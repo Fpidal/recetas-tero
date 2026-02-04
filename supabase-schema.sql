@@ -281,6 +281,7 @@ CREATE TABLE ordenes_compra (
   total DECIMAL(12,2) DEFAULT 0,
   notas TEXT,
   orden_origen_id UUID REFERENCES ordenes_compra(id) ON DELETE SET NULL,
+  activo BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
@@ -318,6 +319,7 @@ CREATE TABLE facturas_proveedor (
   total DECIMAL(12,2) NOT NULL,
   orden_compra_id UUID REFERENCES ordenes_compra(id) ON DELETE SET NULL,
   notas TEXT,
+  activo BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );

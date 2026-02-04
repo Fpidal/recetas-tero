@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -16,6 +17,7 @@ import {
   TrendingUp,
   Trash2
 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 const navigation = [
   { name: 'Inicio', href: '/', icon: Home },
@@ -34,6 +36,31 @@ const navigation = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const [papeleraCount, setPapeleraCount] = useState(0)
+
+  useEffect(() => {
+    fetchPapeleraCount()
+  }, [pathname])
+
+  async function fetchPapeleraCount() {
+    const [prov, ins, rb, pl, me, mesp, ca, oc, fa] = await Promise.all([
+      supabase.from('proveedores').select('id', { count: 'exact', head: true }).eq('activo', false),
+      supabase.from('insumos').select('id', { count: 'exact', head: true }).eq('activo', false),
+      supabase.from('recetas_base').select('id', { count: 'exact', head: true }).eq('activo', false),
+      supabase.from('platos').select('id', { count: 'exact', head: true }).eq('activo', false),
+      supabase.from('menus_ejecutivos').select('id', { count: 'exact', head: true }).eq('activo', false),
+      supabase.from('menus_especiales').select('id', { count: 'exact', head: true }).eq('activo', false),
+      supabase.from('carta').select('id', { count: 'exact', head: true }).eq('activo', false),
+      supabase.from('ordenes_compra').select('id', { count: 'exact', head: true }).eq('activo', false),
+      supabase.from('facturas_proveedor').select('id', { count: 'exact', head: true }).eq('activo', false),
+    ])
+
+    const total = (prov.count || 0) + (ins.count || 0) + (rb.count || 0) +
+      (pl.count || 0) + (me.count || 0) + (mesp.count || 0) +
+      (ca.count || 0) + (oc.count || 0) + (fa.count || 0)
+
+    setPapeleraCount(total)
+  }
 
   return (
     <div className="flex h-full w-64 flex-col bg-gray-900">
@@ -44,6 +71,7 @@ export default function Sidebar() {
         {navigation.map((item) => {
           const isActive = pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href))
+          const isPapelera = item.href === '/papelera'
           return (
             <Link
               key={item.name}
@@ -60,6 +88,11 @@ export default function Sidebar() {
                 }`}
               />
               {item.name}
+              {isPapelera && papeleraCount > 0 && (
+                <span className="ml-auto bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  {papeleraCount}
+                </span>
+              )}
             </Link>
           )
         })}

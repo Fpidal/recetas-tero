@@ -273,6 +273,7 @@ export default function ProveedoresPage() {
     {
       key: 'codigo',
       header: 'Código',
+      hideOnMobile: true,
       render: (p: Proveedor) => (
         <span className="text-sm text-gray-600 font-mono">{p.codigo || '-'}</span>
       ),
@@ -287,6 +288,7 @@ export default function ProveedoresPage() {
     {
       key: 'contacto',
       header: 'Contacto',
+      hideOnMobile: true,
       render: (p: Proveedor) => (
         <div className="space-y-1">
           {(p.celular || p.telefono) && (
@@ -307,6 +309,7 @@ export default function ProveedoresPage() {
     {
       key: 'condicion',
       header: 'Cond. Pago',
+      hideOnMobile: true,
       render: (p: Proveedor) => (
         <span className="text-sm text-gray-600">{p.condicion_pago || '-'}</span>
       ),
@@ -320,14 +323,14 @@ export default function ProveedoresPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleOpenModal(p)}
+            onClick={(e) => { e.stopPropagation(); handleOpenModal(p) }}
           >
             <Pencil className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleDelete(p.id)}
+            onClick={(e) => { e.stopPropagation(); handleDelete(p.id) }}
           >
             <Trash2 className="w-4 h-4 text-red-500" />
           </Button>
@@ -336,14 +339,65 @@ export default function ProveedoresPage() {
     },
   ]
 
+  // Card personalizada para mobile
+  const mobileCard = (p: Proveedor) => (
+    <div>
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <p className="font-semibold text-gray-900">{p.nombre}</p>
+          {p.contacto && <p className="text-sm text-gray-500">{p.contacto}</p>}
+        </div>
+        {p.categoria && (
+          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+            {p.categoria}
+          </span>
+        )}
+      </div>
+      <div className="space-y-1 text-sm text-gray-600">
+        {(p.celular || p.telefono) && (
+          <div className="flex items-center gap-2">
+            <Phone className="w-4 h-4" />
+            {p.celular || p.telefono}
+          </div>
+        )}
+        {p.email && (
+          <div className="flex items-center gap-2">
+            <Mail className="w-4 h-4" />
+            <span className="truncate">{p.email}</span>
+          </div>
+        )}
+        {p.condicion_pago && (
+          <p className="text-xs text-gray-400">Pago: {p.condicion_pago}</p>
+        )}
+      </div>
+      <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => { e.stopPropagation(); handleOpenModal(p) }}
+        >
+          <Pencil className="w-4 h-4 mr-1" />
+          Editar
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => { e.stopPropagation(); handleDelete(p.id) }}
+        >
+          <Trash2 className="w-4 h-4 text-red-500" />
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Proveedores</h1>
-          <p className="text-gray-600">Gestión de proveedores de insumos</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Proveedores</h1>
+          <p className="text-sm text-gray-600">Gestión de proveedores de insumos</p>
         </div>
-        <Button onClick={() => handleOpenModal()}>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Nuevo Proveedor
         </Button>
@@ -355,6 +409,7 @@ export default function ProveedoresPage() {
         keyExtractor={(p) => p.id}
         isLoading={isLoading}
         emptyMessage="No hay proveedores registrados"
+        mobileCard={mobileCard}
       />
 
       <Modal
@@ -363,10 +418,10 @@ export default function ProveedoresPage() {
         title={editingId ? 'Editar Proveedor' : 'Nuevo Proveedor'}
         size="lg"
       >
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Fila 1: Nombre + Código */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
               <Input
                 label="Nombre *"
                 id="nombre"
@@ -386,7 +441,7 @@ export default function ProveedoresPage() {
           </div>
 
           {/* Fila 2: Categoría + Contacto + Celular */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Select
               label="Categoría"
               id="categoria"
@@ -411,7 +466,7 @@ export default function ProveedoresPage() {
           </div>
 
           {/* Fila 3: Situación IVA + Condición Pago + Forma Pago */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Select
               label="Situación IVA"
               id="situacion_iva"
@@ -436,7 +491,7 @@ export default function ProveedoresPage() {
           </div>
 
           {/* Fila 4: CUIT + Teléfono + Email */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               label="CUIT"
               id="cuit"
@@ -462,7 +517,7 @@ export default function ProveedoresPage() {
           </div>
 
           {/* Fila 5: Banco + CBU */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Banco"
               id="banco"
@@ -501,31 +556,31 @@ export default function ProveedoresPage() {
               value={form.notas}
               onChange={(e) => setForm({ ...form, notas: e.target.value })}
               rows={2}
-              className="block w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="Notas adicionales..."
             />
           </div>
 
           {/* Botones: Eliminar (izq) | Cancelar + Guardar (der) */}
-          <div className="flex justify-between items-center pt-3 border-t">
+          <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-3 border-t">
             <div>
               {editingId && (
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={handleDeleteFromModal}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full sm:w-auto"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Eliminar
                 </Button>
               )}
             </div>
-            <div className="flex gap-3">
-              <Button type="button" variant="secondary" onClick={handleCloseModal}>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button type="button" variant="secondary" onClick={handleCloseModal} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSaving}>
+              <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
                 {isSaving ? 'Guardando...' : editingId ? 'Actualizar' : 'Crear'}
               </Button>
             </div>

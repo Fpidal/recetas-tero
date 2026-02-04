@@ -42,7 +42,7 @@ interface ItemMenu {
 
 const TIPO_OPTIONS = [
   { value: 'insumo', label: 'Insumo' },
-  { value: 'receta_base', label: 'Receta Base' },
+  { value: 'receta_base', label: 'Elaboración' },
   { value: 'plato', label: 'Receta (Plato)' },
 ]
 
@@ -234,7 +234,7 @@ export default function NuevoMenuEjecutivoPage() {
   const getTipoLabel = (tipo: string) => {
     switch (tipo) {
       case 'insumo': return 'Insumo'
-      case 'receta_base': return 'Receta Base'
+      case 'receta_base': return 'Elaboración'
       case 'plato': return 'Receta'
       default: return tipo
     }
@@ -288,7 +288,7 @@ export default function NuevoMenuEjecutivoPage() {
             </div>
             <div className="flex-1 min-w-[200px]">
               <Select
-                label={nuevoTipo === 'insumo' ? 'Insumo' : nuevoTipo === 'receta_base' ? 'Receta Base' : 'Plato'}
+                label={nuevoTipo === 'insumo' ? 'Insumo' : nuevoTipo === 'receta_base' ? 'Elaboración' : 'Plato'}
                 options={referenciaOptions}
                 value={nuevoReferenciaId}
                 onChange={(e) => setNuevoReferenciaId(e.target.value)}

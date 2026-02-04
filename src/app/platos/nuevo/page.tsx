@@ -391,14 +391,14 @@ export default function NuevoPlatoPage() {
               }`}
             >
               <ChefHat className="w-4 h-4" />
-              Receta Base
+              Elaboración
             </button>
           </div>
 
           <div className="flex gap-3 items-end mb-3">
             <div className="flex-1">
               <Select
-                label={tipoIngrediente === 'insumo' ? 'Insumo' : 'Receta Base'}
+                label={tipoIngrediente === 'insumo' ? 'Insumo' : 'Elaboración'}
                 options={[
                   { value: '', label: 'Seleccionar...' },
                   ...opcionesItems

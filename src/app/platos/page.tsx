@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, UtensilsCrossed, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, UtensilsCrossed, Search, ChevronDown, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
 import Link from 'next/link'
@@ -21,6 +21,7 @@ export default function PlatosPage() {
   const [platos, setPlatos] = useState<PlatoConCosto[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
+  const [seccionesExpandidas, setSeccionesExpandidas] = useState<Set<string>>(new Set(SECCIONES_ORDEN))
 
   useEffect(() => {
     fetchPlatos()
@@ -156,6 +157,18 @@ export default function PlatosPage() {
     }))
     .filter(grupo => grupo.platos.length > 0)
 
+  function toggleSeccion(seccion: string) {
+    setSeccionesExpandidas(prev => {
+      const nuevo = new Set(prev)
+      if (nuevo.has(seccion)) {
+        nuevo.delete(seccion)
+      } else {
+        nuevo.add(seccion)
+      }
+      return nuevo
+    })
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -205,43 +218,59 @@ export default function PlatosPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {platosPorSeccion.map((grupo) => (
                 <>
-                  <tr key={`seccion-${grupo.seccion}`} className="bg-gray-100">
+                  <tr
+                    key={`seccion-${grupo.seccion}`}
+                    className="bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+                    onClick={() => toggleSeccion(grupo.seccion)}
+                  >
                     <td colSpan={3} className="px-4 py-2">
-                      <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                        {grupo.seccion}
-                      </span>
-                      <span className="ml-2 text-xs text-gray-400">({grupo.platos.length})</span>
+                      <div className="flex items-center gap-2">
+                        {seccionesExpandidas.has(grupo.seccion) ? (
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-gray-500" />
+                        )}
+                        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                          {grupo.seccion}
+                        </span>
+                        <span className="text-[10px] text-gray-400">({grupo.platos.length})</span>
+                      </div>
                     </td>
                   </tr>
-                  {grupo.platos.map((p) => (
+                  {seccionesExpandidas.has(grupo.seccion) && grupo.platos.map((p) => (
                     <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-orange-100 rounded-lg">
-                            <UtensilsCrossed className="w-5 h-5 text-orange-600" />
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-orange-100 rounded-lg">
+                            <UtensilsCrossed className="w-4 h-4 text-orange-600" />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">{p.nombre}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {p.nombre}
+                              {p.descripcion && (
+                                <span className="ml-2 text-xs text-gray-400 italic font-normal">({p.descripcion})</span>
+                              )}
+                            </p>
                             {p.ingredientes_texto && (
-                              <p className="text-xs text-gray-400 truncate max-w-md">
+                              <p className="text-[10px] text-gray-400 truncate max-w-md">
                                 {p.ingredientes_texto}
                               </p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-bold text-green-700 bg-green-50 tabular-nums">
+                      <td className="px-4 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums">
                         <span className="text-green-500 font-normal">$</span><span className="ml-1">{p.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-2">
+                      <td className="px-4 py-2 text-right">
+                        <div className="flex justify-end gap-1">
                           <Link href={`/platos/${p.id}`}>
                             <Button variant="ghost" size="sm">
-                              <Pencil className="w-4 h-4" />
+                              <Pencil className="w-3.5 h-3.5" />
                             </Button>
                           </Link>
                           <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id)}>
-                            <Trash2 className="w-4 h-4 text-red-500" />
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
                           </Button>
                         </div>
                       </td>

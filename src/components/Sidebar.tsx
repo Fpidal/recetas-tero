@@ -24,7 +24,7 @@ const navigation = [
   { name: 'Proveedores', href: '/proveedores', icon: Users },
   { name: 'Insumos', href: '/insumos', icon: Package },
   { name: 'Evolución Precios', href: '/precios', icon: TrendingUp },
-  { name: 'Recetas Base', href: '/recetas-base', icon: BookOpen },
+  { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen },
   { name: 'Recetas', href: '/platos', icon: ChefHat },
   { name: 'Menús Ejecutivos', href: '/menus-ejecutivos', icon: UtensilsCrossed },
   { name: 'Menús Especiales', href: '/menus-especiales', icon: LayoutGrid },

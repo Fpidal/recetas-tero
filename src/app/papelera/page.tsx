@@ -18,7 +18,7 @@ interface ItemPapelera {
 const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
   proveedor: { label: 'Proveedor', icon: Users, color: 'bg-blue-100 text-blue-800' },
   insumo: { label: 'Insumo', icon: Package, color: 'bg-green-100 text-green-800' },
-  receta_base: { label: 'Receta Base', icon: BookOpen, color: 'bg-purple-100 text-purple-800' },
+  receta_base: { label: 'Elaboración', icon: BookOpen, color: 'bg-purple-100 text-purple-800' },
   plato: { label: 'Plato', icon: ChefHat, color: 'bg-orange-100 text-orange-800' },
   menu_ejecutivo: { label: 'Menú Ejecutivo', icon: UtensilsCrossed, color: 'bg-teal-100 text-teal-800' },
   menu_especial: { label: 'Menú Especial', icon: LayoutGrid, color: 'bg-indigo-100 text-indigo-800' },
@@ -97,7 +97,7 @@ export default function PapeleraPage() {
     // Recetas Base
     ;(recetasBase.data || []).forEach((r: any) => {
       allItems.push({
-        id: r.id, tipo: 'receta_base', tipoLabel: 'Receta Base',
+        id: r.id, tipo: 'receta_base', tipoLabel: 'Elaboración',
         nombre: r.nombre, detalle: '',
         fecha: r.updated_at || '', tabla: 'recetas_base',
       })

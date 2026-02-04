@@ -112,9 +112,11 @@ CREATE TABLE recetas_base (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nombre VARCHAR(255) NOT NULL,
   descripcion TEXT,
+  preparacion TEXT,
   rendimiento_porciones INTEGER NOT NULL DEFAULT 1,
   costo_total DECIMAL(12,2) DEFAULT 0,
   costo_por_porcion DECIMAL(12,2) DEFAULT 0,
+  version_receta VARCHAR(10) DEFAULT '1.0',
   activo BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())

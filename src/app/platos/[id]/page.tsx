@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, ArrowLeft, Save, Package, ChefHat, RefreshCw, FileDown } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Save, Package, ChefHat, RefreshCw, FileDown, ClipboardList } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
@@ -56,6 +56,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   const [descripcion, setDescripcion] = useState('')
   const [pasoAPaso, setPasoAPaso] = useState('')
   const [ingredientes, setIngredientes] = useState<Ingrediente[]>([])
+  const [ingredientesOriginales, setIngredientesOriginales] = useState<string>('') // JSON para comparar
   const [ingredientesEliminados, setIngredientesEliminados] = useState<string[]>([])
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [recetasBase, setRecetasBase] = useState<RecetaBase[]>([])
@@ -196,6 +197,8 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
       const total = mapped.reduce((s, i) => s + i.costo_linea, 0)
       console.log(`[FORM] === TOTAL: ${total} ===`)
       setIngredientes(mapped)
+      // Guardar snapshot para detectar cambios
+      setIngredientesOriginales(JSON.stringify(mapped.map(i => ({ id: i.item_id, tipo: i.tipo, cantidad: i.cantidad }))))
     }
 
     setIsLoading(false)
@@ -323,6 +326,14 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
 
     setIsSaving(true)
 
+    // Detectar si hubo cambios en ingredientes (cantidad, agregados, eliminados)
+    const ingredientesActuales = JSON.stringify(ingredientes.map(i => ({ id: i.item_id, tipo: i.tipo, cantidad: i.cantidad })))
+    const huboCambios = ingredientesActuales !== ingredientesOriginales || ingredientesEliminados.length > 0
+
+    // Auto-incrementar versión solo si hubo cambios en la receta
+    const currentVersion = parseFloat(versionReceta) || 1.0
+    const newVersion = huboCambios ? (currentVersion + 0.1).toFixed(1) : versionReceta
+
     // Actualizar plato
     const { error: platoError } = await supabase
       .from('platos')
@@ -332,7 +343,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
         descripcion: descripcion.trim() || null,
         paso_a_paso: pasoAPaso.trim() || null,
         rendimiento_porciones: rendimiento,
-        version_receta: versionReceta.trim() || '1.0',
+        version_receta: newVersion,
         costo_total: costoTotal,
       })
       .eq('id', id)
@@ -611,126 +622,106 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   }
 
   return (
-    <div className="max-w-4xl">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="max-w-4xl h-[calc(100vh-80px)] flex flex-col">
+      {/* Header fijo */}
+      <div className="flex items-center gap-3 mb-3">
         <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900">Editar Plato</h1>
-          <p className="text-sm text-gray-600">{nombre}</p>
         </div>
+        {/* Costo total en header */}
+        {ingredientes.length > 0 && (
+          <div className="bg-green-50 rounded-lg px-3 py-1 text-center">
+            <p className="text-[10px] text-gray-500">Costo Total</p>
+            <p className="text-lg font-bold text-green-600 tabular-nums">
+              ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+        )}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
-        {/* Datos básicos */}
-        <div className="grid grid-cols-4 gap-3">
-          <div className="col-span-2">
-            <Input
-              label="Nombre *"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Ej: Bife de Chorizo con Papas"
-            />
-          </div>
-          <div>
-            <Select
-              label="Sección *"
-              options={[
-                { value: 'Entradas', label: 'Entradas' },
-                { value: 'Principales', label: 'Principales' },
-                { value: 'Pastas y Arroces', label: 'Pastas y Arroces' },
-                { value: 'Ensaladas', label: 'Ensaladas' },
-                { value: 'Postres', label: 'Postres' },
-              ]}
-              value={seccion}
-              onChange={(e) => setSeccion(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Rinde"
-              type="number"
-              min="1"
-              value={rendimiento.toString()}
-              onChange={(e) => setRendimiento(parseInt(e.target.value) || 1)}
-              placeholder="1"
-            />
-            <Input
-              label="Versión"
-              value={versionReceta}
-              onChange={(e) => setVersionReceta(e.target.value)}
-              placeholder="1.0"
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Descripción
-            </label>
-            <textarea
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              rows={2}
-              className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Descripción opcional..."
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Preparación
-            </label>
-            <textarea
-              value={pasoAPaso}
-              onChange={(e) => setPasoAPaso(e.target.value)}
-              rows={3}
-              className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="1. Salpimentar el bife&#10;2. Sellar en plancha..."
-            />
-          </div>
-        </div>
-
-        {/* Agregar ingrediente */}
-        <div className="border-t pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-900">Ingredientes</h3>
-            <Button variant="secondary" size="sm" onClick={handleRecalcularCostos}>
-              <RefreshCw className="w-3.5 h-3.5 mr-1" />
-              Recalcular
-            </Button>
-          </div>
-
-          {/* Selector de tipo */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col flex-1 overflow-hidden">
+        {/* Parte fija superior */}
+        <div className="p-3 border-b bg-white">
+          {/* Datos básicos - todo en una fila */}
           <div className="flex gap-2 mb-3">
-            <button
-              type="button"
-              onClick={() => { setTipoIngrediente('insumo'); setSelectedItem('') }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                tipoIngrediente === 'insumo'
-                  ? 'bg-green-100 text-green-800 border-2 border-green-500'
-                  : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
-              }`}
-            >
-              <Package className="w-4 h-4" />
-              Insumo
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTipoIngrediente('receta_base'); setSelectedItem('') }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                tipoIngrediente === 'receta_base'
-                  ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
-                  : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
-              }`}
-            >
-              <ChefHat className="w-4 h-4" />
-              Receta Base
-            </button>
+            <div className="w-52">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Nombre *</label>
+              <input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Ej: Bife de Chorizo"
+              />
+            </div>
+            <div className="w-36">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Sección</label>
+              <select
+                value={seccion}
+                onChange={(e) => setSeccion(e.target.value)}
+                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+              >
+                <option value="Entradas">Entradas</option>
+                <option value="Principales">Principales</option>
+                <option value="Pastas y Arroces">Pastas y Arroces</option>
+                <option value="Ensaladas">Ensaladas</option>
+                <option value="Postres">Postres</option>
+              </select>
+            </div>
+            <div className="w-16">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Rinde</label>
+              <input
+                type="number"
+                min="1"
+                value={rendimiento.toString()}
+                onChange={(e) => setRendimiento(parseInt(e.target.value) || 1)}
+                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
+              <input
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Descripción opcional del plato..."
+              />
+            </div>
           </div>
 
-          <div className="flex gap-3 items-end mb-3">
+          {/* Fila de agregar ingrediente + botones de acción */}
+          <div className="flex gap-2 items-end">
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => { setTipoIngrediente('insumo'); setSelectedItem('') }}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                  tipoIngrediente === 'insumo'
+                    ? 'bg-green-100 text-green-800 border border-green-500'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Package className="w-3 h-3" />
+                Insumo
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTipoIngrediente('receta_base'); setSelectedItem('') }}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                  tipoIngrediente === 'receta_base'
+                    ? 'bg-purple-100 text-purple-800 border border-purple-500'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <ChefHat className="w-3 h-3" />
+                Elaboración
+              </button>
+            </div>
             <div className="flex-1">
               <Select
-                label={tipoIngrediente === 'insumo' ? 'Insumo' : 'Receta Base'}
+                label={tipoIngrediente === 'insumo' ? 'Insumo' : 'Elaboración'}
                 options={[
                   { value: '', label: 'Seleccionar...' },
                   ...opcionesItems
@@ -739,22 +730,40 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                 onChange={(e) => setSelectedItem(e.target.value)}
               />
             </div>
-            <div className="w-32">
+            <div className="w-20">
               <Input
-                label={tipoIngrediente === 'insumo' ? 'Cantidad' : 'Porciones'}
+                label="Cant."
                 type="number"
                 step="0.001"
                 min="0"
                 value={cantidad}
                 onChange={(e) => setCantidad(e.target.value)}
-                placeholder="0.00"
+                placeholder="0"
               />
             </div>
-            <Button onClick={handleAgregarIngrediente}>
-              <Plus className="w-4 h-4 mr-1" />
-              Agregar
+            <Button onClick={handleAgregarIngrediente} size="sm">
+              <Plus className="w-4 h-4" />
             </Button>
+            <div className="border-l pl-2 flex gap-1">
+              <Button variant="secondary" size="sm" onClick={handleRecalcularCostos} title="Recalcular costos">
+                <RefreshCw className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => router.back()}>
+                Cancelar
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleGenerarPDF} disabled={ingredientes.length === 0}>
+                <FileDown className="w-4 h-4" />
+              </Button>
+              <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
+                <Save className="w-4 h-4 mr-1" />
+                {isSaving ? '...' : 'Guardar'}
+              </Button>
+            </div>
           </div>
+        </div>
+
+        {/* Parte con scroll - lista de ingredientes */}
+        <div className="flex-1 overflow-y-auto p-3">
 
           {/* Lista de ingredientes */}
           {ingredientes.length > 0 ? (
@@ -821,72 +830,92 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               <p className="text-sm text-gray-500">No hay ingredientes agregados</p>
             </div>
           )}
-        </div>
 
-        {/* Gráfico de incidencia */}
-        {ingredientes.length > 0 && costoTotal > 0 && (
-          <div className="border-t pt-3">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Incidencia por Ingrediente</h3>
-            <div className="flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie
-                    data={(() => {
-                      const filtered = ingredientes.filter(ing => (ing.costo_linea / costoTotal) * 100 >= 2)
-                      return filtered.map((ing) => ({
-                        name: ing.nombre,
-                        value: ing.costo_linea,
-                        categoria: ing.categoria,
-                        porcentaje: ((ing.costo_linea / costoTotal) * 100).toFixed(0),
-                      }))
-                    })()}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={75}
-                    dataKey="value"
-                    label={({ name, porcentaje }: any) => `${name} ${porcentaje}%`}
-                    fontSize={11}
-                  >
-                    {ingredientes
-                      .filter(ing => (ing.costo_linea / costoTotal) * 100 >= 2)
-                      .map((ing, idx) => (
-                        <Cell key={idx} fill={CATEGORY_COLORS[ing.categoria] || '#bdbdbd'} />
-                      ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any) => `$${Number(value).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+          {/* Layout 50/50: Composición de costos + Preparación */}
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {/* Card izquierda - Composición del costo */}
+            <div className="border rounded-lg bg-gray-50 p-3">
+              <h4 className="text-xs font-semibold text-gray-700 mb-2">Composición del costo</h4>
+              {ingredientes.length === 0 ? (
+                <div className="flex items-center justify-center h-32 text-gray-400 text-xs">
+                  Sin ingredientes
+                </div>
+              ) : ingredientes.length === 1 ? (
+                <div className="flex flex-col items-center justify-center h-32">
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-xl font-bold"
+                    style={{ backgroundColor: CATEGORY_COLORS[ingredientes[0].categoria] || '#bdbdbd' }}>
+                    100%
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2 text-center">
+                    <span className="font-medium">{ingredientes[0].nombre}</span>
+                    <span className="text-gray-400"> · único ingrediente</span>
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <ResponsiveContainer width="100%" height={110}>
+                    <PieChart>
+                      <Pie
+                        data={(() => {
+                          const filtered = ingredientes.filter(ing => (ing.costo_linea / costoTotal) * 100 >= 2)
+                          return filtered.map((ing) => ({
+                            name: ing.nombre,
+                            value: ing.costo_linea,
+                            categoria: ing.categoria,
+                            porcentaje: ((ing.costo_linea / costoTotal) * 100).toFixed(0),
+                          }))
+                        })()}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={42}
+                        innerRadius={18}
+                        dataKey="value"
+                        label={({ name, porcentaje }: any) => `${name.substring(0, 8)} ${porcentaje}%`}
+                        fontSize={9}
+                      >
+                        {ingredientes
+                          .filter(ing => (ing.costo_linea / costoTotal) * 100 >= 2)
+                          .map((ing, idx) => (
+                            <Cell key={idx} fill={CATEGORY_COLORS[ing.categoria] || '#bdbdbd'} />
+                          ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: any) => `$${Number(value).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {(() => {
+                    const dominante = ingredientes.reduce((max, ing) => ing.costo_linea > max.costo_linea ? ing : max, ingredientes[0])
+                    const pct = costoTotal > 0 ? ((dominante.costo_linea / costoTotal) * 100).toFixed(0) : 0
+                    return (
+                      <p className="text-[11px] text-gray-500 text-center mt-1">
+                        Principal: <span className="font-medium text-gray-700">{dominante.nombre}</span> ({pct}%)
+                      </p>
+                    )
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {/* Card derecha - Preparación */}
+            <div className="border rounded-lg bg-white p-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <ClipboardList className="w-3.5 h-3.5 text-gray-400" />
+                <h4 className="text-xs font-semibold text-gray-700">Preparación</h4>
+              </div>
+              <textarea
+                value={pasoAPaso}
+                onChange={(e) => setPasoAPaso(e.target.value)}
+                placeholder="Ej: Sellar las vieiras, napar con salsa, gratinar 3 min…"
+                className="w-full h-32 text-xs border border-gray-200 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder:text-gray-300"
+              />
             </div>
           </div>
-        )}
 
-        {/* Resumen de costos */}
-        <div className="border-t pt-3">
-          <div className="bg-gray-50 rounded-lg px-4 py-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Costo Total del Plato:</span>
-              <span className="text-lg font-bold text-green-600 tabular-nums">
-                <span className="text-green-400 font-normal">$</span> {costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-              </span>
-            </div>
+          {/* Versión - texto gris al final */}
+          <div className="mt-3 text-[10px] text-gray-400 text-right">
+            Versión {versionReceta}
           </div>
-        </div>
-
-        {/* Botones */}
-        <div className="flex justify-end gap-3 border-t pt-3">
-          <Button variant="secondary" onClick={() => router.back()}>
-            Cancelar
-          </Button>
-          <Button variant="secondary" onClick={handleGenerarPDF} disabled={ingredientes.length === 0}>
-            <FileDown className="w-4 h-4 mr-2" />
-            Exportar PDF
-          </Button>
-          <Button onClick={handleGuardar} disabled={isSaving}>
-            <Save className="w-4 h-4 mr-2" />
-            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-          </Button>
         </div>
       </div>
     </div>

@@ -207,7 +207,10 @@ CREATE INDEX idx_menus_ejecutivos_activo ON menus_ejecutivos(activo);
 CREATE TABLE menu_ejecutivo_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   menu_ejecutivo_id UUID NOT NULL REFERENCES menus_ejecutivos(id) ON DELETE CASCADE,
-  insumo_id UUID NOT NULL REFERENCES insumos(id) ON DELETE RESTRICT,
+  tipo VARCHAR(20) DEFAULT 'insumo',
+  insumo_id UUID REFERENCES insumos(id) ON DELETE RESTRICT,
+  receta_base_id UUID REFERENCES recetas_base(id) ON DELETE RESTRICT,
+  plato_id UUID REFERENCES platos(id) ON DELETE RESTRICT,
   cantidad DECIMAL(10,4) NOT NULL,
   es_bebida BOOLEAN DEFAULT false,
   costo_linea DECIMAL(12,2) DEFAULT 0,
@@ -216,6 +219,8 @@ CREATE TABLE menu_ejecutivo_items (
 
 CREATE INDEX idx_menu_ejec_items_menu ON menu_ejecutivo_items(menu_ejecutivo_id);
 CREATE INDEX idx_menu_ejec_items_insumo ON menu_ejecutivo_items(insumo_id);
+CREATE INDEX idx_menu_ejec_items_receta_base ON menu_ejecutivo_items(receta_base_id);
+CREATE INDEX idx_menu_ejec_items_plato ON menu_ejecutivo_items(plato_id);
 
 -- =====================================================
 -- TABLA: MENUS_ESPECIALES

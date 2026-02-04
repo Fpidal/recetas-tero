@@ -1,0 +1,51 @@
+id,nombre,cuit,telefono,email,banco,cbu,created_at,situacion_iva,categoria,condicion_pago,contacto,celular,forma_pago,codigo
+16,Bodega Escorihuela,30501697466,,,,,2026-01-10T00:41:45.949133+00:00,21,bodega,60,,,echeq,PROV-0001
+17,Bodega Salentein,30697598711,,,,,2026-01-10T01:04:50.296923+00:00,21,bodega,60,Gonzalo,1131754611,echeq,PROV-0002
+18,Distribuidora A1,20106862886,,,,,2026-01-10T01:22:05.424114+00:00,21,almacen,21,Daniel ,1121740888,transferencia,PROV-0003
+19,Dixtron,30708642459,,,,,2026-01-10T02:05:15.50354+00:00,21,limpieza,30,Ana,1134155555,transferencia,PROV-0004
+20,Morres,30708736186,,,,,2026-01-10T02:09:16.724915+00:00,21,carnes,21,Juan manuel,1154282406,transferencia,PROV-0005
+21,Demro,30708737565,,,,,2026-01-10T02:14:08.637504+00:00,21,alquiler,30,Andres seitun,113581-2946,transferencia,PROV-0006
+22,Luz tero-eidico,,,,,,2026-01-10T02:15:55.668609+00:00,0,servicio_luz,60,,,transferencia,PROV-0007
+23,Horacio Castro,20169606332,,,,,2026-01-10T02:22:16.780926+00:00,21,limpieza,21,Horacio,112453-7338,transferencia,PROV-0008
+24,El triunfo,30708492961,,,,,2026-01-10T02:27:56.302345+00:00,21,almacen,30,Juan,115146-9443,transferencia,PROV-0009
+25,Nunos SA,30714407410,,,,,2026-01-10T02:31:08.120287+00:00,21,pescaderia,21,Guido,11-6748-3009,transferencia,PROV-0010
+26,Blancaluna,,,,,,2026-01-10T02:34:43.115596+00:00,21,almacen,15,Paula,11-2724-0349,transferencia,PROV-0011
+27,Rincon de sabores,,,,,,2026-01-10T21:40:42.261007+00:00,0,almacen,,Santiago,11-3148-8800,efectivo,PROV-0012
+28,Limpia Glass,,,,,,2026-01-10T21:45:56.900743+00:00,0,arreglos,,,,,PROV-0013
+29,Coca- cola,30-52539008-6,,,,,2026-01-10T21:49:11.737508+00:00,21,bebidas,7,,,transferencia,PROV-0014
+30,La divisa,,,,,,2026-01-10T21:58:38.952176+00:00,0,carnes,,,,efectivo,PROV-0015
+31,Avicola del Norte,,,,,,2026-01-10T22:17:59.617448+00:00,21,pollo,,,,transferencia,PROV-0016
+32,Juan Pablo Camaras,,,,,,2026-01-10T23:06:57.473434+00:00,0,arreglos,,,,transferencia,PROV-0017
+33,Manteca Lobos,,,,,,2026-01-10T23:09:40.661174+00:00,21,quesos_fiambres,,,,,PROV-0018
+34,Corralon ABCÉ,20301001941,,,,,2026-01-10T23:12:19.270934+00:00,21,arreglos,,,,transferencia,PROV-0019
+35,Servimar,,,,,,2026-01-10T23:17:04.927696+00:00,21,bebidas,,,,transferencia,PROV-0020
+36,Ariel Colucci,,,,,,2026-01-10T23:24:15.52939+00:00,21,pescaderia,,,,efectivo,PROV-0021
+37,Pan Chisco,30717003213,,,,,2026-01-10T23:27:19.721423+00:00,21,panaderia,,Gonzalo,11-68987278,efectivo,PROV-0022
+38,Mantenimiento instalaciones,,,,,,2026-01-11T00:50:58.26261+00:00,21,arreglos,,,,,PROV-0023
+39,Municipalidad de tigre,,,,,,2026-01-11T00:54:36.376071+00:00,21,impuestos_municipales,,,,transferencia,PROV-0024
+40,Fresh,30710747292,,,,,2026-01-11T01:00:10.112998+00:00,21,verduras,,,,transferencia,PROV-0025
+41,YPF GAS,30515488479,,,,,2026-01-11T01:02:41.776685+00:00,21,servicio_gas,7,,,transferencia,PROV-0026
+42,Don Nazareno,,,,,,2026-01-11T01:04:29.61344+00:00,21,verduras,,,,efectivo,PROV-0027
+43,IVESS,,,,,,2026-01-11T01:10:13.154106+00:00,21,bebidas,,,,efectivo,PROV-0028
+44,Frigolar,30565654019,,,,,2026-01-11T01:11:34.024989+00:00,21,carnes,,,,transferencia,PROV-0029
+45,Cups Fumigacion,,,,,,2026-01-12T17:26:38.305081+00:00,21,arreglos,15,,,transferencia,PROV-0030
+46,Matafuegos Rufino,20-10260960-4,,,,,2026-01-12T17:28:08.334886+00:00,21,otros,15,,,transferencia,PROV-0031
+47,Marketing Tero,,,,,,2026-01-12T19:06:42.023168+00:00,21,otros,,,,,PROV-0032
+48,Correo Argentino,,,,,,2026-01-13T17:33:30.097362+00:00,21,otros,,,,,PROV-0033
+49,TEINER,,,,,,2026-01-13T17:39:26.15352+00:00,21,alquiler,21,Jose,,transferencia,PROV-0034
+50,Hielo Franco ,,,,,,2026-01-13T17:44:07.737106+00:00,21,bebidas,,,,,PROV-0035
+52,CCM Limpieza campana,,,,,,2026-01-14T16:24:03.01676+00:00,21,arreglos,,,,efectivo,PROV-0036
+53,Proveedores iva,,,,,,2026-01-15T22:05:12.073647+00:00,21,iva,,,,transferencia,PROV-0037
+54,Fletes Tero,,,,,,2026-01-15T23:53:20.41118+00:00,21,otros,,,,efectivo,PROV-0038
+55,Delico,30714558389,,,,,2026-01-20T16:25:15.206016+00:00,21,bebidas,21,,,transferencia,PROV-0039
+56,Mantisco ,,,,,,2026-01-21T17:42:45.977103+00:00,21,quesos_fiambres,21,,,transferencia,PROV-0040
+57,Berardi,,,,,,2026-01-22T23:49:27.967435+00:00,21,pescaderia,7,,,transferencia,PROV-0041
+58,Fragola,,,,,,2026-01-23T17:17:40.650625+00:00,21,otros,,,,efectivo,PROV-0042
+59,Canducho,,,,,,2026-01-23T17:23:06.883272+00:00,21,otros,,,,efectivo,PROV-0043
+60,Bodega Catena Zapata,,,,,,2026-01-23T17:24:30.0714+00:00,21,bodega,60,Juan,,echeq,PROV-0044
+61,Remates Asenzo,,,,,,2026-01-29T13:05:03.110618+00:00,21,otros,,,,transferencia,PROV-0045
+62,Colucci ,,,,,,2026-02-02T13:06:40.513814+00:00,21,pescaderia,,,,transferencia,PROV-0046
+63,Espacio Sommelier,,,,,,2026-02-02T13:33:54.881105+00:00,21,carnes,,,,efectivo,PROV-0047
+64,Verdura Francisco,,,,,,2026-02-03T11:35:46.341481+00:00,21,verduras,,francisco,,efectivo,PROV-0048
+65,Planes Afip,,,,,,2026-02-03T12:33:21.34741+00:00,21,planes_afip_arba,,,,transferencia,PROV-0049
+66,Planes ARBA,,,,,,2026-02-03T12:33:56.311653+00:00,21,planes_afip_arba,,,,transferencia,PROV-0050

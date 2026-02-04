@@ -260,7 +260,7 @@ export default function PreciosPage() {
     const categFechaPrecios = new Map<string, Map<string, number[]>>()
 
     // Inicializar categorías
-    const categorias = [...new Set(insumos.map(i => i.categoria))]
+    const categorias = Array.from(new Set(insumos.map(i => i.categoria)))
     categorias.forEach(cat => categFechaPrecios.set(cat, new Map()))
 
     // Llenar con precios
@@ -316,7 +316,7 @@ export default function PreciosPage() {
   const allCategResumen = useMemo(() => {
     if (allCategPreciosRaw.length === 0 || insumos.length === 0) return []
 
-    const categorias = [...new Set(insumos.map(i => i.categoria))]
+    const categorias = Array.from(new Set(insumos.map(i => i.categoria)))
 
     return categorias.map(cat => {
       const categInsumoIds = insumos.filter(i => i.categoria === cat).map(i => i.id)
@@ -327,7 +327,7 @@ export default function PreciosPage() {
       if (precios.length === 0) return null
 
       // Calcular promedio inicial y final
-      const fechas = [...new Set(precios.map(p => p.fecha))].sort()
+      const fechas = Array.from(new Set(precios.map(p => p.fecha))).sort()
       const primeraFecha = fechas[0]
       const ultimaFecha = fechas[fechas.length - 1]
 

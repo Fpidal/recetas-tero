@@ -15,7 +15,9 @@ import {
   BookOpen,
   Home,
   TrendingUp,
-  Trash2
+  Trash2,
+  Menu,
+  X
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -37,9 +39,15 @@ const navigation = [
 export default function Sidebar() {
   const pathname = usePathname()
   const [papeleraCount, setPapeleraCount] = useState(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     fetchPapeleraCount()
+  }, [pathname])
+
+  // Cerrar menú mobile al cambiar de página
+  useEffect(() => {
+    setMobileMenuOpen(false)
   }, [pathname])
 
   async function fetchPapeleraCount() {
@@ -62,12 +70,19 @@ export default function Sidebar() {
     setPapeleraCount(total)
   }
 
-  return (
-    <div className="flex h-full w-64 flex-col bg-gray-900">
-      <div className="flex h-16 items-center justify-center border-b border-gray-800">
+  const NavContent = () => (
+    <>
+      <div className="flex h-16 items-center justify-between border-b border-gray-800 px-4">
         <h1 className="text-xl font-bold text-white">Tero Restó</h1>
+        {/* Botón cerrar en mobile */}
+        <button
+          className="lg:hidden text-gray-400 hover:text-white p-2"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <X className="h-6 w-6" />
+        </button>
       </div>
-      <nav className="flex-1 space-y-1 px-2 py-4">
+      <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href))
@@ -76,14 +91,14 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`group flex items-center rounded-md px-3 py-3 lg:py-2 text-base lg:text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-gray-800 text-white'
                   : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               }`}
             >
               <item.icon
-                className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                className={`mr-3 h-6 w-6 lg:h-5 lg:w-5 flex-shrink-0 ${
                   isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'
                 }`}
               />
@@ -97,6 +112,45 @@ export default function Sidebar() {
           )
         })}
       </nav>
-    </div>
+    </>
+  )
+
+  return (
+    <>
+      {/* Header mobile con hamburger */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 h-14 flex items-center px-4 shadow-lg">
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="text-white p-2 -ml-2 hover:bg-gray-800 rounded-md"
+        >
+          <Menu className="h-6 w-6" />
+        </button>
+        <h1 className="ml-3 text-lg font-bold text-white">Tero Restó</h1>
+      </div>
+
+      {/* Overlay para mobile */}
+      {mobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar mobile (drawer) */}
+      <div
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-gray-900 transform transition-transform duration-300 ease-in-out ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex h-full flex-col">
+          <NavContent />
+        </div>
+      </div>
+
+      {/* Sidebar desktop (fijo) */}
+      <div className="hidden lg:flex h-full w-64 flex-col bg-gray-900 flex-shrink-0">
+        <NavContent />
+      </div>
+    </>
   )
 }

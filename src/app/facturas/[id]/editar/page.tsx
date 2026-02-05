@@ -232,7 +232,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   const totalIva21 = itemsActivos.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva105 = itemsActivos.filter(i => i.iva_porcentaje === 10.5).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva = itemsActivos.reduce((sum, item) => sum + item.iva_monto, 0)
-  const totalPercepciones = percepciones.reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0)
+  const totalPercepciones = percepciones.reduce((sum, p) => sum + parsearNumero(p.valor), 0)
   const total = subtotalNeto + totalIva + totalPercepciones
 
   async function handleGuardar() {
@@ -255,8 +255,8 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
     // Filtrar percepciones con valor
     const percepcionesConValor = percepciones
-      .filter(p => p.nombre.trim() && parseFloat(p.valor) > 0)
-      .map(p => ({ nombre: p.nombre, porcentaje: p.porcentaje, valor: p.valor }))
+      .filter(p => p.nombre.trim() && parsearNumero(p.valor) > 0)
+      .map(p => ({ nombre: p.nombre, porcentaje: p.porcentaje, valor: parsearNumero(p.valor).toString() }))
 
     // Actualizar factura
     const { error: facturaError } = await supabase
@@ -582,17 +582,17 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                   />
                   <span className="text-xs text-gray-400">$</span>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={p.valor}
                     onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.,]/g, '')
                       const newPerc = percepciones.map((perc, i) =>
-                        i === idx ? { ...perc, valor: e.target.value } : perc
+                        i === idx ? { ...perc, valor: val } : perc
                       )
                       setPercepciones(newPerc)
                     }}
-                    placeholder="0.00"
+                    placeholder="0,00"
                     className="w-24 rounded border border-gray-300 px-2 py-1 text-xs text-right placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                 </div>

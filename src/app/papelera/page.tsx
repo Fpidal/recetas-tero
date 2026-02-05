@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, RotateCcw, AlertTriangle, Users, Package, BookOpen, ChefHat, UtensilsCrossed, LayoutGrid, ClipboardList, ShoppingCart, FileText } from 'lucide-react'
+import { Trash2, RotateCcw, Users, Package, BookOpen, ChefHat, UtensilsCrossed, LayoutGrid, ShoppingCart, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Select } from '@/components/ui'
 
@@ -22,7 +22,6 @@ const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string }> =
   plato: { label: 'Plato', icon: ChefHat, color: 'bg-orange-100 text-orange-800' },
   menu_ejecutivo: { label: 'Menú Ejecutivo', icon: UtensilsCrossed, color: 'bg-teal-100 text-teal-800' },
   menu_especial: { label: 'Menú Especial', icon: LayoutGrid, color: 'bg-indigo-100 text-indigo-800' },
-  carta: { label: 'Carta', icon: ClipboardList, color: 'bg-pink-100 text-pink-800' },
   orden_compra: { label: 'Orden Compra', icon: ShoppingCart, color: 'bg-yellow-100 text-yellow-800' },
   factura: { label: 'Factura', icon: FileText, color: 'bg-red-100 text-red-800' },
 }
@@ -35,7 +34,6 @@ const FILTRO_OPTIONS = [
   { value: 'plato', label: 'Platos' },
   { value: 'menu_ejecutivo', label: 'Menús Ejecutivos' },
   { value: 'menu_especial', label: 'Menús Especiales' },
-  { value: 'carta', label: 'Carta' },
   { value: 'orden_compra', label: 'Órdenes de Compra' },
   { value: 'factura', label: 'Facturas' },
 ]
@@ -59,7 +57,6 @@ export default function PapeleraPage() {
       platos,
       menusEjecutivos,
       menusEspeciales,
-      carta,
       ordenes,
       facturas,
     ] = await Promise.all([
@@ -69,7 +66,6 @@ export default function PapeleraPage() {
       supabase.from('platos').select('id, nombre, updated_at').eq('activo', false),
       supabase.from('menus_ejecutivos').select('id, nombre, updated_at').eq('activo', false),
       supabase.from('menus_especiales').select('id, nombre, updated_at').eq('activo', false),
-      supabase.from('carta').select('id, updated_at, platos (nombre)').eq('activo', false),
       supabase.from('ordenes_compra').select('id, numero, fecha, updated_at, proveedores (nombre)').eq('activo', false),
       supabase.from('facturas_proveedor').select('id, numero_factura, fecha, updated_at, proveedores (nombre)').eq('activo', false),
     ])
@@ -127,15 +123,6 @@ export default function PapeleraPage() {
         id: m.id, tipo: 'menu_especial', tipoLabel: 'Menú Especial',
         nombre: m.nombre, detalle: '',
         fecha: m.updated_at || '', tabla: 'menus_especiales',
-      })
-    })
-
-    // Carta
-    ;(carta.data || []).forEach((c: any) => {
-      allItems.push({
-        id: c.id, tipo: 'carta', tipoLabel: 'Carta',
-        nombre: (c.platos as any)?.nombre || 'Plato eliminado', detalle: '',
-        fecha: c.updated_at || '', tabla: 'carta',
       })
     })
 

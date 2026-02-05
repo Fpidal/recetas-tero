@@ -164,9 +164,9 @@ export default function NuevaFacturaPage() {
     const insumo = insumos.find(i => i.id === insumoId)
     if (insumo && insumo.precio_actual) {
       // Mostrar precio del paquete (precio unitario × cantidad por paquete)
-      const cantPaq = insumo.cantidad_por_paquete || 1
+      const cantPaq = Number(insumo.cantidad_por_paquete) || 1
       const precioPaquete = insumo.precio_actual * cantPaq
-      setPrecioUnitario(formatearCantidad(precioPaquete, 2))
+      setPrecioUnitario(precioPaquete.toFixed(2).replace('.', ','))
     } else {
       setPrecioUnitario('')
     }

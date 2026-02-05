@@ -622,20 +622,20 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   }
 
   return (
-    <div className="max-w-4xl h-[calc(100vh-80px)] flex flex-col">
+    <div className="max-w-4xl lg:h-[calc(100vh-80px)] flex flex-col">
       {/* Header fijo */}
       <div className="flex items-center gap-3 mb-3">
         <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-gray-900">Editar Plato</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Editar Plato</h1>
         </div>
         {/* Costo total en header */}
         {ingredientes.length > 0 && (
           <div className="bg-green-50 rounded-lg px-3 py-1 text-center">
             <p className="text-[10px] text-gray-500">Costo Total</p>
-            <p className="text-lg font-bold text-green-600 tabular-nums">
+            <p className="text-base sm:text-lg font-bold text-green-600 tabular-nums">
               ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
             </p>
           </div>
@@ -645,23 +645,23 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col flex-1 overflow-hidden">
         {/* Parte fija superior */}
         <div className="p-3 border-b bg-white">
-          {/* Datos básicos - todo en una fila */}
-          <div className="flex gap-2 mb-3">
-            <div className="w-52">
+          {/* Datos básicos - responsive */}
+          <div className="grid grid-cols-2 sm:flex gap-2 mb-3">
+            <div className="col-span-2 sm:w-52">
               <label className="block text-xs font-medium text-gray-700 mb-1">Nombre *</label>
               <input
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="Ej: Bife de Chorizo"
               />
             </div>
-            <div className="w-36">
+            <div className="sm:w-36">
               <label className="block text-xs font-medium text-gray-700 mb-1">Sección</label>
               <select
                 value={seccion}
                 onChange={(e) => setSeccion(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
               >
                 <option value="Entradas">Entradas</option>
                 <option value="Principales">Principales</option>
@@ -670,29 +670,104 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                 <option value="Postres">Postres</option>
               </select>
             </div>
-            <div className="w-16">
+            <div className="sm:w-16">
               <label className="block text-xs font-medium text-gray-700 mb-1">Rinde</label>
               <input
                 type="number"
                 min="1"
                 value={rendimiento.toString()}
                 onChange={(e) => setRendimiento(parseInt(e.target.value) || 1)}
-                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
-            <div className="flex-1">
+            <div className="col-span-2 sm:flex-1">
               <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
               <input
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="Descripción opcional del plato..."
               />
             </div>
           </div>
 
           {/* Fila de agregar ingrediente + botones de acción */}
-          <div className="flex gap-2 items-end">
+          {/* Mobile: Stack vertical */}
+          <div className="sm:hidden space-y-3">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setTipoIngrediente('insumo'); setSelectedItem('') }}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                  tipoIngrediente === 'insumo'
+                    ? 'bg-green-100 text-green-800 border-2 border-green-500'
+                    : 'bg-gray-100 text-gray-600 border-2 border-transparent'
+                }`}
+              >
+                <Package className="w-4 h-4" />
+                Insumo
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTipoIngrediente('receta_base'); setSelectedItem('') }}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                  tipoIngrediente === 'receta_base'
+                    ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
+                    : 'bg-gray-100 text-gray-600 border-2 border-transparent'
+                }`}
+              >
+                <ChefHat className="w-4 h-4" />
+                Elaboración
+              </button>
+            </div>
+            <div>
+              <Select
+                label={tipoIngrediente === 'insumo' ? 'Insumo' : 'Elaboración'}
+                options={[
+                  { value: '', label: 'Seleccionar...' },
+                  ...opcionesItems
+                ]}
+                value={selectedItem}
+                onChange={(e) => setSelectedItem(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <Input
+                  label="Cantidad"
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={cantidad}
+                  onChange={(e) => setCantidad(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <Button onClick={handleAgregarIngrediente} className="flex-shrink-0">
+                <Plus className="w-4 h-4 mr-1" />
+                Agregar
+              </Button>
+            </div>
+            <div className="flex gap-2 pt-2 border-t">
+              <Button variant="secondary" size="sm" onClick={handleRecalcularCostos} title="Recalcular">
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleGenerarPDF} disabled={ingredientes.length === 0}>
+                <FileDown className="w-4 h-4" />
+              </Button>
+              <div className="flex-1" />
+              <Button variant="secondary" size="sm" onClick={() => router.back()}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
+                <Save className="w-4 h-4 mr-1" />
+                {isSaving ? '...' : 'Guardar'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Desktop: Row */}
+          <div className="hidden sm:flex gap-2 items-end">
             <div className="flex gap-1">
               <button
                 type="button"
@@ -767,64 +842,120 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
 
           {/* Lista de ingredientes */}
           {ingredientes.length > 0 ? (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Tipo</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Ingrediente</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Cantidad</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500">C.Unit.</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-green-50">C.Total</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-blue-50">%</th>
-                    <th className="px-2 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {ingredientes.map((ing) => (
-                    <tr key={ing.id} className={ing.isNew ? 'bg-green-50' : ''}>
-                      <td className="px-2 py-1.5">
+            <>
+              {/* Mobile: Cards */}
+              <div className="sm:hidden space-y-2">
+                {ingredientes.map((ing) => (
+                  <div key={ing.id} className={`rounded-lg p-3 border ${ing.isNew ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
                         {ing.tipo === 'insumo' ? (
-                          <Package className="w-3.5 h-3.5 text-green-600" />
+                          <Package className="w-4 h-4 text-green-600 flex-shrink-0" />
                         ) : (
-                          <ChefHat className="w-3.5 h-3.5 text-purple-600" />
+                          <ChefHat className="w-4 h-4 text-purple-600 flex-shrink-0" />
                         )}
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-gray-900">{ing.nombre}</td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          type="number"
-                          step="0.001"
-                          min="0"
-                          value={ing.cantidad}
-                          onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
-                          className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
-                        />
-                        <span className="ml-1 text-xs text-gray-500">{ing.unidad}</span>
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums">
-                        ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums">
-                        ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
-                        {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEliminarIngrediente(ing)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                        </Button>
-                      </td>
+                        <span className="text-sm font-medium text-gray-900 truncate">{ing.nombre}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEliminarIngrediente(ing)}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="text-[10px] text-gray-500 mb-0.5">Cantidad</p>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={ing.cantidad}
+                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                          />
+                          <span className="text-xs text-gray-500">{ing.unidad}</span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-500 mb-0.5">Costo</p>
+                        <p className="text-sm font-bold text-green-700">
+                          ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500 mb-0.5">Incidencia</p>
+                        <p className="text-sm font-semibold text-blue-700">
+                          {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden sm:block border rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Tipo</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Ingrediente</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Cantidad</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-gray-500">C.Unit.</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-green-50">C.Total</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-blue-50">%</th>
+                      <th className="px-2 py-2"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {ingredientes.map((ing) => (
+                      <tr key={ing.id} className={ing.isNew ? 'bg-green-50' : ''}>
+                        <td className="px-2 py-1.5">
+                          {ing.tipo === 'insumo' ? (
+                            <Package className="w-3.5 h-3.5 text-green-600" />
+                          ) : (
+                            <ChefHat className="w-3.5 h-3.5 text-purple-600" />
+                          )}
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-gray-900">{ing.nombre}</td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={ing.cantidad}
+                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
+                          />
+                          <span className="ml-1 text-xs text-gray-500">{ing.unidad}</span>
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums">
+                          ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums">
+                          ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
+                          {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEliminarIngrediente(ing)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <div className="text-center py-4 border rounded-lg bg-gray-50">
               <p className="text-sm text-gray-500">No hay ingredientes agregados</p>
@@ -832,7 +963,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
           )}
 
           {/* Layout 50/50: Composición de costos + Preparación */}
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Card izquierda - Composición del costo */}
             <div className="border rounded-lg bg-gray-50 p-3">
               <h4 className="text-xs font-semibold text-gray-700 mb-2">Composición del costo</h4>

@@ -230,54 +230,104 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
   }
 
   return (
-    <div className="max-w-4xl h-[calc(100vh-80px)] flex flex-col">
+    <div className="max-w-4xl lg:h-[calc(100vh-80px)] flex flex-col">
       {/* Header fijo */}
       <div className="flex items-center gap-3 mb-3">
         <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-gray-900">Editar Elaboración</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Editar Elaboración</h1>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col flex-1 overflow-hidden">
         {/* Parte fija superior */}
         <div className="p-3 border-b bg-white">
-          {/* Datos básicos */}
-          <div className="flex gap-2 mb-3">
-            <div className="w-52">
+          {/* Datos básicos - responsive */}
+          <div className="grid grid-cols-2 sm:flex gap-2 mb-3">
+            <div className="col-span-2 sm:w-52">
               <label className="block text-xs font-medium text-gray-700 mb-1">Nombre *</label>
               <input
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="Ej: Salsa Criolla"
               />
             </div>
-            <div className="w-16">
+            <div className="sm:w-16">
               <label className="block text-xs font-medium text-gray-700 mb-1">Rinde</label>
               <input
                 type="number"
                 min="1"
                 value={rendimiento}
                 onChange={(e) => setRendimiento(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
-            <div className="flex-1">
+            <div className="col-span-2 sm:flex-1">
               <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
               <input
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="Descripción opcional..."
               />
             </div>
           </div>
 
-          {/* Fila agregar + botones */}
-          <div className="flex gap-2 items-end">
+          {/* Mobile: Stack vertical */}
+          <div className="sm:hidden space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Insumo</label>
+              <select
+                value={selectedInsumo}
+                onChange={(e) => setSelectedInsumo(e.target.value)}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+              >
+                <option value="">Seleccionar...</option>
+                {insumos.map(i => (
+                  <option key={i.id} value={i.id}>
+                    {i.nombre} ({i.unidad_medida}) - ${(i.costo_final || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={cantidad}
+                  onChange={(e) => setCantidad(e.target.value)}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="0"
+                />
+              </div>
+              <Button onClick={handleAgregarIngrediente} className="flex-shrink-0">
+                <Plus className="w-4 h-4 mr-1" />
+                Agregar
+              </Button>
+            </div>
+            <div className="flex gap-2 pt-2 border-t">
+              <Button variant="secondary" size="sm" onClick={handleRecalcularCostos} title="Recalcular">
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+              <div className="flex-1" />
+              <Button variant="secondary" size="sm" onClick={() => router.back()}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
+                <Save className="w-4 h-4 mr-1" />
+                {isSaving ? '...' : 'Guardar'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Desktop: Row */}
+          <div className="hidden sm:flex gap-2 items-end">
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-700 mb-1">Insumo</label>
               <select
@@ -327,52 +377,97 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
         <div className="flex-1 overflow-y-auto p-3">
           {/* Tabla ingredientes */}
           {ingredientes.length > 0 ? (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Insumo</th>
-                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Cantidad</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">C.Unit.</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">C.Total</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-blue-50">%</th>
-                    <th className="px-2 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {ingredientes.map((ing) => (
-                    <tr key={ing.id} className={ing.isNew ? 'bg-green-50' : ''}>
-                      <td className="px-2 py-1.5 text-xs text-gray-900">{ing.insumo_nombre}</td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          type="number"
-                          step="0.001"
-                          min="0"
-                          value={ing.cantidad}
-                          onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
-                          className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
-                        />
-                        <span className="ml-1 text-xs text-gray-500">{ing.unidad_medida}</span>
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums">
-                        ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums">
-                        ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
-                        {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Button variant="ghost" size="sm" onClick={() => handleEliminarIngrediente(ing)}>
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                        </Button>
-                      </td>
+            <>
+              {/* Mobile: Cards */}
+              <div className="sm:hidden space-y-2">
+                {ingredientes.map((ing) => (
+                  <div key={ing.id} className={`rounded-lg p-3 border ${ing.isNew ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-sm font-medium text-gray-900">{ing.insumo_nombre}</span>
+                      <Button variant="ghost" size="sm" onClick={() => handleEliminarIngrediente(ing)}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="text-[10px] text-gray-500 mb-0.5">Cantidad</p>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={ing.cantidad}
+                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                          />
+                          <span className="text-xs text-gray-500">{ing.unidad_medida}</span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-500 mb-0.5">Costo</p>
+                        <p className="text-sm font-bold text-green-700">
+                          ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500 mb-0.5">Incidencia</p>
+                        <p className="text-sm font-semibold text-blue-700">
+                          {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden sm:block border rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Insumo</th>
+                      <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Cantidad</th>
+                      <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">C.Unit.</th>
+                      <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">C.Total</th>
+                      <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-blue-50">%</th>
+                      <th className="px-2 py-2"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {ingredientes.map((ing) => (
+                      <tr key={ing.id} className={ing.isNew ? 'bg-green-50' : ''}>
+                        <td className="px-2 py-1.5 text-xs text-gray-900">{ing.insumo_nombre}</td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={ing.cantidad}
+                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
+                          />
+                          <span className="ml-1 text-xs text-gray-500">{ing.unidad_medida}</span>
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums">
+                          ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums">
+                          ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
+                          {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Button variant="ghost" size="sm" onClick={() => handleEliminarIngrediente(ing)}>
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <div className="text-center py-4 border rounded-lg bg-gray-50">
               <p className="text-xs text-gray-500">No hay ingredientes agregados</p>
@@ -380,7 +475,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
           )}
 
           {/* Layout 50/50: Gráfico + Preparación */}
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Composición del costo */}
             <div className="border rounded-lg bg-gray-50 p-3">
               <h4 className="text-xs font-semibold text-gray-700 mb-2">Composición del costo</h4>
@@ -446,7 +541,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
                 value={preparacion}
                 onChange={(e) => setPreparacion(e.target.value)}
                 placeholder="Ej: Picar cebolla, mezclar con tomate..."
-                className="w-full h-32 text-xs border border-gray-200 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder:text-gray-300"
+                className="w-full h-32 text-base sm:text-xs border border-gray-200 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder:text-gray-300"
               />
             </div>
           </div>

@@ -100,15 +100,65 @@ export default function RecetasBasePage() {
     ? recetas.filter(r => r.nombre.toLowerCase().includes(busqueda.toLowerCase()))
     : recetas
 
+  // Card component for mobile
+  const RecetaCard = ({ receta }: { receta: RecetaConCosto }) => (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-start gap-2 flex-1 min-w-0">
+          <div className="p-1.5 bg-purple-100 rounded-lg flex-shrink-0">
+            <ChefHat className="w-4 h-4 text-purple-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900">{receta.nombre}</p>
+            {receta.descripcion && (
+              <p className="text-xs text-gray-400 italic">({receta.descripcion})</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <div>
+          <p className="text-[10px] text-gray-500">Rinde</p>
+          <p className="text-sm font-medium">{receta.rendimiento_porciones} porc.</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-gray-500">Costo Total</p>
+          <p className="text-sm font-medium">
+            ${receta.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] text-gray-500">$/Porción</p>
+          <p className="text-sm font-bold text-green-700">
+            ${receta.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-3 border-t">
+        <Link href={`/recetas-base/${receta.id}`}>
+          <Button variant="ghost" size="sm">
+            <Pencil className="w-4 h-4 mr-1" />
+            Editar
+          </Button>
+        </Link>
+        <Button variant="ghost" size="sm" onClick={() => handleDelete(receta.id)}>
+          <Trash2 className="w-4 h-4 text-red-500" />
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Elaboraciones</h1>
-          <p className="text-gray-600">Salsas, guarniciones y preparados</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Elaboraciones</h1>
+          <p className="text-sm text-gray-600">Salsas, guarniciones y preparados</p>
         </div>
-        <Link href="/recetas-base/nueva">
-          <Button>
+        <Link href="/recetas-base/nueva" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Nueva Elaboración
           </Button>
@@ -123,7 +173,7 @@ export default function RecetasBasePage() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar elaboración..."
-            className="pl-9 pr-3 py-2 w-64 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="pl-9 pr-3 py-2.5 sm:py-2 w-full sm:w-64 rounded-lg border border-gray-300 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
       </div>
@@ -137,59 +187,69 @@ export default function RecetasBasePage() {
           <p className="text-gray-500">No hay elaboraciones registradas</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Nombre</th>
-                <th className="px-4 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Rinde</th>
-                <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo Total</th>
-                <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">$/Porción</th>
-                <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {recetasFiltradas.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-purple-100 rounded-lg">
-                        <ChefHat className="w-4 h-4 text-purple-600" />
-                      </div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {r.nombre}
-                        {r.descripcion && (
-                          <span className="ml-2 text-xs text-gray-400 italic font-normal">({r.descripcion})</span>
-                        )}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2 text-center text-xs text-gray-600">
-                    {r.rendimiento_porciones}
-                  </td>
-                  <td className="px-4 py-2 text-right text-xs font-medium tabular-nums">
-                    <span className="text-gray-400">$</span><span className="ml-1">{r.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                  </td>
-                  <td className="px-4 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums">
-                    <span className="text-green-500 font-normal">$</span><span className="ml-1">{r.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex justify-end gap-1">
-                      <Link href={`/recetas-base/${r.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                      </Link>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)}>
-                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                      </Button>
-                    </div>
-                  </td>
+        <>
+          {/* Mobile: Cards */}
+          <div className="md:hidden space-y-3">
+            {recetasFiltradas.map((r) => (
+              <RecetaCard key={r.id} receta={r} />
+            ))}
+          </div>
+
+          {/* Desktop: Table */}
+          <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Nombre</th>
+                  <th className="px-4 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Rinde</th>
+                  <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo Total</th>
+                  <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">$/Porción</th>
+                  <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recetasFiltradas.map((r) => (
+                  <tr key={r.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-purple-100 rounded-lg">
+                          <ChefHat className="w-4 h-4 text-purple-600" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {r.nombre}
+                          {r.descripcion && (
+                            <span className="ml-2 text-xs text-gray-400 italic font-normal">({r.descripcion})</span>
+                          )}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-center text-xs text-gray-600">
+                      {r.rendimiento_porciones}
+                    </td>
+                    <td className="px-4 py-2 text-right text-xs font-medium tabular-nums">
+                      <span className="text-gray-400">$</span><span className="ml-1">{r.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                    </td>
+                    <td className="px-4 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums">
+                      <span className="text-green-500 font-normal">$</span><span className="ml-1">{r.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Link href={`/recetas-base/${r.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                        </Link>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)}>
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )

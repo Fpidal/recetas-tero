@@ -291,15 +291,15 @@ export default function NuevoPlatoPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Nuevo Plato</h1>
-          <p className="text-sm text-gray-600">Receta con insumos y/o recetas base</p>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Nuevo Plato</h1>
+          <p className="text-xs sm:text-sm text-gray-600">Receta con insumos y/o recetas base</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 space-y-4">
         {/* Datos básicos */}
-        <div className="grid grid-cols-4 gap-3">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="sm:col-span-2">
             <Input
               label="Nombre *"
               value={nombre}
@@ -337,7 +337,7 @@ export default function NuevoPlatoPage() {
               placeholder="1.0"
             />
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Descripción
             </label>
@@ -345,11 +345,11 @@ export default function NuevoPlatoPage() {
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               rows={2}
-              className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="Descripción opcional..."
             />
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Preparación
             </label>
@@ -357,7 +357,7 @@ export default function NuevoPlatoPage() {
               value={pasoAPaso}
               onChange={(e) => setPasoAPaso(e.target.value)}
               rows={3}
-              className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="1. Salpimentar el bife&#10;2. Sellar en plancha..."
             />
           </div>
@@ -372,7 +372,7 @@ export default function NuevoPlatoPage() {
             <button
               type="button"
               onClick={() => { setTipoIngrediente('insumo'); setSelectedItem('') }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-colors ${
                 tipoIngrediente === 'insumo'
                   ? 'bg-green-100 text-green-800 border-2 border-green-500'
                   : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
@@ -384,7 +384,7 @@ export default function NuevoPlatoPage() {
             <button
               type="button"
               onClick={() => { setTipoIngrediente('receta_base'); setSelectedItem('') }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-colors ${
                 tipoIngrediente === 'receta_base'
                   ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
                   : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
@@ -395,7 +395,7 @@ export default function NuevoPlatoPage() {
             </button>
           </div>
 
-          <div className="flex gap-3 items-end mb-3">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-end mb-3">
             <div className="flex-1">
               <Select
                 label={tipoIngrediente === 'insumo' ? 'Insumo' : 'Elaboración'}
@@ -407,83 +407,141 @@ export default function NuevoPlatoPage() {
                 onChange={(e) => setSelectedItem(e.target.value)}
               />
             </div>
-            <div className="w-32">
-              <Input
-                label={tipoIngrediente === 'insumo' ? 'Cantidad' : 'Porciones'}
-                type="number"
-                step="0.001"
-                min="0"
-                value={cantidad}
-                onChange={(e) => setCantidad(e.target.value)}
-                placeholder="0.00"
-              />
+            <div className="flex gap-3 items-end">
+              <div className="flex-1 sm:w-32">
+                <Input
+                  label={tipoIngrediente === 'insumo' ? 'Cantidad' : 'Porciones'}
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={cantidad}
+                  onChange={(e) => setCantidad(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <Button onClick={handleAgregarIngrediente} className="flex-shrink-0">
+                <Plus className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Agregar</span>
+              </Button>
             </div>
-            <Button onClick={handleAgregarIngrediente}>
-              <Plus className="w-4 h-4 mr-1" />
-              Agregar
-            </Button>
           </div>
 
           {/* Lista de ingredientes */}
           {ingredientes.length > 0 ? (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Tipo</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Ingrediente</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Cantidad</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500">C.Unit.</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-green-50">C.Total</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-blue-50">%</th>
-                    <th className="px-2 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {ingredientes.map((ing) => (
-                    <tr key={ing.id}>
-                      <td className="px-2 py-1.5">
+            <>
+              {/* Mobile: Cards */}
+              <div className="sm:hidden space-y-2">
+                {ingredientes.map((ing) => (
+                  <div key={ing.id} className="bg-gray-50 rounded-lg p-3 border">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
                         {ing.tipo === 'insumo' ? (
-                          <Package className="w-3.5 h-3.5 text-green-600" />
+                          <Package className="w-4 h-4 text-green-600 flex-shrink-0" />
                         ) : (
-                          <ChefHat className="w-3.5 h-3.5 text-purple-600" />
+                          <ChefHat className="w-4 h-4 text-purple-600 flex-shrink-0" />
                         )}
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-gray-900">{ing.nombre}</td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          type="number"
-                          step="0.001"
-                          min="0"
-                          value={ing.cantidad}
-                          onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
-                          className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
-                        />
-                        <span className="ml-1 text-xs text-gray-500">{ing.unidad}</span>
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums">
-                        ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums">
-                        ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </td>
-                      <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
-                        {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEliminarIngrediente(ing.id)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                        </Button>
-                      </td>
+                        <span className="text-sm font-medium text-gray-900 truncate">{ing.nombre}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEliminarIngrediente(ing.id)}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="text-[10px] text-gray-500 mb-0.5">Cantidad</p>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={ing.cantidad}
+                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                          />
+                          <span className="text-xs text-gray-500">{ing.unidad}</span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-500 mb-0.5">Costo</p>
+                        <p className="text-sm font-bold text-green-700">
+                          ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500 mb-0.5">Incidencia</p>
+                        <p className="text-sm font-semibold text-blue-700">
+                          {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden sm:block border rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Tipo</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Ingrediente</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Cantidad</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-gray-500">C.Unit.</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-green-50">C.Total</th>
+                      <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-blue-50">%</th>
+                      <th className="px-2 py-2"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {ingredientes.map((ing) => (
+                      <tr key={ing.id}>
+                        <td className="px-2 py-1.5">
+                          {ing.tipo === 'insumo' ? (
+                            <Package className="w-3.5 h-3.5 text-green-600" />
+                          ) : (
+                            <ChefHat className="w-3.5 h-3.5 text-purple-600" />
+                          )}
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-gray-900">{ing.nombre}</td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={ing.cantidad}
+                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
+                          />
+                          <span className="ml-1 text-xs text-gray-500">{ing.unidad}</span>
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums">
+                          ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums">
+                          ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
+                          {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEliminarIngrediente(ing.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <div className="text-center py-4 border rounded-lg bg-gray-50">
               <p className="text-sm text-gray-500">No hay ingredientes agregados</p>
@@ -546,11 +604,11 @@ export default function NuevoPlatoPage() {
         </div>
 
         {/* Botones */}
-        <div className="flex justify-end gap-3 border-t pt-3">
-          <Button variant="secondary" onClick={() => router.back()}>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 border-t pt-3">
+          <Button variant="secondary" onClick={() => router.back()} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button onClick={handleGuardar} disabled={isSaving}>
+          <Button onClick={handleGuardar} disabled={isSaving} className="w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
             {isSaving ? 'Guardando...' : 'Guardar Plato'}
           </Button>

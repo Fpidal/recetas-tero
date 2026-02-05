@@ -122,13 +122,13 @@ export async function generarPDFOrden(ordenId: string) {
     return `$${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
-  // Formatear fecha: "Tigre 04 de febrero de 2026"
+  // Formatear fecha: "Benavidez 04 de febrero de 2026"
   const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
   const fechaObj = new Date(orden.fecha)
   const dia = fechaObj.getDate().toString().padStart(2, '0')
   const mes = meses[fechaObj.getMonth()]
   const anio = fechaObj.getFullYear()
-  const fechaFormateada = `Tigre ${dia} de ${mes} de ${anio}`
+  const fechaFormateada = `Benavidez ${dia} de ${mes} de ${anio}`
 
   // Fondo
   doc.setFillColor(255, 255, 255)
@@ -153,16 +153,16 @@ export async function generarPDFOrden(ordenId: string) {
     } catch {}
   }
 
-  // Texto central: Logo/Tero arriba, "Orden de compra" abajo
-  const centerX = margin + 26
+  // Texto: Tero arriba, "Orden de compra" abajo (pegado al logo)
+  const textX = margin + 24
   doc.setFont('times', 'bolditalic')
   doc.setFontSize(14)
   doc.setTextColor(255, 255, 255)
-  doc.text('Tero', centerX, y + 10)
+  doc.text('Tero', textX, y + 10)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
-  doc.text('Orden de compra', centerX, y + 18)
+  doc.text('Orden de compra', textX, y + 18)
 
   // Datos derecha (Orden de compra N°, Fecha)
   const rightX = pageWidth - margin - 4

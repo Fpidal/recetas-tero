@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, ArrowLeft, Save, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
-import { formatearMoneda, formatearCantidad, parsearNumero } from '@/lib/formato-numeros'
+import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
 
 interface Proveedor {
   id: string
@@ -139,7 +139,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     setSelectedInsumo(insumoId)
     const insumo = insumos.find(i => i.id === insumoId)
     if (insumo && insumo.precio_actual) {
-      setPrecioUnitario(formatearCantidad(insumo.precio_actual, 2))
+      setPrecioUnitario(insumo.precio_actual.toString())
     } else {
       setPrecioUnitario('')
     }
@@ -159,8 +159,8 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
       return
     }
 
-    const cantidadNum = parsearNumero(cantidad)
-    const precioNum = parsearNumero(precioUnitario)
+    const cantidadNum = parseFloat(cantidad)
+    const precioNum = parseFloat(precioUnitario)
     const subtotal = cantidadNum * precioNum
     const ivaPorcentaje = insumo.iva_porcentaje || 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
@@ -194,7 +194,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   }
 
   function handleCantidadChange(itemId: string, nuevaCantidad: string) {
-    const cantidadNum = parsearNumero(nuevaCantidad)
+    const cantidadNum = parseFloat(nuevaCantidad) || 0
     setItems(items.map(item => {
       if (item.id === itemId) {
         const subtotal = cantidadNum * item.precio_unitario
@@ -211,7 +211,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   }
 
   function handlePrecioChange(itemId: string, nuevoPrecio: string) {
-    const precioNum = parsearNumero(nuevoPrecio)
+    const precioNum = parseFloat(nuevoPrecio) || 0
     setItems(items.map(item => {
       if (item.id === itemId) {
         const subtotal = item.cantidad * precioNum

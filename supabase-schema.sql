@@ -97,6 +97,7 @@ CREATE TABLE precios_insumo (
   precio DECIMAL(12,2) NOT NULL,
   fecha DATE NOT NULL DEFAULT CURRENT_DATE,
   es_precio_actual BOOLEAN DEFAULT false,
+  factura_item_id UUID REFERENCES factura_items(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
@@ -531,8 +532,8 @@ BEGIN
   WHERE insumo_id = NEW.insumo_id AND es_precio_actual = true;
 
   -- Insertar nuevo precio (dividir por cantidad_por_paquete para precio por unidad de medida)
-  INSERT INTO precios_insumo (insumo_id, proveedor_id, precio, fecha, es_precio_actual)
-  SELECT NEW.insumo_id, fp.proveedor_id, NEW.precio_unitario / v_cantidad_por_paquete, fp.fecha, true
+  INSERT INTO precios_insumo (insumo_id, proveedor_id, precio, fecha, es_precio_actual, factura_item_id)
+  SELECT NEW.insumo_id, fp.proveedor_id, NEW.precio_unitario / v_cantidad_por_paquete, fp.fecha, true, NEW.id
   FROM facturas_proveedor fp
   WHERE fp.id = NEW.factura_id;
 
@@ -543,6 +544,42 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trigger_actualizar_precio_factura
   AFTER INSERT ON factura_items
   FOR EACH ROW EXECUTE FUNCTION actualizar_precio_desde_factura();
+
+-- =====================================================
+-- FUNCIÓN: Revertir precio al eliminar factura
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION revertir_precio_al_eliminar_factura()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_precio_anterior_id UUID;
+BEGIN
+  -- Buscar el precio anterior para este insumo
+  SELECT id INTO v_precio_anterior_id
+  FROM precios_insumo
+  WHERE insumo_id = OLD.insumo_id
+    AND factura_item_id != OLD.id
+    AND es_precio_actual = false
+  ORDER BY fecha DESC
+  LIMIT 1;
+
+  -- Si hay precio anterior, marcarlo como actual
+  IF v_precio_anterior_id IS NOT NULL THEN
+    UPDATE precios_insumo
+    SET es_precio_actual = true
+    WHERE id = v_precio_anterior_id;
+  END IF;
+
+  -- Eliminar el precio que creó esta factura
+  DELETE FROM precios_insumo WHERE factura_item_id = OLD.id;
+
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_revertir_precio_factura
+  BEFORE DELETE ON factura_items
+  FOR EACH ROW EXECUTE FUNCTION revertir_precio_al_eliminar_factura();
 
 -- =====================================================
 -- FUNCIÓN: Calcular total de orden de compra

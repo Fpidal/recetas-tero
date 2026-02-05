@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Pencil, FileText, X, Trash2 } from 'lucide-react'
+import { Plus, Pencil, FileText, X, Trash2, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { generarPDFOrden } from '@/lib/generar-pdf-oc'
 import { Button, Select, Table } from '@/components/ui'
@@ -81,6 +81,7 @@ const CATEGORIAS = [
 export default function OrdenesCompraPage() {
   const [ordenes, setOrdenes] = useState<OrdenConProveedor[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [tabActiva, setTabActiva] = useState<'pendientes' | 'recibidas'>('pendientes')
 
   // Filtros
   const [filtroFechaDesde, setFiltroFechaDesde] = useState('')
@@ -128,18 +129,39 @@ export default function OrdenesCompraPage() {
     ]
   }, [ordenes])
 
+  // Separar órdenes por estado
+  // Pendientes: borrador, enviada, cancelada (para gestionar/anular)
+  // Recibidas: recibida, parcialmente_recibida (ya ingresó mercadería)
+  const ordenesPendientes = useMemo(() => {
+    return ordenes.filter((o) => ['borrador', 'enviada', 'cancelada'].includes(o.estado))
+  }, [ordenes])
+
+  const ordenesRecibidas = useMemo(() => {
+    return ordenes.filter((o) => ['recibida', 'parcialmente_recibida'].includes(o.estado))
+  }, [ordenes])
+
+  // Órdenes según tab activa
+  const ordenesDeTab = tabActiva === 'pendientes' ? ordenesPendientes : ordenesRecibidas
+
   // Filtrado client-side
   const ordenesFiltradas = useMemo(() => {
-    return ordenes.filter((o) => {
+    return ordenesDeTab.filter((o) => {
       if (filtroFechaDesde && o.fecha < filtroFechaDesde) return false
       if (filtroFechaHasta && o.fecha > filtroFechaHasta) return false
       if (filtroProveedor && o.proveedor_id !== filtroProveedor) return false
       if (filtroCategoria && o.proveedores?.categoria !== filtroCategoria) return false
       return true
     })
-  }, [ordenes, filtroFechaDesde, filtroFechaHasta, filtroProveedor, filtroCategoria])
+  }, [ordenesDeTab, filtroFechaDesde, filtroFechaHasta, filtroProveedor, filtroCategoria])
 
   const hayFiltrosActivos = filtroFechaDesde || filtroFechaHasta || filtroProveedor || filtroCategoria
+
+  // Total de pendientes (sin recibir, excluye canceladas)
+  const totalPendientes = useMemo(() => {
+    return ordenesPendientes
+      .filter((o) => o.estado !== 'cancelada')
+      .reduce((sum, o) => sum + calcularTotalConIva(o), 0)
+  }, [ordenesPendientes])
 
   // Calcular total de órdenes filtradas
   const totalOrdenesFiltradas = useMemo(() => {
@@ -217,6 +239,16 @@ export default function OrdenesCompraPage() {
       className: 'text-right pr-4',
       render: (o: OrdenConProveedor) => (
         <div className="flex justify-end gap-2">
+          {o.estado === 'parcialmente_recibida' && (
+            <Button variant="ghost" size="sm" onClick={async () => {
+              if (confirm('¿Marcar como recibida y cerrar esta orden?')) {
+                await supabase.from('ordenes_compra').update({ estado: 'recibida' } as any).eq('id', o.id)
+                fetchOrdenes()
+              }
+            }} title="Marcar como recibida">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+            </Button>
+          )}
           {o.estado === 'cancelada' && (
             <Button variant="ghost" size="sm" onClick={async () => {
               await supabase.from('ordenes_compra').update({ activo: false } as any).eq('id', o.id)
@@ -275,6 +307,16 @@ export default function OrdenesCompraPage() {
           ${Math.round(calcularTotalConIva(orden)).toLocaleString('es-AR')}
         </span>
         <div className="flex gap-2">
+          {orden.estado === 'parcialmente_recibida' && (
+            <Button variant="ghost" size="sm" onClick={async () => {
+              if (confirm('¿Marcar como recibida y cerrar esta orden?')) {
+                await supabase.from('ordenes_compra').update({ estado: 'recibida' } as any).eq('id', orden.id)
+                fetchOrdenes()
+              }
+            }} title="Marcar como recibida">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+            </Button>
+          )}
           {orden.estado === 'cancelada' && (
             <Button variant="ghost" size="sm" onClick={async () => {
               await supabase.from('ordenes_compra').update({ activo: false } as any).eq('id', orden.id)
@@ -305,11 +347,10 @@ export default function OrdenesCompraPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Órdenes de Compra</h1>
           <p className="text-sm text-gray-600">
-            {ordenesFiltradas.length} {ordenesFiltradas.length === 1 ? 'orden' : 'órdenes'}
-            {' · '}
             <span className="font-semibold text-gray-900">
-              ${Math.round(totalOrdenesFiltradas).toLocaleString('es-AR')}
+              ${Math.round(totalPendientes).toLocaleString('es-AR')}
             </span>
+            {' '}pendiente de recibir
           </p>
         </div>
         <Link href="/ordenes-compra/nueva" className="w-full sm:w-auto">
@@ -318,6 +359,40 @@ export default function OrdenesCompraPage() {
             Nueva Orden
           </Button>
         </Link>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 mb-4">
+        <button
+          onClick={() => setTabActiva('pendientes')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tabActiva === 'pendientes'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          Pendientes
+          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+            tabActiva === 'pendientes' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {ordenesPendientes.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setTabActiva('recibidas')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tabActiva === 'recibidas'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          Recibidas
+          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+            tabActiva === 'recibidas' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {ordenesRecibidas.length}
+          </span>
+        </button>
       </div>
 
       {/* Barra de filtros */}
@@ -368,7 +443,7 @@ export default function OrdenesCompraPage() {
         </div>
         {hayFiltrosActivos && (
           <p className="text-xs text-gray-400 mt-2">
-            Mostrando {ordenesFiltradas.length} de {ordenes.length} órdenes
+            Mostrando {ordenesFiltradas.length} de {ordenesDeTab.length} órdenes
           </p>
         )}
       </div>

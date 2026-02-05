@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, type LucideIcon } from 'lucide-react'
+import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
 
@@ -56,6 +56,7 @@ export default function CartaPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [seccionesExpandidas, setSeccionesExpandidas] = useState<Set<string>>(new Set(SECCIONES_ORDEN))
   const [tabActiva, setTabActiva] = useState<'en_carta' | 'fuera_carta'>('en_carta')
+  const [busqueda, setBusqueda] = useState('')
 
   // Form para agregar
   const [selectedPlato, setSelectedPlato] = useState('')
@@ -371,8 +372,9 @@ export default function CartaPage() {
 
   const fmt = (v: number) => `$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 
-  // Agrupar items por sección según tab activa
-  const itemsActuales = tabActiva === 'en_carta' ? items : itemsFueraCarta
+  // Agrupar items por sección según tab activa y búsqueda
+  const itemsActuales = (tabActiva === 'en_carta' ? items : itemsFueraCarta)
+    .filter(i => !busqueda || i.plato_nombre.toLowerCase().includes(busqueda.toLowerCase()))
   const itemsPorSeccion = SECCIONES_ORDEN
     .map(seccion => ({
       seccion,
@@ -435,28 +437,40 @@ export default function CartaPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-4 border-b">
-        <button
-          onClick={() => setTabActiva('en_carta')}
-          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
-            tabActiva === 'en_carta'
-              ? 'border-primary-600 text-primary-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          En Carta ({items.length})
-        </button>
-        <button
-          onClick={() => setTabActiva('fuera_carta')}
-          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
-            tabActiva === 'fuera_carta'
-              ? 'border-primary-600 text-primary-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Fuera de Carta ({itemsFueraCarta.length})
-        </button>
+      {/* Tabs y Buscador */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="flex gap-1 border-b sm:border-b-0">
+          <button
+            onClick={() => setTabActiva('en_carta')}
+            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+              tabActiva === 'en_carta'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            En Carta ({items.length})
+          </button>
+          <button
+            onClick={() => setTabActiva('fuera_carta')}
+            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+              tabActiva === 'fuera_carta'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Fuera de Carta ({itemsFueraCarta.length})
+          </button>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar plato..."
+            className="pl-9 pr-3 py-2 w-full sm:w-48 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
       </div>
 
       {/* Tabla */}

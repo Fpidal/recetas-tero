@@ -523,9 +523,9 @@ BEGIN
   SET es_precio_actual = false
   WHERE insumo_id = NEW.insumo_id AND es_precio_actual = true;
 
-  -- Insertar nuevo precio
+  -- Insertar nuevo precio (dividir por cantidad para obtener precio por unidad)
   INSERT INTO precios_insumo (insumo_id, proveedor_id, precio, fecha, es_precio_actual)
-  SELECT NEW.insumo_id, fp.proveedor_id, NEW.precio_unitario, fp.fecha, true
+  SELECT NEW.insumo_id, fp.proveedor_id, NEW.precio_unitario / NEW.cantidad, fp.fecha, true
   FROM facturas_proveedor fp
   WHERE fp.id = NEW.factura_id;
 

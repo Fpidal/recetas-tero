@@ -146,15 +146,16 @@ export async function generarPDFOrden(ordenId: string) {
   doc.setFillColor(...TERRACOTA)
   doc.rect(margin, y, contentWidth, headerHeight, 'F')
 
-  // Logo a la izquierda (más grande)
+  // Logo a la izquierda (si existe)
+  let textX = margin + 4  // Por defecto pegado al margen
   if (logoDataUrl) {
     try {
       doc.addImage(logoDataUrl, 'PNG', margin + 3, y + 2, 20, 20)
+      textX = margin + 26  // Si hay logo, mover texto a la derecha
     } catch {}
   }
 
-  // Texto: Tero arriba, "Orden de compra" abajo (pegado al logo)
-  const textX = margin + 24
+  // Texto: Tero arriba, "Orden de compra" abajo
   doc.setFont('times', 'bolditalic')
   doc.setFontSize(14)
   doc.setTextColor(255, 255, 255)

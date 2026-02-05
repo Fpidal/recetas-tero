@@ -43,7 +43,7 @@ interface Ingrediente {
   nombre: string
   unidad: string
   categoria: string
-  cantidad: number
+  cantidad: number | string  // string mientras edita, number para cálculos
   costo_unitario: number // Costo final por unidad
   costo_linea: number
   isNew?: boolean
@@ -280,10 +280,12 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   }
 
   function handleCantidadChange(id: string, nuevaCantidad: string) {
+    // Guardar el string tal cual para permitir escribir con coma
+    // Calcular costo con el valor numérico
     const cantidadNum = parsearNumero(nuevaCantidad)
     setIngredientes(ingredientes.map(ing => {
       if (ing.id === id) {
-        return { ...ing, cantidad: cantidadNum, costo_linea: calcularCostoLinea(ing.costo_unitario, cantidadNum) }
+        return { ...ing, cantidad: nuevaCantidad, costo_linea: calcularCostoLinea(ing.costo_unitario, cantidadNum) }
       }
       return ing
     }))
@@ -291,13 +293,14 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
 
   async function handleRecalcularCostos() {
     const updated = ingredientes.map(ing => {
+      const cantidadNum = typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad
       if (ing.tipo === 'insumo') {
         const insumo = insumos.find(i => i.id === ing.item_id)
         const costoUnitario = insumo?.costo_final || 0
         return {
           ...ing,
           costo_unitario: costoUnitario,
-          costo_linea: calcularCostoLinea(costoUnitario, ing.cantidad)
+          costo_linea: calcularCostoLinea(costoUnitario, cantidadNum)
         }
       } else {
         const receta = recetasBase.find(r => r.id === ing.item_id)
@@ -305,7 +308,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
         return {
           ...ing,
           costo_unitario: costoUnitario,
-          costo_linea: calcularCostoLinea(costoUnitario, ing.cantidad)
+          costo_linea: calcularCostoLinea(costoUnitario, cantidadNum)
         }
       }
     })
@@ -366,10 +369,11 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
 
     // Actualizar ingredientes existentes
     for (const ing of ingredientes.filter(i => !i.isNew)) {
+      const cantidadNum = typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad
       await supabase
         .from('plato_ingredientes')
         .update({
-          cantidad: ing.cantidad,
+          cantidad: cantidadNum,
           costo_linea: ing.costo_linea,
         })
         .eq('id', ing.id)
@@ -380,13 +384,16 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
     if (nuevos.length > 0) {
       await supabase
         .from('plato_ingredientes')
-        .insert(nuevos.map(ing => ({
-          plato_id: id,
-          insumo_id: ing.tipo === 'insumo' ? ing.item_id : null,
-          receta_base_id: ing.tipo === 'receta_base' ? ing.item_id : null,
-          cantidad: ing.cantidad,
-          costo_linea: ing.costo_linea,
-        })))
+        .insert(nuevos.map(ing => {
+          const cantidadNum = typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad
+          return {
+            plato_id: id,
+            insumo_id: ing.tipo === 'insumo' ? ing.item_id : null,
+            receta_base_id: ing.tipo === 'receta_base' ? ing.item_id : null,
+            cantidad: cantidadNum,
+            costo_linea: ing.costo_linea,
+          }
+        }))
     }
 
     // Actualizar carta si existe
@@ -432,17 +439,18 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
 
     // Formatear cantidad legible
     function formatCantidad(ing: Ingrediente): string {
-      if (ing.cantidad <= 0) return 'c/n'
+      const cant = typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad
+      if (cant <= 0) return 'c/n'
       const unidad = ing.unidad
-      if (unidad === 'kg' && ing.cantidad < 1) {
-        return `${Math.round(ing.cantidad * 1000)} g`
+      if (unidad === 'kg' && cant < 1) {
+        return `${Math.round(cant * 1000)} g`
       }
-      if (unidad === 'lt' && ing.cantidad < 1) {
-        return `${Math.round(ing.cantidad * 1000)} ml`
+      if (unidad === 'lt' && cant < 1) {
+        return `${Math.round(cant * 1000)} ml`
       }
-      const cantStr = ing.cantidad % 1 === 0
-        ? ing.cantidad.toFixed(0)
-        : ing.cantidad.toFixed(1).replace(/\.0$/, '').replace('.', ',')
+      const cantStr = cant % 1 === 0
+        ? cant.toFixed(0)
+        : cant.toFixed(1).replace(/\.0$/, '').replace('.', ',')
       return `${cantStr} ${unidad}`
     }
 
@@ -870,7 +878,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad.toString().replace('.', ',')}
+                            value={typeof ing.cantidad === 'string' ? ing.cantidad : ing.cantidad.toString().replace('.', ',')}
                             onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
@@ -923,7 +931,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad.toString().replace('.', ',')}
+                            value={typeof ing.cantidad === 'string' ? ing.cantidad : ing.cantidad.toString().replace('.', ',')}
                             onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
                           />

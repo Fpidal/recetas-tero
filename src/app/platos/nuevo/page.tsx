@@ -42,7 +42,7 @@ interface Ingrediente {
   nombre: string
   unidad: string
   categoria: string
-  cantidad: number
+  cantidad: number | string
   costo_unitario: number // Costo final por unidad
   costo_linea: number
 }
@@ -198,10 +198,11 @@ export default function NuevoPlatoPage() {
   }
 
   function handleCantidadChange(id: string, nuevaCantidad: string) {
+    // Guardar el string tal cual para permitir escribir con coma
     const cantidadNum = parsearNumero(nuevaCantidad)
     setIngredientes(ingredientes.map(ing => {
       if (ing.id === id) {
-        return { ...ing, cantidad: cantidadNum, costo_linea: calcularCostoLinea(ing.costo_unitario, cantidadNum) }
+        return { ...ing, cantidad: nuevaCantidad, costo_linea: calcularCostoLinea(ing.costo_unitario, cantidadNum) }
       }
       return ing
     }))
@@ -246,13 +247,16 @@ export default function NuevoPlatoPage() {
     }
 
     // Insertar ingredientes
-    const ingredientesData = ingredientes.map(ing => ({
-      plato_id: plato.id,
-      insumo_id: ing.tipo === 'insumo' ? ing.item_id : null,
-      receta_base_id: ing.tipo === 'receta_base' ? ing.item_id : null,
-      cantidad: ing.cantidad,
-      costo_linea: ing.costo_linea,
-    }))
+    const ingredientesData = ingredientes.map(ing => {
+      const cantidadNum = typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad
+      return {
+        plato_id: plato.id,
+        insumo_id: ing.tipo === 'insumo' ? ing.item_id : null,
+        receta_base_id: ing.tipo === 'receta_base' ? ing.item_id : null,
+        cantidad: cantidadNum,
+        costo_linea: ing.costo_linea,
+      }
+    })
 
     const { error: ingError } = await supabase
       .from('plato_ingredientes')
@@ -457,7 +461,7 @@ export default function NuevoPlatoPage() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad.toString().replace('.', ',')}
+                            value={typeof ing.cantidad === 'string' ? ing.cantidad : ing.cantidad.toString().replace('.', ',')}
                             onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
@@ -510,7 +514,7 @@ export default function NuevoPlatoPage() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad.toString().replace('.', ',')}
+                            value={typeof ing.cantidad === 'string' ? ing.cantidad : ing.cantidad.toString().replace('.', ',')}
                             onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
                           />

@@ -821,9 +821,8 @@ export default function NuevaFacturaPage() {
                     inputMode="decimal"
                     value={p.valor}
                     onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9.,]/g, '')
                       const newPerc = percepciones.map((perc, i) =>
-                        i === idx ? { ...perc, valor: val } : perc
+                        i === idx ? { ...perc, valor: formatearInputNumero(e.target.value) } : perc
                       )
                       setPercepciones(newPerc)
                     }}

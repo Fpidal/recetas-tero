@@ -91,14 +91,12 @@ export function parsearNumero(valor: string): number {
 
 /**
  * Formatea el valor de un input mientras el usuario escribe
- * Permite: dígitos, una coma como separador decimal
+ * Solo permite coma como decimal, agrega puntos de miles automáticamente
+ * Ejemplo: 33000,25 → 33.000,25
  */
 export function formatearInputNumero(valor: string): string {
-  // Permitir solo dígitos, puntos y comas
-  let limpio = valor.replace(/[^\d.,]/g, '')
-
-  // Reemplazar punto por coma (para que el usuario pueda usar ambos)
-  limpio = limpio.replace('.', ',')
+  // Solo permitir dígitos y coma
+  let limpio = valor.replace(/[^\d,]/g, '')
 
   // Asegurar solo una coma
   const partes = limpio.split(',')
@@ -106,5 +104,15 @@ export function formatearInputNumero(valor: string): string {
     limpio = partes[0] + ',' + partes.slice(1).join('')
   }
 
-  return limpio
+  // Separar parte entera y decimal
+  const [entero, decimal] = limpio.split(',')
+
+  // Agregar puntos de miles a la parte entera
+  const enteroConPuntos = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+  // Reconstruir
+  if (decimal !== undefined) {
+    return enteroConPuntos + ',' + decimal
+  }
+  return enteroConPuntos
 }

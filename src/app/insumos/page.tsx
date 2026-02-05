@@ -6,13 +6,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Modal, Select } from '@/components/ui'
 import { CategoriaInsumo, UnidadMedida } from '@/types/database'
-import { formatearMoneda } from '@/lib/formato-numeros'
-
-// Parsear número que puede venir con coma o punto como decimal
-function parseDecimal(value: string): number {
-  if (!value) return 0
-  return parseFloat(value.replace(',', '.')) || 0
-}
+import { formatearMoneda, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 
 interface InsumoCompleto {
   id: string
@@ -211,7 +205,7 @@ export default function InsumosPage() {
       iva_porcentaje: !isNaN(ivaValue) ? ivaValue : 21,
     }
 
-    const precioPaquete = parseDecimal(form.precio)
+    const precioPaquete = parsearNumero(form.precio)
     const precio = precioPaquete > 0 ? precioPaquete / cantPaq : 0
     const proveedorId = form.proveedor_id
 
@@ -721,11 +715,7 @@ export default function InsumosPage() {
                 type="text"
                 inputMode="decimal"
                 value={form.precio}
-                onChange={(e) => {
-                  // Permitir números, punto y coma
-                  const val = e.target.value.replace(/[^0-9.,]/g, '')
-                  setForm({ ...form, precio: val })
-                }}
+                onChange={(e) => setForm({ ...form, precio: formatearInputNumero(e.target.value) })}
                 placeholder="0,00"
               />
 
@@ -745,13 +735,13 @@ export default function InsumosPage() {
             )}
           </div>
 
-          {(form.precio && parseDecimal(form.precio) > 0) && (
+          {(form.precio && parsearNumero(form.precio) > 0) && (
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <p className="text-sm font-medium text-gray-700">Vista previa de costos:</p>
               {(() => {
                 const iva = parseFloat(form.iva_porcentaje) || 0
                 const merma = parseFloat(form.merma_porcentaje) || 0
-                const precioPaquete = parseDecimal(form.precio)
+                const precioPaquete = parsearNumero(form.precio)
                 const cantPaq = parseFloat(form.cantidad_por_paquete) || 1
                 const precioUnitario = precioPaquete / cantPaq
                 const costoConIva = calcularCostoConIva(precioUnitario, iva)

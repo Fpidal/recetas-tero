@@ -51,21 +51,21 @@ export default function Sidebar() {
   }, [pathname])
 
   async function fetchPapeleraCount() {
-    const [prov, ins, rb, pl, me, mesp, ca, oc, fa] = await Promise.all([
+    // Nota: carta no se cuenta porque "Fuera de Carta" no es papelera, es temporal
+    const [prov, ins, rb, pl, me, mesp, oc, fa] = await Promise.all([
       supabase.from('proveedores').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('insumos').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('recetas_base').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('platos').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('menus_ejecutivos').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('menus_especiales').select('id', { count: 'exact', head: true }).eq('activo', false),
-      supabase.from('carta').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('ordenes_compra').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('facturas_proveedor').select('id', { count: 'exact', head: true }).eq('activo', false),
     ])
 
     const total = (prov.count || 0) + (ins.count || 0) + (rb.count || 0) +
       (pl.count || 0) + (me.count || 0) + (mesp.count || 0) +
-      (ca.count || 0) + (oc.count || 0) + (fa.count || 0)
+      (oc.count || 0) + (fa.count || 0)
 
     setPapeleraCount(total)
   }

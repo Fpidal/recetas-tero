@@ -19,8 +19,8 @@ interface Insumo {
   unidad_medida: string
   categoria: string
   precio_actual: number | null
-  cantidad_por_paquete: number
   iva_porcentaje: number
+  cantidad_por_paquete?: number | null
 }
 
 interface OrdenCompra {
@@ -164,9 +164,11 @@ export default function NuevaFacturaPage() {
     const insumo = insumos.find(i => i.id === insumoId)
     if (insumo && insumo.precio_actual) {
       // Mostrar precio del paquete (precio unitario × cantidad por paquete)
-      const cantPaq = Number(insumo.cantidad_por_paquete) || 1
+      const cantPaq = insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1
       const precioPaquete = insumo.precio_actual * cantPaq
-      setPrecioUnitario(precioPaquete.toFixed(2).replace('.', ','))
+      // Formatear con coma decimal
+      const precioStr = precioPaquete.toFixed(2).replace('.', ',')
+      setPrecioUnitario(precioStr)
     } else {
       setPrecioUnitario('')
     }

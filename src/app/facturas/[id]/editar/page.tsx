@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, ArrowLeft, Save, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
+import { formatearMoneda, formatearCantidad, parsearNumero } from '@/lib/formato-numeros'
 
 interface Proveedor {
   id: string
@@ -50,6 +51,13 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
+  // Percepciones (objetos independientes)
+  const [percepciones, setPercepciones] = useState(() => [
+    { nombre: '', porcentaje: '', valor: '' },
+    { nombre: '', porcentaje: '', valor: '' },
+    { nombre: '', porcentaje: '', valor: '' },
+  ])
+
   useEffect(() => {
     fetchData()
   }, [id])
@@ -62,7 +70,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
       supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, precio_actual, iva_porcentaje').eq('activo', true).order('nombre'),
       supabase.from('facturas_proveedor')
         .select(`
-          id, proveedor_id, numero_factura, fecha, notas,
+          id, proveedor_id, numero_factura, fecha, notas, percepciones,
           factura_items (
             id, insumo_id, cantidad, precio_unitario, subtotal,
             insumos (nombre, unidad_medida, iva_porcentaje)
@@ -85,6 +93,25 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     setNumeroFactura(facturaRes.data.numero_factura)
     setFecha(facturaRes.data.fecha)
     setNotas(facturaRes.data.notas || '')
+
+    // Cargar percepciones
+    if (facturaRes.data.percepciones && Array.isArray(facturaRes.data.percepciones)) {
+      const percLoaded = facturaRes.data.percepciones as { nombre: string; porcentaje?: string; valor: string }[]
+      // Rellenar hasta 3 filas con objetos independientes
+      const percPadded = []
+      for (let i = 0; i < 3; i++) {
+        if (percLoaded[i]) {
+          percPadded.push({
+            nombre: percLoaded[i].nombre || '',
+            porcentaje: percLoaded[i].porcentaje || '',
+            valor: percLoaded[i].valor?.toString() || ''
+          })
+        } else {
+          percPadded.push({ nombre: '', porcentaje: '', valor: '' })
+        }
+      }
+      setPercepciones(percPadded)
+    }
 
     const itemsData: ItemFactura[] = (facturaRes.data.factura_items as any[]).map((item: any) => {
       const subtotal = parseFloat(item.subtotal)
@@ -112,7 +139,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     setSelectedInsumo(insumoId)
     const insumo = insumos.find(i => i.id === insumoId)
     if (insumo && insumo.precio_actual) {
-      setPrecioUnitario(insumo.precio_actual.toString())
+      setPrecioUnitario(formatearCantidad(insumo.precio_actual, 2))
     } else {
       setPrecioUnitario('')
     }
@@ -132,8 +159,8 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
       return
     }
 
-    const cantidadNum = parseFloat(cantidad)
-    const precioNum = parseFloat(precioUnitario)
+    const cantidadNum = parsearNumero(cantidad)
+    const precioNum = parsearNumero(precioUnitario)
     const subtotal = cantidadNum * precioNum
     const ivaPorcentaje = insumo.iva_porcentaje || 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
@@ -167,7 +194,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   }
 
   function handleCantidadChange(itemId: string, nuevaCantidad: string) {
-    const cantidadNum = parseFloat(nuevaCantidad) || 0
+    const cantidadNum = parsearNumero(nuevaCantidad)
     setItems(items.map(item => {
       if (item.id === itemId) {
         const subtotal = cantidadNum * item.precio_unitario
@@ -184,7 +211,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   }
 
   function handlePrecioChange(itemId: string, nuevoPrecio: string) {
-    const precioNum = parseFloat(nuevoPrecio) || 0
+    const precioNum = parsearNumero(nuevoPrecio)
     setItems(items.map(item => {
       if (item.id === itemId) {
         const subtotal = item.cantidad * precioNum
@@ -205,7 +232,8 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   const totalIva21 = itemsActivos.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva105 = itemsActivos.filter(i => i.iva_porcentaje === 10.5).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva = itemsActivos.reduce((sum, item) => sum + item.iva_monto, 0)
-  const total = subtotalNeto + totalIva
+  const totalPercepciones = percepciones.reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0)
+  const total = subtotalNeto + totalIva + totalPercepciones
 
   async function handleGuardar() {
     if (!selectedProveedor) {
@@ -225,6 +253,11 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
     setIsSaving(true)
 
+    // Filtrar percepciones con valor
+    const percepcionesConValor = percepciones
+      .filter(p => p.nombre.trim() && parseFloat(p.valor) > 0)
+      .map(p => ({ nombre: p.nombre, porcentaje: p.porcentaje, valor: p.valor }))
+
     // Actualizar factura
     const { error: facturaError } = await supabase
       .from('facturas_proveedor')
@@ -234,6 +267,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         fecha: fecha,
         total: total,
         notas: notas || null,
+        percepciones: percepcionesConValor.length > 0 ? percepcionesConValor : null,
       })
       .eq('id', id)
 
@@ -253,31 +287,42 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         .in('id', itemsEliminados.map(i => i.id))
     }
 
-    // Actualizar items existentes
+    // Actualizar items existentes (subtotal es campo calculado, no se puede actualizar)
     const itemsExistentes = itemsActivos.filter(i => !i.isNew && itemsOriginales.includes(i.id))
     for (const item of itemsExistentes) {
-      await supabase
+      const { error: updateErr } = await supabase
         .from('factura_items')
         .update({
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
-          subtotal: item.subtotal,
         })
         .eq('id', item.id)
+      if (updateErr) console.error('Error actualizando item:', updateErr)
     }
 
-    // Insertar nuevos items (esto dispara el trigger que actualiza precios)
+    // Insertar nuevos items (subtotal es campo calculado, no se incluye)
     const itemsNuevos = itemsActivos.filter(i => i.isNew)
     if (itemsNuevos.length > 0) {
-      await supabase
+      const insertData = itemsNuevos.map(item => ({
+        factura_id: id,
+        insumo_id: item.insumo_id,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_unitario,
+      }))
+      console.log('Insertando items nuevos:', insertData)
+
+      const { data: insertedData, error: insertErr } = await supabase
         .from('factura_items')
-        .insert(itemsNuevos.map(item => ({
-          factura_id: id,
-          insumo_id: item.insumo_id,
-          cantidad: item.cantidad,
-          precio_unitario: item.precio_unitario,
-          subtotal: item.subtotal,
-        })))
+        .insert(insertData)
+        .select()
+
+      if (insertErr) {
+        console.error('Error insertando items:', insertErr)
+        alert(`Error al guardar items nuevos: ${insertErr.message}`)
+        setIsSaving(false)
+        return
+      }
+      console.log('Items insertados:', insertedData)
     }
 
     setIsSaving(false)
@@ -439,7 +484,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(item.subtotal)}
                       </td>
                       <td className="px-4 py-3">
                         <Button
@@ -459,7 +504,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                       Subtotal Neto:
                     </td>
                     <td className="px-4 py-2 text-right text-sm text-gray-900">
-                      ${subtotalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(subtotalNeto)}
                     </td>
                     <td></td>
                   </tr>
@@ -469,7 +514,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                         IVA 21%:
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900">
-                        ${totalIva21.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(totalIva21)}
                       </td>
                       <td></td>
                     </tr>
@@ -480,7 +525,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                         IVA 10.5%:
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900">
-                        ${totalIva105.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(totalIva105)}
                       </td>
                       <td></td>
                     </tr>
@@ -490,7 +535,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                       Total:
                     </td>
                     <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
-                      ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(total)}
                     </td>
                     <td></td>
                   </tr>
@@ -502,6 +547,68 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
               <p className="text-gray-500">No hay items agregados</p>
             </div>
           )}
+        </div>
+
+        {/* Percepciones */}
+        <div className="border-t pt-4">
+          <div className="flex justify-end">
+            <div className="w-96 space-y-1">
+              <p className="text-xs font-medium text-gray-700 mb-1">Percepciones</p>
+              {percepciones.map((p, idx) => (
+                <div key={idx} className="flex gap-1 items-center">
+                  <input
+                    type="text"
+                    value={p.nombre}
+                    onChange={(e) => {
+                      const newPerc = percepciones.map((perc, i) =>
+                        i === idx ? { ...perc, nombre: e.target.value } : perc
+                      )
+                      setPercepciones(newPerc)
+                    }}
+                    placeholder="Percepción"
+                    className="w-32 rounded border border-gray-300 px-2 py-1 text-xs placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                  <input
+                    type="text"
+                    value={p.porcentaje}
+                    onChange={(e) => {
+                      const newPerc = percepciones.map((perc, i) =>
+                        i === idx ? { ...perc, porcentaje: e.target.value } : perc
+                      )
+                      setPercepciones(newPerc)
+                    }}
+                    placeholder="%"
+                    className="w-14 rounded border border-gray-300 px-2 py-1 text-xs text-center placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                  <span className="text-xs text-gray-400">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={p.valor}
+                    onChange={(e) => {
+                      const newPerc = percepciones.map((perc, i) =>
+                        i === idx ? { ...perc, valor: e.target.value } : perc
+                      )
+                      setPercepciones(newPerc)
+                    }}
+                    placeholder="0.00"
+                    className="w-24 rounded border border-gray-300 px-2 py-1 text-xs text-right placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                </div>
+              ))}
+              {totalPercepciones > 0 && (
+                <div className="flex justify-between pt-1 text-xs">
+                  <span className="text-gray-600">Total Percepciones:</span>
+                  <span className="font-medium">{formatearMoneda(totalPercepciones)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1 border-t">
+                <span className="font-medium text-gray-900 text-sm">Total Final:</span>
+                <span className="text-base font-bold text-green-600">{formatearMoneda(total)}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Notas */}

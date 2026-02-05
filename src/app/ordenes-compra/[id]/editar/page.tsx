@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, ArrowLeft, Save, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
+import { formatearMoneda, formatearCantidad, parsearNumero } from '@/lib/formato-numeros'
 
 interface Proveedor {
   id: string
@@ -121,7 +122,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     setSelectedInsumo(insumoId)
     const insumo = insumos.find(i => i.id === insumoId)
     if (insumo && insumo.precio_actual) {
-      setPrecioUnitario(insumo.precio_actual.toString())
+      setPrecioUnitario(formatearCantidad(insumo.precio_actual, 2))
     } else {
       setPrecioUnitario('')
     }
@@ -141,8 +142,8 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
       return
     }
 
-    const cantidadNum = parseFloat(cantidad)
-    const precioNum = parseFloat(precioUnitario)
+    const cantidadNum = parsearNumero(cantidad)
+    const precioNum = parsearNumero(precioUnitario)
     const subtotal = cantidadNum * precioNum
     const ivaPorcentaje = insumo.iva_porcentaje || 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
@@ -176,7 +177,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
   }
 
   function handleCantidadChange(itemId: string, nuevaCantidad: string) {
-    const cantidadNum = parseFloat(nuevaCantidad) || 0
+    const cantidadNum = parsearNumero(nuevaCantidad)
     setItems(items.map(item => {
       if (item.id === itemId) {
         const subtotal = cantidadNum * item.precio_unitario
@@ -193,7 +194,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
   }
 
   function handlePrecioChange(itemId: string, nuevoPrecio: string) {
-    const precioNum = parseFloat(nuevoPrecio) || 0
+    const precioNum = parsearNumero(nuevoPrecio)
     setItems(items.map(item => {
       if (item.id === itemId) {
         const subtotal = item.cantidad * precioNum
@@ -466,7 +467,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(item.subtotal)}
                       </td>
                       <td className="px-4 py-3">
                         <Button
@@ -486,7 +487,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                       Subtotal Neto:
                     </td>
                     <td className="px-4 py-2 text-right text-sm text-gray-900">
-                      ${subtotalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(subtotalNeto)}
                     </td>
                     <td></td>
                   </tr>
@@ -496,7 +497,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         IVA 21%:
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900">
-                        ${totalIva21.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(totalIva21)}
                       </td>
                       <td></td>
                     </tr>
@@ -507,7 +508,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         IVA 10.5%:
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900">
-                        ${totalIva105.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(totalIva105)}
                       </td>
                       <td></td>
                     </tr>
@@ -517,7 +518,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                       Total:
                     </td>
                     <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
-                      ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(total)}
                     </td>
                     <td></td>
                   </tr>

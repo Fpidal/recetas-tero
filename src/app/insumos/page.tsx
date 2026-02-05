@@ -6,6 +6,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Modal, Select } from '@/components/ui'
 import { CategoriaInsumo, UnidadMedida } from '@/types/database'
+import { formatearMoneda } from '@/lib/formato-numeros'
 
 interface InsumoCompleto {
   id: string
@@ -361,12 +362,12 @@ export default function InsumosPage() {
 
   const formatCurrency = (value: number | null) => {
     if (value === null) return '-'
-    return `$${value.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    return formatearMoneda(value, true)
   }
 
   const formatCurrencyDecimal = (value: number | null) => {
     if (value === null) return '-'
-    return `$${value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return formatearMoneda(value, true)
   }
 
   // Card para mobile

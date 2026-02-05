@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { generarPDFOrden } from '@/lib/generar-pdf-oc'
 import { Button, Select, Table } from '@/components/ui'
 import Link from 'next/link'
+import { formatearMoneda } from '@/lib/formato-numeros'
 
 interface OrdenConProveedor {
   id: string
@@ -229,7 +230,7 @@ export default function OrdenesCompraPage() {
       header: 'Total',
       render: (o: OrdenConProveedor) => (
         <span className="font-medium">
-          ${Math.round(calcularTotalConIva(o)).toLocaleString('es-AR')}
+          {formatearMoneda(calcularTotalConIva(o))}
         </span>
       ),
     },
@@ -304,7 +305,7 @@ export default function OrdenesCompraPage() {
 
       <div className="flex justify-between items-center pt-3 border-t">
         <span className="text-lg font-bold text-gray-900">
-          ${Math.round(calcularTotalConIva(orden)).toLocaleString('es-AR')}
+          {formatearMoneda(calcularTotalConIva(orden))}
         </span>
         <div className="flex gap-2">
           {orden.estado === 'parcialmente_recibida' && (
@@ -348,7 +349,7 @@ export default function OrdenesCompraPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Órdenes de Compra</h1>
           <p className="text-sm text-gray-600">
             <span className="font-semibold text-gray-900">
-              ${Math.round(totalPendientes).toLocaleString('es-AR')}
+              {formatearMoneda(totalPendientes)}
             </span>
             {' '}pendiente de recibir
           </p>

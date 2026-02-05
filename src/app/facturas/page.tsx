@@ -5,6 +5,7 @@ import { Plus, Eye, FileText, Pencil, PackageSearch } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Table } from '@/components/ui'
 import Link from 'next/link'
+import { formatearMoneda } from '@/lib/formato-numeros'
 
 interface FacturaConDetalle {
   id: string
@@ -176,7 +177,7 @@ export default function FacturasPage() {
       header: 'Total',
       render: (f: FacturaConDetalle) => (
         <span className="font-medium">
-          ${f.total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+          {formatearMoneda(f.total)}
         </span>
       ),
     },

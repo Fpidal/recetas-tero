@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, ArrowLeft, Save, Package, Search } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Save, Package, Search, PlusCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getNextOCNumber } from '@/lib/oc-numero'
-import { Button, Input, Select } from '@/components/ui'
+import { Button, Input, Select, Modal } from '@/components/ui'
+import { formatearMoneda, formatearCantidad, parsearNumero } from '@/lib/formato-numeros'
 
 interface Proveedor {
   id: string
@@ -48,6 +49,14 @@ export default function NuevaOrdenCompraPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [nextNumero, setNextNumero] = useState('')
 
+  // Modal nuevo insumo
+  const [showNuevoInsumo, setShowNuevoInsumo] = useState(false)
+  const [nuevoInsumoNombre, setNuevoInsumoNombre] = useState('')
+  const [nuevoInsumoCategoria, setNuevoInsumoCategoria] = useState('')
+  const [nuevoInsumoUnidad, setNuevoInsumoUnidad] = useState('kg')
+  const [nuevoInsumoIva, setNuevoInsumoIva] = useState('21')
+  const [savingInsumo, setSavingInsumo] = useState(false)
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -72,7 +81,7 @@ export default function NuevaOrdenCompraPage() {
     setSelectedInsumo(insumoId)
     const insumo = insumos.find(i => i.id === insumoId)
     if (insumo && insumo.precio_actual) {
-      setPrecioUnitario(insumo.precio_actual.toString())
+      setPrecioUnitario(formatearCantidad(insumo.precio_actual, 2))
     } else {
       setPrecioUnitario('')
     }
@@ -92,8 +101,8 @@ export default function NuevaOrdenCompraPage() {
       return
     }
 
-    const cantidadNum = parseFloat(cantidad)
-    const precioNum = parseFloat(precioUnitario)
+    const cantidadNum = parsearNumero(cantidad)
+    const precioNum = parsearNumero(precioUnitario)
     const subtotal = cantidadNum * precioNum
     const ivaPorcentaje = insumo.iva_porcentaje || 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
@@ -121,7 +130,7 @@ export default function NuevaOrdenCompraPage() {
   }
 
   function handleCantidadChange(id: string, nuevaCantidad: string) {
-    const cantidadNum = parseFloat(nuevaCantidad) || 0
+    const cantidadNum = parsearNumero(nuevaCantidad)
     setItems(items.map(item => {
       if (item.id === id) {
         const subtotal = cantidadNum * item.precio_unitario
@@ -138,7 +147,7 @@ export default function NuevaOrdenCompraPage() {
   }
 
   function handlePrecioChange(id: string, nuevoPrecio: string) {
-    const precioNum = parseFloat(nuevoPrecio) || 0
+    const precioNum = parsearNumero(nuevoPrecio)
     setItems(items.map(item => {
       if (item.id === id) {
         const subtotal = item.cantidad * precioNum
@@ -152,6 +161,58 @@ export default function NuevaOrdenCompraPage() {
       }
       return item
     }))
+  }
+
+  async function handleGuardarNuevoInsumo() {
+    if (!nuevoInsumoNombre.trim() || !nuevoInsumoCategoria) {
+      alert('Completá nombre y categoría')
+      return
+    }
+
+    setSavingInsumo(true)
+
+    const { data, error } = await supabase
+      .from('insumos')
+      .insert({
+        nombre: nuevoInsumoNombre.trim(),
+        categoria: nuevoInsumoCategoria,
+        unidad_medida: nuevoInsumoUnidad,
+        iva_porcentaje: parseFloat(nuevoInsumoIva),
+        merma_porcentaje: 0,
+        activo: true,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creando insumo:', error)
+      alert('Error al crear el insumo')
+      setSavingInsumo(false)
+      return
+    }
+
+    // Agregar a la lista local
+    const nuevoInsumo: Insumo = {
+      id: data.id,
+      nombre: data.nombre,
+      unidad_medida: data.unidad_medida,
+      categoria: data.categoria,
+      precio_actual: null,
+      iva_porcentaje: data.iva_porcentaje,
+    }
+    setInsumos([...insumos, nuevoInsumo].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+
+    // Seleccionar el nuevo insumo
+    setSelectedInsumo(data.id)
+    setFiltroCategoria(data.categoria)
+
+    // Limpiar y cerrar modal
+    setNuevoInsumoNombre('')
+    setNuevoInsumoCategoria('')
+    setNuevoInsumoUnidad('kg')
+    setNuevoInsumoIva('21')
+    setShowNuevoInsumo(false)
+    setSavingInsumo(false)
   }
 
   // Calcular totales con desglose de IVA
@@ -289,18 +350,30 @@ export default function NuevaOrdenCompraPage() {
                 value={filtroCategoria}
                 onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo('') }}
               />
-              <Select
-                label="Insumo"
-                options={[
-                  { value: '', label: 'Seleccionar...' },
-                  ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => ({
-                    value: i.id,
-                    label: `${i.nombre} (${i.unidad_medida})`
-                  }))
-                ]}
-                value={selectedInsumo}
-                onChange={(e) => handleSelectInsumo(e.target.value)}
-              />
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Select
+                    label="Insumo"
+                    options={[
+                      { value: '', label: 'Seleccionar...' },
+                      ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => ({
+                        value: i.id,
+                        label: `${i.nombre} (${i.unidad_medida})`
+                      }))
+                    ]}
+                    value={selectedInsumo}
+                    onChange={(e) => handleSelectInsumo(e.target.value)}
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowNuevoInsumo(true)}
+                  title="Nuevo"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
             <div className="flex gap-3 items-end">
               <div className="flex-1">
@@ -350,19 +423,28 @@ export default function NuevaOrdenCompraPage() {
                 onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo('') }}
               />
             </div>
-            <div className="flex-1">
-              <Select
-                label="Insumo"
-                options={[
-                  { value: '', label: 'Seleccionar insumo...' },
-                  ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => ({
-                    value: i.id,
-                    label: `${i.nombre} (${i.unidad_medida})`
-                  }))
-                ]}
-                value={selectedInsumo}
-                onChange={(e) => handleSelectInsumo(e.target.value)}
-              />
+            <div className="flex-1 flex gap-2 items-end">
+              <div className="flex-1">
+                <Select
+                  label="Insumo"
+                  options={[
+                    { value: '', label: 'Seleccionar insumo...' },
+                    ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => ({
+                      value: i.id,
+                      label: `${i.nombre} (${i.unidad_medida})`
+                    }))
+                  ]}
+                  value={selectedInsumo}
+                  onChange={(e) => handleSelectInsumo(e.target.value)}
+                />
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => setShowNuevoInsumo(true)}
+                title="Crear nuevo insumo"
+              >
+                <PlusCircle className="w-4 h-4" />
+              </Button>
             </div>
             <div className="w-28">
               <Input
@@ -444,7 +526,7 @@ export default function NuevaOrdenCompraPage() {
                       <div className="text-right">
                         <p className="text-[10px] text-gray-500 mb-0.5">Subtotal</p>
                         <p className="text-sm font-bold text-gray-900">
-                          ${item.subtotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                          {formatearMoneda(item.subtotal)}
                         </p>
                       </div>
                     </div>
@@ -460,23 +542,23 @@ export default function NuevaOrdenCompraPage() {
                 <div className="bg-gray-50 rounded-lg p-3 border mt-3">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600">Subtotal Neto:</span>
-                    <span className="text-gray-900">${subtotalNeto.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                    <span className="text-gray-900">{formatearMoneda(subtotalNeto)}</span>
                   </div>
                   {totalIva21 > 0 && (
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-600">IVA 21%:</span>
-                      <span className="text-gray-900">${totalIva21.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                      <span className="text-gray-900">{formatearMoneda(totalIva21)}</span>
                     </div>
                   )}
                   {totalIva105 > 0 && (
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-600">IVA 10.5%:</span>
-                      <span className="text-gray-900">${totalIva105.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                      <span className="text-gray-900">{formatearMoneda(totalIva105)}</span>
                     </div>
                   )}
                   <div className="flex justify-between pt-2 border-t mt-2">
                     <span className="font-medium text-gray-900">Total:</span>
-                    <span className="text-lg font-bold text-green-600">${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                    <span className="text-lg font-bold text-green-600">{formatearMoneda(total)}</span>
                   </div>
                 </div>
               </div>
@@ -537,7 +619,7 @@ export default function NuevaOrdenCompraPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right font-medium">
-                          ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          {formatearMoneda(item.subtotal)}
                         </td>
                         <td className="px-4 py-3">
                           <Button
@@ -557,7 +639,7 @@ export default function NuevaOrdenCompraPage() {
                         Subtotal Neto:
                       </td>
                       <td className="px-4 py-2 text-right text-sm text-gray-900">
-                        ${subtotalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(subtotalNeto)}
                       </td>
                       <td></td>
                     </tr>
@@ -567,7 +649,7 @@ export default function NuevaOrdenCompraPage() {
                           IVA 21%:
                         </td>
                         <td className="px-4 py-1 text-right text-sm text-gray-900">
-                          ${totalIva21.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          {formatearMoneda(totalIva21)}
                         </td>
                         <td></td>
                       </tr>
@@ -578,7 +660,7 @@ export default function NuevaOrdenCompraPage() {
                           IVA 10.5%:
                         </td>
                         <td className="px-4 py-1 text-right text-sm text-gray-900">
-                          ${totalIva105.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          {formatearMoneda(totalIva105)}
                         </td>
                         <td></td>
                       </tr>
@@ -588,7 +670,7 @@ export default function NuevaOrdenCompraPage() {
                         Total:
                       </td>
                       <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
-                        ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(total)}
                       </td>
                       <td></td>
                     </tr>
@@ -628,6 +710,70 @@ export default function NuevaOrdenCompraPage() {
           </Button>
         </div>
       </div>
+
+      {/* Modal Nuevo Insumo */}
+      <Modal
+        isOpen={showNuevoInsumo}
+        onClose={() => setShowNuevoInsumo(false)}
+        title="Nuevo Insumo"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Nombre *"
+            value={nuevoInsumoNombre}
+            onChange={(e) => setNuevoInsumoNombre(e.target.value)}
+            placeholder="Ej: Bife de Chorizo"
+          />
+          <Select
+            label="Categoría *"
+            value={nuevoInsumoCategoria}
+            onChange={(e) => setNuevoInsumoCategoria(e.target.value)}
+            options={[
+              { value: '', label: 'Seleccionar...' },
+              { value: 'Carnes', label: 'Carnes' },
+              { value: 'Almacen', label: 'Almacén' },
+              { value: 'Verduras_Frutas', label: 'Verduras y Frutas' },
+              { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
+              { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
+              { value: 'Bebidas', label: 'Bebidas' },
+              { value: 'Salsas_Recetas', label: 'Salsas y Recetas' },
+            ]}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Unidad"
+              value={nuevoInsumoUnidad}
+              onChange={(e) => setNuevoInsumoUnidad(e.target.value)}
+              options={[
+                { value: 'kg', label: 'Kilogramo (kg)' },
+                { value: 'lt', label: 'Litro (lt)' },
+                { value: 'unidad', label: 'Unidad' },
+                { value: 'gr', label: 'Gramo (gr)' },
+                { value: 'ml', label: 'Mililitro (ml)' },
+              ]}
+            />
+            <Select
+              label="IVA"
+              value={nuevoInsumoIva}
+              onChange={(e) => setNuevoInsumoIva(e.target.value)}
+              options={[
+                { value: '21', label: '21%' },
+                { value: '10.5', label: '10.5%' },
+                { value: '0', label: '0%' },
+              ]}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="secondary" onClick={() => setShowNuevoInsumo(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleGuardarNuevoInsumo} disabled={savingInsumo}>
+              {savingInsumo ? 'Guardando...' : 'Crear Insumo'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

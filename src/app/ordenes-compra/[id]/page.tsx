@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Button, Select } from '@/components/ui'
 import { getNextOCNumber } from '@/lib/oc-numero'
+import { formatearMoneda } from '@/lib/formato-numeros'
 
 interface OrdenDetalle {
   id: string
@@ -435,7 +436,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                         {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')} {item.unidad_medida}
                       </td>
                       <td className={`px-4 py-3 text-sm text-right ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
-                        ${item.precio_unitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(item.precio_unitario)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -448,7 +449,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                         </span>
                       </td>
                       <td className={`px-4 py-3 text-sm text-right ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'font-medium'}`}>
-                        ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        {formatearMoneda(item.subtotal)}
                       </td>
                     </tr>
                   )
@@ -460,7 +461,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                     Subtotal Neto:
                   </td>
                   <td className="px-4 py-2 text-right text-sm text-gray-900">
-                    ${subtotalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    {formatearMoneda(subtotalNeto)}
                   </td>
                 </tr>
                 {totalIva21 > 0 && (
@@ -469,7 +470,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                       IVA 21%:
                     </td>
                     <td className="px-4 py-1 text-right text-sm text-gray-900">
-                      ${totalIva21.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(totalIva21)}
                     </td>
                   </tr>
                 )}
@@ -479,7 +480,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                       IVA 10.5%:
                     </td>
                     <td className="px-4 py-1 text-right text-sm text-gray-900">
-                      ${totalIva105.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(totalIva105)}
                     </td>
                   </tr>
                 )}
@@ -488,7 +489,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                     Total:
                   </td>
                   <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
-                    ${totalConIva.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    {formatearMoneda(totalConIva)}
                   </td>
                 </tr>
               </tfoot>

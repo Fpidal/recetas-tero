@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Package, FileText, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
+import { formatearMoneda, formatearCantidad } from '@/lib/formato-numeros'
+
+interface Percepcion {
+  nombre: string
+  porcentaje?: string
+  valor: string
+}
 
 interface FacturaDetalle {
   id: string
@@ -14,6 +21,7 @@ interface FacturaDetalle {
   total: number
   notas: string | null
   orden_compra_id: string | null
+  percepciones: Percepcion[]
   items: {
     id: string
     insumo_id: string
@@ -58,6 +66,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
         total,
         notas,
         orden_compra_id,
+        percepciones,
         proveedores (nombre),
         factura_items (
           id,
@@ -86,6 +95,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
       total: data.total,
       notas: data.notas,
       orden_compra_id: data.orden_compra_id,
+      percepciones: Array.isArray(data.percepciones) ? data.percepciones : [],
       items: (data.factura_items as any[]).map((item: any) => {
         const subtotal = parseFloat(item.subtotal)
         const ivaPorcentaje = item.insumos?.iva_porcentaje || 21
@@ -201,7 +211,8 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
   const totalIva21 = factura.items.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva105 = factura.items.filter(i => i.iva_porcentaje === 10.5).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva = factura.items.reduce((sum, item) => sum + item.iva_monto, 0)
-  const totalConIva = subtotalNeto + totalIva
+  const totalPercepciones = factura.percepciones.reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0)
+  const totalConIva = subtotalNeto + totalIva + totalPercepciones
 
   return (
     <div className="max-w-4xl">
@@ -262,7 +273,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                       {item.cantidad} {item.unidad_medida}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      ${item.precio_unitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(item.precio_unitario)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -274,7 +285,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-medium">
-                      ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(item.subtotal)}
                     </td>
                   </tr>
                 ))}
@@ -302,7 +313,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                     Subtotal Neto:
                   </td>
                   <td className="px-4 py-2 text-right text-sm text-gray-900">
-                    ${subtotalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    {formatearMoneda(subtotalNeto)}
                   </td>
                 </tr>
                 {totalIva21 > 0 && (
@@ -311,7 +322,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                       IVA 21%:
                     </td>
                     <td className="px-4 py-1 text-right text-sm text-gray-900">
-                      ${totalIva21.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(totalIva21)}
                     </td>
                   </tr>
                 )}
@@ -321,16 +332,30 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                       IVA 10.5%:
                     </td>
                     <td className="px-4 py-1 text-right text-sm text-gray-900">
-                      ${totalIva105.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {formatearMoneda(totalIva105)}
                     </td>
                   </tr>
+                )}
+                {factura.percepciones.length > 0 && factura.percepciones.some(p => parseFloat(p.valor) > 0) && (
+                  <>
+                    {factura.percepciones.filter(p => p.nombre && parseFloat(p.valor) > 0).map((p, idx) => (
+                      <tr key={idx}>
+                        <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                          {p.nombre}{p.porcentaje ? ` (${p.porcentaje}%)` : ''}:
+                        </td>
+                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                          {formatearMoneda(parseFloat(p.valor))}
+                        </td>
+                      </tr>
+                    ))}
+                  </>
                 )}
                 <tr className="border-t border-gray-300">
                   <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
                     Total:
                   </td>
                   <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
-                    ${totalConIva.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    {formatearMoneda(totalConIva)}
                   </td>
                 </tr>
               </tfoot>

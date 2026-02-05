@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, UtensilsCrossed, Search, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
 import Link from 'next/link'
@@ -15,6 +15,22 @@ interface PlatoConCosto {
   seccion: string
   ingredientes_texto: string
   costo_total: number
+}
+
+// Helper para obtener ícono según sección/nombre del plato
+function getPlateIcon(seccion: string, nombrePlato?: string): LucideIcon {
+  const s = seccion.toLowerCase()
+  const n = nombrePlato?.toLowerCase() || ''
+
+  if (s.includes('entrada')) return Salad
+  if (s.includes('ensalada')) return Salad
+  if (s.includes('pasta') || s.includes('arroz')) return Wheat
+  if (s.includes('pescado') || s.includes('marisco') || n.includes('langostino') || n.includes('salmon') || n.includes('trucha')) return Fish
+  if (s.includes('postre')) return Cake
+  if (s.includes('sopa') || s.includes('guiso')) return Soup
+  if (s.includes('principal') || s.includes('carne') || n.includes('bife') || n.includes('lomo') || n.includes('costilla') || n.includes('entraña')) return Beef
+
+  return UtensilsCrossed // default
 }
 
 export default function PlatosPage() {
@@ -156,12 +172,14 @@ export default function PlatosPage() {
   }
 
   // Card component for mobile
-  const PlatoCard = ({ plato }: { plato: PlatoConCosto }) => (
+  const PlatoCard = ({ plato }: { plato: PlatoConCosto }) => {
+    const IconComponent = getPlateIcon(plato.seccion, plato.nombre)
+    return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
       <div className="flex justify-between items-start mb-2">
         <div className="flex items-start gap-2 flex-1">
           <div className="p-1.5 bg-orange-100 rounded-lg flex-shrink-0">
-            <UtensilsCrossed className="w-4 h-4 text-orange-600" />
+            <IconComponent className="w-4 h-4 text-orange-600" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900">{plato.nombre}</p>
@@ -196,7 +214,7 @@ export default function PlatosPage() {
         </Button>
       </div>
     </div>
-  )
+  )}
 
   return (
     <div>
@@ -298,12 +316,14 @@ export default function PlatosPage() {
                         </div>
                       </td>
                     </tr>
-                    {seccionesExpandidas.has(grupo.seccion) && grupo.platos.map((p) => (
+                    {seccionesExpandidas.has(grupo.seccion) && grupo.platos.map((p) => {
+                      const IconComponent = getPlateIcon(p.seccion, p.nombre)
+                      return (
                       <tr key={p.id} className="hover:bg-gray-50">
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-2">
                             <div className="p-1.5 bg-orange-100 rounded-lg">
-                              <UtensilsCrossed className="w-4 h-4 text-orange-600" />
+                              <IconComponent className="w-4 h-4 text-orange-600" />
                             </div>
                             <div>
                               <p className="text-sm font-medium text-gray-900">
@@ -336,7 +356,7 @@ export default function PlatosPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </>
                 ))}
               </tbody>

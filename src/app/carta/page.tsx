@@ -33,11 +33,13 @@ interface CartaItem {
 
 export default function CartaPage() {
   const [items, setItems] = useState<CartaItem[]>([])
+  const [itemsFueraCarta, setItemsFueraCarta] = useState<CartaItem[]>([])
   const [platosDisponibles, setPlatosDisponibles] = useState<PlatoConCosto[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [seccionesExpandidas, setSeccionesExpandidas] = useState<Set<string>>(new Set(SECCIONES_ORDEN))
+  const [tabActiva, setTabActiva] = useState<'en_carta' | 'fuera_carta'>('en_carta')
 
   // Form para agregar
   const [selectedPlato, setSelectedPlato] = useState('')
@@ -150,11 +152,10 @@ export default function CartaPage() {
       }
     })
 
-    // Cargar carta
+    // Cargar carta (activos e inactivos)
     const { data: cartaData, error: cartaError } = await supabase
       .from('carta')
-      .select('id, plato_id, precio_sugerido, precio_carta, margen_objetivo, food_cost_real')
-      .eq('activo', true)
+      .select('id, plato_id, precio_sugerido, precio_carta, margen_objetivo, food_cost_real, activo')
 
     if (cartaError) {
       console.error('Error fetching carta:', cartaError)
@@ -162,8 +163,8 @@ export default function CartaPage() {
       return
     }
 
-    // Mapear carta con costos recalculados
-    const mapped: CartaItem[] = (cartaData || []).map((item: any) => {
+    // Función para mapear items
+    function mapCartaItem(item: any): CartaItem {
       const plato = platosConCosto.find(p => p.id === item.plato_id)
       const costoReal = plato?.costo_total || 0
       const foodCost = item.precio_carta > 0 ? (costoReal / item.precio_carta) * 100 : 0
@@ -192,11 +193,16 @@ export default function CartaPage() {
         food_cost_real: foodCost,
         estado_margen: estado,
       }
-    })
+    }
 
-    setItems(mapped)
+    // Separar activos e inactivos
+    const activos = (cartaData || []).filter((item: any) => item.activo !== false)
+    const inactivos = (cartaData || []).filter((item: any) => item.activo === false)
 
-    // Platos disponibles (no en carta)
+    setItems(activos.map(mapCartaItem))
+    setItemsFueraCarta(inactivos.map(mapCartaItem))
+
+    // Platos disponibles (no en carta activa ni inactiva)
     const platosEnCarta = cartaData?.map((c: any) => c.plato_id) || []
     setPlatosDisponibles(platosConCosto.filter(p => !platosEnCarta.includes(p.id)))
 
@@ -308,6 +314,19 @@ export default function CartaPage() {
     }
   }
 
+  async function handleToggleEnCarta(id: string, nuevoEstado: boolean) {
+    const { error } = await supabase
+      .from('carta')
+      .update({ activo: nuevoEstado })
+      .eq('id', id)
+
+    if (error) {
+      alert('Error al cambiar estado')
+    } else {
+      fetchData()
+    }
+  }
+
   function getEstadoIcon(estado: string) {
     switch (estado) {
       case 'ok':
@@ -336,11 +355,12 @@ export default function CartaPage() {
 
   const fmt = (v: number) => `$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 
-  // Agrupar items por sección
+  // Agrupar items por sección según tab activa
+  const itemsActuales = tabActiva === 'en_carta' ? items : itemsFueraCarta
   const itemsPorSeccion = SECCIONES_ORDEN
     .map(seccion => ({
       seccion,
-      items: items.filter(i => i.plato_seccion === seccion).sort((a, b) => a.plato_nombre.localeCompare(b.plato_nombre)),
+      items: itemsActuales.filter(i => i.plato_seccion === seccion).sort((a, b) => a.plato_nombre.localeCompare(b.plato_nombre)),
     }))
     .filter(grupo => grupo.items.length > 0)
 
@@ -366,44 +386,76 @@ export default function CartaPage() {
         </Button>
       </div>
 
-      {/* Resumen */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-2">
-          <div className="flex items-center gap-1">
-            <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-            <span className="text-[10px] font-medium text-green-800">OK</span>
+      {/* Resumen - solo para tab En Carta */}
+      {tabActiva === 'en_carta' && (
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+            <div className="flex items-center gap-1">
+              <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+              <span className="text-[10px] font-medium text-green-800">OK</span>
+            </div>
+            <p className="text-lg font-bold text-green-600 mt-0.5">
+              {items.filter(i => i.estado_margen === 'ok').length}
+            </p>
           </div>
-          <p className="text-lg font-bold text-green-600 mt-0.5">
-            {items.filter(i => i.estado_margen === 'ok').length}
-          </p>
-        </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
-          <div className="flex items-center gap-1">
-            <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />
-            <span className="text-[10px] font-medium text-yellow-800">Atención</span>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+            <div className="flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />
+              <span className="text-[10px] font-medium text-yellow-800">Atención</span>
+            </div>
+            <p className="text-lg font-bold text-yellow-600 mt-0.5">
+              {items.filter(i => i.estado_margen === 'warning').length}
+            </p>
           </div>
-          <p className="text-lg font-bold text-yellow-600 mt-0.5">
-            {items.filter(i => i.estado_margen === 'warning').length}
-          </p>
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-2">
-          <div className="flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-            <span className="text-[10px] font-medium text-red-800">Fuera</span>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+            <div className="flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+              <span className="text-[10px] font-medium text-red-800">Fuera</span>
+            </div>
+            <p className="text-lg font-bold text-red-600 mt-0.5">
+              {items.filter(i => i.estado_margen === 'danger').length}
+            </p>
           </div>
-          <p className="text-lg font-bold text-red-600 mt-0.5">
-            {items.filter(i => i.estado_margen === 'danger').length}
-          </p>
         </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 border-b">
+        <button
+          onClick={() => setTabActiva('en_carta')}
+          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            tabActiva === 'en_carta'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          En Carta ({items.length})
+        </button>
+        <button
+          onClick={() => setTabActiva('fuera_carta')}
+          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            tabActiva === 'fuera_carta'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Fuera de Carta ({itemsFueraCarta.length})
+        </button>
       </div>
 
       {/* Tabla */}
       {isLoading ? (
         <div className="text-center py-6 text-xs">Cargando...</div>
-      ) : items.length === 0 ? (
+      ) : itemsActuales.length === 0 ? (
         <div className="text-center py-8 bg-white rounded-lg border">
-          <p className="text-xs text-gray-500">No hay platos en la carta</p>
-          <p className="text-[10px] text-gray-400 mt-1">Agregá platos para ver el análisis de food cost</p>
+          <p className="text-xs text-gray-500">
+            {tabActiva === 'en_carta' ? 'No hay platos en la carta' : 'No hay platos fuera de carta'}
+          </p>
+          <p className="text-[10px] text-gray-400 mt-1">
+            {tabActiva === 'en_carta'
+              ? 'Agregá platos para ver el análisis de food cost'
+              : 'Los platos que saques de la carta aparecerán aquí'}
+          </p>
         </div>
       ) : (
         <div className="bg-white rounded-lg border overflow-hidden">
@@ -411,6 +463,7 @@ export default function CartaPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Plato</th>
+                <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">En Carta</th>
                 <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
                 <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Sug.</th>
                 <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Carta</th>
@@ -428,7 +481,7 @@ export default function CartaPage() {
                     className="bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
                     onClick={() => toggleSeccion(grupo.seccion)}
                   >
-                    <td colSpan={8} className="px-2 py-1.5">
+                    <td colSpan={9} className="px-2 py-1.5">
                       <div className="flex items-center gap-1.5">
                         {seccionesExpandidas.has(grupo.seccion) ? (
                           <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
@@ -457,6 +510,23 @@ export default function CartaPage() {
                           : ''}
                       </p>
                     </div>
+                  </td>
+                  <td className="px-2 py-1.5 text-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleToggleEnCarta(item.id, tabActiva !== 'en_carta')
+                      }}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                        tabActiva === 'en_carta' ? 'bg-primary-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                          tabActiva === 'en_carta' ? 'translate-x-[18px]' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
                   </td>
                   <td className="px-2 py-1.5 text-right text-[11px] text-gray-600 tabular-nums">
                     <span className="text-gray-400">$</span>{item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}

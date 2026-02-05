@@ -85,19 +85,24 @@ export async function generarPDFOrden(ordenId: string) {
   const TERRACOTA = [163, 82, 52] as const
   const TERRACOTA_LIGHT = [214, 165, 145] as const
 
-  // Logo
+  // Logo desde bucket "fotos platos"
   let logoDataUrl: string | null = null
   try {
-    const { data: urlData } = supabase.storage.from('logo-tero').getPublicUrl('logo.png')
-    if (urlData?.publicUrl) {
-      const response = await fetch(urlData.publicUrl)
-      if (response.ok) {
-        const blob = await response.blob()
-        logoDataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(reader.result as string)
-          reader.readAsDataURL(blob)
-        })
+    // Listar archivos del bucket para obtener el nombre del logo
+    const { data: files } = await supabase.storage.from('fotos platos').list('', { limit: 1 })
+    if (files && files.length > 0) {
+      const logoFile = files[0].name
+      const { data: urlData } = supabase.storage.from('fotos platos').getPublicUrl(logoFile)
+      if (urlData?.publicUrl) {
+        const response = await fetch(urlData.publicUrl)
+        if (response.ok) {
+          const blob = await response.blob()
+          logoDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+        }
       }
     }
   } catch {}
@@ -141,7 +146,8 @@ export async function generarPDFOrden(ordenId: string) {
 
   if (logoDataUrl) {
     try {
-      doc.addImage(logoDataUrl, 'PNG', pageWidth - margin - 6 - 25, y + 1, 7, 7)
+      // Logo más grande y visible en la esquina derecha del header
+      doc.addImage(logoDataUrl, 'PNG', pageWidth - margin - 20, y + 2, 14, 14)
     } catch {}
   }
 

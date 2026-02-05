@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
 
@@ -29,6 +29,22 @@ interface CartaItem {
   margen_objetivo: number
   food_cost_real: number
   estado_margen: 'ok' | 'warning' | 'danger'
+}
+
+// Helper para obtener ícono según sección/nombre del plato
+function getPlateIcon(seccion: string, nombrePlato?: string): LucideIcon {
+  const s = seccion.toLowerCase()
+  const n = nombrePlato?.toLowerCase() || ''
+
+  if (s.includes('entrada')) return Salad
+  if (s.includes('ensalada')) return Salad
+  if (s.includes('pasta') || s.includes('arroz')) return Wheat
+  if (s.includes('pescado') || s.includes('marisco') || n.includes('langostino') || n.includes('salmon') || n.includes('trucha')) return Fish
+  if (s.includes('postre')) return Cake
+  if (s.includes('sopa') || s.includes('guiso')) return Soup
+  if (s.includes('principal') || s.includes('carne') || n.includes('bife') || n.includes('lomo') || n.includes('costilla') || n.includes('entraña')) return Beef
+
+  return UtensilsCrossed // default
 }
 
 export default function CartaPage() {
@@ -495,20 +511,27 @@ export default function CartaPage() {
                       </div>
                     </td>
                   </tr>
-                  {seccionesExpandidas.has(grupo.seccion) && grupo.items.map((item) => (
+                  {seccionesExpandidas.has(grupo.seccion) && grupo.items.map((item) => {
+                    const IconComponent = getPlateIcon(item.plato_seccion, item.plato_nombre)
+                    return (
                 <tr key={item.id} className={item.estado_margen === 'danger' ? 'bg-red-50' : ''}>
                   <td className="px-2 py-1.5">
-                    <div>
-                      <span className="text-xs font-medium text-gray-900">{item.plato_nombre}</span>
-                      <p className="text-[9px] text-gray-400">
-                        {item.plato_dias_actualizacion === 0
-                          ? 'Hoy'
-                          : item.plato_dias_actualizacion === 1
-                          ? 'Hace 1 día'
-                          : item.plato_dias_actualizacion > 0
-                          ? `Hace ${item.plato_dias_actualizacion}d`
-                          : ''}
-                      </p>
+                    <div className="flex items-center gap-1.5">
+                      <div className="p-1 bg-orange-100 rounded flex-shrink-0">
+                        <IconComponent className="w-3 h-3 text-orange-600" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-gray-900">{item.plato_nombre}</span>
+                        <p className="text-[9px] text-gray-400">
+                          {item.plato_dias_actualizacion === 0
+                            ? 'Hoy'
+                            : item.plato_dias_actualizacion === 1
+                            ? 'Hace 1 día'
+                            : item.plato_dias_actualizacion > 0
+                            ? `Hace ${item.plato_dias_actualizacion}d`
+                            : ''}
+                        </p>
+                      </div>
                     </div>
                   </td>
                   <td className="px-2 py-1.5 text-center">
@@ -595,7 +618,7 @@ export default function CartaPage() {
                     </div>
                   </td>
                 </tr>
-                  ))}
+                  )})}
                 </>
               ))}
             </tbody>

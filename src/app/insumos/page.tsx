@@ -6,7 +6,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Modal, Select } from '@/components/ui'
 import { CategoriaInsumo, UnidadMedida } from '@/types/database'
-import { formatearMoneda, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
+import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 
 interface InsumoCompleto {
   id: string
@@ -172,10 +172,10 @@ export default function InsumosPage() {
         nombre: insumo.nombre,
         categoria: insumo.categoria,
         unidad_medida: insumo.unidad_medida,
-        cantidad_por_paquete: cantPaq.toString(),
-        merma_porcentaje: (insumo.merma_porcentaje || 0).toString(),
+        cantidad_por_paquete: formatearCantidad(cantPaq, cantPaq % 1 === 0 ? 0 : 2),
+        merma_porcentaje: (insumo.merma_porcentaje || 0).toString().replace('.', ','),
         iva_porcentaje: (insumo.iva_porcentaje ?? 21).toString(),
-        precio: precioPaquete?.toString() || '',
+        precio: precioPaquete ? formatearCantidad(precioPaquete, 2) : '',
         proveedor_id: insumo.proveedor_id || '',
       })
     } else {
@@ -196,12 +196,12 @@ export default function InsumosPage() {
     setIsSaving(true)
 
     const ivaValue = parseFloat(form.iva_porcentaje)
-    const cantPaq = parseFloat(form.cantidad_por_paquete) || 1
+    const cantPaq = parsearNumero(form.cantidad_por_paquete) || 1
     const data = {
       nombre: form.nombre,
       categoria: form.categoria,
       unidad_medida: form.unidad_medida,
-      merma_porcentaje: parseFloat(form.merma_porcentaje) || 0,
+      merma_porcentaje: parsearNumero(form.merma_porcentaje) || 0,
       iva_porcentaje: !isNaN(ivaValue) ? ivaValue : 21,
     }
 
@@ -412,7 +412,7 @@ export default function InsumosPage() {
           </div>
           <div>
             <p className="text-xs text-gray-500">Unidad</p>
-            <p>{insumo.unidad_medida} {cantPaq > 1 && <span className="text-purple-600">x{cantPaq}</span>}</p>
+            <p>{insumo.unidad_medida} {cantPaq !== 1 && <span className="text-purple-600">x{formatearCantidad(cantPaq, cantPaq % 1 === 0 ? 0 : 1)}</span>}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">IVA / Merma</p>
@@ -574,8 +574,8 @@ export default function InsumosPage() {
                             <span className="text-gray-600">{insumo.unidad_medida}</span>
                           </td>
                           <td className="px-1 py-1.5 text-center">
-                            {cantPaq > 1 ? (
-                              <span className="text-purple-600 font-medium">{cantPaq}</span>
+                            {cantPaq !== 1 ? (
+                              <span className="text-purple-600 font-medium">{formatearCantidad(cantPaq, cantPaq % 1 === 0 ? 0 : 1)}</span>
                             ) : (
                               <span className="text-gray-400">1</span>
                             )}
@@ -673,26 +673,23 @@ export default function InsumosPage() {
             <Input
               label="Cant. por Paquete"
               id="cantidad_por_paquete"
-              type="number"
-              step="1"
-              min="1"
+              type="text"
+              inputMode="decimal"
               value={form.cantidad_por_paquete}
               onChange={(e) =>
-                setForm({ ...form, cantidad_por_paquete: e.target.value })
+                setForm({ ...form, cantidad_por_paquete: formatearInputNumero(e.target.value) })
               }
-              placeholder="Ej: 12"
+              placeholder="Ej: 2,9"
             />
 
             <Input
               label="Merma (%)"
               id="merma"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
+              type="text"
+              inputMode="decimal"
               value={form.merma_porcentaje}
               onChange={(e) =>
-                setForm({ ...form, merma_porcentaje: e.target.value })
+                setForm({ ...form, merma_porcentaje: formatearInputNumero(e.target.value) })
               }
               placeholder="0"
             />
@@ -740,9 +737,9 @@ export default function InsumosPage() {
               <p className="text-sm font-medium text-gray-700">Vista previa de costos:</p>
               {(() => {
                 const iva = parseFloat(form.iva_porcentaje) || 0
-                const merma = parseFloat(form.merma_porcentaje) || 0
+                const merma = parsearNumero(form.merma_porcentaje) || 0
                 const precioPaquete = parsearNumero(form.precio)
-                const cantPaq = parseFloat(form.cantidad_por_paquete) || 1
+                const cantPaq = parsearNumero(form.cantidad_por_paquete) || 1
                 const precioUnitario = precioPaquete / cantPaq
                 const costoConIva = calcularCostoConIva(precioUnitario, iva)
                 const costoFinal = calcularCostoFinal(precioUnitario, iva, merma)

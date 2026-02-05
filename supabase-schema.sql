@@ -74,6 +74,7 @@ CREATE TABLE insumos (
   nombre VARCHAR(255) NOT NULL,
   categoria categoria_insumo NOT NULL,
   unidad_medida unidad_medida NOT NULL,
+  cantidad_por_paquete DECIMAL(10,3) DEFAULT 1,
   merma_porcentaje DECIMAL(5,2) DEFAULT 0,
   iva_porcentaje DECIMAL(5,2) DEFAULT 21,
   activo BOOLEAN DEFAULT true,
@@ -517,15 +518,21 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION actualizar_precio_desde_factura()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_cantidad_por_paquete DECIMAL(10,3);
 BEGIN
+  -- Obtener cantidad_por_paquete del insumo
+  SELECT COALESCE(cantidad_por_paquete, 1) INTO v_cantidad_por_paquete
+  FROM insumos WHERE id = NEW.insumo_id;
+
   -- Marcar precios anteriores como no actuales
   UPDATE precios_insumo
   SET es_precio_actual = false
   WHERE insumo_id = NEW.insumo_id AND es_precio_actual = true;
 
-  -- Insertar nuevo precio (dividir por cantidad para obtener precio por unidad)
+  -- Insertar nuevo precio (dividir por cantidad_por_paquete para precio por unidad de medida)
   INSERT INTO precios_insumo (insumo_id, proveedor_id, precio, fecha, es_precio_actual)
-  SELECT NEW.insumo_id, fp.proveedor_id, NEW.precio_unitario / NEW.cantidad, fp.fecha, true
+  SELECT NEW.insumo_id, fp.proveedor_id, NEW.precio_unitario / v_cantidad_por_paquete, fp.fecha, true
   FROM facturas_proveedor fp
   WHERE fp.id = NEW.factura_id;
 

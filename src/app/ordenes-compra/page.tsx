@@ -236,15 +236,73 @@ export default function OrdenesCompraPage() {
     },
   ]
 
+  // Mobile card component
+  const OrdenCard = ({ orden }: { orden: OrdenConProveedor }) => (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm font-bold text-gray-700">
+            #{orden.numero || '—'}
+          </span>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${estadoColors[orden.estado]}`}>
+            {estadoLabels[orden.estado]}
+          </span>
+        </div>
+        <span className="text-sm text-gray-500">
+          {new Date(orden.fecha).toLocaleDateString('es-AR')}
+        </span>
+      </div>
+
+      <div className="mb-3">
+        <p className="font-medium text-gray-900">{orden.proveedores?.nombre}</p>
+        {orden.proveedores?.categoria && (
+          <p className="text-xs text-gray-400">{orden.proveedores.categoria}</p>
+        )}
+        {orden.facturas_proveedor && orden.facturas_proveedor.length > 0 && (
+          <p className="text-xs text-gray-400 mt-1">
+            Fact. {orden.facturas_proveedor[0].numero_factura}
+          </p>
+        )}
+      </div>
+
+      <div className="flex justify-between items-center pt-3 border-t">
+        <span className="text-lg font-bold text-gray-900">
+          ${Math.round(calcularTotalConIva(orden)).toLocaleString('es-AR')}
+        </span>
+        <div className="flex gap-2">
+          {orden.estado === 'cancelada' && (
+            <Button variant="ghost" size="sm" onClick={async () => {
+              await supabase.from('ordenes_compra').update({ activo: false } as any).eq('id', orden.id)
+              fetchOrdenes()
+            }}>
+              <Trash2 className="w-4 h-4 text-red-400" />
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={async () => {
+            const cambio = await generarPDFOrden(orden.id)
+            if (cambio) fetchOrdenes()
+          }}>
+            <FileText className="w-4 h-4" />
+          </Button>
+          <Link href={`/ordenes-compra/${orden.id}`}>
+            <Button variant="ghost" size="sm">
+              <Pencil className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Órdenes de Compra</h1>
-          <p className="text-gray-600">Pedidos a proveedores</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Órdenes de Compra</h1>
+          <p className="text-sm text-gray-600">Pedidos a proveedores</p>
         </div>
-        <Link href="/ordenes-compra/nueva">
-          <Button>
+        <Link href="/ordenes-compra/nueva" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Nueva Orden
           </Button>
@@ -252,15 +310,15 @@ export default function OrdenesCompraPage() {
       </div>
 
       {/* Barra de filtros */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-        <div className="flex flex-wrap items-end gap-3">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 mb-4">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
             <input
               type="date"
               value={filtroFechaDesde}
               onChange={(e) => setFiltroFechaDesde(e.target.value)}
-              className="block rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
           <div>
@@ -269,10 +327,10 @@ export default function OrdenesCompraPage() {
               type="date"
               value={filtroFechaHasta}
               onChange={(e) => setFiltroFechaHasta(e.target.value)}
-              className="block rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
-          <div className="w-48">
+          <div className="w-full sm:w-48">
             <Select
               label="Proveedor"
               id="filtroProveedor"
@@ -281,7 +339,7 @@ export default function OrdenesCompraPage() {
               options={proveedoresOptions}
             />
           </div>
-          <div className="w-48">
+          <div className="w-full sm:w-48">
             <Select
               label="Categoría"
               id="filtroCategoria"
@@ -291,7 +349,7 @@ export default function OrdenesCompraPage() {
             />
           </div>
           {hayFiltrosActivos && (
-            <Button variant="ghost" size="sm" onClick={limpiarFiltros} className="text-gray-500">
+            <Button variant="ghost" size="sm" onClick={limpiarFiltros} className="text-gray-500 col-span-2 sm:col-span-1">
               <X className="w-4 h-4 mr-1" />
               Limpiar
             </Button>
@@ -304,13 +362,35 @@ export default function OrdenesCompraPage() {
         )}
       </div>
 
-      <Table
-        columns={columns}
-        data={ordenesFiltradas}
-        keyExtractor={(o) => o.id}
-        isLoading={isLoading}
-        emptyMessage="No hay órdenes de compra registradas"
-      />
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Cargando...</p>
+        </div>
+      ) : ordenesFiltradas.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+          <p className="text-gray-500">No hay órdenes de compra registradas</p>
+        </div>
+      ) : (
+        <>
+          {/* Mobile: Cards */}
+          <div className="md:hidden space-y-3">
+            {ordenesFiltradas.map((orden) => (
+              <OrdenCard key={orden.id} orden={orden} />
+            ))}
+          </div>
+
+          {/* Desktop: Table */}
+          <div className="hidden md:block">
+            <Table
+              columns={columns}
+              data={ordenesFiltradas}
+              keyExtractor={(o) => o.id}
+              isLoading={isLoading}
+              emptyMessage="No hay órdenes de compra registradas"
+            />
+          </div>
+        </>
+      )}
 
       <p className="text-xs text-gray-400 mt-3">
         Observaciones: mercadería sujeta a control de calidad al recibir.

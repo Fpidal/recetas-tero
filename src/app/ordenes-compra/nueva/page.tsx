@@ -235,21 +235,21 @@ export default function NuevaOrdenCompraPage() {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Nueva Orden de Compra{nextNumero ? ` ${nextNumero}` : ''}
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
+            Nueva OC{nextNumero ? ` ${nextNumero}` : ''}
           </h1>
-          <p className="text-gray-600">Pedido a proveedor</p>
+          <p className="text-xs sm:text-base text-gray-600">Pedido a proveedor</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Proveedor */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <Select
             label="Proveedor *"
             options={[
@@ -268,10 +268,71 @@ export default function NuevaOrdenCompraPage() {
         </div>
 
         {/* Agregar item */}
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Items</h3>
+        <div className="border-t pt-4 sm:pt-6">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">Items</h3>
 
-          <div className="flex gap-3 items-end mb-4">
+          {/* Mobile: Stack vertical */}
+          <div className="sm:hidden space-y-3 mb-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="Categoría"
+                options={[
+                  { value: '', label: 'Todas' },
+                  { value: 'Carnes', label: 'Carnes' },
+                  { value: 'Almacen', label: 'Almacén' },
+                  { value: 'Verduras_Frutas', label: 'Verduras' },
+                  { value: 'Pescados_Mariscos', label: 'Pescados' },
+                  { value: 'Lacteos_Fiambres', label: 'Lácteos' },
+                  { value: 'Bebidas', label: 'Bebidas' },
+                  { value: 'Salsas_Recetas', label: 'Salsas' },
+                ]}
+                value={filtroCategoria}
+                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo('') }}
+              />
+              <Select
+                label="Insumo"
+                options={[
+                  { value: '', label: 'Seleccionar...' },
+                  ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => ({
+                    value: i.id,
+                    label: `${i.nombre} (${i.unidad_medida})`
+                  }))
+                ]}
+                value={selectedInsumo}
+                onChange={(e) => handleSelectInsumo(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <Input
+                  label="Cantidad"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={cantidad}
+                  onChange={(e) => setCantidad(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex-1">
+                <Input
+                  label="Precio $"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={precioUnitario}
+                  onChange={(e) => setPrecioUnitario(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <Button onClick={handleAgregarItem} className="flex-shrink-0">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Desktop: Row */}
+          <div className="hidden sm:flex gap-3 items-end mb-4">
             <div className="w-44">
               <Select
                 label="Categoría"
@@ -333,128 +394,217 @@ export default function NuevaOrdenCompraPage() {
 
           {/* Lista de items */}
           {items.length > 0 ? (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-900">{item.insumo_nombre}</span>
+            <>
+              {/* Mobile: Cards */}
+              <div className="sm:hidden space-y-2">
+                {items.map((item) => (
+                  <div key={item.id} className="bg-gray-50 rounded-lg p-3 border">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-sm font-medium text-gray-900 truncate">{item.insumo_nombre}</span>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${
+                        item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
+                        item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {item.iva_porcentaje}%
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mb-2">
+                      <div>
+                        <p className="text-[10px] text-gray-500 mb-0.5">Cantidad</p>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.cantidad}
+                            onChange={(e) => handleCantidadChange(item.id, e.target.value)}
+                            className="w-14 rounded border border-gray-300 px-2 py-1 text-sm"
+                          />
+                          <span className="text-xs text-gray-500">{item.unidad_medida}</span>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={item.cantidad}
-                          onChange={(e) => handleCantidadChange(item.id, e.target.value)}
-                          className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
-                        />
-                        <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
-                      </td>
-                      <td className="px-4 py-3">
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-500 mb-0.5">Precio</p>
                         <div className="flex items-center">
-                          <span className="text-sm text-gray-500 mr-1">$</span>
+                          <span className="text-xs text-gray-500 mr-0.5">$</span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
                             value={item.precio_unitario}
                             onChange={(e) => handlePrecioChange(item.id, e.target.value)}
-                            className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
-                          item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {item.iva_porcentaje}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">
-                        ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEliminarItem(item.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-50">
-                  <tr>
-                    <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
-                      Subtotal Neto:
-                    </td>
-                    <td className="px-4 py-2 text-right text-sm text-gray-900">
-                      ${subtotalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td></td>
-                  </tr>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500 mb-0.5">Subtotal</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          ${item.subtotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button variant="ghost" size="sm" onClick={() => handleEliminarItem(item.id)}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Mobile: Totals */}
+                <div className="bg-gray-50 rounded-lg p-3 border mt-3">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Subtotal Neto:</span>
+                    <span className="text-gray-900">${subtotalNeto.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                  </div>
                   {totalIva21 > 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
-                        IVA 21%:
-                      </td>
-                      <td className="px-4 py-1 text-right text-sm text-gray-900">
-                        ${totalIva21.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td></td>
-                    </tr>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">IVA 21%:</span>
+                      <span className="text-gray-900">${totalIva21.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                    </div>
                   )}
                   {totalIva105 > 0 && (
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">IVA 10.5%:</span>
+                      <span className="text-gray-900">${totalIva105.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t mt-2">
+                    <span className="font-medium text-gray-900">Total:</span>
+                    <span className="text-lg font-bold text-green-600">${total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden sm:block border rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
-                        IVA 10.5%:
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {items.map((item) => (
+                      <tr key={item.id}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-900">{item.insumo_nombre}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.cantidad}
+                            onChange={(e) => handleCantidadChange(item.id, e.target.value)}
+                            className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                          />
+                          <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-500 mr-1">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={item.precio_unitario}
+                              onChange={(e) => handlePrecioChange(item.id, e.target.value)}
+                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
+                            item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {item.iva_porcentaje}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEliminarItem(item.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50">
+                    <tr>
+                      <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
+                        Subtotal Neto:
                       </td>
-                      <td className="px-4 py-1 text-right text-sm text-gray-900">
-                        ${totalIva105.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      <td className="px-4 py-2 text-right text-sm text-gray-900">
+                        ${subtotalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </td>
                       <td></td>
                     </tr>
-                  )}
-                  <tr className="border-t border-gray-300">
-                    <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
-                      Total:
-                    </td>
-                    <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
-                      ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                    {totalIva21 > 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                          IVA 21%:
+                        </td>
+                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                          ${totalIva21.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td></td>
+                      </tr>
+                    )}
+                    {totalIva105 > 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                          IVA 10.5%:
+                        </td>
+                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                          ${totalIva105.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td></td>
+                      </tr>
+                    )}
+                    <tr className="border-t border-gray-300">
+                      <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
+                        Total:
+                      </td>
+                      <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
+                        ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
           ) : (
-            <div className="text-center py-8 border rounded-lg bg-gray-50">
-              <p className="text-gray-500">No hay items agregados</p>
+            <div className="text-center py-6 sm:py-8 border rounded-lg bg-gray-50">
+              <p className="text-gray-500 text-sm">No hay items agregados</p>
             </div>
           )}
         </div>
 
         {/* Notas */}
-        <div className="border-t pt-6">
+        <div className="border-t pt-4 sm:pt-6">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Notas
           </label>
@@ -462,17 +612,17 @@ export default function NuevaOrdenCompraPage() {
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
             rows={3}
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Notas adicionales para el proveedor..."
           />
         </div>
 
         {/* Botones */}
-        <div className="flex justify-end gap-3 border-t pt-6">
-          <Button variant="secondary" onClick={() => router.back()}>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 border-t pt-4 sm:pt-6">
+          <Button variant="secondary" onClick={() => router.back()} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button onClick={handleGuardar} disabled={isSaving}>
+          <Button onClick={handleGuardar} disabled={isSaving} className="w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
             {isSaving ? 'Guardando...' : 'Crear Orden'}
           </Button>

@@ -22,18 +22,18 @@ import {
 import { supabase } from '@/lib/supabase'
 
 const navigation = [
-  { name: 'Inicio', href: '/', icon: Home },
-  { name: 'Proveedores', href: '/proveedores', icon: Users },
-  { name: 'Insumos', href: '/insumos', icon: Package },
-  { name: 'Evolución Precios', href: '/precios', icon: TrendingUp },
-  { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen },
-  { name: 'Recetas', href: '/platos', icon: ChefHat },
-  { name: 'Menús Ejecutivos', href: '/menus-ejecutivos', icon: UtensilsCrossed },
-  { name: 'Menús Especiales', href: '/menus-especiales', icon: LayoutGrid },
-  { name: 'Carta', href: '/carta', icon: ClipboardList },
-  { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart },
-  { name: 'Facturas', href: '/facturas', icon: FileText },
-  { name: 'Papelera', href: '/papelera', icon: Trash2 },
+  { name: 'Inicio', href: '/', icon: Home, color: '#FFFFFF' },
+  { name: 'Proveedores', href: '/proveedores', icon: Users, color: '#4F8EF7' },
+  { name: 'Insumos', href: '/insumos', icon: Package, color: '#10B981' },
+  { name: 'Evolución Precios', href: '/precios', icon: TrendingUp, color: '#8B5CF6' },
+  { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen, color: '#EF4444' },
+  { name: 'Recetas', href: '/platos', icon: ChefHat, color: '#A855F7' },
+  { name: 'Menús Ejecutivos', href: '/menus-ejecutivos', icon: UtensilsCrossed, color: '#14B8A6' },
+  { name: 'Menús Especiales', href: '/menus-especiales', icon: LayoutGrid, color: '#EC4899' },
+  { name: 'Carta', href: '/carta', icon: ClipboardList, color: '#EF4444' },
+  { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart, color: '#6366F1' },
+  { name: 'Facturas', href: '/facturas', icon: FileText, color: '#6B7280' },
+  { name: 'Papelera', href: '/papelera', icon: Trash2, color: '#DC2626' },
 ]
 
 export default function Sidebar() {
@@ -98,9 +98,8 @@ export default function Sidebar() {
               }`}
             >
               <item.icon
-                className={`mr-3 h-6 w-6 lg:h-5 lg:w-5 flex-shrink-0 ${
-                  isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'
-                }`}
+                className="mr-3 h-6 w-6 lg:h-5 lg:w-5 flex-shrink-0"
+                style={{ color: isActive ? '#FFFFFF' : item.color }}
               />
               {item.name}
               {isPapelera && papeleraCount > 0 && (

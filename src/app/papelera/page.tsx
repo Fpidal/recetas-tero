@@ -69,7 +69,7 @@ export default function PapeleraPage() {
       supabase.from('platos').select('id, nombre, updated_at').eq('activo', false),
       supabase.from('menus_ejecutivos').select('id, nombre, updated_at').eq('activo', false),
       supabase.from('menus_especiales').select('id, nombre, updated_at').eq('activo', false),
-      supabase.from('carta').select('id, nombre, updated_at').eq('activo', false),
+      supabase.from('carta').select('id, updated_at, platos (nombre)').eq('activo', false),
       supabase.from('ordenes_compra').select('id, numero, fecha, updated_at, proveedores (nombre)').eq('activo', false),
       supabase.from('facturas_proveedor').select('id, numero_factura, fecha, updated_at, proveedores (nombre)').eq('activo', false),
     ])
@@ -134,7 +134,7 @@ export default function PapeleraPage() {
     ;(carta.data || []).forEach((c: any) => {
       allItems.push({
         id: c.id, tipo: 'carta', tipoLabel: 'Carta',
-        nombre: c.nombre, detalle: '',
+        nombre: (c.platos as any)?.nombre || 'Plato eliminado', detalle: '',
         fecha: c.updated_at || '', tabla: 'carta',
       })
     })

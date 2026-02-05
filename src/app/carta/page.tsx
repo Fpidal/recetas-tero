@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save } from 'lucide-react'
+import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
 
@@ -37,6 +37,7 @@ export default function CartaPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [seccionesExpandidas, setSeccionesExpandidas] = useState<Set<string>>(new Set(SECCIONES_ORDEN))
 
   // Form para agregar
   const [selectedPlato, setSelectedPlato] = useState('')
@@ -48,6 +49,18 @@ export default function CartaPage() {
   const [editMargen, setEditMargen] = useState('')
 
   const [isSaving, setIsSaving] = useState(false)
+
+  function toggleSeccion(seccion: string) {
+    setSeccionesExpandidas(prev => {
+      const nuevo = new Set(prev)
+      if (nuevo.has(seccion)) {
+        nuevo.delete(seccion)
+      } else {
+        nuevo.add(seccion)
+      }
+      return nuevo
+    })
+  }
 
   useEffect(() => {
     fetchData()
@@ -342,43 +355,43 @@ export default function CartaPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Carta</h1>
-          <p className="text-gray-600">Precios y análisis de food cost</p>
+          <h1 className="text-lg font-bold text-gray-900">Carta</h1>
+          <p className="text-xs text-gray-600">Precios y análisis de food cost</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} disabled={platosDisponibles.length === 0}>
-          <Plus className="w-4 h-4 mr-2" />
-          Agregar Plato
+        <Button onClick={() => setIsModalOpen(true)} disabled={platosDisponibles.length === 0} size="sm">
+          <Plus className="w-3.5 h-3.5 mr-1" />
+          Agregar
         </Button>
       </div>
 
       {/* Resumen */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-            <span className="text-sm font-medium text-green-800">Dentro de margen</span>
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+          <div className="flex items-center gap-1">
+            <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+            <span className="text-[10px] font-medium text-green-800">OK</span>
           </div>
-          <p className="text-2xl font-bold text-green-600 mt-1">
+          <p className="text-lg font-bold text-green-600 mt-0.5">
             {items.filter(i => i.estado_margen === 'ok').length}
           </p>
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-yellow-500" />
-            <span className="text-sm font-medium text-yellow-800">Atención</span>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+          <div className="flex items-center gap-1">
+            <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />
+            <span className="text-[10px] font-medium text-yellow-800">Atención</span>
           </div>
-          <p className="text-2xl font-bold text-yellow-600 mt-1">
+          <p className="text-lg font-bold text-yellow-600 mt-0.5">
             {items.filter(i => i.estado_margen === 'warning').length}
           </p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            <span className="text-sm font-medium text-red-800">Fuera de margen</span>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+          <div className="flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+            <span className="text-[10px] font-medium text-red-800">Fuera</span>
           </div>
-          <p className="text-2xl font-bold text-red-600 mt-1">
+          <p className="text-lg font-bold text-red-600 mt-0.5">
             {items.filter(i => i.estado_margen === 'danger').length}
           </p>
         </div>
@@ -386,115 +399,126 @@ export default function CartaPage() {
 
       {/* Tabla */}
       {isLoading ? (
-        <div className="text-center py-8">Cargando...</div>
+        <div className="text-center py-6 text-xs">Cargando...</div>
       ) : items.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border">
-          <p className="text-gray-500">No hay platos en la carta</p>
-          <p className="text-sm text-gray-400 mt-1">Agregá platos para ver el análisis de food cost</p>
+        <div className="text-center py-8 bg-white rounded-lg border">
+          <p className="text-xs text-gray-500">No hay platos en la carta</p>
+          <p className="text-[10px] text-gray-400 mt-1">Agregá platos para ver el análisis de food cost</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg border overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plato</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">P. Sugerido</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">P. Carta</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Margen Obj.</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Food Cost</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Contribución</th>
-                <th className="px-4 py-3"></th>
+                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Plato</th>
+                <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
+                <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Sug.</th>
+                <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Carta</th>
+                <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">M.Obj</th>
+                <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">FC</th>
+                <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">Contrib.</th>
+                <th className="px-2 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {itemsPorSeccion.map((grupo) => (
                 <>
-                  <tr key={`seccion-${grupo.seccion}`} className="bg-gray-100">
-                    <td colSpan={8} className="px-4 py-2">
-                      <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                        {grupo.seccion}
-                      </span>
-                      <span className="ml-2 text-xs text-gray-400">({grupo.items.length})</span>
+                  <tr
+                    key={`seccion-${grupo.seccion}`}
+                    className="bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+                    onClick={() => toggleSeccion(grupo.seccion)}
+                  >
+                    <td colSpan={8} className="px-2 py-1.5">
+                      <div className="flex items-center gap-1.5">
+                        {seccionesExpandidas.has(grupo.seccion) ? (
+                          <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                        )}
+                        <span className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide">
+                          {grupo.seccion}
+                        </span>
+                        <span className="text-[10px] text-gray-400">({grupo.items.length})</span>
+                      </div>
                     </td>
                   </tr>
-                  {grupo.items.map((item) => (
+                  {seccionesExpandidas.has(grupo.seccion) && grupo.items.map((item) => (
                 <tr key={item.id} className={item.estado_margen === 'danger' ? 'bg-red-50' : ''}>
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-1.5">
                     <div>
-                      <span className="font-medium text-gray-900">{item.plato_nombre}</span>
-                      <p className="text-xs text-gray-400">
+                      <span className="text-xs font-medium text-gray-900">{item.plato_nombre}</span>
+                      <p className="text-[9px] text-gray-400">
                         {item.plato_dias_actualizacion === 0
-                          ? 'Costos actualizados hoy'
+                          ? 'Hoy'
                           : item.plato_dias_actualizacion === 1
-                          ? 'Costos actualizados hace 1 día'
+                          ? 'Hace 1 día'
                           : item.plato_dias_actualizacion > 0
-                          ? `Costos actualizados hace ${item.plato_dias_actualizacion} días`
+                          ? `Hace ${item.plato_dias_actualizacion}d`
                           : ''}
                       </p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right text-sm text-gray-600 tabular-nums">
-                    <span className="text-gray-400">$</span><span className="ml-1">{item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                  <td className="px-2 py-1.5 text-right text-[11px] text-gray-600 tabular-nums">
+                    <span className="text-gray-400">$</span>{item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </td>
-                  <td className="px-4 py-3 text-right text-sm text-gray-500 tabular-nums">
-                    <span className="text-gray-400">$</span><span className="ml-1">{item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                  <td className="px-2 py-1.5 text-right text-[11px] text-gray-500 tabular-nums">
+                    <span className="text-gray-400">$</span>{item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-2 py-1.5 text-right">
                     {editingId === item.id ? (
                       <input
                         type="number"
                         value={editPrecio}
                         onChange={(e) => setEditPrecio(e.target.value)}
-                        className="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-right"
+                        className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-[11px] text-right"
                       />
                     ) : (
-                      <span className="font-medium tabular-nums">
-                        <span className="text-gray-400 font-normal">$</span><span className="ml-1">{item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                      <span className="text-xs font-medium tabular-nums">
+                        <span className="text-gray-400 font-normal">$</span>{item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-1.5 text-center">
                     {editingId === item.id ? (
                       <input
                         type="number"
                         value={editMargen}
                         onChange={(e) => setEditMargen(e.target.value)}
-                        className="w-16 rounded border border-gray-300 px-2 py-1 text-sm text-center"
+                        className="w-12 rounded border border-gray-300 px-1 py-0.5 text-[11px] text-center"
                       />
                     ) : (
-                      <span className="text-sm text-gray-600">{item.margen_objetivo}%</span>
+                      <span className="text-[11px] text-gray-600">{item.margen_objetivo}%</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="px-2 py-1.5 text-center">
+                    <div className="flex items-center justify-center gap-1">
                       {getEstadoIcon(item.estado_margen)}
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEstadoClass(item.estado_margen)}`}>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(item.estado_margen)}`}>
                         {item.food_cost_real.toFixed(1)}%
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right text-sm font-bold text-green-700 tabular-nums">
-                    <span className="text-green-500 font-normal">$</span><span className="ml-1">{(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                  <td className="px-2 py-1.5 text-right text-[11px] font-bold text-green-700 bg-green-50 tabular-nums">
+                    <span className="text-green-500 font-normal">$</span>{(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
+                  <td className="px-2 py-1.5">
+                    <div className="flex justify-end gap-0.5">
                       {editingId === item.id ? (
                         <>
                           <Button variant="ghost" size="sm" onClick={() => handleSaveEdit(item)} disabled={isSaving}>
-                            <Save className="w-4 h-4 text-green-600" />
+                            <Save className="w-3.5 h-3.5 text-green-600" />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-                            <X className="w-4 h-4 text-gray-500" />
+                            <X className="w-3.5 h-3.5 text-gray-500" />
                           </Button>
                         </>
                       ) : (
                         <>
                           <Button variant="ghost" size="sm" onClick={() => handleStartEdit(item)}>
-                            <Pencil className="w-4 h-4" />
+                            <Pencil className="w-3 h-3" />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleEliminar(item.id)}>
-                            <Trash2 className="w-4 h-4 text-red-500" />
+                            <Trash2 className="w-3 h-3 text-red-500" />
                           </Button>
                         </>
                       )}

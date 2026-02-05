@@ -27,6 +27,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  LabelList,
 } from 'recharts'
 
 // Colores del sistema
@@ -828,9 +829,9 @@ export default function Home() {
               <p className="text-xs text-gray-400">Sin datos</p>
             </div>
           ) : (
-            <div className="h-36">
+            <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.variacionCategoriasData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                <BarChart data={data.variacionCategoriasData} margin={{ top: 20, right: 10, left: -15, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="categoria" tick={{ fontSize: 9 }} />
                   <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 9 }} />
@@ -842,6 +843,12 @@ export default function Home() {
                     {data.variacionCategoriasData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={LABEL_COLORES[entry.categoria] || entry.color || '#6B7280'} />
                     ))}
+                    <LabelList
+                      dataKey="variacion"
+                      position="top"
+                      formatter={(v: number) => `${v.toFixed(1)}%`}
+                      style={{ fontSize: 9, fill: '#374151' }}
+                    />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -859,11 +866,11 @@ export default function Home() {
             <span style={{ color: COLORS.turquesa }} className="text-xs font-semibold">{formatMoney(totalCompras4Semanas)}</span>
           </div>
           {data.comprasSemanalesData.length === 0 ? (
-            <div className="flex items-center justify-center h-32">
+            <div className="flex items-center justify-center h-44">
               <p className="text-xs text-gray-400">Sin datos</p>
             </div>
           ) : (
-            <div className="h-36">
+            <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.comprasSemanalesData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -907,23 +914,23 @@ export default function Home() {
 
             if (distribucionData.length === 0) {
               return (
-                <div className="flex items-center justify-center h-32">
+                <div className="flex items-center justify-center h-44">
                   <p className="text-xs text-gray-400">Sin datos</p>
                 </div>
               )
             }
 
             return (
-              <div className="flex items-center gap-4">
-                <div className="h-32 w-32 flex-shrink-0">
+              <div className="flex items-center gap-6">
+                <div className="h-44 w-44 flex-shrink-0 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={distribucionData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={25}
-                        outerRadius={50}
+                        innerRadius={32}
+                        outerRadius={65}
                         paddingAngle={2}
                         dataKey="valor"
                       >
@@ -943,12 +950,12 @@ export default function Home() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex-1 space-y-1.5">
+                <div className="flex-1 space-y-2">
                   {distribucionData.slice(0, 5).map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-[11px]">
-                      <div className="flex items-center gap-1.5">
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
                         <div
-                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          className="w-3 h-3 rounded-full flex-shrink-0"
                           style={{
                             backgroundColor: modoDistribucion === 'categoria'
                               ? (LABEL_COLORES[item.nombre] || item.color || PIE_COLORS[i % PIE_COLORS.length])

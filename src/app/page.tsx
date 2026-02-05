@@ -950,10 +950,10 @@ export default function Home() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex-1 space-y-2">
+                <div className="flex-1 space-y-2 min-w-0">
                   {distribucionData.slice(0, 5).map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
+                    <div key={i} className="flex items-center justify-between text-xs gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div
                           className="w-3 h-3 rounded-full flex-shrink-0"
                           style={{
@@ -962,9 +962,9 @@ export default function Home() {
                               : PIE_COLORS[i % PIE_COLORS.length]
                           }}
                         />
-                        <span className="text-gray-700">{item.nombre}</span>
+                        <span className="text-gray-700 truncate" title={item.nombre}>{item.nombre}</span>
                       </div>
-                      <span className="text-gray-500 font-medium">{item.porcentaje}%</span>
+                      <span className="text-gray-500 font-medium flex-shrink-0">{item.porcentaje}%</span>
                     </div>
                   ))}
                 </div>

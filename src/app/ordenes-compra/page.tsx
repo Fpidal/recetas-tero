@@ -141,6 +141,11 @@ export default function OrdenesCompraPage() {
 
   const hayFiltrosActivos = filtroFechaDesde || filtroFechaHasta || filtroProveedor || filtroCategoria
 
+  // Calcular total de órdenes filtradas
+  const totalOrdenesFiltradas = useMemo(() => {
+    return ordenesFiltradas.reduce((sum, o) => sum + calcularTotalConIva(o), 0)
+  }, [ordenesFiltradas])
+
   function limpiarFiltros() {
     setFiltroFechaDesde('')
     setFiltroFechaHasta('')
@@ -299,7 +304,13 @@ export default function OrdenesCompraPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Órdenes de Compra</h1>
-          <p className="text-sm text-gray-600">Pedidos a proveedores</p>
+          <p className="text-sm text-gray-600">
+            {ordenesFiltradas.length} {ordenesFiltradas.length === 1 ? 'orden' : 'órdenes'}
+            {' · '}
+            <span className="font-semibold text-gray-900">
+              ${Math.round(totalOrdenesFiltradas).toLocaleString('es-AR')}
+            </span>
+          </p>
         </div>
         <Link href="/ordenes-compra/nueva" className="w-full sm:w-auto">
           <Button className="w-full sm:w-auto">

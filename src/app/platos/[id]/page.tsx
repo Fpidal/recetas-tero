@@ -7,6 +7,7 @@ import jsPDF from 'jspdf'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
+import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Carnes': '#d98a8a',
@@ -209,7 +210,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   }
 
   function handleAgregarIngrediente() {
-    if (!selectedItem || !cantidad || parseFloat(cantidad) <= 0) {
+    if (!selectedItem || !cantidad || parsearNumero(cantidad) <= 0) {
       alert('Seleccioná un ingrediente y una cantidad válida')
       return
     }
@@ -229,7 +230,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
       if (!insumo) return
 
       const costoUnitario = insumo.costo_final || 0
-      const cantidadNum = parseFloat(cantidad)
+      const cantidadNum = parsearNumero(cantidad)
       const costoLinea = calcularCostoLinea(costoUnitario, cantidadNum)
 
       nuevoIngrediente = {
@@ -248,7 +249,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
       const receta = recetasBase.find(r => r.id === selectedItem)
       if (!receta) return
 
-      const cantidadNum = parseFloat(cantidad)
+      const cantidadNum = parsearNumero(cantidad)
       const costoUnitario = receta.costo_por_porcion
       const costoLinea = calcularCostoLinea(costoUnitario, cantidadNum)
 
@@ -279,7 +280,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   }
 
   function handleCantidadChange(id: string, nuevaCantidad: string) {
-    const cantidadNum = parseFloat(nuevaCantidad) || 0
+    const cantidadNum = parsearNumero(nuevaCantidad)
     setIngredientes(ingredientes.map(ing => {
       if (ing.id === id) {
         return { ...ing, cantidad: cantidadNum, costo_linea: calcularCostoLinea(ing.costo_unitario, cantidadNum) }
@@ -735,11 +736,10 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               <div className="flex-1">
                 <Input
                   label="Cantidad"
-                  type="number"
-                  step="0.001"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   value={cantidad}
-                  onChange={(e) => setCantidad(e.target.value)}
+                  onChange={(e) => setCantidad(formatearInputNumero(e.target.value))}
                   placeholder="0"
                 />
               </div>
@@ -808,11 +808,10 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
             <div className="w-20">
               <Input
                 label="Cant."
-                type="number"
-                step="0.001"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={cantidad}
-                onChange={(e) => setCantidad(e.target.value)}
+                onChange={(e) => setCantidad(formatearInputNumero(e.target.value))}
                 placeholder="0"
               />
             </div>
@@ -869,11 +868,10 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                         <p className="text-[10px] text-gray-500 mb-0.5">Cantidad</p>
                         <div className="flex items-center gap-1">
                           <input
-                            type="number"
-                            step="0.001"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             value={ing.cantidad}
-                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                           <span className="text-xs text-gray-500">{ing.unidad}</span>
@@ -923,11 +921,10 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                         <td className="px-2 py-1.5 text-xs text-gray-900">{ing.nombre}</td>
                         <td className="px-2 py-1.5">
                           <input
-                            type="number"
-                            step="0.001"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             value={ing.cantidad}
-                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
                           />
                           <span className="ml-1 text-xs text-gray-500">{ing.unidad}</span>

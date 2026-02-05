@@ -6,7 +6,7 @@ import { Plus, Trash2, ArrowLeft, Save, Package, Search, PlusCircle } from 'luci
 import { supabase } from '@/lib/supabase'
 import { getNextOCNumber } from '@/lib/oc-numero'
 import { Button, Input, Select, Modal } from '@/components/ui'
-import { formatearMoneda, formatearCantidad, parsearNumero } from '@/lib/formato-numeros'
+import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
 
 interface Proveedor {
   id: string
@@ -101,8 +101,8 @@ export default function NuevaOrdenCompraPage() {
       return
     }
 
-    const cantidadNum = parseFloat(cantidad)
-    const precioNum = parseFloat(precioUnitario)
+    const cantidadNum = parsearNumero(cantidad)
+    const precioNum = parsearNumero(precioUnitario)
     const subtotal = cantidadNum * precioNum
     const ivaPorcentaje = insumo.iva_porcentaje || 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
@@ -130,7 +130,7 @@ export default function NuevaOrdenCompraPage() {
   }
 
   function handleCantidadChange(id: string, nuevaCantidad: string) {
-    const cantidadNum = parseFloat(nuevaCantidad) || 0
+    const cantidadNum = parsearNumero(nuevaCantidad)
     setItems(items.map(item => {
       if (item.id === id) {
         const subtotal = cantidadNum * item.precio_unitario
@@ -147,7 +147,7 @@ export default function NuevaOrdenCompraPage() {
   }
 
   function handlePrecioChange(id: string, nuevoPrecio: string) {
-    const precioNum = parseFloat(nuevoPrecio) || 0
+    const precioNum = parsearNumero(nuevoPrecio)
     setItems(items.map(item => {
       if (item.id === id) {
         const subtotal = item.cantidad * precioNum
@@ -379,23 +379,21 @@ export default function NuevaOrdenCompraPage() {
               <div className="flex-1">
                 <Input
                   label="Cantidad"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   value={cantidad}
-                  onChange={(e) => setCantidad(e.target.value)}
+                  onChange={(e) => setCantidad(formatearInputNumero(e.target.value))}
                   placeholder="0"
                 />
               </div>
               <div className="flex-1">
                 <Input
                   label="Precio $"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   value={precioUnitario}
-                  onChange={(e) => setPrecioUnitario(e.target.value)}
-                  placeholder="0.00"
+                  onChange={(e) => setPrecioUnitario(formatearInputNumero(e.target.value))}
+                  placeholder="0,00"
                 />
               </div>
               <Button onClick={handleAgregarItem} className="flex-shrink-0">
@@ -449,23 +447,21 @@ export default function NuevaOrdenCompraPage() {
             <div className="w-28">
               <Input
                 label="Cantidad"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={cantidad}
-                onChange={(e) => setCantidad(e.target.value)}
+                onChange={(e) => setCantidad(formatearInputNumero(e.target.value))}
                 placeholder="0"
               />
             </div>
             <div className="w-32">
               <Input
                 label="Precio Unit. ($)"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={precioUnitario}
-                onChange={(e) => setPrecioUnitario(e.target.value)}
-                placeholder="0.00"
+                onChange={(e) => setPrecioUnitario(formatearInputNumero(e.target.value))}
+                placeholder="0,00"
               />
             </div>
             <Button onClick={handleAgregarItem}>
@@ -499,11 +495,10 @@ export default function NuevaOrdenCompraPage() {
                         <p className="text-[10px] text-gray-500 mb-0.5">Cantidad</p>
                         <div className="flex items-center gap-1">
                           <input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             value={item.cantidad}
-                            onChange={(e) => handleCantidadChange(item.id, e.target.value)}
+                            onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-14 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                           <span className="text-xs text-gray-500">{item.unidad_medida}</span>
@@ -514,11 +509,10 @@ export default function NuevaOrdenCompraPage() {
                         <div className="flex items-center">
                           <span className="text-xs text-gray-500 mr-0.5">$</span>
                           <input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             value={item.precio_unitario}
-                            onChange={(e) => handlePrecioChange(item.id, e.target.value)}
+                            onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                         </div>
@@ -587,11 +581,10 @@ export default function NuevaOrdenCompraPage() {
                         </td>
                         <td className="px-4 py-3">
                           <input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             value={item.cantidad}
-                            onChange={(e) => handleCantidadChange(item.id, e.target.value)}
+                            onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                           <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
@@ -600,11 +593,10 @@ export default function NuevaOrdenCompraPage() {
                           <div className="flex items-center">
                             <span className="text-sm text-gray-500 mr-1">$</span>
                             <input
-                              type="number"
-                              step="0.01"
-                              min="0"
+                              type="text"
+                              inputMode="decimal"
                               value={item.precio_unitario}
-                              onChange={(e) => handlePrecioChange(item.id, e.target.value)}
+                              onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
                               className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
                             />
                           </div>

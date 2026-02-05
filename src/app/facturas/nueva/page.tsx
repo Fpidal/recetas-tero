@@ -19,6 +19,7 @@ interface Insumo {
   unidad_medida: string
   categoria: string
   precio_actual: number | null
+  cantidad_por_paquete: number
   iva_porcentaje: number
 }
 
@@ -93,7 +94,7 @@ export default function NuevaFacturaPage() {
 
     const [proveedoresRes, insumosRes, ordenesRes] = await Promise.all([
       supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre'),
-      supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, categoria, precio_actual, iva_porcentaje').eq('activo', true).order('nombre'),
+      supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, categoria, precio_actual, cantidad_por_paquete, iva_porcentaje').eq('activo', true).order('nombre'),
       supabase.from('ordenes_compra')
         .select(`
           id, fecha, total, proveedor_id,
@@ -162,7 +163,10 @@ export default function NuevaFacturaPage() {
     setSelectedInsumo(insumoId)
     const insumo = insumos.find(i => i.id === insumoId)
     if (insumo && insumo.precio_actual) {
-      setPrecioUnitario(insumo.precio_actual.toString())
+      // Mostrar precio del paquete (precio unitario × cantidad por paquete)
+      const cantPaq = insumo.cantidad_por_paquete || 1
+      const precioPaquete = insumo.precio_actual * cantPaq
+      setPrecioUnitario(formatearCantidad(precioPaquete, 2))
     } else {
       setPrecioUnitario('')
     }

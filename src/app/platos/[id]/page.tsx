@@ -870,7 +870,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad}
+                            value={ing.cantidad.toString().replace('.', ',')}
                             onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
@@ -923,7 +923,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad}
+                            value={ing.cantidad.toString().replace('.', ',')}
                             onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
                           />

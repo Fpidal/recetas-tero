@@ -435,7 +435,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         <input
                           type="text"
                           inputMode="decimal"
-                          value={item.cantidad}
+                          value={String(item.cantidad).replace('.', ',')}
                           onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
                           className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
                         />
@@ -447,7 +447,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.precio_unitario}
+                            value={String(item.precio_unitario).replace('.', ',')}
                             onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
                           />

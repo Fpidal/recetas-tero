@@ -3,20 +3,14 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
-  Package,
   ShoppingCart,
-  TrendingUp,
   AlertTriangle,
   FileText,
   ClipboardList,
   Plus,
-  BarChart3,
-  Calendar,
   ChefHat,
-  ArrowUpRight,
   XCircle,
-  UtensilsCrossed,
-  RefreshCw
+  UtensilsCrossed
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -37,33 +31,21 @@ const COLORS = {
 }
 
 interface DashboardData {
-  insumosMinimo: number
+  totalPlatos: number
   foodCostPromedio: number
-  foodCostVariacion: number
   ordenesPendientes: number
-  ultimaVariacion: { nombre: string; porcentaje: number } | null
-  alertas: {
-    insumosAumento: number
-    ordenesSinFactura: number
-    platosFueraRango: number
-    recetasSinActualizar: number
-  }
+  ordenesSinFactura: number
+  platosFueraRango: number
   mejorMargen: { nombre: string; ganancia: number } | null
 }
 
 export default function Home() {
   const [data, setData] = useState<DashboardData>({
-    insumosMinimo: 0,
+    totalPlatos: 0,
     foodCostPromedio: 0,
-    foodCostVariacion: 0,
     ordenesPendientes: 0,
-    ultimaVariacion: null,
-    alertas: {
-      insumosAumento: 0,
-      ordenesSinFactura: 0,
-      platosFueraRango: 0,
-      recetasSinActualizar: 0,
-    },
+    ordenesSinFactura: 0,
+    platosFueraRango: 0,
     mejorMargen: null,
   })
   const [isLoading, setIsLoading] = useState(true)
@@ -108,40 +90,45 @@ export default function Home() {
       // Platos fuera de rango (food cost > 35%)
       const platosFueraRango = foodCosts.filter((fc: number) => fc > 35).length
 
-      // Mejor margen (mayor contribución)
-      const { data: mejorMargenData } = await supabase
+      // Obtener todos los items de carta con precio y costo para calcular contribución real
+      const { data: cartaCompleta } = await supabase
         .from('carta')
-        .select('precio_carta, platos(nombre)')
+        .select('precio_carta, food_cost_real, platos(nombre)')
         .eq('activo', true)
-        .order('precio_carta', { ascending: false })
-        .limit(1)
 
+      // Calcular mejor margen (mayor contribución = precio - costo)
       let mejorMargen = null
-      if (mejorMargenData && mejorMargenData.length > 0) {
-        const item = mejorMargenData[0] as any
-        // Calcular contribución aproximada (precio - 30% costo estimado)
-        const ganancia = item.precio_carta * 0.65
-        mejorMargen = {
-          nombre: item.platos?.nombre || 'Plato',
-          ganancia: ganancia,
+      if (cartaCompleta && cartaCompleta.length > 0) {
+        const cartaConContribucion = cartaCompleta.map((item: any) => {
+          const costo = item.precio_carta * (item.food_cost_real / 100)
+          const contribucion = item.precio_carta - costo
+          return {
+            nombre: item.platos?.nombre || 'Plato',
+            precio: item.precio_carta,
+            contribucion,
+          }
+        })
+
+        // Ordenar por contribución descendente
+        cartaConContribucion.sort((a, b) => b.contribucion - a.contribucion)
+
+        if (cartaConContribucion.length > 0) {
+          mejorMargen = {
+            nombre: cartaConContribucion[0].nombre,
+            ganancia: cartaConContribucion[0].contribucion,
+          }
         }
       }
 
-      // Última variación de precios (simulado por ahora)
-      const ultimaVariacion = { nombre: 'Queso rallado', porcentaje: 18 }
+      // Contar platos en carta
+      const totalPlatos = cartaCompleta?.length || 0
 
       setData({
-        insumosMinimo: 6, // TODO: calcular desde stock mínimo
+        totalPlatos,
         foodCostPromedio,
-        foodCostVariacion: 1.2, // TODO: calcular variación real
         ordenesPendientes: ordenesPendientes || 0,
-        ultimaVariacion,
-        alertas: {
-          insumosAumento: 3, // TODO: calcular desde historial precios
-          ordenesSinFactura,
-          platosFueraRango,
-          recetasSinActualizar: 8, // TODO: calcular recetas antiguas
-        },
+        ordenesSinFactura,
+        platosFueraRango,
         mejorMargen,
       })
     } catch (error) {
@@ -151,21 +138,6 @@ export default function Home() {
     setIsLoading(false)
   }
 
-  // Datos del gráfico (simulados)
-  const chartData = [
-    { fecha: '30/8', valor: 180 },
-    { fecha: '3/9', valor: 220 },
-    { fecha: '6/9', valor: 250 },
-    { fecha: '9/9', valor: 230 },
-    { fecha: '12/9', valor: 270 },
-    { fecha: '15/9', valor: 290 },
-    { fecha: '18/9', valor: 260 },
-    { fecha: '21/9', valor: 300 },
-    { fecha: '24/9', valor: 280 },
-    { fecha: '27/9', valor: 310 },
-  ]
-
-  const maxValor = Math.max(...chartData.map(d => d.valor))
 
   return (
     <div className="space-y-6">
@@ -177,24 +149,24 @@ export default function Home() {
 
       {/* 4 Tarjetas Superiores */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Tarjeta 1 - Insumos bajo mínimo */}
+        {/* Tarjeta 1 - Platos en Carta */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-start justify-between mb-3">
             <div
               className="p-2.5 rounded-lg"
               style={{ backgroundColor: COLORS.verdeBg }}
             >
-              <Package className="w-5 h-5" style={{ color: COLORS.verde }} />
+              <ClipboardList className="w-5 h-5" style={{ color: COLORS.verde }} />
             </div>
           </div>
-          <p className="text-sm text-gray-500 mb-1">Insumos bajo mínimo</p>
+          <p className="text-sm text-gray-500 mb-1">Platos en Carta</p>
           <p className="text-2xl font-bold text-gray-900">
-            {isLoading ? '...' : `${data.insumosMinimo} insumos`}
+            {isLoading ? '...' : `${data.totalPlatos} platos`}
           </p>
           <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full"
-              style={{ backgroundColor: COLORS.verde, width: '40%' }}
+              style={{ backgroundColor: COLORS.verde, width: '100%' }}
             />
           </div>
         </div>
@@ -208,12 +180,8 @@ export default function Home() {
             >
               <UtensilsCrossed className="w-5 h-5" style={{ color: COLORS.naranja }} />
             </div>
-            <span className="flex items-center text-xs font-medium text-red-500">
-              <TrendingUp className="w-3 h-3 mr-0.5" />
-              {data.foodCostVariacion}%
-            </span>
           </div>
-          <p className="text-sm text-gray-500 mb-1">Food Cost Promedio Carta</p>
+          <p className="text-sm text-gray-500 mb-1">Food Cost Promedio</p>
           <p className="text-2xl font-bold text-gray-900">
             {isLoading ? '...' : `${data.foodCostPromedio.toFixed(1)}%`}
           </p>
@@ -247,25 +215,25 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tarjeta 4 - Última Variación de Precios */}
+        {/* Tarjeta 4 - Platos Fuera de Rango */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-start justify-between mb-3">
             <div
               className="p-2.5 rounded-lg"
-              style={{ backgroundColor: COLORS.moradoBg }}
+              style={{ backgroundColor: COLORS.rojoBg }}
             >
-              <TrendingUp className="w-5 h-5" style={{ color: COLORS.morado }} />
+              <AlertTriangle className="w-5 h-5" style={{ color: COLORS.rojo }} />
             </div>
           </div>
-          <p className="text-sm text-gray-500 mb-1">Última Variación de Precios</p>
+          <p className="text-sm text-gray-500 mb-1">Platos Fuera de Rango</p>
           <p className="text-2xl font-bold text-gray-900">
-            {isLoading ? '...' : data.ultimaVariacion ? `${data.ultimaVariacion.nombre} +${data.ultimaVariacion.porcentaje}%` : 'Sin datos'}
+            {isLoading ? '...' : `${data.platosFueraRango} platos`}
           </p>
-          <p className="text-xs text-gray-400 mt-1">(últimos 7 días)</p>
+          <p className="text-xs text-gray-400 mt-1">(food cost &gt;35%)</p>
           <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full"
-              style={{ backgroundColor: COLORS.morado, width: '60%' }}
+              style={{ backgroundColor: COLORS.rojo, width: `${data.totalPlatos > 0 ? (data.platosFueraRango / data.totalPlatos) * 100 : 0}%` }}
             />
           </div>
         </div>
@@ -277,69 +245,53 @@ export default function Home() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Alertas</h2>
           <div className="space-y-3">
-            {/* Alerta 1 */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full" style={{ backgroundColor: COLORS.naranjaBg }}>
-                  <ArrowUpRight className="w-4 h-4" style={{ color: COLORS.naranja }} />
-                </div>
-                <span className="text-sm text-gray-700">Insumos con aumento &gt;10%</span>
-              </div>
-              <span
-                className="px-2.5 py-1 rounded-md text-xs font-semibold text-white"
-                style={{ backgroundColor: COLORS.naranja }}
-              >
-                {data.alertas.insumosAumento}
-              </span>
-            </div>
-
-            {/* Alerta 2 */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            {/* Alerta - Órdenes sin factura */}
+            <Link href="/ordenes-compra" className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full" style={{ backgroundColor: COLORS.rojoBg }}>
                   <XCircle className="w-4 h-4" style={{ color: COLORS.rojo }} />
                 </div>
-                <span className="text-sm text-gray-700">Órdenes enviadas sin factura</span>
+                <span className="text-sm text-gray-700">Órdenes sin factura</span>
               </div>
               <span
                 className="px-2.5 py-1 rounded-md text-xs font-semibold text-white"
-                style={{ backgroundColor: COLORS.rojo }}
+                style={{ backgroundColor: data.ordenesSinFactura > 0 ? COLORS.rojo : COLORS.verde }}
               >
-                {data.alertas.ordenesSinFactura}
+                {data.ordenesSinFactura}
               </span>
-            </div>
+            </Link>
 
-            {/* Alerta 3 */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            {/* Alerta - Platos fuera de rango */}
+            <Link href="/carta" className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full" style={{ backgroundColor: COLORS.naranjaBg }}>
                   <ChefHat className="w-4 h-4" style={{ color: COLORS.naranja }} />
                 </div>
-                <span className="text-sm text-gray-700">Platos con food cost fuera de rango</span>
+                <span className="text-sm text-gray-700">Platos con food cost &gt;35%</span>
               </div>
               <span
                 className="px-2.5 py-1 rounded-md text-xs font-semibold text-white"
-                style={{ backgroundColor: COLORS.naranja }}
+                style={{ backgroundColor: data.platosFueraRango > 0 ? COLORS.naranja : COLORS.verde }}
               >
-                {data.alertas.platosFueraRango}
+                {data.platosFueraRango}
               </span>
-            </div>
+            </Link>
 
-            {/* Alerta 4 */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            {/* Alerta - Órdenes pendientes */}
+            <Link href="/ordenes-compra" className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full" style={{ backgroundColor: COLORS.moradoBg }}>
-                  <RefreshCw className="w-4 h-4" style={{ color: COLORS.morado }} />
+                <div className="p-2 rounded-full" style={{ backgroundColor: COLORS.indigoBg }}>
+                  <ShoppingCart className="w-4 h-4" style={{ color: COLORS.indigo }} />
                 </div>
-                <span className="text-sm text-gray-700">Recetas sin costo actualizado</span>
+                <span className="text-sm text-gray-700">Órdenes pendientes de recibir</span>
               </div>
               <span
                 className="px-2.5 py-1 rounded-md text-xs font-semibold text-white"
-                style={{ backgroundColor: COLORS.morado }}
+                style={{ backgroundColor: data.ordenesPendientes > 0 ? COLORS.indigo : COLORS.verde }}
               >
-                {data.alertas.recetasSinActualizar}
+                {data.ordenesPendientes}
               </span>
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -390,87 +342,27 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Tercera fila: Gráfico + Mejor Margen */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Gráfico Evolución Food Cost */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Evolución Food Cost</h2>
-              <p className="text-xs text-gray-500">Últimos 30 días</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="p-1.5 rounded hover:bg-gray-100">
-                <BarChart3 className="w-4 h-4 text-gray-400" />
-              </button>
-              <button className="p-1.5 rounded hover:bg-gray-100">
-                <TrendingUp className="w-4 h-4 text-gray-400" />
-              </button>
-              <button className="p-1.5 rounded hover:bg-gray-100">
-                <Calendar className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-          </div>
-
-          {/* Gráfico simple con CSS */}
-          <div className="relative h-48">
-            {/* Líneas de referencia */}
-            <div className="absolute inset-0 flex flex-col justify-between py-2">
-              {[300, 250, 200, 150].map((val) => (
-                <div key={val} className="flex items-center">
-                  <span className="text-[10px] text-gray-400 w-8">{val}</span>
-                  <div className="flex-1 border-t border-dashed border-gray-100" />
-                </div>
-              ))}
-            </div>
-
-            {/* Barras del gráfico */}
-            <div className="absolute inset-0 flex items-end justify-around pl-10 pb-6">
-              {chartData.map((d, i) => (
-                <div key={i} className="flex flex-col items-center gap-1">
-                  <div
-                    className="w-6 rounded-t-sm transition-all hover:opacity-80"
-                    style={{
-                      height: `${(d.valor / maxValor) * 140}px`,
-                      background: `linear-gradient(180deg, ${COLORS.verde} 0%, #14B8A6 100%)`,
-                    }}
-                  />
-                  <span className="text-[9px] text-gray-400">{d.fecha}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Widget Mejor Margen del Día */}
+      {/* Tercera fila: Mejor Margen */}
+      {data.mejorMargen && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Mejor Margen del Día</h2>
-
-          {/* Imagen placeholder */}
-          <div className="relative h-32 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
-            <ChefHat className="w-16 h-16 text-orange-300" />
-          </div>
-
-          <p className="text-sm text-gray-600 mb-1">
-            {data.mejorMargen?.nombre || 'Bife de chorizo'}
-          </p>
-          <p className="text-3xl font-bold" style={{ color: COLORS.verde }}>
-            + ${(data.mejorMargen?.ganancia || 4320).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-          </p>
-
-          {/* Toggle */}
-          <div className="flex items-center gap-2 mt-4 p-1 bg-gray-100 rounded-lg">
-            <button className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-white rounded-md shadow-sm text-xs font-medium text-gray-700">
-              <BarChart3 className="w-3 h-3" />
-              Gráfico
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-gray-500">
-              <ClipboardList className="w-3 h-3" />
-              Corto
-            </button>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Mejor Contribución en Carta</h2>
+          <div className="flex items-center gap-6">
+            {/* Imagen placeholder */}
+            <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center flex-shrink-0">
+              <ChefHat className="w-10 h-10 text-orange-300" />
+            </div>
+            <div>
+              <p className="text-lg font-medium text-gray-900 mb-1">
+                {data.mejorMargen.nombre}
+              </p>
+              <p className="text-sm text-gray-500 mb-2">Mayor contribución por plato vendido</p>
+              <p className="text-3xl font-bold" style={{ color: COLORS.verde }}>
+                + ${data.mejorMargen.ganancia.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

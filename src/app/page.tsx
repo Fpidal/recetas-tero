@@ -250,14 +250,14 @@ export default function Home() {
         .eq('activo', true)
 
       // Función para calcular costo final de un insumo
-      function getCostoFinalInsumo(insumoId: string): number {
+      const getCostoFinalInsumo = (insumoId: string): number => {
         const insumo = insumosConPrecio?.find((i: any) => i.id === insumoId)
         if (!insumo || !insumo.precio_actual) return 0
         return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
       }
 
       // Función para calcular costo de un plato
-      function calcularCostoPlato(platoId: string): number {
+      const calcularCostoPlato = (platoId: string): number => {
         const plato = platosData?.find((p: any) => p.id === platoId)
         if (!plato) return 0
 

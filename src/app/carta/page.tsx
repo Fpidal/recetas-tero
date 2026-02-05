@@ -517,13 +517,13 @@ export default function CartaPage() {
                         e.stopPropagation()
                         handleToggleEnCarta(item.id, tabActiva !== 'en_carta')
                       }}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      className={`relative inline-flex h-4 w-[30px] items-center rounded-full transition-colors ${
                         tabActiva === 'en_carta' ? 'bg-primary-600' : 'bg-gray-300'
                       }`}
                     >
                       <span
-                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-                          tabActiva === 'en_carta' ? 'translate-x-[18px]' : 'translate-x-1'
+                        className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
+                          tabActiva === 'en_carta' ? 'translate-x-[15px]' : 'translate-x-0.5'
                         }`}
                       />
                     </button>

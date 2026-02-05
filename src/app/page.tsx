@@ -846,7 +846,7 @@ export default function Home() {
                     <LabelList
                       dataKey="variacion"
                       position="top"
-                      formatter={(v: number) => `${v.toFixed(1)}%`}
+                      formatter={(v) => `${Number(v).toFixed(1)}%`}
                       style={{ fontSize: 9, fill: '#374151' }}
                     />
                   </Bar>

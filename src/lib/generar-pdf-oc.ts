@@ -5,6 +5,7 @@ interface OrdenPDF {
   id: string
   numero: string | null
   fecha: string
+  estado: string
   notas: string | null
   proveedor_nombre: string
   proveedor_contacto: string | null
@@ -20,6 +21,14 @@ interface OrdenPDF {
     iva_porcentaje: number
     iva_monto: number
   }[]
+}
+
+// Datos fijos de Tero Restó
+const TERO_RESTO = {
+  nombre: 'Tero Restó',
+  direccion: 'Av. del Libertador 1234',
+  localidad: 'San Isidro, Buenos Aires',
+  telefono: '11-4444-5555',
 }
 
 export async function generarPDFOrden(ordenId: string) {
@@ -47,6 +56,7 @@ export async function generarPDFOrden(ordenId: string) {
     id: data.id,
     numero: (data as any).numero || null,
     fecha: data.fecha,
+    estado: (data as any).estado || 'borrador',
     notas: data.notas,
     proveedor_nombre: prov?.nombre || 'Desconocido',
     proveedor_contacto: prov?.contacto || null,
@@ -80,15 +90,15 @@ export async function generarPDFOrden(ordenId: string) {
   const doc = new jsPDF({ unit: 'mm', format: 'a5' })
   const pageWidth = 148
   const pageHeight = 210
-  const margin = 10
+  const margin = 8
   const contentWidth = pageWidth - margin * 2
   const TERRACOTA = [163, 82, 52] as const
   const TERRACOTA_LIGHT = [214, 165, 145] as const
+  const GRIS_CLARO = [245, 245, 245] as const
 
   // Logo desde bucket "fotos platos"
   let logoDataUrl: string | null = null
   try {
-    // Listar archivos del bucket para obtener el nombre del logo
     const { data: files } = await supabase.storage.from('fotos platos').list('', { limit: 1 })
     if (files && files.length > 0) {
       const logoFile = files[0].name
@@ -111,91 +121,129 @@ export async function generarPDFOrden(ordenId: string) {
     return `$${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
-  // Fondo + borde
-  doc.setFillColor(255, 255, 255)
-  doc.rect(0, 0, pageWidth, pageHeight, 'F')
-  doc.setDrawColor(...TERRACOTA_LIGHT)
-  doc.setLineWidth(0.4)
-  doc.roundedRect(5, 5, pageWidth - 10, pageHeight - 10, 3, 3, 'S')
-
-  let y = 15
-
-  // === HEADER ===
-  doc.setFillColor(...TERRACOTA)
-  doc.roundedRect(margin, y, contentWidth, 18, 2, 2, 'F')
-
-  doc.setFont('times', 'bolditalic')
-  doc.setFontSize(13)
-  doc.setTextColor(255, 255, 255)
-  doc.text('Tero Restó', margin + 6, y + 7)
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
-  doc.text('ORDEN DE COMPRA', margin + 6, y + 13.5)
-
-  // Fecha y N° a la derecha
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7.5)
-  const fechaStr = new Date(orden.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
-  doc.text(fechaStr, pageWidth - margin - 6, y + 7, { align: 'right' })
-  if (orden.numero) {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(7)
-    doc.text(orden.numero, pageWidth - margin - 6, y + 13.5, { align: 'right' })
+  const estadoLabel: Record<string, string> = {
+    borrador: 'BORRADOR',
+    enviada: 'ENVIADA',
+    recibida: 'RECIBIDA',
+    cancelada: 'CANCELADA',
+    parcialmente_recibida: 'PARCIAL',
   }
 
+  // Fondo
+  doc.setFillColor(255, 255, 255)
+  doc.rect(0, 0, pageWidth, pageHeight, 'F')
+
+  // Borde exterior
+  doc.setDrawColor(...TERRACOTA_LIGHT)
+  doc.setLineWidth(0.5)
+  doc.rect(margin - 2, margin - 2, contentWidth + 4, pageHeight - margin * 2 + 4, 'S')
+
+  let y = margin + 4
+
+  // === HEADER ===
+  const headerHeight = 22
+  doc.setFillColor(...TERRACOTA)
+  doc.rect(margin, y, contentWidth, headerHeight, 'F')
+
+  // Logo a la izquierda
   if (logoDataUrl) {
     try {
-      // Logo más grande y visible en la esquina derecha del header
-      doc.addImage(logoDataUrl, 'PNG', pageWidth - margin - 20, y + 2, 14, 14)
+      doc.addImage(logoDataUrl, 'PNG', margin + 3, y + 3, 16, 16)
     } catch {}
   }
 
-  y += 24
+  // Texto central
+  const centerX = margin + 22
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.setTextColor(255, 255, 255)
+  doc.text('ORDEN DE COMPRA', centerX, y + 9)
 
-  // === PROVEEDOR ===
-  doc.setFillColor(248, 244, 241)
-  doc.roundedRect(margin, y, contentWidth, orden.proveedor_direccion ? 22 : 17, 2, 2, 'F')
+  doc.setFont('times', 'bolditalic')
+  doc.setFontSize(10)
+  doc.text('Tero Restó', centerX, y + 16)
+
+  // Datos derecha (N°, Fecha, Estado)
+  const rightX = pageWidth - margin - 4
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.text(orden.numero || 'S/N', rightX, y + 7, { align: 'right' })
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  const fechaCorta = new Date(orden.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+  doc.text(`Fecha: ${fechaCorta}`, rightX, y + 12, { align: 'right' })
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(6)
+  doc.text(`Estado: ${estadoLabel[orden.estado] || orden.estado.toUpperCase()}`, rightX, y + 17, { align: 'right' })
+
+  y += headerHeight + 3
+
+  // === PROVEEDOR + ENTREGAR EN (dos columnas) ===
+  const boxHeight = 24
+  const halfWidth = (contentWidth - 3) / 2
+
+  // Caja PROVEEDOR (izquierda)
+  doc.setFillColor(...GRIS_CLARO)
+  doc.rect(margin, y, halfWidth, boxHeight, 'F')
+  doc.setDrawColor(...TERRACOTA_LIGHT)
+  doc.setLineWidth(0.3)
+  doc.rect(margin, y, halfWidth, boxHeight, 'S')
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(6)
   doc.setTextColor(...TERRACOTA)
-  doc.text('PROVEEDOR', margin + 4, y + 4)
+  doc.text('PROVEEDOR:', margin + 3, y + 5)
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
+  doc.setFontSize(8)
   doc.setTextColor(40, 40, 40)
-  doc.text(orden.proveedor_nombre, margin + 4, y + 10)
+  doc.text(orden.proveedor_nombre, margin + 3, y + 11)
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(6.5)
+  doc.setFontSize(6)
   doc.setTextColor(80, 80, 80)
-
-  const contactoParts: string[] = []
-  if (orden.proveedor_contacto) contactoParts.push(`Contacto: ${orden.proveedor_contacto}`)
-  if (orden.proveedor_telefono) contactoParts.push(`Tel: ${orden.proveedor_telefono}`)
-  if (orden.proveedor_email) contactoParts.push(orden.proveedor_email)
-
-  if (contactoParts.length > 0) {
-    doc.text(contactoParts.join('  |  '), margin + 4, y + 14.5)
+  if (orden.proveedor_contacto) {
+    doc.text(orden.proveedor_contacto, margin + 3, y + 16)
+  }
+  if (orden.proveedor_telefono) {
+    doc.text(`Tel: ${orden.proveedor_telefono}`, margin + 3, y + 20)
   }
 
-  if (orden.proveedor_direccion) {
-    doc.text(orden.proveedor_direccion, margin + 4, y + 19)
-    y += 26
-  } else {
-    y += 21
-  }
+  // Caja ENTREGAR EN (derecha)
+  const rightBoxX = margin + halfWidth + 3
+  doc.setFillColor(...GRIS_CLARO)
+  doc.rect(rightBoxX, y, halfWidth, boxHeight, 'F')
+  doc.setDrawColor(...TERRACOTA_LIGHT)
+  doc.rect(rightBoxX, y, halfWidth, boxHeight, 'S')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(6)
+  doc.setTextColor(...TERRACOTA)
+  doc.text('ENTREGAR EN:', rightBoxX + 3, y + 5)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(40, 40, 40)
+  doc.text(TERO_RESTO.nombre, rightBoxX + 3, y + 11)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6)
+  doc.setTextColor(80, 80, 80)
+  doc.text(TERO_RESTO.direccion, rightBoxX + 3, y + 16)
+  doc.text(TERO_RESTO.localidad, rightBoxX + 3, y + 20)
+
+  y += boxHeight + 4
 
   // === TABLA ===
-  y += 4
-  const rowH = 7.5
+  const rowH = 7
   const colX = {
-    num: margin + 3,
-    insumo: margin + contentWidth * 0.05 + 3,
-    cantRight: margin + contentWidth * 0.55 - 2,
-    unidad: margin + contentWidth * 0.55 + 2,
-    precioRight: margin + contentWidth * 0.825 - 2,
+    num: margin + 2,
+    insumo: margin + 10,
+    cantRight: margin + contentWidth * 0.52,
+    unidad: margin + contentWidth * 0.54,
+    precioRight: margin + contentWidth * 0.78,
     subtotalRight: pageWidth - margin - 3,
   }
 
@@ -206,11 +254,11 @@ export async function generarPDFOrden(ordenId: string) {
   doc.setFontSize(6)
   doc.setTextColor(255, 255, 255)
 
-  const hTextY = y + 5
+  const hTextY = y + 4.5
   doc.text('#', colX.num, hTextY)
   doc.text('INSUMO', colX.insumo, hTextY)
-  doc.text('CANT.', colX.cantRight, hTextY, { align: 'right' })
-  doc.text('UN.', colX.unidad, hTextY)
+  doc.text('CANT', colX.cantRight, hTextY, { align: 'right' })
+  doc.text('UN', colX.unidad, hTextY)
   doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
   doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
 
@@ -219,31 +267,34 @@ export async function generarPDFOrden(ordenId: string) {
   // Filas
   orden.items.forEach((item, idx) => {
     if (idx % 2 === 0) {
-      doc.setFillColor(248, 248, 248)
+      doc.setFillColor(250, 250, 250)
       doc.rect(margin, y, contentWidth, rowH, 'F')
     }
     doc.setDrawColor(230, 230, 230)
-    doc.setLineWidth(0.15)
+    doc.setLineWidth(0.1)
     doc.line(margin, y, pageWidth - margin, y)
 
-    const textY = y + 5
-    doc.setFontSize(7)
+    const textY = y + 4.5
+    doc.setFontSize(6.5)
 
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(150, 150, 150)
     doc.text(`${idx + 1}`, colX.num, textY)
 
     doc.setTextColor(30, 30, 30)
-    doc.text(item.insumo_nombre, colX.insumo, textY)
+    const nombreTruncado = item.insumo_nombre.length > 25
+      ? item.insumo_nombre.substring(0, 25) + '...'
+      : item.insumo_nombre
+    doc.text(nombreTruncado, colX.insumo, textY)
 
     doc.setTextColor(50, 50, 50)
     const cantStr = item.cantidad % 1 === 0 ? item.cantidad.toFixed(0) : item.cantidad.toFixed(2).replace('.', ',')
     doc.text(cantStr, colX.cantRight, textY, { align: 'right' })
 
     doc.setTextColor(120, 120, 120)
-    doc.setFontSize(6.5)
+    doc.setFontSize(6)
     doc.text(item.unidad_medida, colX.unidad, textY)
-    doc.setFontSize(7)
+    doc.setFontSize(6.5)
 
     doc.setTextColor(50, 50, 50)
     doc.text(fmtMoney(item.precio_unitario), colX.precioRight, textY, { align: 'right' })
@@ -255,11 +306,11 @@ export async function generarPDFOrden(ordenId: string) {
     y += rowH
   })
 
-  // Línea cierre
-  doc.setDrawColor(...TERRACOTA_LIGHT)
+  // Línea cierre tabla
+  doc.setDrawColor(...TERRACOTA)
   doc.setLineWidth(0.3)
   doc.line(margin, y, pageWidth - margin, y)
-  y += 5
+  y += 4
 
   // === TOTALES ===
   const totalesX = colX.subtotalRight
@@ -268,85 +319,84 @@ export async function generarPDFOrden(ordenId: string) {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
   doc.setTextColor(100, 100, 100)
-  doc.text('Subtotal Neto:', labelX, y, { align: 'right' })
+  doc.text('Subtotal Neto', labelX, y, { align: 'right' })
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(40, 40, 40)
   doc.text(fmtMoney(subtotalNeto), totalesX, y, { align: 'right' })
-  y += 5
+  y += 4.5
 
   if (totalIva21 > 0) {
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100, 100, 100)
-    doc.text('IVA 21%:', labelX, y, { align: 'right' })
+    doc.text('IVA (21%)', labelX, y, { align: 'right' })
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(40, 40, 40)
     doc.text(fmtMoney(totalIva21), totalesX, y, { align: 'right' })
-    y += 5
+    y += 4.5
   }
 
   if (totalIva105 > 0) {
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100, 100, 100)
-    doc.text('IVA 10.5%:', labelX, y, { align: 'right' })
+    doc.text('IVA (10.5%)', labelX, y, { align: 'right' })
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(40, 40, 40)
     doc.text(fmtMoney(totalIva105), totalesX, y, { align: 'right' })
-    y += 5
+    y += 4.5
   }
 
-  // Total badge
-  y += 2
-  const totalText = fmtMoney(totalConIva)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8.5)
-  const totalBadgeW = doc.getTextWidth(totalText) + doc.getTextWidth('TOTAL:  ') + 14
-  const totalBadgeX = pageWidth - margin - totalBadgeW
+  // Línea separadora
+  y += 1
+  doc.setDrawColor(...TERRACOTA_LIGHT)
+  doc.setLineWidth(0.2)
+  doc.line(labelX - 25, y, totalesX, y)
+  y += 4
 
+  // Total final
   doc.setFillColor(...TERRACOTA)
-  doc.roundedRect(totalBadgeX, y - 4, totalBadgeW, 10, 2, 2, 'F')
+  const totalBoxW = 55
+  const totalBoxX = pageWidth - margin - totalBoxW
+  doc.roundedRect(totalBoxX, y - 3, totalBoxW, 10, 1.5, 1.5, 'F')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
   doc.setTextColor(255, 255, 255)
-  doc.text('TOTAL:', totalBadgeX + 6, y + 2)
+  doc.text('TOTAL GENERAL', totalBoxX + 4, y + 3)
   doc.setFontSize(9)
-  doc.text(totalText, pageWidth - margin - 5, y + 2, { align: 'right' })
-  y += 14
+  doc.text(fmtMoney(totalConIva), pageWidth - margin - 3, y + 3, { align: 'right' })
+  y += 12
 
   // Notas
   if (orden.notas) {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(6)
     doc.setTextColor(...TERRACOTA)
-    doc.text('NOTAS / CONDICIONES', margin + 2, y)
-    y += 3.5
-
-    doc.setFillColor(248, 244, 241)
-    const notasLines = doc.splitTextToSize(orden.notas, contentWidth - 8)
-    const notasHeight = notasLines.length * 3.5 + 4
-    doc.roundedRect(margin, y - 1.5, contentWidth, notasHeight, 2, 2, 'F')
+    doc.text('NOTAS:', margin + 2, y)
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(6.5)
+    doc.setFontSize(6)
     doc.setTextColor(60, 60, 60)
-    doc.text(notasLines, margin + 4, y + 2)
-    y += notasHeight + 3
+    const notasLines = doc.splitTextToSize(orden.notas, contentWidth - 20)
+    doc.text(notasLines, margin + 18, y)
+    y += notasLines.length * 3 + 4
   }
 
   // Observaciones
   doc.setFont('helvetica', 'italic')
-  doc.setFontSize(5.5)
+  doc.setFontSize(5)
   doc.setTextColor(150, 150, 150)
   doc.text('Observaciones: mercadería sujeta a control de calidad al recibir.', margin + 2, y)
 
   // Footer
-  const footerY = pageHeight - 15
+  const footerY = pageHeight - margin - 8
   doc.setDrawColor(...TERRACOTA_LIGHT)
   doc.setLineWidth(0.2)
-  doc.line(margin + 15, footerY, pageWidth - margin - 15, footerY)
+  doc.line(margin + 20, footerY, pageWidth - margin - 20, footerY)
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(5.5)
+  doc.setFontSize(5)
   doc.setTextColor(150, 130, 120)
   doc.text('Tero Restó  |  Orden de Compra', pageWidth / 2, footerY + 4, { align: 'center' })
-  doc.text(`Generada: ${new Date().toLocaleDateString('es-AR')}`, pageWidth / 2, footerY + 7.5, { align: 'center' })
 
   // Guardar
   const numPart = orden.numero ? `${orden.numero}_` : ''
@@ -361,5 +411,5 @@ export async function generarPDFOrden(ordenId: string) {
       .eq('id', ordenId)
   }
 
-  return (data as any).estado === 'borrador' // retorna true si cambió estado
+  return (data as any).estado === 'borrador'
 }

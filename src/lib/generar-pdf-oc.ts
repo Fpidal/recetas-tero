@@ -23,12 +23,13 @@ interface OrdenPDF {
   }[]
 }
 
-// Datos fijos de Tero Restó
-const TERO_RESTO = {
-  nombre: 'Tero Restó',
-  direccion: 'Av. del Libertador 1234',
-  localidad: 'San Isidro, Buenos Aires',
-  telefono: '11-4444-5555',
+// Datos fijos de Tero
+const TERO_DATA = {
+  nombre: 'Tero (Oret Srl)',
+  cuit: 'CUIT 30-71732567-9',
+  direccion: 'Av Agustin Garcia 9501',
+  localidad: 'Benavidez',
+  cp: 'CP 1621',
 }
 
 export async function generarPDFOrden(ordenId: string) {
@@ -121,13 +122,13 @@ export async function generarPDFOrden(ordenId: string) {
     return `$${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
-  const estadoLabel: Record<string, string> = {
-    borrador: 'BORRADOR',
-    enviada: 'ENVIADA',
-    recibida: 'RECIBIDA',
-    cancelada: 'CANCELADA',
-    parcialmente_recibida: 'PARCIAL',
-  }
+  // Formatear fecha: "Tigre 04 de febrero de 2026"
+  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  const fechaObj = new Date(orden.fecha)
+  const dia = fechaObj.getDate().toString().padStart(2, '0')
+  const mes = meses[fechaObj.getMonth()]
+  const anio = fechaObj.getFullYear()
+  const fechaFormateada = `Tigre ${dia} de ${mes} de ${anio}`
 
   // Fondo
   doc.setFillColor(255, 255, 255)
@@ -141,47 +142,42 @@ export async function generarPDFOrden(ordenId: string) {
   let y = margin + 4
 
   // === HEADER ===
-  const headerHeight = 22
+  const headerHeight = 24
   doc.setFillColor(...TERRACOTA)
   doc.rect(margin, y, contentWidth, headerHeight, 'F')
 
-  // Logo a la izquierda
+  // Logo a la izquierda (más grande)
   if (logoDataUrl) {
     try {
-      doc.addImage(logoDataUrl, 'PNG', margin + 3, y + 3, 16, 16)
+      doc.addImage(logoDataUrl, 'PNG', margin + 3, y + 2, 20, 20)
     } catch {}
   }
 
-  // Texto central
-  const centerX = margin + 22
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.setTextColor(255, 255, 255)
-  doc.text('ORDEN DE COMPRA', centerX, y + 9)
-
+  // Texto central: Logo/Tero arriba, "Orden de compra" abajo
+  const centerX = margin + 26
   doc.setFont('times', 'bolditalic')
-  doc.setFontSize(10)
-  doc.text('Tero Restó', centerX, y + 16)
+  doc.setFontSize(14)
+  doc.setTextColor(255, 255, 255)
+  doc.text('Tero', centerX, y + 10)
 
-  // Datos derecha (N°, Fecha, Estado)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.text('Orden de compra', centerX, y + 18)
+
+  // Datos derecha (Orden de compra N°, Fecha)
   const rightX = pageWidth - margin - 4
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
-  doc.text(orden.numero || 'S/N', rightX, y + 7, { align: 'right' })
+  doc.text(`Orden de compra N° ${orden.numero || 'S/N'}`, rightX, y + 10, { align: 'right' })
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
-  const fechaCorta = new Date(orden.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
-  doc.text(`Fecha: ${fechaCorta}`, rightX, y + 12, { align: 'right' })
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(6)
-  doc.text(`Estado: ${estadoLabel[orden.estado] || orden.estado.toUpperCase()}`, rightX, y + 17, { align: 'right' })
+  doc.text(fechaFormateada, rightX, y + 17, { align: 'right' })
 
   y += headerHeight + 3
 
   // === PROVEEDOR + ENTREGAR EN (dos columnas) ===
-  const boxHeight = 24
+  const boxHeight = 28
   const halfWidth = (contentWidth - 3) / 2
 
   // Caja PROVEEDOR (izquierda)
@@ -224,15 +220,16 @@ export async function generarPDFOrden(ordenId: string) {
   doc.text('ENTREGAR EN:', rightBoxX + 3, y + 5)
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
+  doc.setFontSize(7)
   doc.setTextColor(40, 40, 40)
-  doc.text(TERO_RESTO.nombre, rightBoxX + 3, y + 11)
+  doc.text(TERO_DATA.nombre, rightBoxX + 3, y + 10)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(6)
   doc.setTextColor(80, 80, 80)
-  doc.text(TERO_RESTO.direccion, rightBoxX + 3, y + 16)
-  doc.text(TERO_RESTO.localidad, rightBoxX + 3, y + 20)
+  doc.text(TERO_DATA.cuit, rightBoxX + 3, y + 14)
+  doc.text(TERO_DATA.direccion, rightBoxX + 3, y + 18)
+  doc.text(`${TERO_DATA.localidad} - ${TERO_DATA.cp}`, rightBoxX + 3, y + 22)
 
   y += boxHeight + 4
 
@@ -241,9 +238,10 @@ export async function generarPDFOrden(ordenId: string) {
   const colX = {
     num: margin + 2,
     insumo: margin + 10,
+    ivaRight: margin + contentWidth * 0.42,
     cantRight: margin + contentWidth * 0.52,
     unidad: margin + contentWidth * 0.54,
-    precioRight: margin + contentWidth * 0.78,
+    precioRight: margin + contentWidth * 0.76,
     subtotalRight: pageWidth - margin - 3,
   }
 
@@ -257,6 +255,7 @@ export async function generarPDFOrden(ordenId: string) {
   const hTextY = y + 4.5
   doc.text('#', colX.num, hTextY)
   doc.text('INSUMO', colX.insumo, hTextY)
+  doc.text('IVA', colX.ivaRight, hTextY, { align: 'right' })
   doc.text('CANT', colX.cantRight, hTextY, { align: 'right' })
   doc.text('UN', colX.unidad, hTextY)
   doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
@@ -282,10 +281,17 @@ export async function generarPDFOrden(ordenId: string) {
     doc.text(`${idx + 1}`, colX.num, textY)
 
     doc.setTextColor(30, 30, 30)
-    const nombreTruncado = item.insumo_nombre.length > 25
-      ? item.insumo_nombre.substring(0, 25) + '...'
+    const nombreTruncado = item.insumo_nombre.length > 20
+      ? item.insumo_nombre.substring(0, 20) + '...'
       : item.insumo_nombre
     doc.text(nombreTruncado, colX.insumo, textY)
+
+    // IVA
+    doc.setTextColor(100, 100, 100)
+    doc.setFontSize(5.5)
+    const ivaStr = item.iva_porcentaje === 10.5 ? '10,5%' : item.iva_porcentaje === 0 ? '0%' : '21%'
+    doc.text(ivaStr, colX.ivaRight, textY, { align: 'right' })
+    doc.setFontSize(6.5)
 
     doc.setTextColor(50, 50, 50)
     const cantStr = item.cantidad % 1 === 0 ? item.cantidad.toFixed(0) : item.cantidad.toFixed(2).replace('.', ',')
@@ -382,10 +388,22 @@ export async function generarPDFOrden(ordenId: string) {
   }
 
   // Observaciones
-  doc.setFont('helvetica', 'italic')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(5.5)
+  doc.setTextColor(...TERRACOTA)
+  doc.text('Observaciones:', margin + 2, y)
+
+  doc.setFont('helvetica', 'normal')
   doc.setFontSize(5)
-  doc.setTextColor(150, 150, 150)
-  doc.text('Observaciones: mercadería sujeta a control de calidad al recibir.', margin + 2, y)
+  doc.setTextColor(80, 80, 80)
+  const observaciones = [
+    '• Mercadería sujeta a control de calidad al recibir.',
+    '• Confirmar si el pedido será entregado en su totalidad.',
+    '• Confirmar fecha de entrega.',
+  ]
+  observaciones.forEach((obs, i) => {
+    doc.text(obs, margin + 2, y + 4 + (i * 3))
+  })
 
   // Footer
   const footerY = pageHeight - margin - 8

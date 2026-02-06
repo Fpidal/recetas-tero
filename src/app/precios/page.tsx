@@ -16,6 +16,7 @@ interface PrecioRaw {
   insumo_id: string
   precio: number
   fecha: string
+  es_precio_actual?: boolean
 }
 
 const COLORES = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed']
@@ -134,7 +135,7 @@ export default function PreciosPage() {
 
     const { data } = await supabase
       .from('precios_insumo')
-      .select('insumo_id, precio, fecha')
+      .select('insumo_id, precio, fecha, es_precio_actual')
       .in('insumo_id', categInsumoIds)
       .gte('fecha', fechaDesde.toISOString().split('T')[0])
       .order('fecha', { ascending: true })
@@ -230,8 +231,17 @@ export default function PreciosPage() {
 
       if (precios.length === 0) return null
 
-      const primero = precios[0].precio
-      const ultimo = precios[precios.length - 1].precio
+      // Usar el precio actual (es_precio_actual = true) como último
+      const precioActualReg = precios.find(p => p.es_precio_actual)
+      const preciosAnteriores = precios.filter(p => !p.es_precio_actual)
+
+      // Si no hay precio actual en el período, usar el más reciente
+      const ultimo = precioActualReg?.precio || precios[precios.length - 1].precio
+      // El anterior es el más reciente de los no actuales, o el primero del período
+      const primero = preciosAnteriores.length > 0
+        ? preciosAnteriores[preciosAnteriores.length - 1].precio
+        : precios[0].precio
+
       const variacion = primero > 0 ? ((ultimo - primero) / primero) * 100 : 0
       const min = Math.min(...precios.map(p => p.precio))
       const max = Math.max(...precios.map(p => p.precio))
@@ -697,8 +707,8 @@ export default function PreciosPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Inicial</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Actual</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Anterior</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actual</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Mín.</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Máx.</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Variación</th>

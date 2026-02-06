@@ -93,7 +93,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
         menu_ejecutivo_items (
           id, tipo, insumo_id, receta_base_id, plato_id, cantidad, es_bebida, costo_linea,
           insumos (nombre, unidad_medida),
-          recetas_base (nombre, unidad_medida, costo_total, rendimiento),
+          recetas_base (nombre, costo_total, costo_por_porcion, rendimiento_porciones),
           platos (nombre, costo_total)
         )
       `)

@@ -46,6 +46,7 @@ interface ItemFactura {
   unidad_medida: string
   cantidad: number
   precio_unitario: number
+  descuento: number
   subtotal: number
   iva_porcentaje: number
   iva_monto: number
@@ -66,6 +67,7 @@ export default function NuevaFacturaPage() {
   const [selectedInsumo, setSelectedInsumo] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [precioUnitario, setPrecioUnitario] = useState('')
+  const [descuento, setDescuento] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isModalOrdenOpen, setIsModalOrdenOpen] = useState(false)
@@ -148,6 +150,7 @@ export default function NuevaFacturaPage() {
         unidad_medida: item.unidad_medida,
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
+        descuento: 0,
         subtotal,
         iva_porcentaje: item.iva_porcentaje,
         iva_monto: ivaMonto,
@@ -190,7 +193,8 @@ export default function NuevaFacturaPage() {
 
     const cantidadNum = parsearNumero(cantidad)
     const precioNum = parsearNumero(precioUnitario)
-    const subtotal = cantidadNum * precioNum
+    const descuentoNum = descuento ? parsearNumero(descuento) : 0
+    const subtotal = cantidadNum * precioNum * (1 - descuentoNum / 100)
     const ivaPorcentaje = insumo.iva_porcentaje || 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
 
@@ -201,6 +205,7 @@ export default function NuevaFacturaPage() {
       unidad_medida: insumo.unidad_medida,
       cantidad: cantidadNum,
       precio_unitario: precioNum,
+      descuento: descuentoNum,
       subtotal,
       iva_porcentaje: ivaPorcentaje,
       iva_monto: ivaMonto,
@@ -211,6 +216,7 @@ export default function NuevaFacturaPage() {
     setSelectedInsumo('')
     setCantidad('')
     setPrecioUnitario('')
+    setDescuento('')
   }
 
   function handleEliminarItem(id: string) {
@@ -233,7 +239,7 @@ export default function NuevaFacturaPage() {
             diferencia = null
           }
         }
-        const subtotal = cantidadNum * item.precio_unitario
+        const subtotal = cantidadNum * item.precio_unitario * (1 - item.descuento / 100)
         const ivaMonto = subtotal * (item.iva_porcentaje / 100)
         return {
           ...item,
@@ -263,7 +269,7 @@ export default function NuevaFacturaPage() {
             diferencia = null
           }
         }
-        const subtotal = item.cantidad * precioNum
+        const subtotal = item.cantidad * precioNum * (1 - item.descuento / 100)
         const ivaMonto = subtotal * (item.iva_porcentaje / 100)
         return {
           ...item,
@@ -271,6 +277,23 @@ export default function NuevaFacturaPage() {
           subtotal,
           iva_monto: ivaMonto,
           diferencia,
+        }
+      }
+      return item
+    }))
+  }
+
+  function handleDescuentoChange(id: string, nuevoDescuento: string) {
+    const descuentoNum = nuevoDescuento ? parsearNumero(nuevoDescuento) : 0
+    setItems(items.map(item => {
+      if (item.id === id) {
+        const subtotal = item.cantidad * item.precio_unitario * (1 - descuentoNum / 100)
+        const ivaMonto = subtotal * (item.iva_porcentaje / 100)
+        return {
+          ...item,
+          descuento: descuentoNum,
+          subtotal,
+          iva_monto: ivaMonto,
         }
       }
       return item
@@ -387,6 +410,7 @@ export default function NuevaFacturaPage() {
       insumo_id: item.insumo_id,
       cantidad: item.cantidad,
       precio_unitario: item.precio_unitario,
+      descuento: item.descuento || 0,
     }))
 
     const { error: itemsError } = await supabase
@@ -622,10 +646,14 @@ export default function NuevaFacturaPage() {
                     { value: '', label: 'Seleccionar insumo...' },
                     ...insumos
                       .filter(i => !items.some(item => item.insumo_id === i.id))
-                      .map(i => ({
-                        value: i.id,
-                        label: `${i.nombre} (${i.unidad_medida})`
-                      }))
+                      .map(i => {
+                        const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
+                        const contenidoInfo = cantPaq > 1 ? ` - Cont: ${cantPaq}` : ''
+                        return {
+                          value: i.id,
+                          label: `${i.nombre} (${i.unidad_medida})${contenidoInfo}`
+                        }
+                      })
                   ]}
                   value={selectedInsumo}
                   onChange={(e) => handleSelectInsumo(e.target.value)}
@@ -659,6 +687,16 @@ export default function NuevaFacturaPage() {
                 placeholder="0,00"
               />
             </div>
+            <div className="w-20">
+              <Input
+                label="Dto %"
+                type="text"
+                inputMode="decimal"
+                value={descuento}
+                onChange={(e) => setDescuento(formatearInputNumero(e.target.value))}
+                placeholder="0"
+              />
+            </div>
             <Button onClick={handleAgregarItem}>
               <Plus className="w-4 h-4 mr-1" />
               Agregar
@@ -674,6 +712,7 @@ export default function NuevaFacturaPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dto %</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
                     <th className="px-4 py-3"></th>
@@ -690,14 +729,16 @@ export default function NuevaFacturaPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={String(item.cantidad).replace('.', ',')}
-                          onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
-                          className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
-                        />
-                        <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
+                        <div className="flex items-center">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={String(item.cantidad).replace('.', ',')}
+                            onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                          />
+                          <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center">
@@ -709,6 +750,19 @@ export default function NuevaFacturaPage() {
                             onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={item.descuento > 0 ? String(item.descuento).replace('.', ',') : ''}
+                            onChange={(e) => handleDescuentoChange(item.id, formatearInputNumero(e.target.value))}
+                            className="w-14 rounded border border-gray-300 px-2 py-1 text-sm text-center"
+                            placeholder="0"
+                          />
+                          <span className="ml-1 text-xs text-gray-500">%</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">

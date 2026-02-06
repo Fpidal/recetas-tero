@@ -21,6 +21,14 @@ interface PrecioRaw {
 
 const COLORES = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed']
 
+// Función para calcular mediana (más resistente a outliers que el promedio)
+function calcularMediana(valores: number[]): number {
+  if (valores.length === 0) return 0
+  const sorted = [...valores].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
+
 const PERIODOS = [
   { value: '30', label: 'Últimos 30 días' },
   { value: '60', label: 'Últimos 60 días' },
@@ -266,55 +274,56 @@ export default function PreciosPage() {
   const allCategChartData = useMemo(() => {
     if (allCategPreciosRaw.length === 0 || insumos.length === 0) return []
 
-    // Agrupar precios por categoría y fecha
-    const categFechaPrecios = new Map<string, Map<string, number[]>>()
-
-    // Inicializar categorías
     const categorias = Array.from(new Set(insumos.map(i => i.categoria)))
-    categorias.forEach(cat => categFechaPrecios.set(cat, new Map()))
 
-    // Llenar con precios
+    // Para cada insumo, guardar su precio base (primer precio del período)
+    const precioBaseInsumo: Record<string, number> = {}
+    const preciosPorInsumoFecha: Record<string, Record<string, number>> = {}
+
+    // Agrupar precios por insumo y fecha
     allCategPreciosRaw.forEach(p => {
-      const insumo = insumos.find(i => i.id === p.insumo_id)
-      if (!insumo) return
-      const catMap = categFechaPrecios.get(insumo.categoria)
-      if (!catMap) return
-      if (!catMap.has(p.fecha)) catMap.set(p.fecha, [])
-      catMap.get(p.fecha)!.push(p.precio)
+      if (!preciosPorInsumoFecha[p.insumo_id]) {
+        preciosPorInsumoFecha[p.insumo_id] = {}
+      }
+      // Si hay múltiples precios en la misma fecha, quedarse con el último
+      preciosPorInsumoFecha[p.insumo_id][p.fecha] = p.precio
     })
 
-    // Calcular precio base (primer día) por categoría
-    const preciosBase: Record<string, number> = {}
-    categorias.forEach(cat => {
-      const catMap = categFechaPrecios.get(cat)!
-      const fechas = Array.from(catMap.keys()).sort()
-      if (fechas.length > 0) {
-        const primeraFecha = fechas[0]
-        const precios = catMap.get(primeraFecha)!
-        preciosBase[cat] = precios.reduce((a, b) => a + b, 0) / precios.length
+    // Calcular precio base de cada insumo (primer precio cronológico)
+    Object.entries(preciosPorInsumoFecha).forEach(([insumoId, fechasPrecios]) => {
+      const fechasOrdenadas = Object.keys(fechasPrecios).sort()
+      if (fechasOrdenadas.length > 0) {
+        precioBaseInsumo[insumoId] = fechasPrecios[fechasOrdenadas[0]]
       }
     })
 
     // Obtener todas las fechas únicas ordenadas
-    const todasFechas = new Set<string>()
-    categorias.forEach(cat => {
-      categFechaPrecios.get(cat)!.forEach((_, fecha) => todasFechas.add(fecha))
-    })
-    const fechasOrdenadas = Array.from(todasFechas).sort()
+    const todasFechas = Array.from(new Set(allCategPreciosRaw.map(p => p.fecha))).sort()
 
     // Construir data para el chart
-    return fechasOrdenadas.map(fecha => {
+    return todasFechas.map(fecha => {
       const punto: Record<string, any> = {
         fecha: new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
       }
 
       categorias.forEach(cat => {
-        const catMap = categFechaPrecios.get(cat)!
-        const precios = catMap.get(fecha)
-        if (precios && precios.length > 0 && preciosBase[cat]) {
-          const promedio = precios.reduce((a, b) => a + b, 0) / precios.length
-          const variacion = ((promedio - preciosBase[cat]) / preciosBase[cat]) * 100
-          punto[CATEG_LABELS[cat] || cat] = parseFloat(variacion.toFixed(1))
+        const categInsumos = insumos.filter(i => i.categoria === cat)
+        const variacionesDelDia: number[] = []
+
+        categInsumos.forEach(insumo => {
+          const precioBase = precioBaseInsumo[insumo.id]
+          const precioDelDia = preciosPorInsumoFecha[insumo.id]?.[fecha]
+
+          // Solo incluir si tiene precio base y precio en esta fecha
+          if (precioBase && precioBase > 0 && precioDelDia !== undefined) {
+            const variacion = ((precioDelDia - precioBase) / precioBase) * 100
+            variacionesDelDia.push(variacion)
+          }
+        })
+
+        // La variación de la categoría en este día es la mediana de las variaciones individuales
+        if (variacionesDelDia.length > 0) {
+          punto[CATEG_LABELS[cat] || cat] = parseFloat(calcularMediana(variacionesDelDia).toFixed(1))
         }
       })
 
@@ -329,24 +338,34 @@ export default function PreciosPage() {
     const categorias = Array.from(new Set(insumos.map(i => i.categoria)))
 
     return categorias.map(cat => {
-      const categInsumoIds = insumos.filter(i => i.categoria === cat).map(i => i.id)
-      const precios = allCategPreciosRaw
-        .filter(p => categInsumoIds.includes(p.insumo_id))
-        .sort((a, b) => a.fecha.localeCompare(b.fecha))
+      const categInsumos = insumos.filter(i => i.categoria === cat)
+      const categInsumoIds = categInsumos.map(i => i.id)
+      const preciosCat = allCategPreciosRaw.filter(p => categInsumoIds.includes(p.insumo_id))
 
-      if (precios.length === 0) return null
+      if (preciosCat.length === 0) return null
 
-      // Calcular promedio inicial y final
-      const fechas = Array.from(new Set(precios.map(p => p.fecha))).sort()
-      const primeraFecha = fechas[0]
-      const ultimaFecha = fechas[fechas.length - 1]
+      // Calcular variación individual de cada insumo
+      const variacionesPorInsumo: number[] = []
 
-      const preciosPrimeros = precios.filter(p => p.fecha === primeraFecha)
-      const preciosUltimos = precios.filter(p => p.fecha === ultimaFecha)
+      categInsumos.forEach(insumo => {
+        const preciosInsumo = preciosCat
+          .filter(p => p.insumo_id === insumo.id)
+          .sort((a, b) => a.fecha.localeCompare(b.fecha))
 
-      const promedioInicial = preciosPrimeros.reduce((s, p) => s + p.precio, 0) / preciosPrimeros.length
-      const promedioFinal = preciosUltimos.reduce((s, p) => s + p.precio, 0) / preciosUltimos.length
-      const variacion = promedioInicial > 0 ? ((promedioFinal - promedioInicial) / promedioInicial) * 100 : 0
+        if (preciosInsumo.length >= 2) {
+          const primero = preciosInsumo[0].precio
+          const ultimo = preciosInsumo[preciosInsumo.length - 1].precio
+          if (primero > 0) {
+            const varInsumo = ((ultimo - primero) / primero) * 100
+            variacionesPorInsumo.push(varInsumo)
+          }
+        }
+      })
+
+      // La variación de la categoría es la mediana de las variaciones individuales
+      const variacion = variacionesPorInsumo.length > 0
+        ? calcularMediana(variacionesPorInsumo)
+        : 0
 
       return {
         categoria: cat,
@@ -354,10 +373,11 @@ export default function PreciosPage() {
         color: CATEG_COLORES[cat] || '#6b7280',
         insumos: categInsumoIds.length,
         variacion,
-        registros: precios.length,
+        registros: preciosCat.length,
+        insumosConVariacion: variacionesPorInsumo.length,
       }
     }).filter(Boolean).sort((a, b) => Math.abs(b!.variacion) - Math.abs(a!.variacion)) as {
-      categoria: string; label: string; color: string; insumos: number; variacion: number; registros: number;
+      categoria: string; label: string; color: string; insumos: number; variacion: number; registros: number; insumosConVariacion: number;
     }[]
   }, [allCategPreciosRaw, insumos])
 
@@ -628,7 +648,7 @@ export default function PreciosPage() {
                     </ResponsiveContainer>
                   </div>
                   <p className="text-[10px] text-gray-400 mt-2 text-center">
-                    Variación % respecto al primer día del período (promedio de precios por categoría)
+                    Variación % respecto al primer día del período (mediana de precios por categoría)
                   </p>
                 </div>
 
@@ -639,7 +659,7 @@ export default function PreciosPage() {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Insumos</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Variación Promedio</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Variación</th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Registros</th>
                         <th className="px-4 py-3"></th>
                       </tr>

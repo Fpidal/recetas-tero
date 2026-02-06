@@ -18,6 +18,7 @@ interface Insumo {
   unidad_medida: string
   precio_actual: number | null
   iva_porcentaje: number
+  cantidad_por_paquete?: number | null
 }
 
 interface ItemFactura {
@@ -27,6 +28,7 @@ interface ItemFactura {
   unidad_medida: string
   cantidad: number
   precio_unitario: number
+  descuento: number
   subtotal: number
   iva_porcentaje: number
   iva_monto: number
@@ -48,6 +50,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   const [selectedInsumo, setSelectedInsumo] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [precioUnitario, setPrecioUnitario] = useState('')
+  const [descuento, setDescuento] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -67,12 +70,12 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
     const [proveedoresRes, insumosRes, facturaRes] = await Promise.all([
       supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre'),
-      supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, precio_actual, iva_porcentaje').eq('activo', true).order('nombre'),
+      supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, precio_actual, iva_porcentaje, cantidad_por_paquete').eq('activo', true).order('nombre'),
       supabase.from('facturas_proveedor')
         .select(`
           id, proveedor_id, numero_factura, fecha, notas, percepciones,
           factura_items (
-            id, insumo_id, cantidad, precio_unitario, subtotal,
+            id, insumo_id, cantidad, precio_unitario, descuento, subtotal,
             insumos (nombre, unidad_medida, iva_porcentaje)
           )
         `)
@@ -124,6 +127,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         unidad_medida: item.insumos?.unidad_medida || '',
         cantidad: parseFloat(item.cantidad),
         precio_unitario: parseFloat(item.precio_unitario),
+        descuento: parseFloat(item.descuento) || 0,
         subtotal,
         iva_porcentaje: ivaPorcentaje,
         iva_monto: ivaMonto,
@@ -139,7 +143,11 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     setSelectedInsumo(insumoId)
     const insumo = insumos.find(i => i.id === insumoId)
     if (insumo && insumo.precio_actual) {
-      setPrecioUnitario(insumo.precio_actual.toString())
+      // Mostrar precio del paquete (precio unitario × cantidad por paquete)
+      const cantPaq = insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1
+      const precioPaquete = insumo.precio_actual * cantPaq
+      const precioStr = precioPaquete.toFixed(2).replace('.', ',')
+      setPrecioUnitario(precioStr)
     } else {
       setPrecioUnitario('')
     }
@@ -161,7 +169,8 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
     const cantidadNum = parsearNumero(cantidad)
     const precioNum = parsearNumero(precioUnitario)
-    const subtotal = cantidadNum * precioNum
+    const descuentoNum = descuento ? parsearNumero(descuento) : 0
+    const subtotal = cantidadNum * precioNum * (1 - descuentoNum / 100)
     const ivaPorcentaje = insumo.iva_porcentaje || 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
 
@@ -172,6 +181,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
       unidad_medida: insumo.unidad_medida,
       cantidad: cantidadNum,
       precio_unitario: precioNum,
+      descuento: descuentoNum,
       subtotal,
       iva_porcentaje: ivaPorcentaje,
       iva_monto: ivaMonto,
@@ -182,6 +192,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     setSelectedInsumo('')
     setCantidad('')
     setPrecioUnitario('')
+    setDescuento('')
   }
 
   function handleEliminarItem(itemId: string) {
@@ -197,7 +208,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     const cantidadNum = parsearNumero(nuevaCantidad)
     setItems(items.map(item => {
       if (item.id === itemId) {
-        const subtotal = cantidadNum * item.precio_unitario
+        const subtotal = cantidadNum * item.precio_unitario * (1 - item.descuento / 100)
         const ivaMonto = subtotal * (item.iva_porcentaje / 100)
         return {
           ...item,
@@ -214,11 +225,28 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     const precioNum = parsearNumero(nuevoPrecio)
     setItems(items.map(item => {
       if (item.id === itemId) {
-        const subtotal = item.cantidad * precioNum
+        const subtotal = item.cantidad * precioNum * (1 - item.descuento / 100)
         const ivaMonto = subtotal * (item.iva_porcentaje / 100)
         return {
           ...item,
           precio_unitario: precioNum,
+          subtotal,
+          iva_monto: ivaMonto,
+        }
+      }
+      return item
+    }))
+  }
+
+  function handleDescuentoChange(itemId: string, nuevoDescuento: string) {
+    const descuentoNum = parsearNumero(nuevoDescuento)
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        const subtotal = item.cantidad * item.precio_unitario * (1 - descuentoNum / 100)
+        const ivaMonto = subtotal * (item.iva_porcentaje / 100)
+        return {
+          ...item,
+          descuento: descuentoNum,
           subtotal,
           iva_monto: ivaMonto,
         }
@@ -295,6 +323,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         .update({
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
+          descuento: item.descuento || 0,
         })
         .eq('id', item.id)
       if (updateErr) console.error('Error actualizando item:', updateErr)
@@ -308,6 +337,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         insumo_id: item.insumo_id,
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
+        descuento: item.descuento || 0,
       }))
       console.log('Insertando items nuevos:', insertData)
 
@@ -387,10 +417,14 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                   { value: '', label: 'Seleccionar insumo...' },
                   ...insumos
                     .filter(i => !items.some(item => item.insumo_id === i.id && !item.isDeleted))
-                    .map(i => ({
-                      value: i.id,
-                      label: `${i.nombre} (${i.unidad_medida})`
-                    }))
+                    .map(i => {
+                      const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
+                      const contenidoInfo = cantPaq > 1 ? ` - Cont: ${cantPaq}` : ''
+                      return {
+                        value: i.id,
+                        label: `${i.nombre} (${i.unidad_medida})${contenidoInfo}`
+                      }
+                    })
                 ]}
                 value={selectedInsumo}
                 onChange={(e) => handleSelectInsumo(e.target.value)}
@@ -416,6 +450,16 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                 placeholder="0,00"
               />
             </div>
+            <div className="w-20">
+              <Input
+                label="Dto %"
+                type="text"
+                inputMode="decimal"
+                value={descuento}
+                onChange={(e) => setDescuento(formatearInputNumero(e.target.value))}
+                placeholder="0"
+              />
+            </div>
             <Button onClick={handleAgregarItem}>
               <Plus className="w-4 h-4 mr-1" />
               Agregar
@@ -431,6 +475,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dto %</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
                     <th className="px-4 py-3"></th>
@@ -449,14 +494,16 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={String(item.cantidad).replace('.', ',')}
-                          onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
-                          className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
-                        />
-                        <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
+                        <div className="flex items-center">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={String(item.cantidad).replace('.', ',')}
+                            onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                          />
+                          <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center">
@@ -469,6 +516,16 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                             className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                         </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={item.descuento ? String(item.descuento).replace('.', ',') : ''}
+                          onChange={(e) => handleDescuentoChange(item.id, formatearInputNumero(e.target.value))}
+                          className="w-14 rounded border border-gray-300 px-2 py-1 text-sm text-center"
+                          placeholder="0"
+                        />
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -496,7 +553,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr>
-                    <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
+                    <td colSpan={5} className="px-4 py-2 text-right text-sm text-gray-600">
                       Subtotal Neto:
                     </td>
                     <td className="px-4 py-2 text-right text-sm text-gray-900">
@@ -506,7 +563,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                   </tr>
                   {totalIva21 > 0 && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                      <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
                         IVA 21%:
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900">
@@ -517,7 +574,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                   )}
                   {totalIva105 > 0 && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                      <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
                         IVA 10.5%:
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900">
@@ -527,7 +584,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                     </tr>
                   )}
                   <tr className="border-t border-gray-300">
-                    <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
+                    <td colSpan={5} className="px-4 py-3 text-right font-medium text-gray-900">
                       Total:
                     </td>
                     <td className="px-4 py-3 text-right text-lg font-bold text-green-600">

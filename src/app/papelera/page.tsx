@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, RotateCcw, Users, Package, BookOpen, ChefHat, UtensilsCrossed, LayoutGrid, ShoppingCart, FileText } from 'lucide-react'
+import { Trash2, RotateCcw, Users, Package, BookOpen, ChefHat, UtensilsCrossed, LayoutGrid, ShoppingCart, FileText, Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button, Select } from '@/components/ui'
 
@@ -39,9 +40,18 @@ const FILTRO_OPTIONS = [
 ]
 
 export default function PapeleraPage() {
+  const router = useRouter()
   const [items, setItems] = useState<ItemPapelera[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filtroTipo, setFiltroTipo] = useState('')
+
+  // Función para obtener la URL de vista según el tipo
+  function getViewUrl(item: ItemPapelera): string | null {
+    switch (item.tipo) {
+      case 'factura': return `/facturas/${item.id}`
+      default: return null
+    }
+  }
 
   useEffect(() => {
     fetchPapelera()
@@ -300,6 +310,16 @@ export default function PapeleraPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
+                          {getViewUrl(item) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(getViewUrl(item)!)}
+                              title="Ver detalle"
+                            >
+                              <Eye className="w-4 h-4 text-gray-500" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, type LucideIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, Package, BookOpen, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
 import Link from 'next/link'
@@ -15,6 +15,14 @@ interface PlatoConCosto {
   seccion: string
   ingredientes_texto: string
   costo_total: number
+}
+
+interface InsumoEnRecetas {
+  id: string
+  nombre: string
+  tipo: 'insumo' | 'elaboracion'
+  cantidadRecetas: number
+  recetas: { id: string; nombre: string; seccion: string }[]
 }
 
 // Helper para obtener ícono según sección/nombre del plato
@@ -38,10 +46,85 @@ export default function PlatosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [seccionesExpandidas, setSeccionesExpandidas] = useState<Set<string>>(new Set(SECCIONES_ORDEN))
+  const [tab, setTab] = useState<'recetas' | 'insumos'>('recetas')
+  const [insumosEnRecetas, setInsumosEnRecetas] = useState<InsumoEnRecetas[]>([])
+  const [isLoadingInsumos, setIsLoadingInsumos] = useState(false)
+  const [insumoExpandido, setInsumoExpandido] = useState<string | null>(null)
+  const [busquedaInsumos, setBusquedaInsumos] = useState('')
 
   useEffect(() => {
     fetchPlatos()
   }, [])
+
+  useEffect(() => {
+    if (tab === 'insumos' && insumosEnRecetas.length === 0) {
+      fetchInsumosEnRecetas()
+    }
+  }, [tab])
+
+  async function fetchInsumosEnRecetas() {
+    setIsLoadingInsumos(true)
+
+    // Cargar todos los platos activos con sus ingredientes
+    const { data: platosData } = await supabase
+      .from('platos')
+      .select(`
+        id, nombre, seccion,
+        plato_ingredientes (
+          insumo_id,
+          receta_base_id,
+          insumos (id, nombre),
+          recetas_base (id, nombre)
+        )
+      `)
+      .eq('activo', true)
+
+    if (!platosData) {
+      setIsLoadingInsumos(false)
+      return
+    }
+
+    // Mapear insumos y elaboraciones a sus recetas
+    const insumoMap = new Map<string, { nombre: string; tipo: 'insumo' | 'elaboracion'; recetas: { id: string; nombre: string; seccion: string }[] }>()
+
+    platosData.forEach((plato: any) => {
+      const ingredientes = plato.plato_ingredientes || []
+      ingredientes.forEach((ing: any) => {
+        if (ing.insumo_id && ing.insumos) {
+          const key = `insumo-${ing.insumo_id}`
+          if (!insumoMap.has(key)) {
+            insumoMap.set(key, { nombre: ing.insumos.nombre, tipo: 'insumo', recetas: [] })
+          }
+          const item = insumoMap.get(key)!
+          if (!item.recetas.find(r => r.id === plato.id)) {
+            item.recetas.push({ id: plato.id, nombre: plato.nombre, seccion: plato.seccion })
+          }
+        }
+        if (ing.receta_base_id && ing.recetas_base) {
+          const key = `elaboracion-${ing.receta_base_id}`
+          if (!insumoMap.has(key)) {
+            insumoMap.set(key, { nombre: ing.recetas_base.nombre, tipo: 'elaboracion', recetas: [] })
+          }
+          const item = insumoMap.get(key)!
+          if (!item.recetas.find(r => r.id === plato.id)) {
+            item.recetas.push({ id: plato.id, nombre: plato.nombre, seccion: plato.seccion })
+          }
+        }
+      })
+    })
+
+    // Convertir a array y ordenar por cantidad de recetas
+    const resultado: InsumoEnRecetas[] = Array.from(insumoMap.entries()).map(([key, value]) => ({
+      id: key,
+      nombre: value.nombre,
+      tipo: value.tipo,
+      cantidadRecetas: value.recetas.length,
+      recetas: value.recetas.sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    })).sort((a, b) => b.cantidadRecetas - a.cantidadRecetas)
+
+    setInsumosEnRecetas(resultado)
+    setIsLoadingInsumos(false)
+  }
 
   async function fetchPlatos() {
     setIsLoading(true)
@@ -216,6 +299,11 @@ export default function PlatosPage() {
     </div>
   )}
 
+  // Filtrar insumos por búsqueda
+  const insumosFiltrados = busquedaInsumos
+    ? insumosEnRecetas.filter(i => i.nombre.toLowerCase().includes(busquedaInsumos.toLowerCase()))
+    : insumosEnRecetas
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -223,37 +311,62 @@ export default function PlatosPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recetas</h1>
           <p className="text-sm text-gray-600">Recetas de platos agrupadas por sección</p>
         </div>
-        <Link href="/platos/nuevo" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Plato
-          </Button>
-        </Link>
+        {tab === 'recetas' && (
+          <Link href="/platos/nuevo" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Plato
+            </Button>
+          </Link>
+        )}
       </div>
 
-      <div className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar receta..."
-            className="pl-9 pr-3 py-2.5 sm:py-2 w-full sm:w-64 rounded-lg border border-gray-300 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setTab('recetas')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            tab === 'recetas' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Recetas
+        </button>
+        <button
+          onClick={() => setTab('insumos')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            tab === 'insumos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Insumos de Recetas
+        </button>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500">Cargando...</p>
+      {tab === 'recetas' && (
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar receta..."
+              className="pl-9 pr-3 py-2.5 sm:py-2 w-full sm:w-64 rounded-lg border border-gray-300 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
         </div>
-      ) : platos.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-          <p className="text-gray-500">No hay platos registrados</p>
-        </div>
-      ) : (
-        <>
+      )}
+
+      {tab === 'recetas' && (
+        isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-500">Cargando...</p>
+          </div>
+        ) : platos.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <p className="text-gray-500">No hay platos registrados</p>
+          </div>
+        ) : (
+          <>
           {/* Vista mobile - Cards agrupadas */}
           <div className="md:hidden space-y-4">
             {platosPorSeccion.map((grupo) => (
@@ -362,6 +475,96 @@ export default function PlatosPage() {
               </tbody>
             </table>
           </div>
+        </>
+        )
+      )}
+
+      {/* Vista Insumos de Recetas */}
+      {tab === 'insumos' && (
+        <>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={busquedaInsumos}
+                onChange={(e) => setBusquedaInsumos(e.target.value)}
+                placeholder="Buscar insumo o elaboración..."
+                className="pl-9 pr-3 py-2.5 sm:py-2 w-full sm:w-64 rounded-lg border border-gray-300 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+          </div>
+
+          {isLoadingInsumos ? (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-gray-500">Cargando...</p>
+            </div>
+          ) : insumosEnRecetas.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+              <p className="text-gray-500">No hay insumos en recetas</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-3 bg-gray-50 border-b">
+                <p className="text-xs text-gray-500">
+                  {insumosFiltrados.length} {insumosFiltrados.length === 1 ? 'ingrediente' : 'ingredientes'} encontrados
+                </p>
+              </div>
+              <div className="divide-y divide-gray-200">
+                {insumosFiltrados.map((item) => (
+                  <div key={item.id}>
+                    <button
+                      onClick={() => setInsumoExpandido(insumoExpandido === item.id ? null : item.id)}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <div className={`p-1.5 rounded-lg ${item.tipo === 'insumo' ? 'bg-green-100' : 'bg-purple-100'}`}>
+                        {item.tipo === 'insumo' ? (
+                          <Package className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <BookOpen className="w-4 h-4 text-purple-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">{item.nombre}</p>
+                        <p className="text-xs text-gray-500">
+                          {item.tipo === 'insumo' ? 'Insumo' : 'Elaboración'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-blue-600">
+                          {item.cantidadRecetas} {item.cantidadRecetas === 1 ? 'receta' : 'recetas'}
+                        </span>
+                        {insumoExpandido === item.id ? (
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                        )}
+                      </div>
+                    </button>
+
+                    {insumoExpandido === item.id && (
+                      <div className="bg-gray-50 px-4 py-2 border-t">
+                        <p className="text-xs font-medium text-gray-500 mb-2">Recetas que lo usan:</p>
+                        <div className="space-y-1">
+                          {item.recetas.map((receta) => (
+                            <Link
+                              key={receta.id}
+                              href={`/platos/${receta.id}`}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
+                            >
+                              <UtensilsCrossed className="w-3.5 h-3.5 text-orange-500" />
+                              <span className="text-sm text-gray-700">{receta.nombre}</span>
+                              <span className="text-xs text-gray-400">({receta.seccion})</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -68,6 +68,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   const [versionReceta, setVersionReceta] = useState('1.0')
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isReadOnly, setIsReadOnly] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -144,6 +145,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
     setPasoAPaso(plato.paso_a_paso || '')
     setRendimiento(plato.rendimiento_porciones || 1)
     setVersionReceta(plato.version_receta || '1.0')
+    setIsReadOnly(plato.activo === false)
 
     // Cargar ingredientes
     const { data: ingredientesData } = await supabase
@@ -638,7 +640,12 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Editar Plato</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">
+            {isReadOnly ? 'Ver Plato' : 'Editar Plato'}
+          </h1>
+          {isReadOnly && (
+            <span className="text-xs text-red-500">En papelera</span>
+          )}
         </div>
         {/* Costo total en header */}
         {ingredientes.length > 0 && (
@@ -765,12 +772,14 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               </Button>
               <div className="flex-1" />
               <Button variant="secondary" size="sm" onClick={() => router.back()}>
-                Cancelar
+                {isReadOnly ? 'Volver' : 'Cancelar'}
               </Button>
-              <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
-                <Save className="w-4 h-4 mr-1" />
-                {isSaving ? '...' : 'Guardar'}
-              </Button>
+              {!isReadOnly && (
+                <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
+                  <Save className="w-4 h-4 mr-1" />
+                  {isSaving ? '...' : 'Guardar'}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -831,15 +840,17 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                 <RefreshCw className="w-3.5 h-3.5" />
               </Button>
               <Button variant="secondary" size="sm" onClick={() => router.back()}>
-                Cancelar
+                {isReadOnly ? 'Volver' : 'Cancelar'}
               </Button>
               <Button variant="secondary" size="sm" onClick={handleGenerarPDF} disabled={ingredientes.length === 0}>
                 <FileDown className="w-4 h-4" />
               </Button>
-              <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
-                <Save className="w-4 h-4 mr-1" />
-                {isSaving ? '...' : 'Guardar'}
-              </Button>
+              {!isReadOnly && (
+                <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
+                  <Save className="w-4 h-4 mr-1" />
+                  {isSaving ? '...' : 'Guardar'}
+                </Button>
+              )}
             </div>
           </div>
         </div>

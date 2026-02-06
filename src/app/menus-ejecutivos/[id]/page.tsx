@@ -55,6 +55,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
   const [items, setItems] = useState<ItemMenu[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isReadOnly, setIsReadOnly] = useState(false)
 
   // Datos para selectores
   const [insumos, setInsumos] = useState<Insumo[]>([])
@@ -89,7 +90,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
     const { data: menu, error } = await supabase
       .from('menus_ejecutivos')
       .select(`
-        id, nombre, descripcion, costo_total,
+        id, nombre, descripcion, costo_total, activo,
         menu_ejecutivo_items (
           id, tipo, insumo_id, receta_base_id, plato_id, cantidad, es_bebida, costo_linea,
           insumos (nombre, unidad_medida),
@@ -108,6 +109,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
 
     setNombre(menu.nombre)
     setDescripcion(menu.descripcion || '')
+    setIsReadOnly(menu.activo === false)
 
     // Mapear items
     const mappedItems: ItemMenu[] = (menu.menu_ejecutivo_items as any[]).map((item: any) => {
@@ -331,8 +333,14 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Editar Menú Ejecutivo</h1>
-          <p className="text-gray-600">Modificá el menú con insumos, recetas base y platos</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isReadOnly ? 'Ver Menú Ejecutivo' : 'Editar Menú Ejecutivo'}
+          </h1>
+          {isReadOnly ? (
+            <span className="text-xs text-red-500">En papelera</span>
+          ) : (
+            <p className="text-gray-600">Modificá el menú con insumos, recetas base y platos</p>
+          )}
         </div>
       </div>
 
@@ -473,11 +481,13 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
         {/* Acciones */}
         <div className="flex justify-end gap-3 border-t pt-6">
           <Button variant="secondary" onClick={() => router.back()}>
-            Cancelar
+            {isReadOnly ? 'Volver' : 'Cancelar'}
           </Button>
-          <Button onClick={handleGuardar} disabled={isSaving || !nombre.trim() || items.length === 0}>
-            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-          </Button>
+          {!isReadOnly && (
+            <Button onClick={handleGuardar} disabled={isSaving || !nombre.trim() || items.length === 0}>
+              {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
+          )}
         </div>
       </div>
     </div>

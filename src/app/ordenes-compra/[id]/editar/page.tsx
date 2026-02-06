@@ -19,6 +19,7 @@ interface Insumo {
   categoria: string
   precio_actual: number | null
   iva_porcentaje: number
+  cantidad_por_paquete?: number | null
 }
 
 interface ItemOrden {
@@ -74,7 +75,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
 
     const [proveedoresRes, insumosRes, ordenRes] = await Promise.all([
       supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre'),
-      supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, categoria, precio_actual, iva_porcentaje').eq('activo', true).order('categoria').order('nombre'),
+      supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, categoria, precio_actual, iva_porcentaje, cantidad_por_paquete').eq('activo', true).order('categoria').order('nombre'),
       supabase.from('ordenes_compra')
         .select(`
           id, proveedor_id, notas, estado,
@@ -370,10 +371,14 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                 label="Insumo"
                 options={[
                   { value: '', label: 'Seleccionar insumo...' },
-                  ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => ({
-                    value: i.id,
-                    label: `${i.nombre} (${i.unidad_medida})`
-                  }))
+                  ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
+                    const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
+                    const contenidoInfo = cantPaq > 1 ? ` - Cont: ${cantPaq}` : ''
+                    return {
+                      value: i.id,
+                      label: `${i.nombre} (${i.unidad_medida})${contenidoInfo}`
+                    }
+                  })
                 ]}
                 value={selectedInsumo}
                 onChange={(e) => handleSelectInsumo(e.target.value)}

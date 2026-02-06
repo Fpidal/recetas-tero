@@ -65,6 +65,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [tieneFactura, setTieneFactura] = useState(false)
+  const [isReadOnly, setIsReadOnly] = useState(false)
   const [ordenOrigenFecha, setOrdenOrigenFecha] = useState<string | null>(null)
   const [facturaItems, setFacturaItems] = useState<FacturaItem[]>([])
 
@@ -86,6 +87,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         total,
         notas,
         orden_origen_id,
+        activo,
         proveedores (nombre, telefono, contacto, email, direccion),
         orden_compra_items (
           id,
@@ -140,6 +142,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
     }
 
     setOrden(ordenData)
+    setIsReadOnly((data as any).activo === false)
 
     // Verificar si tiene factura asociada y cargar sus items
     const { data: facturaData } = await supabase
@@ -527,11 +530,14 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           </div>
 
           <div className="flex gap-2">
-            {orden.estado !== 'recibida' && orden.estado !== 'parcialmente_recibida' && orden.estado !== 'cancelada' && (
+            {!isReadOnly && orden.estado !== 'recibida' && orden.estado !== 'parcialmente_recibida' && orden.estado !== 'cancelada' && (
               <Button variant="secondary" onClick={() => router.push(`/ordenes-compra/${orden.id}/editar`)}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Editar
               </Button>
+            )}
+            {isReadOnly && (
+              <span className="text-xs text-red-500 px-2 py-1">En papelera</span>
             )}
             <Button variant="ghost" onClick={() => router.push('/ordenes-compra')}>
               <LogOut className="w-4 h-4 mr-2" />

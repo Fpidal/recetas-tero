@@ -49,6 +49,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
   const [ocItems, setOcItems] = useState<OCItem[]>([])
+  const [isReadOnly, setIsReadOnly] = useState(false)
 
   useEffect(() => {
     fetchFactura()
@@ -67,6 +68,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
         notas,
         orden_compra_id,
         percepciones,
+        activo,
         proveedores (nombre),
         factura_items (
           id,
@@ -115,6 +117,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
     }
 
     setFactura(facturaData)
+    setIsReadOnly((data as any).activo === false)
 
     // Si tiene OC vinculada, cargar items de la OC para comparación
     if (data.orden_compra_id) {
@@ -382,19 +385,26 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
 
         {/* Acciones */}
         <div className="flex justify-between border-t pt-6">
-          <Button
-            variant="ghost"
-            onClick={handleEliminar}
-            disabled={isDeleting}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {isDeleting ? 'Eliminando...' : 'Eliminar Factura'}
-          </Button>
-          <Button onClick={() => router.push(`/facturas/${factura.id}/editar`)}>
-            <Pencil className="w-4 h-4 mr-2" />
-            Editar Factura
-          </Button>
+          {!isReadOnly && (
+            <>
+              <Button
+                variant="ghost"
+                onClick={handleEliminar}
+                disabled={isDeleting}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {isDeleting ? 'Eliminando...' : 'Eliminar Factura'}
+              </Button>
+              <Button onClick={() => router.push(`/facturas/${factura.id}/editar`)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Editar Factura
+              </Button>
+            </>
+          )}
+          {isReadOnly && (
+            <span className="text-xs text-red-500 px-2 py-1">En papelera</span>
+          )}
         </div>
       </div>
     </div>

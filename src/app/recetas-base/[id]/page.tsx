@@ -56,6 +56,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
   const [versionReceta, setVersionReceta] = useState('1.0')
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isReadOnly, setIsReadOnly] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -96,6 +97,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     setPreparacion(receta.preparacion || '')
     setRendimiento(receta.rendimiento_porciones.toString())
     setVersionReceta(receta.version_receta || '1.0')
+    setIsReadOnly(receta.activo === false)
 
     const { data: ingredientesData } = await supabase
       .from('receta_base_ingredientes')
@@ -237,7 +239,12 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Editar Elaboración</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">
+            {isReadOnly ? 'Ver Elaboración' : 'Editar Elaboración'}
+          </h1>
+          {isReadOnly && (
+            <span className="text-xs text-red-500">En papelera</span>
+          )}
         </div>
       </div>
 
@@ -317,12 +324,14 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
               </Button>
               <div className="flex-1" />
               <Button variant="secondary" size="sm" onClick={() => router.back()}>
-                Cancelar
+                {isReadOnly ? 'Volver' : 'Cancelar'}
               </Button>
-              <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
-                <Save className="w-4 h-4 mr-1" />
-                {isSaving ? '...' : 'Guardar'}
-              </Button>
+              {!isReadOnly && (
+                <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
+                  <Save className="w-4 h-4 mr-1" />
+                  {isSaving ? '...' : 'Guardar'}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -363,12 +372,14 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
                 <RefreshCw className="w-3.5 h-3.5" />
               </Button>
               <Button variant="secondary" size="sm" onClick={() => router.back()}>
-                Cancelar
+                {isReadOnly ? 'Volver' : 'Cancelar'}
               </Button>
-              <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
-                <Save className="w-4 h-4 mr-1" />
-                {isSaving ? '...' : 'Guardar'}
-              </Button>
+              {!isReadOnly && (
+                <Button size="sm" onClick={handleGuardar} disabled={isSaving}>
+                  <Save className="w-4 h-4 mr-1" />
+                  {isSaving ? '...' : 'Guardar'}
+                </Button>
+              )}
             </div>
           </div>
         </div>

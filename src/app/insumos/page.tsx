@@ -510,7 +510,7 @@ export default function InsumosPage() {
                     <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Var</th>
                     <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Precio</th>
                     <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Un.</th>
-                    <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Cant.</th>
+                    <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Cont.</th>
                     <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
                     <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">IVA</th>
                     <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">+IVA</th>
@@ -671,7 +671,7 @@ export default function InsumosPage() {
 
           <div className="grid grid-cols-3 gap-4">
             <Input
-              label="Cant. por Paquete"
+              label="Contenido"
               id="cantidad_por_paquete"
               type="text"
               inputMode="decimal"
@@ -679,7 +679,7 @@ export default function InsumosPage() {
               onChange={(e) =>
                 setForm({ ...form, cantidad_por_paquete: formatearInputNumero(e.target.value) })
               }
-              placeholder="Ej: 2,9"
+              placeholder="Ej: 5 kg por paquete"
             />
 
             <Input

@@ -17,8 +17,8 @@ interface RecetaBase {
   id: string
   nombre: string
   costo_total: number
-  unidad_medida: string
-  rendimiento: number
+  costo_por_porcion: number
+  rendimiento_porciones: number
 }
 
 interface Plato {
@@ -77,7 +77,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
     // Cargar opciones
     const [insumosRes, recetasRes, platosRes] = await Promise.all([
       supabase.from('insumos').select('id, nombre, unidad_medida, categoria').eq('activo', true).order('nombre'),
-      supabase.from('recetas_base').select('id, nombre, costo_total, unidad_medida, rendimiento').eq('activo', true).order('nombre'),
+      supabase.from('recetas_base').select('id, nombre, costo_total, costo_por_porcion, rendimiento_porciones').eq('activo', true).order('nombre'),
       supabase.from('platos').select('id, nombre, costo_total, seccion').eq('activo', true).order('nombre'),
     ])
 
@@ -127,9 +127,9 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
         tipo = 'receta_base'
         referencia_id = item.receta_base_id
         nombreItem = item.recetas_base.nombre
-        unidad = item.recetas_base.unidad_medida
-        costoUnitario = item.recetas_base.rendimiento > 0
-          ? item.recetas_base.costo_total / item.recetas_base.rendimiento
+        unidad = 'porción'
+        costoUnitario = item.recetas_base.rendimiento_porciones > 0
+          ? item.recetas_base.costo_total / item.recetas_base.rendimiento_porciones
           : item.recetas_base.costo_total
       } else if (item.plato_id && item.platos) {
         tipo = 'plato'
@@ -175,8 +175,8 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
       ]
     } else if (nuevoTipo === 'receta_base') {
       return [
-        { value: '', label: 'Seleccionar receta base...' },
-        ...recetasBase.map(r => ({ value: r.id, label: `${r.nombre} ($${r.costo_total.toFixed(2)})` }))
+        { value: '', label: 'Seleccionar elaboración...' },
+        ...recetasBase.map(r => ({ value: r.id, label: `${r.nombre} ($${(r.costo_por_porcion || 0).toFixed(2)}/porción)` }))
       ]
     } else {
       return [
@@ -206,8 +206,8 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
       const receta = recetasBase.find(r => r.id === nuevoReferenciaId)
       if (!receta) return
       nombreItem = receta.nombre
-      unidad = receta.unidad_medida
-      costoUnitario = receta.rendimiento > 0 ? receta.costo_total / receta.rendimiento : receta.costo_total
+      unidad = 'porción'
+      costoUnitario = receta.costo_por_porcion || (receta.rendimiento_porciones > 0 ? receta.costo_total / receta.rendimiento_porciones : receta.costo_total)
     } else {
       const plato = platos.find(p => p.id === nuevoReferenciaId)
       if (!plato) return

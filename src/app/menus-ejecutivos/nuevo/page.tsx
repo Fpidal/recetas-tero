@@ -17,8 +17,8 @@ interface RecetaBase {
   id: string
   nombre: string
   costo_total: number
-  unidad_medida: string
-  rendimiento: number
+  costo_por_porcion: number
+  rendimiento_porciones: number
 }
 
 interface Plato {
@@ -71,7 +71,7 @@ export default function NuevoMenuEjecutivoPage() {
   async function fetchData() {
     const [insumosRes, recetasRes, platosRes] = await Promise.all([
       supabase.from('insumos').select('id, nombre, unidad_medida, categoria').eq('activo', true).order('nombre'),
-      supabase.from('recetas_base').select('id, nombre, costo_total, unidad_medida, rendimiento').eq('activo', true).order('nombre'),
+      supabase.from('recetas_base').select('id, nombre, costo_total, costo_por_porcion, rendimiento_porciones').eq('activo', true).order('nombre'),
       supabase.from('platos').select('id, nombre, costo_total, seccion').eq('activo', true).order('nombre'),
     ])
 
@@ -101,8 +101,8 @@ export default function NuevoMenuEjecutivoPage() {
       ]
     } else if (nuevoTipo === 'receta_base') {
       return [
-        { value: '', label: 'Seleccionar receta base...' },
-        ...recetasBase.map(r => ({ value: r.id, label: `${r.nombre} ($${r.costo_total.toFixed(2)})` }))
+        { value: '', label: 'Seleccionar elaboración...' },
+        ...recetasBase.map(r => ({ value: r.id, label: `${r.nombre} ($${(r.costo_por_porcion || 0).toFixed(2)}/porción)` }))
       ]
     } else {
       return [
@@ -132,8 +132,8 @@ export default function NuevoMenuEjecutivoPage() {
       const receta = recetasBase.find(r => r.id === nuevoReferenciaId)
       if (!receta) return
       nombre = receta.nombre
-      unidad = receta.unidad_medida
-      costoUnitario = receta.rendimiento > 0 ? receta.costo_total / receta.rendimiento : receta.costo_total
+      unidad = 'porción'
+      costoUnitario = receta.costo_por_porcion || (receta.rendimiento_porciones > 0 ? receta.costo_total / receta.rendimiento_porciones : receta.costo_total)
     } else {
       const plato = platos.find(p => p.id === nuevoReferenciaId)
       if (!plato) return

@@ -306,54 +306,31 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
       return
     }
 
-    // Eliminar items marcados
-    const itemsEliminados = items.filter(i => i.isDeleted && itemsOriginales.includes(i.id))
-    if (itemsEliminados.length > 0) {
-      await supabase
-        .from('factura_items')
-        .delete()
-        .in('id', itemsEliminados.map(i => i.id))
-    }
+    // Eliminar todos los items y reinsertar los actuales
+    console.log('Eliminando items de factura:', id)
+    const { error: deleteErr, count: deleteCount } = await supabase
+      .from('factura_items')
+      .delete()
+      .eq('factura_id', id)
+    console.log('Delete result:', { error: deleteErr, count: deleteCount })
 
-    // Actualizar items existentes (subtotal es campo calculado, no se puede actualizar)
-    const itemsExistentes = itemsActivos.filter(i => !i.isNew && itemsOriginales.includes(i.id))
-    for (const item of itemsExistentes) {
-      const { error: updateErr } = await supabase
-        .from('factura_items')
-        .update({
-          cantidad: item.cantidad,
-          precio_unitario: item.precio_unitario,
-          descuento: item.descuento || 0,
-        })
-        .eq('id', item.id)
-      if (updateErr) console.error('Error actualizando item:', updateErr)
-    }
-
-    // Insertar nuevos items (subtotal es campo calculado, no se incluye)
-    const itemsNuevos = itemsActivos.filter(i => i.isNew)
-    if (itemsNuevos.length > 0) {
-      const insertData = itemsNuevos.map(item => ({
+    // Insertar todos los items activos
+    console.log('Items a insertar:', itemsActivos.map(i => ({ nombre: i.insumo_nombre, cantidad: i.cantidad, precio: i.precio_unitario })))
+    if (itemsActivos.length > 0) {
+      const insertData = itemsActivos.map(item => ({
         factura_id: id,
         insumo_id: item.insumo_id,
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
         descuento: item.descuento || 0,
       }))
-      console.log('Insertando items nuevos:', insertData)
-
-      const { data: insertedData, error: insertErr } = await supabase
+      const { error: insertErr } = await supabase
         .from('factura_items')
         .insert(insertData)
-        .select()
-
-      if (insertErr) {
-        console.error('Error insertando items:', insertErr)
-        alert(`Error al guardar items nuevos: ${insertErr.message}`)
-        setIsSaving(false)
-        return
-      }
-      console.log('Items insertados:', insertedData)
+      if (insertErr) console.error('Error insertando items:', insertErr)
+      else console.log('Items insertados OK')
     }
+
 
     setIsSaving(false)
     router.push(`/facturas/${id}`)

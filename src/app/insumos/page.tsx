@@ -80,6 +80,7 @@ interface HistorialPrecio {
   fecha: string
   precio: number
   proveedor: string
+  cantidad: number | null
 }
 
 export default function InsumosPage() {
@@ -311,22 +312,27 @@ export default function InsumosPage() {
     setHistorialLoading(true)
     setShowHistorial(true)
 
+    // Obtener historial desde factura_items con datos de factura y proveedor
     const { data } = await supabase
-      .from('precios_insumo')
+      .from('factura_items')
       .select(`
-        precio,
-        fecha,
-        proveedores (nombre)
+        cantidad,
+        precio_unitario,
+        facturas_proveedor!inner (
+          fecha,
+          proveedores (nombre)
+        )
       `)
       .eq('insumo_id', insumo.id)
-      .order('fecha', { ascending: true })
+      .order('facturas_proveedor(fecha)', { ascending: true })
 
     if (data) {
       setHistorialData(
         data.map((d: any) => ({
-          fecha: new Date(d.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
-          precio: d.precio,
-          proveedor: d.proveedores?.nombre || '-',
+          fecha: new Date(d.facturas_proveedor.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+          precio: d.precio_unitario,
+          proveedor: d.facturas_proveedor.proveedores?.nombre || '-',
+          cantidad: d.cantidad,
         }))
       )
     }
@@ -822,6 +828,7 @@ export default function InsumosPage() {
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-3 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">Fecha</th>
+                    <th className="px-3 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Cant.</th>
                     <th className="px-3 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Precio</th>
                     <th className="px-3 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">Proveedor</th>
                   </tr>
@@ -830,6 +837,7 @@ export default function InsumosPage() {
                   {[...historialData].reverse().map((item, idx) => (
                     <tr key={idx} className={idx === 0 ? 'bg-blue-50' : ''}>
                       <td className="px-3 py-1">{item.fecha}</td>
+                      <td className="px-3 py-1 text-right">{item.cantidad ? formatearCantidad(item.cantidad) : '-'}</td>
                       <td className="px-3 py-1 text-right font-medium">${item.precio.toLocaleString('es-AR')}</td>
                       <td className="px-3 py-1 text-gray-600">{item.proveedor}</td>
                     </tr>

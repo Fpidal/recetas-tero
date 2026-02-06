@@ -125,6 +125,7 @@ interface DashboardData {
   comprasSemanaActual: number
   comprasSemanaPasada: number
   comprasSemanalesData: { semana: string; valor: number }[]
+  comprasMensualesData: { mes: string; valor: number }[]
   variacionCategoriasData: { categoria: string; variacion: number; monto: number; color: string }[]
   distribucionProveedorData: DistribucionItem[]
   distribucionCategoriaData: DistribucionItem[]
@@ -150,6 +151,7 @@ export default function Home() {
     comprasSemanaActual: 0,
     comprasSemanaPasada: 0,
     comprasSemanalesData: [],
+    comprasMensualesData: [],
     variacionCategoriasData: [],
     distribucionProveedorData: [],
     distribucionCategoriaData: [],
@@ -161,6 +163,7 @@ export default function Home() {
   })
   const [isLoading, setIsLoading] = useState(true)
   const [modoDistribucion, setModoDistribucion] = useState<'proveedor' | 'categoria'>('proveedor')
+  const [modoCompras, setModoCompras] = useState<'semanal' | 'mensual'>('semanal')
   const [alertaModal, setAlertaModal] = useState<AlertaModal>(null)
 
   useEffect(() => {
@@ -473,6 +476,31 @@ export default function Home() {
         .slice(-4)
         .map(([semana, valor]) => ({ semana, valor }))
 
+      // ===== COMPRAS MENSUALES =====
+      const mesesMap = new Map<string, number>()
+      const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+      // Inicializar últimos 6 meses
+      for (let i = 5; i >= 0; i--) {
+        const fecha = new Date()
+        fecha.setMonth(fecha.getMonth() - i)
+        const mesKey = `${mesesNombres[fecha.getMonth()]} ${fecha.getFullYear().toString().slice(-2)}`
+        mesesMap.set(mesKey, 0)
+      }
+
+      (facturas || []).forEach((factura: any) => {
+        const fechaFactura = new Date(factura.fecha)
+        const total = calcularTotalFactura(factura)
+        const mesKey = `${mesesNombres[fechaFactura.getMonth()]} ${fechaFactura.getFullYear().toString().slice(-2)}`
+
+        if (mesesMap.has(mesKey)) {
+          mesesMap.set(mesKey, (mesesMap.get(mesKey) || 0) + total)
+        }
+      })
+
+      const comprasMensualesData = Array.from(mesesMap.entries())
+        .map(([mes, valor]) => ({ mes, valor }))
+
       // ===== VARIACIÓN POR CATEGORÍA =====
       const fecha30DiasAtras = new Date()
       fecha30DiasAtras.setDate(fecha30DiasAtras.getDate() - 30)
@@ -630,6 +658,7 @@ export default function Home() {
         comprasSemanaActual,
         comprasSemanaPasada,
         comprasSemanalesData,
+        comprasMensualesData,
         variacionCategoriasData: top4Categorias,
         distribucionProveedorData,
         distribucionCategoriaData,
@@ -657,6 +686,7 @@ export default function Home() {
     : 0
 
   const totalCompras4Semanas = data.comprasSemanalesData.reduce((s, d) => s + d.valor, 0)
+  const totalCompras6Meses = data.comprasMensualesData.reduce((s, d) => s + d.valor, 0)
 
   return (
     <div className="space-y-3">
@@ -859,39 +889,60 @@ export default function Home() {
 
       {/* Tercera fila: Evolución Compras + Distribución */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Evolución Compras Semanales */}
+        {/* Evolución Compras */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-gray-900">Compras Semanales</h2>
-            <span style={{ color: COLORS.turquesa }} className="text-xs font-semibold">{formatMoney(totalCompras4Semanas)}</span>
+            <h2 className="text-sm font-semibold text-gray-900">Compras</h2>
+            <div className="flex items-center gap-2">
+              <span style={{ color: COLORS.turquesa }} className="text-xs font-semibold">
+                {formatMoney(modoCompras === 'semanal' ? totalCompras4Semanas : totalCompras6Meses)}
+              </span>
+              <select
+                value={modoCompras}
+                onChange={(e) => setModoCompras(e.target.value as 'semanal' | 'mensual')}
+                className="text-xs border border-gray-200 rounded px-1.5 py-0.5 text-gray-600 focus:outline-none"
+              >
+                <option value="semanal">Semanal</option>
+                <option value="mensual">Mensual</option>
+              </select>
+            </div>
           </div>
-          {data.comprasSemanalesData.length === 0 ? (
-            <div className="flex items-center justify-center h-44">
-              <p className="text-xs text-gray-400">Sin datos</p>
-            </div>
-          ) : (
-            <div className="h-44">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.comprasSemanalesData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="semana" tick={{ fontSize: 9 }} />
-                  <YAxis tickFormatter={formatMoney} tick={{ fontSize: 9 }} />
-                  <Tooltip
-                    formatter={(value) => [formatMoney(Number(value)), 'Compras']}
-                    contentStyle={{ borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="valor"
-                    stroke={COLORS.turquesa}
-                    strokeWidth={2}
-                    dot={{ fill: COLORS.turquesa, strokeWidth: 1, r: 3 }}
-                    activeDot={{ r: 5 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          {(() => {
+            const comprasData = modoCompras === 'semanal' ? data.comprasSemanalesData : data.comprasMensualesData
+            const dataKey = modoCompras === 'semanal' ? 'semana' : 'mes'
+
+            if (comprasData.length === 0) {
+              return (
+                <div className="flex items-center justify-center h-44">
+                  <p className="text-xs text-gray-400">Sin datos</p>
+                </div>
+              )
+            }
+
+            return (
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={comprasData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey={dataKey} tick={{ fontSize: 9 }} />
+                    <YAxis tickFormatter={formatMoney} tick={{ fontSize: 9 }} />
+                    <Tooltip
+                      formatter={(value) => [formatMoney(Number(value)), 'Compras']}
+                      contentStyle={{ borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="valor"
+                      stroke={COLORS.turquesa}
+                      strokeWidth={2}
+                      dot={{ fill: COLORS.turquesa, strokeWidth: 1, r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Distribución de Compras */}

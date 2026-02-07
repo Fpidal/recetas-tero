@@ -10,6 +10,7 @@ import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero
 
 interface InsumoCompleto {
   id: string
+  codigo: string
   nombre: string
   categoria: CategoriaInsumo
   unidad_medida: UnidadMedida
@@ -388,7 +389,10 @@ export default function InsumosPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1">
-            <p className="font-semibold text-gray-900">{insumo.nombre}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-gray-400">{insumo.codigo}</span>
+              <p className="font-semibold text-gray-900">{insumo.nombre}</p>
+            </div>
             <p className="text-xs text-gray-500">
               {categorias.find((c) => c.value === insumo.categoria)?.label}
             </p>
@@ -509,6 +513,7 @@ export default function InsumosPage() {
               <table className="min-w-full divide-y divide-gray-200 text-xs">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Cód.</th>
                     <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Producto</th>
                     <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Categ.</th>
                     <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Fecha</th>
@@ -529,7 +534,7 @@ export default function InsumosPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredInsumos.length === 0 ? (
                     <tr>
-                      <td colSpan={15} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={16} className="px-4 py-8 text-center text-gray-500">
                         No hay insumos registrados
                       </td>
                     </tr>
@@ -545,6 +550,9 @@ export default function InsumosPage() {
 
                       return (
                         <tr key={insumo.id} className="hover:bg-gray-50">
+                          <td className="px-2 py-1.5 text-gray-500 font-mono text-[10px]">
+                            {insumo.codigo}
+                          </td>
                           <td className="px-2 py-1.5 font-medium text-gray-900">
                             {insumo.nombre}
                           </td>

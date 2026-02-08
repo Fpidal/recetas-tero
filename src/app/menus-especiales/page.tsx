@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, LayoutGrid, Users, Calculator, Eye, Save, X } from 'lucide-react'
+import { Plus, Trash2, LayoutGrid, Users, Calculator, Eye, Save } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input } from '@/components/ui'
 import { MenuEspecial } from '@/types/database'
@@ -49,11 +49,9 @@ export default function MenusEspecialesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [calculadora, setCalculadora] = useState<{ menuId: string; personas: string } | null>(null)
 
-  // Estado para edición inline
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editMargen, setEditMargen] = useState('')
-  const [editPrecio, setEditPrecio] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
+  // Estado para edición inline por menú
+  const [editValues, setEditValues] = useState<Record<string, { margen: string; precio: string }>>({})
+  const [isSaving, setIsSaving] = useState<string | null>(null)
 
   useEffect(() => {
     fetchMenus()
@@ -131,22 +129,30 @@ export default function MenusEspecialesPage() {
     }
   }
 
-  function handleStartEdit(menu: any) {
-    setEditingId(menu.id)
-    setEditMargen(((menu as any).margen_objetivo || 25).toString())
-    setEditPrecio(((menu as any).precio_venta || 0).toString())
+  function getEditValue(menuId: string, field: 'margen' | 'precio', defaultValue: number) {
+    if (editValues[menuId]?.[field] !== undefined) {
+      return editValues[menuId][field]
+    }
+    return defaultValue.toString()
   }
 
-  function handleCancelEdit() {
-    setEditingId(null)
-    setEditMargen('')
-    setEditPrecio('')
+  function setEditValue(menuId: string, field: 'margen' | 'precio', value: string) {
+    setEditValues(prev => ({
+      ...prev,
+      [menuId]: {
+        ...prev[menuId],
+        [field]: value
+      }
+    }))
   }
 
-  async function handleSaveEdit(menuId: string, costoPorPersona: number) {
-    setIsSaving(true)
-    const margen = parseFloat(editMargen) || 25
-    const precio = parseFloat(editPrecio) || 0
+  async function handleSave(menuId: string) {
+    const values = editValues[menuId]
+    if (!values) return
+
+    setIsSaving(menuId)
+    const margen = parseFloat(values.margen) || 25
+    const precio = parseFloat(values.precio) || 0
 
     const { error } = await supabase
       .from('menus_especiales')
@@ -160,10 +166,15 @@ export default function MenusEspecialesPage() {
       console.error('Error actualizando menú:', error)
       alert('Error al actualizar')
     } else {
-      handleCancelEdit()
+      // Limpiar valores editados y recargar
+      setEditValues(prev => {
+        const newValues = { ...prev }
+        delete newValues[menuId]
+        return newValues
+      })
       fetchMenus()
     }
-    setIsSaving(false)
+    setIsSaving(null)
   }
 
   if (isLoading) {
@@ -247,131 +258,116 @@ export default function MenusEspecialesPage() {
                 </div>
 
                 {/* Análisis de Precios - igual que Carta */}
-                <div className="border-t bg-gray-50 px-4 py-3">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-[10px] text-gray-500 uppercase">
-                        <th className="text-left font-medium">Costo Menú</th>
-                        <th className="text-right font-medium">Costo x Pers.</th>
-                        <th className="text-right font-medium">P.Sug.</th>
-                        <th className="text-right font-medium">P.Venta</th>
-                        <th className="text-center font-medium">FC Obj.</th>
-                        <th className="text-center font-medium">FC Real</th>
-                        <th className="text-right font-medium bg-green-50">Contrib.</th>
-                        <th className="w-16"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        {/* Costo Menú */}
-                        <td className="py-2 text-left">
-                          <span className="text-xs text-gray-600">
-                            <span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                          </span>
-                          <span className="text-[10px] text-gray-400 ml-1">({comensales}p)</span>
-                        </td>
-                        {/* Costo x Persona */}
-                        <td className="py-2 text-right">
-                          <span className="text-sm font-bold text-green-600">
-                            <span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                          </span>
-                        </td>
-                        {/* Precio Sugerido */}
-                        <td className="py-2 text-right">
-                          {(() => {
-                            const fc = editingId === menu.id ? parseFloat(editMargen) || 25 : fcObjetivo
-                            const ps = fc > 0 ? costoPorPersona / (fc / 100) : 0
-                            return (
-                              <span className="text-xs text-gray-500">
-                                <span className="text-gray-400">$</span>{ps.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                {(() => {
+                  const currentMargen = parseFloat(getEditValue(menu.id, 'margen', fcObjetivo)) || 25
+                  const currentPrecio = parseFloat(getEditValue(menu.id, 'precio', precioVenta)) || 0
+                  const currentPrecioSugerido = currentMargen > 0 ? costoPorPersona / (currentMargen / 100) : 0
+                  const currentFcReal = currentPrecio > 0 ? (costoPorPersona / currentPrecio * 100) : 0
+                  const currentContrib = currentPrecio - costoPorPersona
+                  const isOk = currentFcReal <= currentMargen
+                  const hasChanges = editValues[menu.id] !== undefined
+
+                  return (
+                    <div className="border-t bg-gray-50 px-4 py-3">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-[10px] text-gray-500 uppercase">
+                            <th className="text-left font-medium">Costo Menú</th>
+                            <th className="text-right font-medium">Costo x Pers.</th>
+                            <th className="text-center font-medium">FC Obj.</th>
+                            <th className="text-right font-medium">P.Sug.</th>
+                            <th className="text-right font-medium">P.Venta</th>
+                            <th className="text-center font-medium">FC Real</th>
+                            <th className="text-right font-medium bg-green-50">Contrib.</th>
+                            <th className="w-12"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            {/* Costo Menú */}
+                            <td className="py-2 text-left">
+                              <span className="text-xs text-gray-600">
+                                <span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                               </span>
-                            )
-                          })()}
-                        </td>
-                        {/* Precio Venta - Editable */}
-                        <td className="py-2 text-right">
-                          {editingId === menu.id ? (
-                            <input
-                              type="number"
-                              value={editPrecio}
-                              onChange={(e) => setEditPrecio(e.target.value)}
-                              className="w-20 px-1.5 py-0.5 border border-gray-300 rounded text-right text-xs"
-                              placeholder="0"
-                            />
-                          ) : (
-                            <span className="text-sm font-medium">
-                              {precioVenta > 0 ? (
-                                <><span className="text-gray-400 font-normal">$</span>{precioVenta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</>
+                              <span className="text-[10px] text-gray-400 ml-1">({comensales}p)</span>
+                            </td>
+                            {/* Costo x Persona */}
+                            <td className="py-2 text-right">
+                              <span className="text-sm font-bold text-green-600">
+                                <span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                              </span>
+                            </td>
+                            {/* FC Objetivo - Siempre Editable */}
+                            <td className="py-2 text-center">
+                              <div className="flex items-center justify-center gap-0.5">
+                                <input
+                                  type="number"
+                                  value={getEditValue(menu.id, 'margen', fcObjetivo)}
+                                  onChange={(e) => setEditValue(menu.id, 'margen', e.target.value)}
+                                  className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-xs"
+                                />
+                                <span className="text-[10px] text-gray-400">%</span>
+                              </div>
+                            </td>
+                            {/* Precio Sugerido */}
+                            <td className="py-2 text-right">
+                              <span className="text-xs text-blue-600 font-medium">
+                                <span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                              </span>
+                            </td>
+                            {/* Precio Venta - Siempre Editable */}
+                            <td className="py-2 text-right">
+                              <div className="flex items-center justify-end gap-0.5">
+                                <span className="text-[10px] text-gray-400">$</span>
+                                <input
+                                  type="number"
+                                  value={getEditValue(menu.id, 'precio', precioVenta)}
+                                  onChange={(e) => setEditValue(menu.id, 'precio', e.target.value)}
+                                  className="w-20 px-1.5 py-0.5 border border-gray-300 rounded text-right text-xs"
+                                  placeholder="0"
+                                />
+                              </div>
+                            </td>
+                            {/* FC Real */}
+                            <td className="py-2 text-center">
+                              {currentPrecio > 0 ? (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                  {currentFcReal.toFixed(1)}%
+                                </span>
                               ) : (
-                                <span className="text-gray-400">—</span>
+                                <span className="text-gray-400 text-xs">—</span>
                               )}
-                            </span>
-                          )}
-                        </td>
-                        {/* FC Objetivo - Editable */}
-                        <td className="py-2 text-center">
-                          {editingId === menu.id ? (
-                            <input
-                              type="number"
-                              value={editMargen}
-                              onChange={(e) => setEditMargen(e.target.value)}
-                              className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-xs"
-                            />
-                          ) : (
-                            <span className="text-xs text-gray-600">{fcObjetivo}%</span>
-                          )}
-                        </td>
-                        {/* FC Real */}
-                        <td className="py-2 text-center">
-                          {(() => {
-                            const pv = editingId === menu.id ? parseFloat(editPrecio) || 0 : precioVenta
-                            const fc = editingId === menu.id ? parseFloat(editMargen) || 25 : fcObjetivo
-                            const fcr = pv > 0 ? (costoPorPersona / pv * 100) : 0
-                            const isOk = fcr <= fc
-                            return pv > 0 ? (
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                {fcr.toFixed(1)}%
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 text-xs">—</span>
-                            )
-                          })()}
-                        </td>
-                        {/* Contribución */}
-                        <td className="py-2 text-right bg-green-50">
-                          {(() => {
-                            const pv = editingId === menu.id ? parseFloat(editPrecio) || 0 : precioVenta
-                            const contrib = pv - costoPorPersona
-                            return pv > 0 ? (
-                              <span className="text-xs font-bold text-green-700">
-                                <span className="text-green-500 font-normal">$</span>{contrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 text-xs">—</span>
-                            )
-                          })()}
-                        </td>
-                        {/* Acciones */}
-                        <td className="py-2 text-right">
-                          {editingId === menu.id ? (
-                            <div className="flex justify-end gap-0.5">
-                              <Button variant="ghost" size="sm" onClick={() => handleSaveEdit(menu.id, costoPorPersona)} disabled={isSaving}>
-                                <Save className="w-3.5 h-3.5 text-green-600" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-                                <X className="w-3.5 h-3.5 text-gray-500" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button variant="ghost" size="sm" onClick={() => handleStartEdit(menu)}>
-                              <Pencil className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                            </td>
+                            {/* Contribución */}
+                            <td className="py-2 text-right bg-green-50">
+                              {currentPrecio > 0 ? (
+                                <span className="text-xs font-bold text-green-700">
+                                  <span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">—</span>
+                              )}
+                            </td>
+                            {/* Guardar */}
+                            <td className="py-2 text-right">
+                              {hasChanges && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleSave(menu.id)}
+                                  disabled={isSaving === menu.id}
+                                  title="Guardar cambios"
+                                >
+                                  <Save className="w-3.5 h-3.5 text-green-600" />
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })()}
 
                 {/* Calculadora expandible */}
                 <div className="border-t bg-gradient-to-r from-pink-50 to-purple-50 p-3">

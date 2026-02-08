@@ -600,92 +600,6 @@ export default function EditarMenuEspecialPage({ params }: { params: { id: strin
           </p>
         </div>
 
-        {/* Precios y Márgenes */}
-        <div className="border-t pt-6">
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Análisis de Precios</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Costo del Menú */}
-              <div className="text-center">
-                <p className="text-xs text-gray-500">Costo Menú ({comensales} pers.)</p>
-                <p className="text-lg font-bold text-gray-700">
-                  ${calculos.costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </p>
-              </div>
-              {/* Costo por Persona */}
-              <div className="text-center bg-white rounded-lg p-2">
-                <p className="text-xs text-gray-500">Costo x Persona</p>
-                <p className="text-xl font-bold text-green-600">
-                  ${calculos.costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </p>
-              </div>
-              {/* Margen Objetivo */}
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">Margen Objetivo</p>
-                <div className="flex items-center justify-center gap-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="99"
-                    value={margenObjetivo}
-                    onChange={(e) => setMargenObjetivo(parseInt(e.target.value) || 0)}
-                    className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
-                    disabled={isReadOnly}
-                  />
-                  <span className="text-gray-500">%</span>
-                </div>
-              </div>
-              {/* Precio Sugerido */}
-              <div className="text-center">
-                <p className="text-xs text-gray-500">Precio Sugerido</p>
-                <p className="text-lg font-bold text-blue-600">
-                  ${calculos.precioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-green-200 grid grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Precio de Venta */}
-              <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">Precio de Venta</p>
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-gray-500">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={precioVenta || ''}
-                    onChange={(e) => setPrecioVenta(parseInt(e.target.value) || 0)}
-                    className="w-24 px-2 py-1 border border-gray-300 rounded text-center font-semibold"
-                    placeholder="0"
-                    disabled={isReadOnly}
-                  />
-                </div>
-              </div>
-              {/* Margen Real */}
-              <div className="text-center bg-white rounded-lg p-2">
-                <p className="text-xs text-gray-500">Margen Real</p>
-                <p className={`text-xl font-bold ${calculos.margenReal >= margenObjetivo ? 'text-green-600' : 'text-red-600'}`}>
-                  {calculos.margenReal.toFixed(1)}%
-                </p>
-              </div>
-              {/* Contribución */}
-              <div className="text-center bg-white rounded-lg p-2">
-                <p className="text-xs text-gray-500">Contribución</p>
-                <p className={`text-xl font-bold ${calculos.contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ${calculos.contribucion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </p>
-              </div>
-              {/* Food Cost */}
-              <div className="text-center">
-                <p className="text-xs text-gray-500">Food Cost</p>
-                <p className={`text-lg font-bold ${precioVenta > 0 ? (100 - calculos.margenReal <= 35 ? 'text-green-600' : 'text-yellow-600') : 'text-gray-400'}`}>
-                  {precioVenta > 0 ? (100 - calculos.margenReal).toFixed(1) : '—'}%
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Calculadora de Evento */}
         <div className="border-t pt-6">
           <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
@@ -779,6 +693,9 @@ export default function EditarMenuEspecialPage({ params }: { params: { id: strin
               const opts = opcionesPorTipo[seccion.value]
               if (opts.length === 0) return null
               const cant = cantidades[seccion.value] || 0
+              // Calcular promedios
+              const costoPromSeccion = opts.length > 0 ? (opts.reduce((sum, o) => sum + o.costo, 0) / opts.length) * cant : 0
+              const precioPromSeccion = opts.length > 0 ? (opts.reduce((sum, o) => sum + o.precio_carta, 0) / opts.length) * cant : 0
 
               return (
                 <div key={seccion.value} className="border rounded-lg overflow-hidden">
@@ -789,9 +706,19 @@ export default function EditarMenuEspecialPage({ params }: { params: { id: strin
                         ({opts.length} {opts.length === 1 ? 'opción' : 'opciones'})
                       </span>
                     </span>
-                    <span className="text-xs text-pink-600">
-                      × {cant} = se calcula {cant}
-                    </span>
+                    <div className="flex items-center gap-4 text-xs">
+                      <span className="text-pink-600">× {cant}</span>
+                      {cant > 0 && (
+                        <>
+                          <span className="text-green-600">
+                            Costo: <span className="font-semibold">${costoPromSeccion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                          </span>
+                          <span className="text-blue-600">
+                            P.Carta: <span className="font-semibold">${precioPromSeccion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <table className="min-w-full">
                     <thead className="bg-gray-50 text-xs text-gray-500">

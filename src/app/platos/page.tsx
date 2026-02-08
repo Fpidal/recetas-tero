@@ -132,7 +132,7 @@ export default function PlatosPage() {
     const { data: platosData, error } = await supabase
       .from('platos')
       .select(`
-        id, nombre, descripcion, seccion,
+        id, nombre, descripcion, seccion, rendimiento_porciones,
         plato_ingredientes (
           insumo_id,
           receta_base_id,
@@ -186,17 +186,21 @@ export default function PlatosPage() {
     }
 
     const platosConCosto: PlatoConCosto[] = (platosData || []).map((plato: any) => {
-      let costoTotal = 0
+      let costoReceta = 0
 
       for (const ing of plato.plato_ingredientes || []) {
         if (ing.insumo_id) {
           const costoInsumo = getCostoFinalInsumo(ing.insumo_id)
-          costoTotal += ing.cantidad * costoInsumo
+          costoReceta += ing.cantidad * costoInsumo
         } else if (ing.receta_base_id) {
           const costoPorcion = getCostoPorcionReceta(ing.receta_base_id)
-          costoTotal += ing.cantidad * costoPorcion
+          costoReceta += ing.cantidad * costoPorcion
         }
       }
+
+      // Dividir por rendimiento para obtener costo por porción
+      const rendimiento = plato.rendimiento_porciones > 0 ? plato.rendimiento_porciones : 1
+      const costoPorPorcion = costoReceta / rendimiento
 
       const nombres = (plato.plato_ingredientes || [])
         .map((ing: any) => ing.insumos?.nombre || ing.recetas_base?.nombre || '')
@@ -208,7 +212,7 @@ export default function PlatosPage() {
         descripcion: plato.descripcion,
         seccion: plato.seccion || 'Principales',
         ingredientes_texto: nombres.join(' · '),
-        costo_total: costoTotal,
+        costo_total: costoPorPorcion, // Ahora es costo por porción
       }
     })
 

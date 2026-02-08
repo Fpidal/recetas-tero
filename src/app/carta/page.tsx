@@ -92,34 +92,37 @@ export default function CartaPage() {
     return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
   }
 
-  // Función para calcular costo real de un plato
+  // Función para calcular costo real de un plato (por porción)
   function calcularCostoPlato(
     platoIngredientes: any[],
     insumosData: any[],
-    recetasBaseData: any[]
+    recetasBaseData: any[],
+    rendimientoPorciones: number = 1
   ): number {
-    let costoTotal = 0
+    let costoReceta = 0
 
     for (const ing of platoIngredientes) {
       if (ing.insumo_id) {
-        costoTotal += ing.cantidad * getCostoFinalInsumo(ing.insumo_id, insumosData)
+        costoReceta += ing.cantidad * getCostoFinalInsumo(ing.insumo_id, insumosData)
       } else if (ing.receta_base_id) {
         // Recalcular costo por porción de la receta base
         const receta = recetasBaseData?.find((r: any) => r.id === ing.receta_base_id)
         if (receta) {
-          let costoReceta = 0
+          let costoRecetaBase = 0
           for (const rIng of receta.receta_base_ingredientes || []) {
-            costoReceta += rIng.cantidad * getCostoFinalInsumo(rIng.insumo_id, insumosData)
+            costoRecetaBase += rIng.cantidad * getCostoFinalInsumo(rIng.insumo_id, insumosData)
           }
           const costoPorPorcion = receta.rendimiento_porciones > 0
-            ? costoReceta / receta.rendimiento_porciones
+            ? costoRecetaBase / receta.rendimiento_porciones
             : 0
-          costoTotal += ing.cantidad * costoPorPorcion
+          costoReceta += ing.cantidad * costoPorPorcion
         }
       }
     }
 
-    return costoTotal
+    // Dividir por rendimiento para obtener costo por porción
+    const rendimiento = rendimientoPorciones > 0 ? rendimientoPorciones : 1
+    return costoReceta / rendimiento
   }
 
   async function fetchData() {
@@ -143,13 +146,13 @@ export default function CartaPage() {
     const { data: platosData } = await supabase
       .from('platos')
       .select(`
-        id, nombre, seccion, updated_at,
+        id, nombre, seccion, updated_at, rendimiento_porciones,
         plato_ingredientes (insumo_id, receta_base_id, cantidad, insumos (nombre), recetas_base (nombre))
       `)
       .eq('activo', true)
       .order('nombre')
 
-    // Calcular costos reales de cada plato
+    // Calcular costos reales de cada plato (por porción)
     const platosConCosto: PlatoConCosto[] = (platosData || []).map((plato: any) => {
       const nombres = (plato.plato_ingredientes || [])
         .map((ing: any) => ing.insumos?.nombre || ing.recetas_base?.nombre || '')
@@ -164,7 +167,8 @@ export default function CartaPage() {
         costo_total: calcularCostoPlato(
           plato.plato_ingredientes || [],
           insumosData || [],
-          recetasBaseData || []
+          recetasBaseData || [],
+          plato.rendimiento_porciones || 1
         ),
       }
     })

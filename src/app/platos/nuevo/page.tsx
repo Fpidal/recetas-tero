@@ -209,6 +209,7 @@ export default function NuevoPlatoPage() {
   }
 
   const costoTotal = ingredientes.reduce((sum, ing) => sum + ing.costo_linea, 0)
+  const costoPorPorcion = rendimiento > 0 ? costoTotal / rendimiento : costoTotal
 
   async function handleGuardar() {
     if (!nombre.trim()) {
@@ -233,7 +234,7 @@ export default function NuevoPlatoPage() {
         paso_a_paso: pasoAPaso.trim() || null,
         rendimiento_porciones: rendimiento,
         version_receta: versionReceta.trim() || '1.0',
-        costo_total: costoTotal,
+        costo_total: costoPorPorcion, // Guardamos costo por porción, no el total
         activo: true,
       })
       .select()
@@ -595,11 +596,19 @@ export default function NuevoPlatoPage() {
 
         {/* Resumen de costos */}
         <div className="border-t pt-3">
-          <div className="bg-gray-50 rounded-lg px-4 py-2">
+          <div className="bg-gray-50 rounded-lg px-4 py-2 space-y-1">
+            {rendimiento > 1 && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500">Costo Receta (rinde {rendimiento}):</span>
+                <span className="text-sm font-medium text-gray-600 tabular-nums">
+                  ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Costo Total del Plato:</span>
+              <span className="text-sm text-gray-600">Costo por Porción:</span>
               <span className="text-lg font-bold text-green-600 tabular-nums">
-                <span className="text-green-400 font-normal">$</span> {costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                <span className="text-green-400 font-normal">$</span> {costoPorPorcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
               </span>
             </div>
           </div>

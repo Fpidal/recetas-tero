@@ -318,6 +318,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   }
 
   const costoTotal = ingredientes.reduce((sum, ing) => sum + ing.costo_linea, 0)
+  const costoPorPorcion = rendimiento > 0 ? costoTotal / rendimiento : costoTotal
 
   async function handleGuardar() {
     if (!nombre.trim()) {
@@ -350,7 +351,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
         paso_a_paso: pasoAPaso.trim() || null,
         rendimiento_porciones: rendimiento,
         version_receta: newVersion,
-        costo_total: costoTotal,
+        costo_total: costoPorPorcion, // Guardamos costo por porción, no el total
       })
       .eq('id', id)
 
@@ -647,13 +648,23 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
             <span className="text-xs text-red-500">En papelera</span>
           )}
         </div>
-        {/* Costo total en header */}
+        {/* Costos en header */}
         {ingredientes.length > 0 && (
-          <div className="bg-green-50 rounded-lg px-3 py-1 text-center">
-            <p className="text-[10px] text-gray-500">Costo Total</p>
-            <p className="text-base sm:text-lg font-bold text-green-600 tabular-nums">
-              ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-            </p>
+          <div className="flex gap-2">
+            {rendimiento > 1 && (
+              <div className="bg-gray-100 rounded-lg px-2 py-1 text-center">
+                <p className="text-[10px] text-gray-500">Costo Receta</p>
+                <p className="text-sm font-medium text-gray-600 tabular-nums">
+                  ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                </p>
+              </div>
+            )}
+            <div className="bg-green-50 rounded-lg px-3 py-1 text-center">
+              <p className="text-[10px] text-gray-500">Costo x Porción</p>
+              <p className="text-base sm:text-lg font-bold text-green-600 tabular-nums">
+                ${costoPorPorcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
           </div>
         )}
       </div>

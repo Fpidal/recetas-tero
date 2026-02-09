@@ -231,8 +231,10 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
 
     setIsSaving(true)
 
+    console.log('Guardando OC:', id, 'Total:', total, 'Items activos:', itemsActivos.length, 'Items nuevos:', itemsActivos.filter(i => i.isNew).length)
+
     // Actualizar orden
-    const { error: ordenError } = await supabase
+    const { data: ordenData, error: ordenError } = await supabase
       .from('ordenes_compra')
       .update({
         proveedor_id: selectedProveedor,
@@ -240,6 +242,9 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         notas: notas || null,
       })
       .eq('id', id)
+      .select()
+
+    console.log('Resultado update orden:', ordenData, ordenError)
 
     if (ordenError) {
       console.error('Error actualizando orden:', ordenError)
@@ -260,7 +265,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     // Actualizar items existentes
     const itemsExistentes = itemsActivos.filter(i => !i.isNew && itemsOriginales.includes(i.id))
     for (const item of itemsExistentes) {
-      await supabase
+      const { error: updateErr } = await supabase
         .from('orden_compra_items')
         .update({
           cantidad: item.cantidad,
@@ -268,20 +273,35 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
           subtotal: item.subtotal,
         })
         .eq('id', item.id)
+
+      if (updateErr) {
+        console.error('Error actualizando item:', updateErr)
+      }
     }
 
     // Insertar nuevos items
     const itemsNuevos = itemsActivos.filter(i => i.isNew)
     if (itemsNuevos.length > 0) {
-      await supabase
+      const insertData = itemsNuevos.map(item => ({
+        orden_compra_id: id,
+        insumo_id: item.insumo_id,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_unitario,
+        subtotal: item.subtotal,
+      }))
+
+      console.log('Insertando items nuevos:', insertData)
+
+      const { error: insertErr } = await supabase
         .from('orden_compra_items')
-        .insert(itemsNuevos.map(item => ({
-          orden_compra_id: id,
-          insumo_id: item.insumo_id,
-          cantidad: item.cantidad,
-          precio_unitario: item.precio_unitario,
-          subtotal: item.subtotal,
-        })))
+        .insert(insertData)
+
+      if (insertErr) {
+        console.error('Error insertando items:', insertErr)
+        alert('Error al guardar los nuevos items: ' + insertErr.message)
+        setIsSaving(false)
+        return
+      }
     }
 
     setIsSaving(false)

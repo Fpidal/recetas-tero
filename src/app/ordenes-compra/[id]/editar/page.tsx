@@ -270,7 +270,6 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         .update({
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
-          subtotal: item.subtotal,
         })
         .eq('id', item.id)
 
@@ -287,7 +286,6 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         insumo_id: item.insumo_id,
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
-        subtotal: item.subtotal,
       }))
 
       console.log('Insertando items nuevos:', insertData)

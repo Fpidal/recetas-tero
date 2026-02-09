@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Plus, Eye, FileText, Pencil, PackageSearch, Filter, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -92,7 +92,7 @@ const MESES = [
   { value: '12', label: 'Diciembre' },
 ]
 
-export default function FacturasPage() {
+function FacturasContent() {
   const [facturas, setFacturas] = useState<FacturaConDetalle[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -389,5 +389,13 @@ export default function FacturasPage() {
         emptyMessage="No hay facturas registradas"
       />
     </div>
+  )
+}
+
+export default function FacturasPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><p className="text-gray-500">Cargando...</p></div>}>
+      <FacturasContent />
+    </Suspense>
   )
 }

@@ -250,7 +250,7 @@ export default function Home() {
       // Obtener platos con ingredientes y nombre
       const { data: platosData } = await supabase
         .from('platos')
-        .select('id, nombre, plato_ingredientes (insumo_id, receta_base_id, cantidad)')
+        .select('id, nombre, rendimiento_porciones, plato_ingredientes (insumo_id, receta_base_id, cantidad)')
         .eq('activo', true)
 
       // Función para calcular costo final de un insumo
@@ -260,7 +260,7 @@ export default function Home() {
         return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
       }
 
-      // Función para calcular costo de un plato
+      // Función para calcular costo de un plato (por porción)
       const calcularCostoPlato = (platoId: string): number => {
         const plato = platosData?.find((p: any) => p.id === platoId)
         if (!plato) return 0
@@ -283,7 +283,9 @@ export default function Home() {
             }
           }
         }
-        return costoTotal
+        // Dividir por rendimiento para obtener costo por porción
+        const rendimiento = plato.rendimiento_porciones > 0 ? plato.rendimiento_porciones : 1
+        return costoTotal / rendimiento
       }
 
       // Calcular food cost real para cada item de carta

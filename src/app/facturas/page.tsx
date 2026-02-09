@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Plus, Eye, FileText, Pencil, PackageSearch, Filter, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Table, Select } from '@/components/ui'
@@ -96,11 +97,27 @@ export default function FacturasPage() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Filtros
-  const [filtroProveedor, setFiltroProveedor] = useState('')
-  const [filtroFechaDesde, setFiltroFechaDesde] = useState('')
-  const [filtroFechaHasta, setFiltroFechaHasta] = useState('')
-  const [filtroMes, setFiltroMes] = useState('')
+  // URL params para persistir filtros
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  // Leer filtros desde URL
+  const filtroProveedor = searchParams.get('proveedor') || ''
+  const filtroFechaDesde = searchParams.get('desde') || ''
+  const filtroFechaHasta = searchParams.get('hasta') || ''
+  const filtroMes = searchParams.get('mes') || ''
+
+  // Actualizar URL con nuevo filtro
+  function setFiltro(key: string, value: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (value) {
+      params.set(key, value)
+    } else {
+      params.delete(key)
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
 
   useEffect(() => {
     fetchFacturas()
@@ -162,10 +179,7 @@ export default function FacturasPage() {
   const hayFiltrosActivos = filtroProveedor || filtroFechaDesde || filtroFechaHasta || filtroMes
 
   function limpiarFiltros() {
-    setFiltroProveedor('')
-    setFiltroFechaDesde('')
-    setFiltroFechaHasta('')
-    setFiltroMes('')
+    router.replace(pathname, { scroll: false })
   }
 
   function renderSemaforo(f: FacturaConDetalle) {
@@ -313,7 +327,7 @@ export default function FacturasPage() {
           <div className="w-48">
             <Select
               value={filtroProveedor}
-              onChange={(e) => setFiltroProveedor(e.target.value)}
+              onChange={(e) => setFiltro('proveedor', e.target.value)}
               options={[
                 { value: '', label: 'Todos los proveedores' },
                 ...proveedores.map(p => ({ value: p.id, label: p.nombre }))
@@ -325,7 +339,7 @@ export default function FacturasPage() {
           <div className="w-40">
             <Select
               value={filtroMes}
-              onChange={(e) => setFiltroMes(e.target.value)}
+              onChange={(e) => setFiltro('mes', e.target.value)}
               options={MESES}
             />
           </div>
@@ -336,7 +350,7 @@ export default function FacturasPage() {
             <input
               type="date"
               value={filtroFechaDesde}
-              onChange={(e) => setFiltroFechaDesde(e.target.value)}
+              onChange={(e) => setFiltro('desde', e.target.value)}
               className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
             />
           </div>
@@ -347,7 +361,7 @@ export default function FacturasPage() {
             <input
               type="date"
               value={filtroFechaHasta}
-              onChange={(e) => setFiltroFechaHasta(e.target.value)}
+              onChange={(e) => setFiltro('hasta', e.target.value)}
               className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
             />
           </div>

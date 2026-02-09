@@ -60,7 +60,65 @@ export default function MenusEspecialesPage() {
   async function fetchMenus() {
     setIsLoading(true)
 
-    // Cargar precios de bebidas
+    // 1. Cargar insumos con precios actuales (igual que edit page)
+    const { data: insumosData } = await supabase
+      .from('v_insumos_con_precio')
+      .select('id, precio_actual, iva_porcentaje, merma_porcentaje')
+
+    // 2. Cargar recetas base con ingredientes
+    const { data: recetasBaseData } = await supabase
+      .from('recetas_base')
+      .select(`
+        id, rendimiento_porciones,
+        receta_base_ingredientes (insumo_id, cantidad)
+      `)
+      .eq('activo', true)
+
+    // Función para calcular costo final de insumo (con IVA y merma)
+    function getCostoFinalInsumo(insumoId: string): number {
+      const insumo = insumosData?.find(i => i.id === insumoId)
+      if (!insumo || !insumo.precio_actual) return 0
+      return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+    }
+
+    // Función para calcular costo por porción de receta base
+    function getCostoPorcionReceta(recetaBaseId: string): number {
+      const receta = recetasBaseData?.find((r: any) => r.id === recetaBaseId)
+      if (!receta) return 0
+      let costoTotal = 0
+      for (const ing of (receta as any).receta_base_ingredientes || []) {
+        costoTotal += ing.cantidad * getCostoFinalInsumo(ing.insumo_id)
+      }
+      return (receta as any).rendimiento_porciones > 0
+        ? costoTotal / (receta as any).rendimiento_porciones
+        : 0
+    }
+
+    // 3. Cargar platos con ingredientes para recalcular costos
+    const { data: platosData } = await supabase
+      .from('platos')
+      .select(`
+        id, rendimiento_porciones,
+        plato_ingredientes (insumo_id, receta_base_id, cantidad)
+      `)
+      .eq('activo', true)
+
+    // Mapa de costos recalculados por plato_id
+    const platoCostosMap = new Map<string, number>()
+    for (const plato of (platosData || []) as any[]) {
+      let costoReceta = 0
+      for (const ing of plato.plato_ingredientes || []) {
+        if (ing.insumo_id) {
+          costoReceta += ing.cantidad * getCostoFinalInsumo(ing.insumo_id)
+        } else if (ing.receta_base_id) {
+          costoReceta += ing.cantidad * getCostoPorcionReceta(ing.receta_base_id)
+        }
+      }
+      const rendimiento = plato.rendimiento_porciones > 0 ? plato.rendimiento_porciones : 1
+      platoCostosMap.set(plato.id, costoReceta / rendimiento)
+    }
+
+    // 4. Cargar precios de bebidas
     const { data: bebidasData } = await supabase
       .from('insumos')
       .select('id')
@@ -83,10 +141,11 @@ export default function MenusEspecialesPage() {
       )
     }
 
+    // 5. Cargar menús con opciones
     const { data, error } = await supabase
       .from('menus_especiales')
       .select(`*,
-        menu_especial_opciones (id, tipo_opcion, plato_id, insumo_id, platos (costo_total))
+        menu_especial_opciones (id, tipo_opcion, plato_id, insumo_id)
       `)
       .eq('activo', true)
       .order('nombre')
@@ -94,11 +153,56 @@ export default function MenusEspecialesPage() {
     if (error) {
       console.error('Error fetching menus:', error)
     } else {
-      // Usar costo_promedio guardado (que ahora es costo por persona)
+      // Recalcular costos dinámicamente igual que la página de edición
       const menusConCosto = (data || []).map((menu: any) => {
+        const cantidades: Record<string, number> = {
+          Entradas: menu.cantidad_entradas || 1,
+          Principales: menu.cantidad_principales || 2,
+          Postres: menu.cantidad_postres || 1,
+          Bebidas: menu.cantidad_bebidas || 1,
+        }
+        const comensales = menu.comensales || 2
+
+        // Agrupar opciones por tipo
+        const opcionesPorTipo: Record<string, { costo: number }[]> = {
+          Entradas: [],
+          Principales: [],
+          Postres: [],
+          Bebidas: [],
+        }
+
+        for (const opcion of menu.menu_especial_opciones || []) {
+          const tipoNorm = normalizarTipoOpcion(opcion.tipo_opcion)
+          let costo = 0
+
+          if (opcion.plato_id) {
+            // Usar costo recalculado del plato
+            costo = platoCostosMap.get(opcion.plato_id) || 0
+          } else if (opcion.insumo_id) {
+            // Bebida - usar precio del insumo
+            costo = bebidasPreciosMap.get(opcion.insumo_id) || 0
+          }
+
+          if (!opcionesPorTipo[tipoNorm]) opcionesPorTipo[tipoNorm] = []
+          opcionesPorTipo[tipoNorm].push({ costo })
+        }
+
+        // Calcular costo total del menú
+        let costoMenu = 0
+        for (const seccion of ['Entradas', 'Principales', 'Postres', 'Bebidas']) {
+          const opts = opcionesPorTipo[seccion]
+          const cant = cantidades[seccion] || 0
+          if (opts.length > 0 && cant > 0) {
+            const costoPromSeccion = opts.reduce((sum, o) => sum + o.costo, 0) / opts.length
+            costoMenu += costoPromSeccion * cant
+          }
+        }
+
+        const costoPorPersona = comensales > 0 ? costoMenu / comensales : 0
+
         return {
           ...menu,
-          costo_calculado: menu.costo_promedio || 0 // costo_promedio ahora es costo por persona
+          costo_calculado: costoPorPersona
         }
       })
       setMenus(menusConCosto as MenuConOpciones[])
@@ -146,25 +250,30 @@ export default function MenusEspecialesPage() {
     }))
   }
 
-  async function handleSave(menuId: string) {
-    const values = editValues[menuId]
-    if (!values) return
-
+  async function handleSave(menuId: string, margenValue?: number, precioValue?: number) {
     setIsSaving(menuId)
-    const margen = parseFloat(values.margen) || 25
-    const precio = parseFloat(values.precio) || 0
+
+    // Usar valores pasados o del estado
+    const values = editValues[menuId]
+    const margen = margenValue ?? (values ? parseFloat(values.margen) : null)
+    const precio = precioValue ?? (values ? parseFloat(values.precio) : null)
+
+    const updateData: any = {}
+    if (margen !== null) updateData.margen_objetivo = margen
+    if (precio !== null) updateData.precio_venta = precio
+
+    if (Object.keys(updateData).length === 0) {
+      setIsSaving(null)
+      return
+    }
 
     const { error } = await supabase
       .from('menus_especiales')
-      .update({
-        margen_objetivo: margen,
-        precio_venta: precio,
-      })
+      .update(updateData)
       .eq('id', menuId)
 
     if (error) {
       console.error('Error actualizando menú:', error)
-      alert('Error al actualizar')
     } else {
       // Limpiar valores editados y recargar
       setEditValues(prev => {
@@ -175,6 +284,17 @@ export default function MenusEspecialesPage() {
       fetchMenus()
     }
     setIsSaving(null)
+  }
+
+  function handleBlurSave(menuId: string, field: 'margen' | 'precio', value: string, originalValue: number) {
+    const numValue = parseFloat(value) || 0
+    if (numValue !== originalValue) {
+      if (field === 'margen') {
+        handleSave(menuId, numValue, undefined)
+      } else {
+        handleSave(menuId, undefined, numValue)
+      }
+    }
   }
 
   if (isLoading) {
@@ -304,6 +424,7 @@ export default function MenusEspecialesPage() {
                                   type="number"
                                   value={getEditValue(menu.id, 'margen', fcObjetivo)}
                                   onChange={(e) => setEditValue(menu.id, 'margen', e.target.value)}
+                                  onBlur={(e) => handleBlurSave(menu.id, 'margen', e.target.value, fcObjetivo)}
                                   className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-xs"
                                 />
                                 <span className="text-[10px] text-gray-400">%</span>
@@ -320,9 +441,16 @@ export default function MenusEspecialesPage() {
                               <div className="flex items-center justify-end gap-0.5">
                                 <span className="text-[10px] text-gray-400">$</span>
                                 <input
-                                  type="number"
-                                  value={getEditValue(menu.id, 'precio', precioVenta)}
-                                  onChange={(e) => setEditValue(menu.id, 'precio', e.target.value)}
+                                  type="text"
+                                  value={Number(getEditValue(menu.id, 'precio', precioVenta) || 0).toLocaleString('es-AR')}
+                                  onChange={(e) => {
+                                    const raw = e.target.value.replace(/\D/g, '')
+                                    setEditValue(menu.id, 'precio', raw)
+                                  }}
+                                  onBlur={(e) => {
+                                    const raw = e.target.value.replace(/\D/g, '')
+                                    handleBlurSave(menu.id, 'precio', raw, precioVenta)
+                                  }}
                                   className="w-20 px-1.5 py-0.5 border border-gray-300 rounded text-right text-xs"
                                   placeholder="0"
                                 />

@@ -1,11 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Eye, FileText, Pencil, PackageSearch } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, Eye, FileText, Pencil, PackageSearch, Filter, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { Button, Table } from '@/components/ui'
+import { Button, Table, Select } from '@/components/ui'
 import Link from 'next/link'
 import { formatearMoneda } from '@/lib/formato-numeros'
+
+interface Proveedor {
+  id: string
+  nombre: string
+}
 
 interface FacturaConDetalle {
   id: string
@@ -70,13 +75,46 @@ function calcularSemaforo(f: FacturaConDetalle): SemaforoInfo | null {
   return { faltantes, parciales, precioDif, nuevos }
 }
 
+const MESES = [
+  { value: '', label: 'Todos los meses' },
+  { value: '01', label: 'Enero' },
+  { value: '02', label: 'Febrero' },
+  { value: '03', label: 'Marzo' },
+  { value: '04', label: 'Abril' },
+  { value: '05', label: 'Mayo' },
+  { value: '06', label: 'Junio' },
+  { value: '07', label: 'Julio' },
+  { value: '08', label: 'Agosto' },
+  { value: '09', label: 'Septiembre' },
+  { value: '10', label: 'Octubre' },
+  { value: '11', label: 'Noviembre' },
+  { value: '12', label: 'Diciembre' },
+]
+
 export default function FacturasPage() {
   const [facturas, setFacturas] = useState<FacturaConDetalle[]>([])
+  const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // Filtros
+  const [filtroProveedor, setFiltroProveedor] = useState('')
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('')
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('')
+  const [filtroMes, setFiltroMes] = useState('')
 
   useEffect(() => {
     fetchFacturas()
+    fetchProveedores()
   }, [])
+
+  async function fetchProveedores() {
+    const { data } = await supabase
+      .from('proveedores')
+      .select('id, nombre')
+      .eq('activo', true)
+      .order('nombre')
+    setProveedores(data || [])
+  }
 
   async function fetchFacturas() {
     setIsLoading(true)
@@ -97,6 +135,37 @@ export default function FacturasPage() {
       setFacturas((data as FacturaConDetalle[]) || [])
     }
     setIsLoading(false)
+  }
+
+  // Facturas filtradas
+  const facturasFiltradas = useMemo(() => {
+    return facturas.filter(f => {
+      // Filtro por proveedor
+      if (filtroProveedor && f.proveedor_id !== filtroProveedor) return false
+
+      // Filtro por fecha desde
+      if (filtroFechaDesde && f.fecha < filtroFechaDesde) return false
+
+      // Filtro por fecha hasta
+      if (filtroFechaHasta && f.fecha > filtroFechaHasta) return false
+
+      // Filtro por mes (formato: "01" a "12")
+      if (filtroMes) {
+        const mesFecha = f.fecha.substring(5, 7) // Extrae MM de YYYY-MM-DD
+        if (mesFecha !== filtroMes) return false
+      }
+
+      return true
+    })
+  }, [facturas, filtroProveedor, filtroFechaDesde, filtroFechaHasta, filtroMes])
+
+  const hayFiltrosActivos = filtroProveedor || filtroFechaDesde || filtroFechaHasta || filtroMes
+
+  function limpiarFiltros() {
+    setFiltroProveedor('')
+    setFiltroFechaDesde('')
+    setFiltroFechaHasta('')
+    setFiltroMes('')
   }
 
   function renderSemaforo(f: FacturaConDetalle) {
@@ -232,9 +301,75 @@ export default function FacturasPage() {
         </div>
       </div>
 
+      {/* Filtros */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Filter className="w-4 h-4" />
+            <span className="font-medium">Filtros:</span>
+          </div>
+
+          {/* Proveedor */}
+          <div className="w-48">
+            <Select
+              value={filtroProveedor}
+              onChange={(e) => setFiltroProveedor(e.target.value)}
+              options={[
+                { value: '', label: 'Todos los proveedores' },
+                ...proveedores.map(p => ({ value: p.id, label: p.nombre }))
+              ]}
+            />
+          </div>
+
+          {/* Mes */}
+          <div className="w-40">
+            <Select
+              value={filtroMes}
+              onChange={(e) => setFiltroMes(e.target.value)}
+              options={MESES}
+            />
+          </div>
+
+          {/* Fecha desde */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Desde:</span>
+            <input
+              type="date"
+              value={filtroFechaDesde}
+              onChange={(e) => setFiltroFechaDesde(e.target.value)}
+              className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+            />
+          </div>
+
+          {/* Fecha hasta */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Hasta:</span>
+            <input
+              type="date"
+              value={filtroFechaHasta}
+              onChange={(e) => setFiltroFechaHasta(e.target.value)}
+              className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+            />
+          </div>
+
+          {/* Limpiar filtros */}
+          {hayFiltrosActivos && (
+            <Button variant="ghost" size="sm" onClick={limpiarFiltros}>
+              <X className="w-4 h-4 mr-1" />
+              Limpiar
+            </Button>
+          )}
+
+          {/* Contador */}
+          <span className="text-xs text-gray-400 ml-auto">
+            {facturasFiltradas.length} de {facturas.length} facturas
+          </span>
+        </div>
+      </div>
+
       <Table
         columns={columns}
-        data={facturas}
+        data={facturasFiltradas}
         keyExtractor={(f) => f.id}
         isLoading={isLoading}
         emptyMessage="No hay facturas registradas"

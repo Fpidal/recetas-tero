@@ -500,17 +500,13 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           </div>
         </div>
 
-        {/* Notas */}
+        {/* Observaciones */}
         {orden.notas && (
           <div className="border-t pt-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Notas</h3>
-            <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{orden.notas}</p>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Observaciones</h3>
+            <p className="text-gray-700 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">{orden.notas}</p>
           </div>
         )}
-
-        <p className="text-xs text-gray-400 mt-2">
-          Observaciones: mercadería sujeta a control de calidad al recibir.
-        </p>
 
         {/* Acciones */}
         <div className="flex justify-between items-center border-t pt-6">

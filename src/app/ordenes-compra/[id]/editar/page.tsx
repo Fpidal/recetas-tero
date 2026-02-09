@@ -533,17 +533,17 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
           )}
         </div>
 
-        {/* Notas */}
+        {/* Observaciones */}
         <div className="border-t pt-6">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Notas
+            Observaciones
           </label>
           <textarea
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
             rows={3}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            placeholder="Notas adicionales para el proveedor..."
+            placeholder="Indicaciones especiales para el proveedor..."
           />
         </div>
 

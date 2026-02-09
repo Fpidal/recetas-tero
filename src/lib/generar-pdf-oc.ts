@@ -373,37 +373,44 @@ export async function generarPDFOrden(ordenId: string) {
   doc.text(fmtMoney(totalConIva), pageWidth - margin - 3, y + 3, { align: 'right' })
   y += 12
 
-  // Notas
+  // Observaciones (indicaciones especiales del usuario)
   if (orden.notas) {
+    // Caja destacada para observaciones
+    doc.setFillColor(255, 250, 230) // amarillo suave
+    doc.setDrawColor(...TERRACOTA_LIGHT)
+    doc.setLineWidth(0.3)
+    const notasLines = doc.splitTextToSize(orden.notas, contentWidth - 6)
+    const boxH = notasLines.length * 3.5 + 8
+    doc.roundedRect(margin, y, contentWidth, boxH, 1.5, 1.5, 'FD')
+
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(6)
+    doc.setFontSize(7)
     doc.setTextColor(...TERRACOTA)
-    doc.text('NOTAS:', margin + 2, y)
+    doc.text('OBSERVACIONES:', margin + 3, y + 5)
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(6)
-    doc.setTextColor(60, 60, 60)
-    const notasLines = doc.splitTextToSize(orden.notas, contentWidth - 20)
-    doc.text(notasLines, margin + 18, y)
-    y += notasLines.length * 3 + 4
+    doc.setFontSize(6.5)
+    doc.setTextColor(40, 40, 40)
+    doc.text(notasLines, margin + 3, y + 10)
+    y += boxH + 4
   }
 
-  // Observaciones
+  // Condiciones de entrega (texto fijo)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(5.5)
   doc.setTextColor(...TERRACOTA)
-  doc.text('Observaciones:', margin + 2, y)
+  doc.text('Condiciones:', margin + 2, y)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(5)
-  doc.setTextColor(80, 80, 80)
-  const observaciones = [
+  doc.setTextColor(100, 100, 100)
+  const condiciones = [
     '• Mercadería sujeta a control de calidad al recibir.',
     '• Confirmar si el pedido será entregado en su totalidad.',
     '• Confirmar fecha de entrega.',
   ]
-  observaciones.forEach((obs, i) => {
-    doc.text(obs, margin + 2, y + 4 + (i * 3))
+  condiciones.forEach((cond, i) => {
+    doc.text(cond, margin + 2, y + 4 + (i * 3))
   })
 
   // Footer

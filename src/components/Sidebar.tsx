@@ -17,7 +17,8 @@ import {
   TrendingUp,
   Trash2,
   Menu,
-  X
+  X,
+  Warehouse
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -33,6 +34,7 @@ const navigation = [
   { name: 'Carta', href: '/carta', icon: ClipboardList, color: '#EF4444' },
   { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart, color: '#6366F1' },
   { name: 'Facturas', href: '/facturas', icon: FileText, color: '#6B7280' },
+  { name: 'Inventario', href: '/inventario', icon: Warehouse, color: '#0EA5E9' },
   { name: 'Papelera', href: '/papelera', icon: Trash2, color: '#DC2626' },
 ]
 

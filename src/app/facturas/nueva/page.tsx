@@ -141,8 +141,11 @@ export default function NuevaFacturaPage() {
 
     // Convertir items de la orden a items de factura
     const itemsFactura: ItemFactura[] = orden.items.map(item => {
+      // Usar IVA actual del insumo, no el de la OC
+      const insumoActual = insumos.find(i => i.id === item.insumo_id)
+      const ivaPorcentaje = insumoActual?.iva_porcentaje ?? item.iva_porcentaje
       const subtotal = item.cantidad * item.precio_unitario
-      const ivaMonto = subtotal * (item.iva_porcentaje / 100)
+      const ivaMonto = subtotal * (ivaPorcentaje / 100)
       return {
         id: crypto.randomUUID(),
         insumo_id: item.insumo_id,
@@ -152,7 +155,7 @@ export default function NuevaFacturaPage() {
         precio_unitario: item.precio_unitario,
         descuento: 0,
         subtotal,
-        iva_porcentaje: item.iva_porcentaje,
+        iva_porcentaje: ivaPorcentaje,
         iva_monto: ivaMonto,
         diferencia: null,
       }
@@ -306,6 +309,20 @@ export default function NuevaFacturaPage() {
     }))
   }
 
+  function handleIvaChange(id: string, nuevoIva: number) {
+    setItems(items.map(item => {
+      if (item.id === id) {
+        const ivaMonto = item.subtotal * (nuevoIva / 100)
+        return {
+          ...item,
+          iva_porcentaje: nuevoIva,
+          iva_monto: ivaMonto,
+        }
+      }
+      return item
+    }))
+  }
+
   async function handleGuardarNuevoInsumo() {
     if (!nuevoInsumoNombre.trim() || !nuevoInsumoCategoria) {
       alert('Completá nombre y categoría')
@@ -361,6 +378,7 @@ export default function NuevaFacturaPage() {
   const subtotalNeto = items.reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva21 = items.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva105 = items.filter(i => i.iva_porcentaje === 10.5).reduce((sum, item) => sum + item.iva_monto, 0)
+  const totalIva0 = items.filter(i => i.iva_porcentaje === 0).reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva = items.reduce((sum, item) => sum + item.iva_monto, 0)
   const totalPercepciones = percepciones.reduce((sum, p) => sum + parsearNumero(p.valor), 0)
   const total = subtotalNeto + totalIva + totalPercepciones
@@ -775,13 +793,19 @@ export default function NuevaFacturaPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
-                          item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {item.iva_porcentaje}%
-                        </span>
+                        <select
+                          value={item.iva_porcentaje}
+                          onChange={(e) => handleIvaChange(item.id, parseFloat(e.target.value))}
+                          className={`px-2 py-0.5 rounded text-xs font-medium border-0 cursor-pointer ${
+                            item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
+                            item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          <option value={21}>21%</option>
+                          <option value={10.5}>10.5%</option>
+                          <option value={0}>0%</option>
+                        </select>
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
                         {formatearMoneda(item.subtotal)}
@@ -826,6 +850,17 @@ export default function NuevaFacturaPage() {
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900">
                         {formatearMoneda(totalIva105)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  )}
+                  {totalIva0 > 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                        Exento (0%):
+                      </td>
+                      <td className="px-4 py-1 text-right text-sm text-gray-900">
+                        {formatearMoneda(totalIva0)}
                       </td>
                       <td></td>
                     </tr>

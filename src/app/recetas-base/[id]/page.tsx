@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, ArrowLeft, Save, RefreshCw, ClipboardList } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Save, RefreshCw, ClipboardList, FileDown } from 'lucide-react'
+import jsPDF from 'jspdf'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
@@ -174,6 +175,215 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     }))
   }
 
+  async function handleGenerarPDF() {
+    // A6 vertical: 105 x 148 mm
+    const doc = new jsPDF({ unit: 'mm', format: [105, 148] })
+    const pageWidth = 105
+    const pageHeight = 148
+    const margin = 8
+    const contentWidth = pageWidth - margin * 2
+    const GREEN = [45, 59, 45] as const // #2D3B2D
+
+    // Fondo papel y borde redondeado
+    function drawPageFrame() {
+      doc.setFillColor(245, 245, 240) // #F5F5F0
+      doc.rect(0, 0, pageWidth, pageHeight, 'F')
+      doc.setDrawColor(210, 210, 200)
+      doc.setLineWidth(0.3)
+      doc.roundedRect(3, 3, pageWidth - 6, pageHeight - 6, 3, 3, 'S')
+    }
+
+    function addNewPage() {
+      doc.addPage([105, 148])
+      drawPageFrame()
+      return 10
+    }
+
+    // Formatear cantidad legible
+    function formatCantidad(ing: Ingrediente): string {
+      const cant = ing.cantidad
+      if (cant <= 0) return 'c/n'
+      const unidad = ing.unidad_medida
+      if (unidad === 'kg' && cant < 1) {
+        return `${Math.round(cant * 1000)} g`
+      }
+      if (unidad === 'lt' && cant < 1) {
+        return `${Math.round(cant * 1000)} ml`
+      }
+      const cantStr = cant % 1 === 0
+        ? cant.toFixed(0)
+        : cant.toFixed(1).replace(/\.0$/, '').replace('.', ',')
+      return `${cantStr} ${unidad}`
+    }
+
+    // Logo desde Supabase (pre-fetch)
+    let logoDataUrl: string | null = null
+    try {
+      const { data: urlData } = supabase.storage.from('logo-tero').getPublicUrl('logo.png')
+      if (urlData?.publicUrl) {
+        const response = await fetch(urlData.publicUrl)
+        if (response.ok) {
+          const blob = await response.blob()
+          logoDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+        }
+      }
+    } catch {}
+
+    // === PÁGINA 1 ===
+    drawPageFrame()
+    let y = 10
+
+    // === HEADER: "Tero Restó" centrado, serif cursiva ===
+    doc.setFont('times', 'bolditalic')
+    doc.setFontSize(13)
+    doc.setTextColor(...GREEN)
+    doc.text('Tero Restó', pageWidth / 2, y, { align: 'center' })
+    y += 4
+
+    // Línea separadora fina
+    doc.setDrawColor(180, 180, 170)
+    doc.setLineWidth(0.2)
+    doc.line(margin + 10, y, pageWidth - margin - 10, y)
+    y += 6
+
+    // === NOMBRE DE LA ELABORACIÓN: serif grande, centrado ===
+    doc.setFont('times', 'bold')
+    doc.setFontSize(15)
+    doc.setTextColor(30, 30, 30)
+    const nombreLines = doc.splitTextToSize(nombre, contentWidth - 4)
+    doc.text(nombreLines, pageWidth / 2, y, { align: 'center' })
+    y += nombreLines.length * 5.5 + 3
+
+    // === BADGE "ELABORACIÓN" ===
+    const badgeText = 'ELABORACIÓN'
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(5.5)
+    const badgeWidth = doc.getTextWidth(badgeText) + 8
+    const badgeX = (pageWidth - badgeWidth) / 2
+    doc.setFillColor(147, 51, 234) // purple-600
+    doc.roundedRect(badgeX, y - 2.5, badgeWidth, 5, 2, 2, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.text(badgeText, pageWidth / 2, y + 0.8, { align: 'center' })
+    y += 7
+
+    // === INGREDIENTES ===
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7)
+    doc.setTextColor(...GREEN)
+    doc.text('INGREDIENTES', margin, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(6)
+    doc.setTextColor(120, 120, 120)
+    doc.text('Cantidad', pageWidth - margin, y, { align: 'right' })
+    y += 1.5
+
+    doc.setDrawColor(180, 180, 170)
+    doc.setLineWidth(0.15)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 3.5
+
+    doc.setFontSize(7)
+
+    for (const ing of ingredientes) {
+      if (y > pageHeight - 25) { y = addNewPage() }
+      // Nombre a la izquierda
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(40, 40, 40)
+      doc.text(ing.insumo_nombre, margin + 1, y)
+      // Cantidad a la derecha
+      doc.setTextColor(80, 80, 80)
+      doc.text(formatCantidad(ing), pageWidth - margin - 1, y, { align: 'right' })
+      y += 3.5
+    }
+
+    y += 4
+
+    // === PREPARACIÓN ===
+    if (y > pageHeight - 20) { y = addNewPage() }
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7)
+    doc.setTextColor(...GREEN)
+    doc.text('PREPARACIÓN', margin, y)
+    y += 1.5
+
+    doc.setDrawColor(180, 180, 170)
+    doc.setLineWidth(0.15)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 4
+
+    if (preparacion.trim()) {
+      const rawSteps = preparacion.split(/\n/).filter(l => l.trim())
+      let stepNum = 1
+
+      for (const step of rawSteps) {
+        if (y > pageHeight - 15) { y = addNewPage() }
+
+        const cleanStep = step.replace(/^\d+[\.\)\-]\s*/, '').trim()
+        if (!cleanStep) continue
+
+        // Número en verde
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(6.5)
+        doc.setTextColor(...GREEN)
+        doc.text(`${stepNum}.`, margin + 1, y)
+
+        // Texto del paso
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(40, 40, 40)
+        const stepLines = doc.splitTextToSize(cleanStep, contentWidth - 7)
+        doc.text(stepLines, margin + 6, y)
+        y += stepLines.length * 2.8 + 1.5
+
+        stepNum++
+      }
+    } else {
+      doc.setDrawColor(210, 210, 200)
+      for (let i = 0; i < 5; i++) {
+        doc.line(margin + 1, y + i * 5, pageWidth - margin - 1, y + i * 5)
+      }
+    }
+
+    // === FOOTER (todas las páginas) ===
+    const totalPages = (doc as any).internal.getNumberOfPages()
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p)
+
+      // Línea separadora footer
+      doc.setDrawColor(180, 180, 170)
+      doc.setLineWidth(0.15)
+      doc.line(margin, pageHeight - 16, pageWidth - margin, pageHeight - 16)
+
+      // Rinde y versión
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(5.5)
+      doc.setTextColor(120, 120, 120)
+      const rindeText = `Rinde: ${rendimiento} porción${parseInt(rendimiento) !== 1 ? 'es' : ''}  |  Versión: ${versionReceta}`
+      doc.text(rindeText, margin, pageHeight - 12)
+
+      // Última revisión
+      const fecha = new Date().toLocaleDateString('es-AR')
+      doc.text(`Última revisión: ${fecha}`, margin, pageHeight - 8.5)
+
+      // Logo Tero
+      if (logoDataUrl) {
+        const logoSize = 8
+        doc.addImage(logoDataUrl, 'PNG', pageWidth - margin - logoSize, pageHeight - 16, logoSize, logoSize)
+      } else {
+        doc.setFont('times', 'bolditalic')
+        doc.setFontSize(6)
+        doc.setTextColor(...GREEN)
+        doc.text('Tero Restó', pageWidth - margin, pageHeight - 10, { align: 'right' })
+      }
+    }
+
+    doc.save(`Elaboración - ${nombre}.pdf`)
+  }
+
   const costoTotal = ingredientes.reduce((sum, ing) => sum + ing.costo_linea, 0)
   const costoPorPorcion = parseFloat(rendimiento) > 0 ? costoTotal / parseFloat(rendimiento) : 0
 
@@ -322,6 +532,9 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
               <Button variant="secondary" size="sm" onClick={handleRecalcularCostos} title="Recalcular">
                 <RefreshCw className="w-4 h-4" />
               </Button>
+              <Button variant="secondary" size="sm" onClick={handleGenerarPDF} disabled={ingredientes.length === 0} title="Descargar PDF">
+                <FileDown className="w-4 h-4" />
+              </Button>
               <div className="flex-1" />
               <Button variant="secondary" size="sm" onClick={() => router.back()}>
                 {isReadOnly ? 'Volver' : 'Cancelar'}
@@ -373,6 +586,9 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
               </Button>
               <Button variant="secondary" size="sm" onClick={() => router.back()}>
                 {isReadOnly ? 'Volver' : 'Cancelar'}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleGenerarPDF} disabled={ingredientes.length === 0} title="Descargar PDF">
+                <FileDown className="w-3.5 h-3.5" />
               </Button>
               {!isReadOnly && (
                 <Button size="sm" onClick={handleGuardar} disabled={isSaving}>

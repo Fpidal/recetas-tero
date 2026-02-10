@@ -44,9 +44,9 @@ interface ItemFactura {
   insumo_id: string
   insumo_nombre: string
   unidad_medida: string
-  cantidad: number
-  precio_unitario: number
-  descuento: number
+  cantidad: number | string  // string mientras edita
+  precio_unitario: number | string  // string mientras edita
+  descuento: number | string  // string mientras edita
   subtotal: number
   iva_porcentaje: number
   iva_monto: number
@@ -224,26 +224,28 @@ export default function NuevaFacturaPage() {
   }
 
   function handleCantidadChange(id: string, nuevaCantidad: string) {
-    const cantidadNum = parsearNumero(nuevaCantidad)
     setItems(items.map(item => {
       if (item.id === id) {
+        const cantidadNum = parsearNumero(nuevaCantidad)
+        const precioNum = typeof item.precio_unitario === 'string' ? parsearNumero(item.precio_unitario) : item.precio_unitario
+        const descuentoNum = typeof item.descuento === 'string' ? parsearNumero(item.descuento) : item.descuento
         // Detectar diferencia con orden original
         let diferencia = item.diferencia
         if (selectedOrden && diferencia !== 'nuevo') {
           const itemOrden = selectedOrden.items.find(i => i.insumo_id === item.insumo_id)
           if (itemOrden && cantidadNum !== itemOrden.cantidad) {
             diferencia = 'cantidad'
-          } else if (itemOrden && item.precio_unitario !== itemOrden.precio_unitario) {
+          } else if (itemOrden && precioNum !== itemOrden.precio_unitario) {
             diferencia = 'precio'
           } else {
             diferencia = null
           }
         }
-        const subtotal = cantidadNum * item.precio_unitario * (1 - item.descuento / 100)
+        const subtotal = cantidadNum * precioNum * (1 - descuentoNum / 100)
         const ivaMonto = subtotal * (item.iva_porcentaje / 100)
         return {
           ...item,
-          cantidad: cantidadNum,
+          cantidad: nuevaCantidad, // Mantener como string mientras edita
           subtotal,
           iva_monto: ivaMonto,
           diferencia,
@@ -254,26 +256,28 @@ export default function NuevaFacturaPage() {
   }
 
   function handlePrecioChange(id: string, nuevoPrecio: string) {
-    const precioNum = parsearNumero(nuevoPrecio)
     setItems(items.map(item => {
       if (item.id === id) {
+        const precioNum = parsearNumero(nuevoPrecio)
+        const cantidadNum = typeof item.cantidad === 'string' ? parsearNumero(item.cantidad) : item.cantidad
+        const descuentoNum = typeof item.descuento === 'string' ? parsearNumero(item.descuento) : item.descuento
         // Detectar diferencia con orden original
         let diferencia = item.diferencia
         if (selectedOrden && diferencia !== 'nuevo') {
           const itemOrden = selectedOrden.items.find(i => i.insumo_id === item.insumo_id)
           if (itemOrden && precioNum !== itemOrden.precio_unitario) {
             diferencia = 'precio'
-          } else if (itemOrden && item.cantidad !== itemOrden.cantidad) {
+          } else if (itemOrden && cantidadNum !== itemOrden.cantidad) {
             diferencia = 'cantidad'
           } else {
             diferencia = null
           }
         }
-        const subtotal = item.cantidad * precioNum * (1 - item.descuento / 100)
+        const subtotal = cantidadNum * precioNum * (1 - descuentoNum / 100)
         const ivaMonto = subtotal * (item.iva_porcentaje / 100)
         return {
           ...item,
-          precio_unitario: precioNum,
+          precio_unitario: nuevoPrecio, // Mantener como string mientras edita
           subtotal,
           iva_monto: ivaMonto,
           diferencia,
@@ -284,14 +288,16 @@ export default function NuevaFacturaPage() {
   }
 
   function handleDescuentoChange(id: string, nuevoDescuento: string) {
-    const descuentoNum = nuevoDescuento ? parsearNumero(nuevoDescuento) : 0
     setItems(items.map(item => {
       if (item.id === id) {
-        const subtotal = item.cantidad * item.precio_unitario * (1 - descuentoNum / 100)
+        const descuentoNum = nuevoDescuento ? parsearNumero(nuevoDescuento) : 0
+        const cantidadNum = typeof item.cantidad === 'string' ? parsearNumero(item.cantidad) : item.cantidad
+        const precioNum = typeof item.precio_unitario === 'string' ? parsearNumero(item.precio_unitario) : item.precio_unitario
+        const subtotal = cantidadNum * precioNum * (1 - descuentoNum / 100)
         const ivaMonto = subtotal * (item.iva_porcentaje / 100)
         return {
           ...item,
-          descuento: descuentoNum,
+          descuento: nuevoDescuento, // Mantener como string mientras edita
           subtotal,
           iva_monto: ivaMonto,
         }
@@ -408,9 +414,9 @@ export default function NuevaFacturaPage() {
     const itemsData = items.map(item => ({
       factura_id: factura.id,
       insumo_id: item.insumo_id,
-      cantidad: item.cantidad,
-      precio_unitario: item.precio_unitario,
-      descuento: item.descuento || 0,
+      cantidad: typeof item.cantidad === 'string' ? parsearNumero(item.cantidad) : item.cantidad,
+      precio_unitario: typeof item.precio_unitario === 'string' ? parsearNumero(item.precio_unitario) : item.precio_unitario,
+      descuento: typeof item.descuento === 'string' ? parsearNumero(item.descuento) : (item.descuento || 0),
     }))
 
     const { error: itemsError } = await supabase
@@ -436,14 +442,17 @@ export default function NuevaFacturaPage() {
             cantidad: itemOC.cantidad,
             precio_unitario: itemOC.precio_unitario,
           })
-        } else if (itemFactura.cantidad < itemOC.cantidad) {
-          // Cantidad parcial → faltante por la diferencia
-          faltantes.push({
-            insumo_id: itemOC.insumo_id,
-            insumo_nombre: itemOC.insumo_nombre,
-            cantidad: itemOC.cantidad - itemFactura.cantidad,
-            precio_unitario: itemOC.precio_unitario,
-          })
+        } else {
+          const cantidadFactura = typeof itemFactura.cantidad === 'string' ? parsearNumero(itemFactura.cantidad) : itemFactura.cantidad
+          if (cantidadFactura < itemOC.cantidad) {
+            // Cantidad parcial → faltante por la diferencia
+            faltantes.push({
+              insumo_id: itemOC.insumo_id,
+              insumo_nombre: itemOC.insumo_nombre,
+              cantidad: itemOC.cantidad - cantidadFactura,
+              precio_unitario: itemOC.precio_unitario,
+            })
+          }
         }
       }
 
@@ -733,7 +742,7 @@ export default function NuevaFacturaPage() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={String(item.cantidad).replace('.', ',')}
+                            value={typeof item.cantidad === 'string' ? item.cantidad : String(item.cantidad).replace('.', ',')}
                             onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
@@ -746,7 +755,7 @@ export default function NuevaFacturaPage() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={String(item.precio_unitario).replace('.', ',')}
+                            value={typeof item.precio_unitario === 'string' ? item.precio_unitario : String(item.precio_unitario).replace('.', ',')}
                             onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
@@ -757,7 +766,7 @@ export default function NuevaFacturaPage() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.descuento > 0 ? String(item.descuento).replace('.', ',') : ''}
+                            value={typeof item.descuento === 'string' ? item.descuento : (item.descuento > 0 ? String(item.descuento).replace('.', ',') : '')}
                             onChange={(e) => handleDescuentoChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-14 rounded border border-gray-300 px-2 py-1 text-sm text-center"
                             placeholder="0"

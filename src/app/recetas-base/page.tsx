@@ -32,7 +32,7 @@ export default function RecetasBasePage() {
       .from('recetas_base')
       .select(`
         id, nombre, descripcion, rendimiento_porciones,
-        receta_base_ingredientes (
+        receta_base_ingredientes!receta_base_ingredientes_receta_base_id_fkey (
           insumo_id,
           cantidad
         )

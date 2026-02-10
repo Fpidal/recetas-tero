@@ -76,8 +76,9 @@ function calcularSemaforo(f: FacturaConDetalle): SemaforoInfo | null {
   return { faltantes, parciales, precioDif, nuevos }
 }
 
-const MESES = [
-  { value: '', label: 'Todos los meses' },
+const PERIODOS = [
+  { value: '', label: 'Todos' },
+  { value: '7dias', label: 'Últimos 7 días' },
   { value: '01', label: 'Enero' },
   { value: '02', label: 'Febrero' },
   { value: '03', label: 'Marzo' },
@@ -106,7 +107,7 @@ function FacturasContent() {
   const filtroProveedor = searchParams.get('proveedor') || ''
   const filtroFechaDesde = searchParams.get('desde') || ''
   const filtroFechaHasta = searchParams.get('hasta') || ''
-  const filtroMes = searchParams.get('mes') || ''
+  const filtroPeriodo = searchParams.get('periodo') || ''
 
   // Actualizar URL con nuevo filtro
   function setFiltro(key: string, value: string) {
@@ -166,17 +167,26 @@ function FacturasContent() {
       // Filtro por fecha hasta
       if (filtroFechaHasta && f.fecha > filtroFechaHasta) return false
 
-      // Filtro por mes (formato: "01" a "12")
-      if (filtroMes) {
-        const mesFecha = f.fecha.substring(5, 7) // Extrae MM de YYYY-MM-DD
-        if (mesFecha !== filtroMes) return false
+      // Filtro por periodo
+      if (filtroPeriodo) {
+        if (filtroPeriodo === '7dias') {
+          // Últimos 7 días
+          const hace7dias = new Date()
+          hace7dias.setDate(hace7dias.getDate() - 7)
+          const fechaFactura = new Date(f.fecha)
+          if (fechaFactura < hace7dias) return false
+        } else {
+          // Filtro por mes (formato: "01" a "12")
+          const mesFecha = f.fecha.substring(5, 7) // Extrae MM de YYYY-MM-DD
+          if (mesFecha !== filtroPeriodo) return false
+        }
       }
 
       return true
     })
-  }, [facturas, filtroProveedor, filtroFechaDesde, filtroFechaHasta, filtroMes])
+  }, [facturas, filtroProveedor, filtroFechaDesde, filtroFechaHasta, filtroPeriodo])
 
-  const hayFiltrosActivos = filtroProveedor || filtroFechaDesde || filtroFechaHasta || filtroMes
+  const hayFiltrosActivos = filtroProveedor || filtroFechaDesde || filtroFechaHasta || filtroPeriodo
 
   function limpiarFiltros() {
     router.replace(pathname, { scroll: false })
@@ -335,12 +345,12 @@ function FacturasContent() {
             />
           </div>
 
-          {/* Mes */}
+          {/* Periodo */}
           <div className="w-40">
             <Select
-              value={filtroMes}
-              onChange={(e) => setFiltro('mes', e.target.value)}
-              options={MESES}
+              value={filtroPeriodo}
+              onChange={(e) => setFiltro('periodo', e.target.value)}
+              options={PERIODOS}
             />
           </div>
 

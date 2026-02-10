@@ -204,7 +204,7 @@ export default function Home() {
         if (!orden.orden_compra_items || orden.orden_compra_items.length === 0) return orden.total || 0
         return orden.orden_compra_items.reduce((sum: number, item: any) => {
           const subtotal = item.cantidad * item.precio_unitario
-          const iva = subtotal * ((item.insumos?.iva_porcentaje || 21) / 100)
+          const iva = subtotal * ((item.insumos?.iva_porcentaje ?? 21) / 100)
           return sum + subtotal + iva
         }, 0)
       }
@@ -415,7 +415,7 @@ export default function Home() {
         if (!factura.factura_items || factura.factura_items.length === 0) return factura.total || 0
         return factura.factura_items.reduce((sum: number, item: any) => {
           const subtotal = item.cantidad * item.precio_unitario
-          const iva = subtotal * ((item.insumos?.iva_porcentaje || 21) / 100)
+          const iva = subtotal * ((item.insumos?.iva_porcentaje ?? 21) / 100)
           return sum + subtotal + iva
         }, 0)
       }
@@ -628,7 +628,7 @@ export default function Home() {
         ;(factura.factura_items || []).forEach((item: any) => {
           if (item.insumos?.categoria && CATEGORIAS_GRAFICOS.includes(item.insumos.categoria)) {
             const subtotal = item.cantidad * item.precio_unitario
-            const iva = subtotal * ((item.insumos.iva_porcentaje || 21) / 100)
+            const iva = subtotal * ((item.insumos.iva_porcentaje ?? 21) / 100)
             const total = subtotal + iva
             const cat = item.insumos.categoria
             categoriaTotales.set(cat, (categoriaTotales.get(cat) || 0) + total)

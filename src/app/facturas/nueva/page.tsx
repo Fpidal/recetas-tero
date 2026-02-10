@@ -126,7 +126,7 @@ export default function NuevaFacturaPage() {
           unidad_medida: item.insumos?.unidad_medida || '',
           cantidad: parseFloat(item.cantidad),
           precio_unitario: parseFloat(item.precio_unitario),
-          iva_porcentaje: item.insumos?.iva_porcentaje || 21,
+          iva_porcentaje: item.insumos?.iva_porcentaje ?? 21,
         }))
       }))
       setOrdenesPendientes(ordenes)
@@ -198,7 +198,7 @@ export default function NuevaFacturaPage() {
     const precioNum = parsearNumero(precioUnitario)
     const descuentoNum = descuento ? parsearNumero(descuento) : 0
     const subtotal = cantidadNum * precioNum * (1 - descuentoNum / 100)
-    const ivaPorcentaje = insumo.iva_porcentaje || 21
+    const ivaPorcentaje = insumo.iva_porcentaje ?? 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
 
     const nuevoItem: ItemFactura = {

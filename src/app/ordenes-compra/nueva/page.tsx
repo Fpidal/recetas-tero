@@ -105,7 +105,7 @@ export default function NuevaOrdenCompraPage() {
     const cantidadNum = parsearNumero(cantidad)
     const precioNum = parsearNumero(precioUnitario)
     const subtotal = cantidadNum * precioNum
-    const ivaPorcentaje = insumo.iva_porcentaje || 21
+    const ivaPorcentaje = insumo.iva_porcentaje ?? 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
 
     const nuevoItem: ItemOrden = {

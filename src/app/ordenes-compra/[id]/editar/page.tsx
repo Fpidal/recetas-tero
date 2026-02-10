@@ -97,7 +97,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
 
       const itemsData: ItemOrden[] = (ordenRes.data.orden_compra_items as any[]).map((item: any) => {
         const subtotal = parseFloat(item.subtotal)
-        const ivaPorcentaje = item.insumos?.iva_porcentaje || 21
+        const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
         return {
           id: item.id,
@@ -146,7 +146,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     const cantidadNum = parsearNumero(cantidad)
     const precioNum = parsearNumero(precioUnitario)
     const subtotal = cantidadNum * precioNum
-    const ivaPorcentaje = insumo.iva_porcentaje || 21
+    const ivaPorcentaje = insumo.iva_porcentaje ?? 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
 
     const nuevoItem: ItemOrden = {

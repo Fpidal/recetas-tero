@@ -37,7 +37,7 @@ function calcularTotalConIva(o: OrdenConProveedor): number {
   if (!o.orden_compra_items || o.orden_compra_items.length === 0) return o.total
   return o.orden_compra_items.reduce((sum, item) => {
     const subtotal = item.cantidad * item.precio_unitario
-    const iva = subtotal * ((item.insumos?.iva_porcentaje || 21) / 100)
+    const iva = subtotal * ((item.insumos?.iva_porcentaje ?? 21) / 100)
     return sum + subtotal + iva
   }, 0)
 }

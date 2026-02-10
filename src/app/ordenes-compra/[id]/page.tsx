@@ -125,7 +125,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
       orden_origen_id: (data as any).orden_origen_id || null,
       items: (data.orden_compra_items as any[]).map((item: any) => {
         const subtotal = parseFloat(item.subtotal)
-        const ivaPorcentaje = item.insumos?.iva_porcentaje || 21
+        const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
         return {
           id: item.id,

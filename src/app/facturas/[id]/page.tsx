@@ -100,7 +100,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
       percepciones: Array.isArray(data.percepciones) ? data.percepciones : [],
       items: (data.factura_items as any[]).map((item: any) => {
         const subtotal = parseFloat(item.subtotal)
-        const ivaPorcentaje = item.insumos?.iva_porcentaje || 21
+        const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
         return {
           id: item.id,

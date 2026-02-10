@@ -119,7 +119,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
     const itemsData: ItemFactura[] = (facturaRes.data.factura_items as any[]).map((item: any) => {
       const subtotal = parseFloat(item.subtotal)
-      const ivaPorcentaje = item.insumos?.iva_porcentaje || 21
+      const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
       return {
         id: item.id,
@@ -190,7 +190,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     const precioNum = parsearNumero(precioUnitario)
     const descuentoNum = descuento ? parsearNumero(descuento) : 0
     const subtotal = cantidadNum * precioNum * (1 - descuentoNum / 100)
-    const ivaPorcentaje = insumo.iva_porcentaje || 21
+    const ivaPorcentaje = insumo.iva_porcentaje ?? 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
 
     const nuevoItem: ItemFactura = {

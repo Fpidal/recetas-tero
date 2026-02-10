@@ -66,7 +66,7 @@ export async function generarPDFOrden(ordenId: string) {
     proveedor_direccion: prov?.direccion || null,
     items: (data.orden_compra_items as any[]).map((item: any) => {
       const subtotal = parseFloat(item.subtotal)
-      const ivaPorcentaje = item.insumos?.iva_porcentaje || 21
+      const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
       return {
         insumo_nombre: item.insumos?.nombre || 'Desconocido',

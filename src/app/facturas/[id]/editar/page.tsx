@@ -53,6 +53,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   const [descuento, setDescuento] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [datosOriginales, setDatosOriginales] = useState<any>(null)
 
   // Percepciones (objetos independientes)
   const [percepciones, setPercepciones] = useState(() => [
@@ -136,6 +137,24 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
     setItems(itemsData)
     setItemsOriginales(itemsData.map(i => i.id))
+
+    // Guardar datos originales para historial de modificaciones
+    const provNombre = proveedoresRes.data?.find(p => p.id === facturaRes.data.proveedor_id)?.nombre || ''
+    setDatosOriginales({
+      proveedor_id: facturaRes.data.proveedor_id,
+      proveedor_nombre: provNombre,
+      numero_factura: facturaRes.data.numero_factura,
+      fecha: facturaRes.data.fecha,
+      notas: facturaRes.data.notas,
+      total: itemsData.reduce((sum: number, i: ItemFactura) => sum + i.subtotal + i.iva_monto, 0),
+      items: itemsData.map((i: ItemFactura) => ({
+        insumo_nombre: i.insumo_nombre,
+        cantidad: i.cantidad,
+        precio_unitario: i.precio_unitario,
+        subtotal: i.subtotal,
+      })),
+    })
+
     setIsLoading(false)
   }
 
@@ -280,6 +299,35 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     }
 
     setIsSaving(true)
+
+    // Registrar modificación en historial (antes de actualizar)
+    if (datosOriginales) {
+      const provNombre = proveedores.find(p => p.id === selectedProveedor)?.nombre || ''
+      await supabase
+        .from('facturas_historial')
+        .insert({
+          factura_id: id,
+          tipo: 'modificacion',
+          numero_factura: datosOriginales.numero_factura,
+          proveedor_nombre: datosOriginales.proveedor_nombre,
+          total: datosOriginales.total,
+          datos_anteriores: datosOriginales,
+          datos_nuevos: {
+            proveedor_id: selectedProveedor,
+            proveedor_nombre: provNombre,
+            numero_factura: numeroFactura,
+            fecha: fecha,
+            notas: notas,
+            total: total,
+            items: itemsActivos.map(i => ({
+              insumo_nombre: i.insumo_nombre,
+              cantidad: i.cantidad,
+              precio_unitario: i.precio_unitario,
+              subtotal: i.subtotal,
+            })),
+          },
+        })
+    }
 
     // Filtrar percepciones con valor
     const percepcionesConValor = percepciones

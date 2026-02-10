@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, RotateCcw, Users, Package, BookOpen, ChefHat, UtensilsCrossed, LayoutGrid, ShoppingCart, FileText, Eye } from 'lucide-react'
+import { Trash2, RotateCcw, Users, Package, BookOpen, ChefHat, UtensilsCrossed, LayoutGrid, ShoppingCart, FileText, Eye, History, XCircle, Pencil, ChevronDown, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { Button, Select } from '@/components/ui'
+import { Button, Select, Modal } from '@/components/ui'
+import { formatearMoneda } from '@/lib/formato-numeros'
 
 interface ItemPapelera {
   id: string
@@ -14,6 +15,18 @@ interface ItemPapelera {
   detalle: string
   fecha: string
   tabla: string
+}
+
+interface HistorialFactura {
+  id: string
+  factura_id: string
+  tipo: 'anulacion' | 'modificacion'
+  fecha_registro: string
+  numero_factura: string
+  proveedor_nombre: string
+  total: number
+  datos_anteriores: any
+  datos_nuevos: any
 }
 
 const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
@@ -44,6 +57,11 @@ export default function PapeleraPage() {
   const [items, setItems] = useState<ItemPapelera[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filtroTipo, setFiltroTipo] = useState('')
+  const [tabActiva, setTabActiva] = useState<'papelera' | 'historial'>('papelera')
+  const [historial, setHistorial] = useState<HistorialFactura[]>([])
+  const [historialFiltro, setHistorialFiltro] = useState<'todos' | 'anulacion' | 'modificacion'>('todos')
+  const [historialExpandido, setHistorialExpandido] = useState<string | null>(null)
+  const [modalDetalle, setModalDetalle] = useState<HistorialFactura | null>(null)
 
   // Función para obtener la URL de vista según el tipo
   function getViewUrl(item: ItemPapelera): string | null {
@@ -55,7 +73,17 @@ export default function PapeleraPage() {
 
   useEffect(() => {
     fetchPapelera()
+    fetchHistorial()
   }, [])
+
+  async function fetchHistorial() {
+    const { data } = await supabase
+      .from('facturas_historial')
+      .select('*')
+      .order('fecha_registro', { ascending: false })
+
+    setHistorial(data || [])
+  }
 
   async function fetchPapelera() {
     setIsLoading(true)
@@ -236,28 +264,64 @@ export default function PapeleraPage() {
     )
   }
 
+  const historialFiltrado = historialFiltro === 'todos'
+    ? historial
+    : historial.filter(h => h.tipo === historialFiltro)
+
+  const anulaciones = historial.filter(h => h.tipo === 'anulacion')
+  const modificaciones = historial.filter(h => h.tipo === 'modificacion')
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Papelera</h1>
-          <p className="text-gray-600">
-            {items.length === 0
-              ? 'No hay elementos eliminados'
-              : `${items.length} elemento(s) eliminado(s)`}
-          </p>
+          <p className="text-gray-600 text-sm">Elementos eliminados e historial de facturas</p>
         </div>
-        {items.length > 0 && (
-          <Button
-            variant="ghost"
-            onClick={handleVaciarPapelera}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Vaciar papelera
-          </Button>
-        )}
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b mb-4">
+        <button
+          onClick={() => setTabActiva('papelera')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tabActiva === 'papelera'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Trash2 className="w-4 h-4 inline mr-1.5" />
+          Papelera ({items.length})
+        </button>
+        <button
+          onClick={() => setTabActiva('historial')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tabActiva === 'historial'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <History className="w-4 h-4 inline mr-1.5" />
+          Historial Facturas ({historial.length})
+        </button>
+      </div>
+
+      {/* Tab Papelera */}
+      {tabActiva === 'papelera' && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <div></div>
+            {items.length > 0 && (
+              <Button
+                variant="ghost"
+                onClick={handleVaciarPapelera}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Vaciar papelera
+              </Button>
+            )}
+          </div>
 
       {items.length > 0 && (
         <>
@@ -359,6 +423,205 @@ export default function PapeleraPage() {
           <p className="text-gray-500">La papelera está vacía</p>
         </div>
       )}
+        </>
+      )}
+
+      {/* Tab Historial */}
+      {tabActiva === 'historial' && (
+        <>
+          {/* Filtros de historial */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setHistorialFiltro('todos')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                historialFiltro === 'todos'
+                  ? 'bg-gray-800 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Todos ({historial.length})
+            </button>
+            <button
+              onClick={() => setHistorialFiltro('anulacion')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                historialFiltro === 'anulacion'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+              }`}
+            >
+              <XCircle className="w-3 h-3 inline mr-1" />
+              Anulaciones ({anulaciones.length})
+            </button>
+            <button
+              onClick={() => setHistorialFiltro('modificacion')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                historialFiltro === 'modificacion'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+              }`}
+            >
+              <Pencil className="w-3 h-3 inline mr-1" />
+              Modificaciones ({modificaciones.length})
+            </button>
+          </div>
+
+          {/* Tabla historial */}
+          {historialFiltrado.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+              <History className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No hay registros en el historial</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Factura</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Registro</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {historialFiltrado.map((h) => (
+                    <tr key={h.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        {h.tipo === 'anulacion' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <XCircle className="w-3 h-3" />
+                            Anulación
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            <Pencil className="w-3 h-3" />
+                            Modificación
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-medium text-gray-900">{h.numero_factura}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-gray-600">{h.proveedor_nombre}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="text-sm font-medium">{formatearMoneda(h.total)}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-gray-500">
+                          {new Date(h.fecha_registro).toLocaleString('es-AR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setModalDetalle(h)}
+                        >
+                          <Eye className="w-4 h-4 text-gray-500" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <p className="text-xs text-gray-400 mt-4">
+            * Este historial es de solo lectura y no se puede modificar ni eliminar.
+          </p>
+        </>
+      )}
+
+      {/* Modal detalle historial */}
+      <Modal
+        isOpen={!!modalDetalle}
+        onClose={() => setModalDetalle(null)}
+        title={modalDetalle?.tipo === 'anulacion' ? 'Detalle de Anulación' : 'Detalle de Modificación'}
+        size="lg"
+      >
+        {modalDetalle && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">Factura</p>
+                <p className="font-medium">{modalDetalle.numero_factura}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Proveedor</p>
+                <p className="font-medium">{modalDetalle.proveedor_nombre}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Total</p>
+                <p className="font-medium">{formatearMoneda(modalDetalle.total)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Fecha de registro</p>
+                <p className="font-medium">
+                  {new Date(modalDetalle.fecha_registro).toLocaleString('es-AR')}
+                </p>
+              </div>
+            </div>
+
+            {modalDetalle.tipo === 'modificacion' && modalDetalle.datos_anteriores && modalDetalle.datos_nuevos && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium text-gray-900 mb-3">Cambios realizados</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-red-50 rounded-lg p-3">
+                    <p className="text-xs font-medium text-red-700 mb-2">Datos Anteriores</p>
+                    <div className="text-xs space-y-1">
+                      <p><span className="text-gray-500">Fecha:</span> {modalDetalle.datos_anteriores.fecha}</p>
+                      <p><span className="text-gray-500">Total:</span> {formatearMoneda(modalDetalle.datos_anteriores.total)}</p>
+                      <p className="text-gray-500 mt-2">Items:</p>
+                      {modalDetalle.datos_anteriores.items?.map((item: any, idx: number) => (
+                        <p key={idx} className="pl-2">• {item.insumo_nombre}: {item.cantidad} x {formatearMoneda(item.precio_unitario)}</p>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <p className="text-xs font-medium text-green-700 mb-2">Datos Nuevos</p>
+                    <div className="text-xs space-y-1">
+                      <p><span className="text-gray-500">Fecha:</span> {modalDetalle.datos_nuevos.fecha}</p>
+                      <p><span className="text-gray-500">Total:</span> {formatearMoneda(modalDetalle.datos_nuevos.total)}</p>
+                      <p className="text-gray-500 mt-2">Items:</p>
+                      {modalDetalle.datos_nuevos.items?.map((item: any, idx: number) => (
+                        <p key={idx} className="pl-2">• {item.insumo_nombre}: {item.cantidad} x {formatearMoneda(item.precio_unitario)}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {modalDetalle.tipo === 'anulacion' && modalDetalle.datos_anteriores && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium text-gray-900 mb-3">Datos de la factura anulada</h4>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="text-xs space-y-1">
+                    <p><span className="text-gray-500">Fecha:</span> {modalDetalle.datos_anteriores.fecha}</p>
+                    {modalDetalle.datos_anteriores.notas && (
+                      <p><span className="text-gray-500">Notas:</span> {modalDetalle.datos_anteriores.notas}</p>
+                    )}
+                    <p className="text-gray-500 mt-2">Items:</p>
+                    {modalDetalle.datos_anteriores.items?.map((item: any, idx: number) => (
+                      <p key={idx} className="pl-2">• {item.insumo_nombre}: {item.cantidad} x {formatearMoneda(item.precio_unitario)}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

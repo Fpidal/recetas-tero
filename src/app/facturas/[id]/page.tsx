@@ -151,10 +151,26 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
 
   async function handleEliminar() {
     if (!factura) return
-    const confirmar = confirm(`¿Estás seguro de eliminar la factura ${factura.numero_factura}?`)
+    const confirmar = confirm(`¿Estás seguro de anular la factura ${factura.numero_factura}?`)
     if (!confirmar) return
 
     setIsDeleting(true)
+
+    // Registrar anulación en historial (antes de eliminar)
+    await supabase
+      .from('facturas_historial')
+      .insert({
+        factura_id: factura.id,
+        tipo: 'anulacion',
+        numero_factura: factura.numero_factura,
+        proveedor_nombre: factura.proveedor_nombre,
+        total: factura.total,
+        datos_anteriores: {
+          fecha: factura.fecha,
+          items: factura.items,
+          notas: factura.notas,
+        },
+      })
 
     // Si la factura tenía OC vinculada, volver la OC a estado 'enviada'
     if (factura.orden_compra_id) {

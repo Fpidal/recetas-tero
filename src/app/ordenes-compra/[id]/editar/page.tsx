@@ -211,10 +211,25 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     }))
   }
 
+  function handleIvaChange(itemId: string, nuevoIva: number) {
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        const ivaMonto = item.subtotal * (nuevoIva / 100)
+        return {
+          ...item,
+          iva_porcentaje: nuevoIva,
+          iva_monto: ivaMonto,
+        }
+      }
+      return item
+    }))
+  }
+
   const itemsActivos = items.filter(i => !i.isDeleted)
   const subtotalNeto = itemsActivos.reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva21 = itemsActivos.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva105 = itemsActivos.filter(i => i.iva_porcentaje === 10.5).reduce((sum, item) => sum + item.iva_monto, 0)
+  const totalIva0 = itemsActivos.filter(i => i.iva_porcentaje === 0).reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva = itemsActivos.reduce((sum, item) => sum + item.iva_monto, 0)
   const total = subtotalNeto + totalIva
 
@@ -477,13 +492,19 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
-                          item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {item.iva_porcentaje}%
-                        </span>
+                        <select
+                          value={item.iva_porcentaje}
+                          onChange={(e) => handleIvaChange(item.id, parseFloat(e.target.value))}
+                          className={`px-2 py-0.5 rounded text-xs font-medium border-0 cursor-pointer ${
+                            item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
+                            item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          <option value={21}>21%</option>
+                          <option value={10.5}>10.5%</option>
+                          <option value={0}>0%</option>
+                        </select>
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
                         {formatearMoneda(item.subtotal)}
@@ -528,6 +549,17 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900">
                         {formatearMoneda(totalIva105)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  )}
+                  {totalIva0 > 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                        Exento (0%):
+                      </td>
+                      <td className="px-4 py-1 text-right text-sm text-gray-900">
+                        {formatearMoneda(totalIva0)}
                       </td>
                       <td></td>
                     </tr>

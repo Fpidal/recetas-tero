@@ -164,6 +164,20 @@ export default function NuevaOrdenCompraPage() {
     }))
   }
 
+  function handleIvaChange(id: string, nuevoIva: number) {
+    setItems(items.map(item => {
+      if (item.id === id) {
+        const ivaMonto = item.subtotal * (nuevoIva / 100)
+        return {
+          ...item,
+          iva_porcentaje: nuevoIva,
+          iva_monto: ivaMonto,
+        }
+      }
+      return item
+    }))
+  }
+
   async function handleGuardarNuevoInsumo() {
     if (!nuevoInsumoNombre.trim() || !nuevoInsumoCategoria) {
       alert('Completá nombre y categoría')
@@ -220,6 +234,7 @@ export default function NuevaOrdenCompraPage() {
   const subtotalNeto = items.reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva21 = items.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva105 = items.filter(i => i.iva_porcentaje === 10.5).reduce((sum, item) => sum + item.iva_monto, 0)
+  const totalIva0 = items.filter(i => i.iva_porcentaje === 0).reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva = items.reduce((sum, item) => sum + item.iva_monto, 0)
   const total = subtotalNeto + totalIva
 
@@ -491,13 +506,19 @@ export default function NuevaOrdenCompraPage() {
                         <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <span className="text-sm font-medium text-gray-900 truncate">{item.insumo_nombre}</span>
                       </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${
-                        item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
-                        item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {item.iva_porcentaje}%
-                      </span>
+                      <select
+                        value={item.iva_porcentaje}
+                        onChange={(e) => handleIvaChange(item.id, parseFloat(e.target.value))}
+                        className={`px-2 py-0.5 rounded text-xs font-medium border-0 cursor-pointer flex-shrink-0 ${
+                          item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
+                          item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        <option value={21}>21%</option>
+                        <option value={10.5}>10.5%</option>
+                        <option value={0}>0%</option>
+                      </select>
                     </div>
                     <div className="grid grid-cols-3 gap-2 mb-2">
                       <div>
@@ -559,6 +580,12 @@ export default function NuevaOrdenCompraPage() {
                       <span className="text-gray-900">{formatearMoneda(totalIva105)}</span>
                     </div>
                   )}
+                  {totalIva0 > 0 && (
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">Exento (0%):</span>
+                      <span className="text-gray-900">{formatearMoneda(totalIva0)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between pt-2 border-t mt-2">
                     <span className="font-medium text-gray-900">Total:</span>
                     <span className="text-lg font-bold text-green-600">{formatearMoneda(total)}</span>
@@ -611,13 +638,19 @@ export default function NuevaOrdenCompraPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
-                            item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {item.iva_porcentaje}%
-                          </span>
+                          <select
+                            value={item.iva_porcentaje}
+                            onChange={(e) => handleIvaChange(item.id, parseFloat(e.target.value))}
+                            className={`px-2 py-0.5 rounded text-xs font-medium border-0 cursor-pointer ${
+                              item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
+                              item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            <option value={21}>21%</option>
+                            <option value={10.5}>10.5%</option>
+                            <option value={0}>0%</option>
+                          </select>
                         </td>
                         <td className="px-4 py-3 text-right font-medium">
                           {formatearMoneda(item.subtotal)}
@@ -662,6 +695,17 @@ export default function NuevaOrdenCompraPage() {
                         </td>
                         <td className="px-4 py-1 text-right text-sm text-gray-900">
                           {formatearMoneda(totalIva105)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    )}
+                    {totalIva0 > 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                          Exento (0%):
+                        </td>
+                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                          {formatearMoneda(totalIva0)}
                         </td>
                         <td></td>
                       </tr>

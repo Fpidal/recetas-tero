@@ -18,6 +18,7 @@ interface InsumoCompleto {
   merma_porcentaje: number
   iva_porcentaje: number
   activo: boolean
+  inventario: boolean
   precio_actual: number | null
   precio_anterior: number | null
   fecha_actualizacion: string | null
@@ -34,6 +35,7 @@ interface InsumoForm {
   iva_porcentaje: string
   precio: string
   proveedor_id: string
+  inventario: boolean
 }
 
 interface Proveedor {
@@ -75,6 +77,7 @@ const initialForm: InsumoForm = {
   iva_porcentaje: '21',
   precio: '',
   proveedor_id: '',
+  inventario: false,
 }
 
 interface HistorialPrecio {
@@ -179,6 +182,7 @@ export default function InsumosPage() {
         iva_porcentaje: (insumo.iva_porcentaje ?? 21).toString(),
         precio: precioPaquete ? formatearCantidad(precioPaquete, 2) : '',
         proveedor_id: insumo.proveedor_id || '',
+        inventario: insumo.inventario || false,
       })
     } else {
       setEditingId(null)
@@ -205,6 +209,7 @@ export default function InsumosPage() {
       unidad_medida: form.unidad_medida,
       merma_porcentaje: parsearNumero(form.merma_porcentaje) || 0,
       iva_porcentaje: !isNaN(ivaValue) ? ivaValue : 21,
+      inventario: form.inventario,
     }
 
     const precioPaquete = parsearNumero(form.precio)
@@ -652,14 +657,29 @@ export default function InsumosPage() {
         title={editingId ? 'Editar Insumo' : 'Nuevo Insumo'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Nombre *"
-            id="nombre"
-            value={form.nombre}
-            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            required
-            placeholder="Nombre del insumo"
-          />
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <Input
+                label="Nombre *"
+                id="nombre"
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                required
+                placeholder="Nombre del insumo"
+              />
+            </div>
+            <div className="pt-6">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.inventario}
+                  onChange={(e) => setForm({ ...form, inventario: e.target.checked })}
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Inventario</span>
+              </label>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select

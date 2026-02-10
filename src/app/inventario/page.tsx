@@ -153,7 +153,7 @@ export default function InventarioPage() {
           <Warehouse className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 text-lg">No hay insumos en inventario</p>
           <p className="text-gray-400 text-sm mt-2">
-            Marcá insumos con el tilde "Inventario" para que aparezcan acá
+            Marcá insumos con el tilde Inventario para que aparezcan acá
           </p>
         </div>
       ) : (

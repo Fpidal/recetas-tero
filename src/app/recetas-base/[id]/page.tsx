@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, ArrowLeft, Save, RefreshCw, ClipboardList, FileDown } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Save, RefreshCw, ClipboardList, FileDown, ImagePlus, X } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
@@ -55,6 +55,9 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
   const [selectedInsumo, setSelectedInsumo] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [versionReceta, setVersionReceta] = useState('1.0')
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null)
+  const [observaciones, setObservaciones] = useState('')
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isReadOnly, setIsReadOnly] = useState(false)
@@ -98,6 +101,8 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     setPreparacion(receta.preparacion || '')
     setRendimiento(receta.rendimiento_porciones.toString())
     setVersionReceta(receta.version_receta || '1.0')
+    setImagenUrl(receta.imagen_url || null)
+    setObservaciones(receta.observaciones || '')
     setIsReadOnly(receta.activo === false)
 
     const { data: ingredientesData } = await supabase
@@ -175,6 +180,75 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     }))
   }
 
+  async function handleSubirImagen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validar tipo y tamaño
+    if (!file.type.startsWith('image/')) {
+      alert('Solo se permiten imágenes')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('La imagen no puede superar 2MB')
+      return
+    }
+
+    setIsUploadingImage(true)
+
+    // Eliminar imagen anterior si existe
+    if (imagenUrl) {
+      const oldPath = imagenUrl.split('/').pop()
+      if (oldPath) {
+        await supabase.storage.from('fotos platos').remove([`${id}/${oldPath}`])
+      }
+    }
+
+    // Subir nueva imagen
+    const ext = file.name.split('.').pop()
+    const fileName = `${Date.now()}.${ext}`
+    const filePath = `${id}/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('fotos platos')
+      .upload(filePath, file)
+
+    if (uploadError) {
+      console.error('Error subiendo imagen:', uploadError)
+      alert('Error al subir la imagen')
+      setIsUploadingImage(false)
+      return
+    }
+
+    // Obtener URL pública
+    const { data: urlData } = supabase.storage.from('fotos platos').getPublicUrl(filePath)
+    const newUrl = urlData?.publicUrl || null
+
+    // Guardar en la receta
+    console.log('Guardando imagen_url:', newUrl, 'para id:', id)
+    const { error: saveError } = await supabase.from('recetas_base').update({ imagen_url: newUrl }).eq('id', id)
+    if (saveError) {
+      console.error('Error guardando imagen_url:', saveError)
+      alert('Error al guardar la URL de la imagen')
+    } else {
+      console.log('imagen_url guardada correctamente')
+    }
+    setImagenUrl(newUrl)
+    setIsUploadingImage(false)
+  }
+
+  async function handleEliminarImagen() {
+    if (!imagenUrl) return
+    if (!confirm('¿Eliminar la imagen?')) return
+
+    const pathParts = imagenUrl.split('/fotos%20platos/')
+    if (pathParts[1]) {
+      await supabase.storage.from('fotos platos').remove([decodeURIComponent(pathParts[1])])
+    }
+    await supabase.from('recetas_base').update({ imagen_url: null }).eq('id', id)
+    setImagenUrl(null)
+  }
+
   async function handleGenerarPDF() {
     // A6 vertical: 105 x 148 mm
     const doc = new jsPDF({ unit: 'mm', format: [105, 148] })
@@ -231,6 +305,22 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
       }
     } catch {}
 
+    // Imagen de la receta (pre-fetch)
+    let recetaImageDataUrl: string | null = null
+    if (imagenUrl) {
+      try {
+        const response = await fetch(imagenUrl)
+        if (response.ok) {
+          const blob = await response.blob()
+          recetaImageDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+        }
+      } catch {}
+    }
+
     // === PÁGINA 1 ===
     drawPageFrame()
     let y = 10
@@ -248,13 +338,31 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     doc.line(margin + 10, y, pageWidth - margin - 10, y)
     y += 6
 
-    // === NOMBRE DE LA ELABORACIÓN: serif grande, centrado ===
-    doc.setFont('times', 'bold')
-    doc.setFontSize(15)
-    doc.setTextColor(30, 30, 30)
-    const nombreLines = doc.splitTextToSize(nombre, contentWidth - 4)
-    doc.text(nombreLines, pageWidth / 2, y, { align: 'center' })
-    y += nombreLines.length * 5.5 + 3
+    // === NOMBRE Y IMAGEN ===
+    const imgSize = 22
+    const hasImage = !!recetaImageDataUrl
+
+    if (hasImage) {
+      // Con imagen: título a la izquierda, imagen a la derecha
+      const textWidth = contentWidth - imgSize - 4
+      doc.setFont('times', 'bold')
+      doc.setFontSize(14)
+      doc.setTextColor(30, 30, 30)
+      const nombreLines = doc.splitTextToSize(nombre, textWidth)
+      doc.text(nombreLines, margin, y + 4)
+
+      // Imagen a la derecha
+      doc.addImage(recetaImageDataUrl, 'JPEG', pageWidth - margin - imgSize, y - 2, imgSize, imgSize)
+      y += Math.max(nombreLines.length * 5, imgSize) + 3
+    } else {
+      // Sin imagen: título centrado
+      doc.setFont('times', 'bold')
+      doc.setFontSize(15)
+      doc.setTextColor(30, 30, 30)
+      const nombreLines = doc.splitTextToSize(nombre, contentWidth - 4)
+      doc.text(nombreLines, pageWidth / 2, y, { align: 'center' })
+      y += nombreLines.length * 5.5 + 3
+    }
 
     // === BADGE "ELABORACIÓN" ===
     const badgeText = 'ELABORACIÓN'
@@ -404,6 +512,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
         nombre: nombre.trim(),
         descripcion: descripcion.trim() || null,
         preparacion: preparacion.trim() || null,
+        observaciones: observaciones.trim() || null,
         rendimiento_porciones: parseInt(rendimiento) || 1,
         costo_total: costoTotal,
         costo_por_porcion: costoPorPorcion,
@@ -480,15 +589,31 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
-            <div className="col-span-2 sm:flex-1">
+            <div className="sm:flex-1">
               <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
               <input
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Descripción opcional..."
+                placeholder="Opcional..."
               />
             </div>
+            {ingredientes.length > 0 && (
+              <div className="col-span-2 sm:col-span-1 flex items-end gap-4 sm:ml-auto">
+                <div className="text-right">
+                  <span className="text-[10px] text-gray-500 block">Costo Total</span>
+                  <span className="text-sm font-bold text-gray-900 tabular-nums">
+                    ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-gray-500 block">x Porción ({rendimiento})</span>
+                  <span className="text-sm font-bold text-green-600 tabular-nums">
+                    ${costoPorPorcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Mobile: Stack vertical */}
@@ -699,7 +824,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
             </div>
           )}
 
-          {/* Layout 50/50: Gráfico + Preparación */}
+          {/* Fila 1: Composición + Preparación */}
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Composición del costo */}
             <div className="border rounded-lg bg-gray-50 p-3">
@@ -771,23 +896,55 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
             </div>
           </div>
 
-          {/* Resumen de costos */}
-          {ingredientes.length > 0 && (
-            <div className="mt-3 bg-gray-50 rounded-lg p-3">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-600">Costo Total:</span>
-                <span className="text-base font-bold text-gray-900 tabular-nums">
-                  ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-600">Costo por Porción ({rendimiento} porciones):</span>
-                <span className="text-base font-bold text-green-600 tabular-nums">
-                  ${costoPorPorcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </span>
-              </div>
+          {/* Fila 2: Observaciones + Foto */}
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Observaciones y Tips */}
+            <div className="border rounded-lg bg-white p-3">
+              <h4 className="text-xs font-semibold text-gray-700 mb-2">Observaciones y Tips</h4>
+              <textarea
+                value={observaciones}
+                onChange={(e) => setObservaciones(e.target.value)}
+                placeholder="Consejos, variantes, notas importantes..."
+                className="w-full h-32 text-base sm:text-xs border border-gray-200 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder:text-gray-300"
+              />
             </div>
-          )}
+
+            {/* Foto de la receta */}
+            <div className="border rounded-lg bg-white p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-semibold text-gray-700">Foto</h4>
+                {imagenUrl && !isReadOnly && (
+                  <button
+                    onClick={handleEliminarImagen}
+                    className="text-red-500 hover:text-red-600 text-xs"
+                  >
+                    Eliminar
+                  </button>
+                )}
+              </div>
+              {imagenUrl ? (
+                <img src={imagenUrl} alt={nombre} className="w-full h-32 object-contain rounded-lg" />
+              ) : (
+                <label className={`flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleSubirImagen}
+                    className="hidden"
+                    disabled={isReadOnly || isUploadingImage}
+                  />
+                  {isUploadingImage ? (
+                    <span className="text-sm text-gray-400">Subiendo...</span>
+                  ) : (
+                    <>
+                      <ImagePlus className="w-8 h-8 text-gray-400 mb-1" />
+                      <span className="text-xs text-gray-400">Clic para subir imagen</span>
+                    </>
+                  )}
+                </label>
+              )}
+            </div>
+          </div>
 
           {/* Versión */}
           <div className="mt-2 text-[10px] text-gray-400 text-right">

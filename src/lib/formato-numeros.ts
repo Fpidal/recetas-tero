@@ -94,6 +94,17 @@ export function parsearNumero(valor: string): number {
  * Solo permite coma como decimal, agrega puntos de miles automáticamente
  * Ejemplo: 33000,25 → 33.000,25
  */
+/**
+ * Formatea una fecha YYYY-MM-DD a formato argentino DD/MM/YYYY
+ * Sin problemas de timezone (no usa new Date())
+ */
+export function formatearFecha(fecha: string): string {
+  if (!fecha) return ''
+  const [year, month, day] = fecha.split('-')
+  if (!year || !month || !day) return fecha
+  return `${day}/${month}/${year}`
+}
+
 export function formatearInputNumero(valor: string): string {
   // Solo permitir dígitos y coma
   let limpio = valor.replace(/[^\d,]/g, '')

@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Button, Select } from '@/components/ui'
 import { getNextOCNumber } from '@/lib/oc-numero'
-import { formatearMoneda } from '@/lib/formato-numeros'
+import { formatearMoneda, formatearFecha } from '@/lib/formato-numeros'
 
 interface OrdenDetalle {
   id: string
@@ -245,14 +245,16 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
     const numeroOC = await getNextOCNumber()
     const totalOC = itemsFaltantes.reduce((sum, i) => sum + i.subtotal, 0)
 
+    const hoy = new Date()
+    const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
     const { data: nuevaOC, error } = await supabase
       .from('ordenes_compra')
       .insert({
         proveedor_id: orden.proveedor_id,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: fechaHoy,
         estado: 'borrador',
         total: totalOC,
-        notas: `Faltante de OC ${orden.numero || ''} del ${new Date(orden.fecha + 'T12:00:00').toLocaleDateString('es-AR')}`,
+        notas: `Faltante de OC ${orden.numero || ''} del ${formatearFecha(orden.fecha)}`,
         orden_origen_id: orden.id,
       })
       .select()
@@ -340,7 +342,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           <p className="text-sm text-yellow-800">
             Esta orden fue generada por faltantes de OC del{' '}
             <span className="font-medium">
-              {ordenOrigenFecha ? new Date(ordenOrigenFecha + 'T12:00:00').toLocaleDateString('es-AR') : '...'}
+              {ordenOrigenFecha ? formatearFecha(ordenOrigenFecha) : '...'}
             </span>
           </p>
           <Link href={`/ordenes-compra/${orden.orden_origen_id}`}>
@@ -367,7 +369,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           </div>
           <div>
             <p className="text-sm text-gray-500">Fecha</p>
-            <p className="font-medium">{new Date(orden.fecha).toLocaleDateString('es-AR')}</p>
+            <p className="font-medium">{formatearFecha(orden.fecha)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Estado</p>
@@ -511,7 +513,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         {/* Acciones */}
         <div className="flex justify-between items-center border-t pt-6">
           <div className="flex gap-2">
-            {orden.estado === 'borrador' && (
+            {(orden.estado === 'borrador' || orden.estado === 'enviada') && (
               <Button variant="secondary" onClick={() => handleCambiarEstado('cancelada')}>
                 <X className="w-4 h-4 mr-2" />
                 Cancelar Orden

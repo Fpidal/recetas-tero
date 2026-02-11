@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { generarPDFOrden } from '@/lib/generar-pdf-oc'
 import { Button, Select, Table } from '@/components/ui'
 import Link from 'next/link'
-import { formatearMoneda } from '@/lib/formato-numeros'
+import { formatearMoneda, formatearFecha } from '@/lib/formato-numeros'
 
 interface OrdenConProveedor {
   id: string
@@ -142,6 +142,18 @@ export default function OrdenesCompraPage() {
     return ordenes.filter((o) => ['recibida', 'parcialmente_recibida'].includes(o.estado))
   }, [ordenes])
 
+  // Cerrar OC parcialmente recibida: marca como recibida y cancela OC de faltantes
+  async function handleCerrarOCParcial(ordenId: string) {
+    if (!confirm('¿Marcar como recibida y cerrar esta orden?\n\nEsto también cancelará la OC de faltantes si existe.')) {
+      return
+    }
+    // Marcar esta OC como recibida
+    await supabase.from('ordenes_compra').update({ estado: 'recibida' } as any).eq('id', ordenId)
+    // Cancelar OC de faltantes que se generó desde esta
+    await supabase.from('ordenes_compra').update({ estado: 'cancelada' } as any).eq('orden_origen_id', ordenId)
+    fetchOrdenes()
+  }
+
   // Órdenes según tab activa
   const ordenesDeTab = tabActiva === 'pendientes' ? ordenesPendientes : ordenesRecibidas
 
@@ -192,7 +204,7 @@ export default function OrdenesCompraPage() {
       header: 'Fecha',
       render: (o: OrdenConProveedor) => (
         <div>
-          <span>{new Date(o.fecha).toLocaleDateString('es-AR')}</span>
+          <span>{formatearFecha(o.fecha)}</span>
           {o.facturas_proveedor && o.facturas_proveedor.length > 0 && (
             <span className="ml-2 text-xs text-gray-400">
               Fact. {o.facturas_proveedor[0].numero_factura}
@@ -242,12 +254,7 @@ export default function OrdenesCompraPage() {
       render: (o: OrdenConProveedor) => (
         <div className="flex justify-end gap-2">
           {o.estado === 'parcialmente_recibida' && (
-            <Button variant="ghost" size="sm" onClick={async () => {
-              if (confirm('¿Marcar como recibida y cerrar esta orden?')) {
-                await supabase.from('ordenes_compra').update({ estado: 'recibida' } as any).eq('id', o.id)
-                fetchOrdenes()
-              }
-            }} title="Marcar como recibida">
+            <Button variant="ghost" size="sm" onClick={() => handleCerrarOCParcial(o.id)} title="Marcar como recibida">
               <CheckCircle className="w-4 h-4 text-green-500" />
             </Button>
           )}
@@ -288,7 +295,7 @@ export default function OrdenesCompraPage() {
           </span>
         </div>
         <span className="text-sm text-gray-500">
-          {new Date(orden.fecha).toLocaleDateString('es-AR')}
+          {formatearFecha(orden.fecha)}
         </span>
       </div>
 
@@ -310,12 +317,7 @@ export default function OrdenesCompraPage() {
         </span>
         <div className="flex gap-2">
           {orden.estado === 'parcialmente_recibida' && (
-            <Button variant="ghost" size="sm" onClick={async () => {
-              if (confirm('¿Marcar como recibida y cerrar esta orden?')) {
-                await supabase.from('ordenes_compra').update({ estado: 'recibida' } as any).eq('id', orden.id)
-                fetchOrdenes()
-              }
-            }} title="Marcar como recibida">
+            <Button variant="ghost" size="sm" onClick={() => handleCerrarOCParcial(orden.id)} title="Marcar como recibida">
               <CheckCircle className="w-4 h-4 text-green-500" />
             </Button>
           )}

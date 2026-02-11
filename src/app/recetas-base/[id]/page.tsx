@@ -184,10 +184,8 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     const contentWidth = pageWidth - margin * 2
     const GREEN = [45, 59, 45] as const // #2D3B2D
 
-    // Fondo papel y borde redondeado
+    // Borde redondeado (fondo blanco por defecto)
     function drawPageFrame() {
-      doc.setFillColor(245, 245, 240) // #F5F5F0
-      doc.rect(0, 0, pageWidth, pageHeight, 'F')
       doc.setDrawColor(210, 210, 200)
       doc.setLineWidth(0.3)
       doc.roundedRect(3, 3, pageWidth - 6, pageHeight - 6, 3, 3, 'S')

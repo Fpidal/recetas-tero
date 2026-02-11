@@ -6,7 +6,7 @@ import { Plus, Trash2, ArrowLeft, Save, Package, AlertCircle, FileDown, PlusCirc
 import { supabase } from '@/lib/supabase'
 import { getNextOCNumber } from '@/lib/oc-numero'
 import { Button, Input, Select, Modal } from '@/components/ui'
-import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
+import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero, formatearFecha } from '@/lib/formato-numeros'
 
 interface Proveedor {
   id: string
@@ -61,7 +61,10 @@ export default function NuevaFacturaPage() {
   const [selectedProveedor, setSelectedProveedor] = useState('')
   const [selectedOrden, setSelectedOrden] = useState<OrdenCompra | null>(null)
   const [numeroFactura, setNumeroFactura] = useState('')
-  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
+  const [fecha, setFecha] = useState(() => {
+    const hoy = new Date()
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+  })
   const [notas, setNotas] = useState('')
   const [items, setItems] = useState<ItemFactura[]>([])
   const [selectedInsumo, setSelectedInsumo] = useState('')
@@ -478,7 +481,7 @@ export default function NuevaFacturaPage() {
 
       if (faltantes.length > 0) {
         // Crear OC de faltantes
-        const fechaOC = new Date(selectedOrden.fecha).toLocaleDateString('es-AR')
+        const fechaOC = formatearFecha(selectedOrden.fecha)
         const numeroOC = await getNextOCNumber()
         const { data: nuevaOC, error: ocError } = await supabase
           .from('ordenes_compra')
@@ -607,7 +610,7 @@ export default function NuevaFacturaPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-green-800">
-                Importado desde orden del {new Date(selectedOrden.fecha).toLocaleDateString('es-AR')}
+                Importado desde orden del {formatearFecha(selectedOrden.fecha)}
               </p>
               <p className="text-sm text-green-600">
                 {selectedOrden.proveedor_nombre} - Total original: {formatearMoneda(selectedOrden.total)}
@@ -997,7 +1000,7 @@ export default function NuevaFacturaPage() {
                     <div>
                       <p className="font-medium text-gray-900">{orden.proveedor_nombre}</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(orden.fecha).toLocaleDateString('es-AR')} - {orden.items.length} items
+                        {formatearFecha(orden.fecha)} - {orden.items.length} items
                       </p>
                     </div>
                     <p className="font-medium text-green-600">

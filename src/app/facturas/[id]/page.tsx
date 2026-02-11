@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Package, FileText, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
-import { formatearMoneda, formatearCantidad } from '@/lib/formato-numeros'
+import { formatearMoneda, formatearCantidad, formatearFecha } from '@/lib/formato-numeros'
 
 interface Percepcion {
   nombre: string
@@ -40,6 +40,7 @@ interface OCItem {
   insumo_nombre: string
   unidad_medida: string
   cantidad: number
+  precio_unitario: number
 }
 
 export default function VerFacturaPage({ params }: { params: { id: string } }) {
@@ -123,7 +124,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
     if (data.orden_compra_id) {
       const { data: ocData } = await supabase
         .from('orden_compra_items')
-        .select('insumo_id, cantidad, insumos (nombre, unidad_medida)')
+        .select('insumo_id, cantidad, precio_unitario, insumos (nombre, unidad_medida)')
         .eq('orden_compra_id', data.orden_compra_id)
 
       if (ocData) {
@@ -132,6 +133,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
           insumo_nombre: oc.insumos?.nombre || 'Desconocido',
           unidad_medida: oc.insumos?.unidad_medida || '',
           cantidad: parseFloat(oc.cantidad),
+          precio_unitario: parseFloat(oc.precio_unitario),
         })))
       }
     }
@@ -210,14 +212,30 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
       // Item nuevo, no estaba en la OC
       return <span className="ml-2 text-xs px-1.5 py-0.5 bg-green-200 text-green-800 rounded">Nuevo</span>
     }
+
+    const badges = []
+
+    // Badge de cantidad
     if (item.cantidad >= ocItem.cantidad) {
-      return <span className="ml-2 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">Completo</span>
+      badges.push(<span key="cant" className="ml-2 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">Completo</span>)
+    } else {
+      badges.push(
+        <span key="cant" className="ml-2 text-xs px-1.5 py-0.5 bg-yellow-200 text-yellow-800 rounded">
+          Parcial ({item.cantidad} de {ocItem.cantidad})
+        </span>
+      )
     }
-    return (
-      <span className="ml-2 text-xs px-1.5 py-0.5 bg-yellow-200 text-yellow-800 rounded">
-        Parcial ({item.cantidad} de {ocItem.cantidad})
-      </span>
-    )
+
+    // Badge de precio diferente
+    if (item.precio_unitario !== ocItem.precio_unitario) {
+      badges.push(
+        <span key="precio" className="ml-1 text-xs px-1.5 py-0.5 bg-orange-200 text-orange-800 rounded" title={`OC: ${formatearMoneda(ocItem.precio_unitario)}`}>
+          Precio dif.
+        </span>
+      )
+    }
+
+    return <>{badges}</>
   }
 
   // Items de la OC que no están en la factura
@@ -259,7 +277,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
           </div>
           <div>
             <p className="text-sm text-gray-500">Fecha</p>
-            <p className="font-medium">{new Date(factura.fecha).toLocaleDateString('es-AR')}</p>
+            <p className="font-medium">{formatearFecha(factura.fecha)}</p>
           </div>
         </div>
 

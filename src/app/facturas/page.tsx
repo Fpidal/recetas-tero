@@ -6,7 +6,7 @@ import { Plus, Eye, FileText, Pencil, PackageSearch, Filter, X } from 'lucide-re
 import { supabase } from '@/lib/supabase'
 import { Button, Table, Select } from '@/components/ui'
 import Link from 'next/link'
-import { formatearMoneda } from '@/lib/formato-numeros'
+import { formatearMoneda, formatearFecha } from '@/lib/formato-numeros'
 
 interface Proveedor {
   id: string
@@ -244,7 +244,7 @@ function FacturasContent() {
             <span className="font-medium">{f.numero_factura}</span>
             {f.orden_compra_id && f.ordenes_compra && (
               <p className="text-xs text-gray-400 mt-0.5">
-                OC {f.ordenes_compra.numero || new Date(f.ordenes_compra.fecha + 'T12:00:00').toLocaleDateString('es-AR')}
+                OC {f.ordenes_compra.numero || formatearFecha(f.ordenes_compra.fecha)}
               </p>
             )}
           </div>
@@ -255,7 +255,7 @@ function FacturasContent() {
       key: 'fecha',
       header: 'Fecha',
       render: (f: FacturaConDetalle) => (
-        <span>{new Date(f.fecha).toLocaleDateString('es-AR')}</span>
+        <span>{formatearFecha(f.fecha)}</span>
       ),
     },
     {

@@ -49,6 +49,10 @@ export default function NuevaOrdenCompraPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [nextNumero, setNextNumero] = useState('')
+  const [fechaHoy] = useState(() => {
+    const hoy = new Date()
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+  })
 
   // Modal nuevo insumo
   const [showNuevoInsumo, setShowNuevoInsumo] = useState(false)
@@ -256,7 +260,7 @@ export default function NuevaOrdenCompraPage() {
       .from('ordenes_compra')
       .insert({
         proveedor_id: selectedProveedor,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: fechaHoy,
         estado: 'borrador',
         total: total,
         notas: notas || null,
@@ -339,7 +343,7 @@ export default function NuevaOrdenCompraPage() {
           <Input
             label="Fecha"
             type="date"
-            value={new Date().toISOString().split('T')[0]}
+            value={fechaHoy}
             disabled
           />
         </div>

@@ -78,7 +78,8 @@ function calcularSemaforo(f: FacturaConDetalle): SemaforoInfo | null {
 
 const PERIODOS = [
   { value: '', label: 'Todos' },
-  { value: '7dias', label: 'Últimos 7 días' },
+  { value: 'esta_semana', label: 'Esta semana' },
+  { value: 'semana_pasada', label: 'Semana pasada' },
   { value: '01', label: 'Enero' },
   { value: '02', label: 'Febrero' },
   { value: '03', label: 'Marzo' },
@@ -92,6 +93,23 @@ const PERIODOS = [
   { value: '11', label: 'Noviembre' },
   { value: '12', label: 'Diciembre' },
 ]
+
+// Obtener lunes de una semana dada
+function getLunesDeSemana(fecha: Date): Date {
+  const dia = fecha.getDay() // 0=domingo, 1=lunes, ..., 6=sábado
+  const diff = dia === 0 ? -6 : 1 - dia // si es domingo, retroceder 6 días
+  const lunes = new Date(fecha)
+  lunes.setDate(fecha.getDate() + diff)
+  lunes.setHours(0, 0, 0, 0)
+  return lunes
+}
+
+// Obtener domingo de una semana (lunes + 6 días)
+function getDomingoDeSemana(lunes: Date): Date {
+  const domingo = new Date(lunes)
+  domingo.setDate(lunes.getDate() + 6)
+  return domingo
+}
 
 function FacturasContent() {
   const [facturas, setFacturas] = useState<FacturaConDetalle[]>([])
@@ -169,12 +187,22 @@ function FacturasContent() {
 
       // Filtro por periodo
       if (filtroPeriodo) {
-        if (filtroPeriodo === '7dias') {
-          // Últimos 7 días
-          const hace7dias = new Date()
-          hace7dias.setDate(hace7dias.getDate() - 7)
-          const fechaFactura = new Date(f.fecha)
-          if (fechaFactura < hace7dias) return false
+        if (filtroPeriodo === 'esta_semana') {
+          // Esta semana (lunes a domingo actual)
+          const hoy = new Date()
+          const lunesActual = getLunesDeSemana(hoy)
+          const domingoActual = getDomingoDeSemana(lunesActual)
+          const fechaFactura = new Date(f.fecha + 'T12:00:00') // Evitar problemas de timezone
+          if (fechaFactura < lunesActual || fechaFactura > domingoActual) return false
+        } else if (filtroPeriodo === 'semana_pasada') {
+          // Semana pasada
+          const hoy = new Date()
+          const lunesActual = getLunesDeSemana(hoy)
+          const lunesPasado = new Date(lunesActual)
+          lunesPasado.setDate(lunesActual.getDate() - 7)
+          const domingoPasado = getDomingoDeSemana(lunesPasado)
+          const fechaFactura = new Date(f.fecha + 'T12:00:00')
+          if (fechaFactura < lunesPasado || fechaFactura > domingoPasado) return false
         } else {
           // Filtro por mes (formato: "01" a "12")
           const mesFecha = f.fecha.substring(5, 7) // Extrae MM de YYYY-MM-DD
@@ -384,10 +412,15 @@ function FacturasContent() {
             </Button>
           )}
 
-          {/* Contador */}
-          <span className="text-xs text-gray-400 ml-auto">
-            {facturasFiltradas.length} de {facturas.length} facturas
-          </span>
+          {/* Contador y Total */}
+          <div className="ml-auto flex items-center gap-4">
+            <span className="text-xs text-gray-400">
+              {facturasFiltradas.length} de {facturas.length} facturas
+            </span>
+            <span className="text-sm font-semibold text-gray-700 bg-gray-100 px-3 py-1 rounded-lg">
+              Total: {formatearMoneda(facturasFiltradas.reduce((sum, f) => sum + f.total, 0))}
+            </span>
+          </div>
         </div>
       </div>
 

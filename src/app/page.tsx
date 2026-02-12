@@ -114,6 +114,16 @@ interface RecetaSinCostoDetalle {
   nombre: string
 }
 
+interface ComprasPorCategoriaItem {
+  periodo: string
+  Carnes: number
+  Pescados: number
+  Verduras: number
+  Almacen: number
+  Lacteos: number
+  total: number
+}
+
 interface DashboardData {
   foodCostPromedio: number
   ordenesPendientes: number
@@ -130,6 +140,9 @@ interface DashboardData {
   distribucionProveedorData: DistribucionItem[]
   distribucionCategoriaData: DistribucionItem[]
   itemsConAumento: number
+  // Compras por categoría en el tiempo
+  comprasPorCategoriaSemanales: ComprasPorCategoriaItem[]
+  comprasPorCategoriaMensuales: ComprasPorCategoriaItem[]
   // Detalles para alertas clickeables
   itemsConAumentoDetalle: ItemConAumentoDetalle[]
   ordenesSinFacturaDetalle: OrdenSinFacturaDetalle[]
@@ -156,6 +169,8 @@ export default function Home() {
     distribucionProveedorData: [],
     distribucionCategoriaData: [],
     itemsConAumento: 0,
+    comprasPorCategoriaSemanales: [],
+    comprasPorCategoriaMensuales: [],
     itemsConAumentoDetalle: [],
     ordenesSinFacturaDetalle: [],
     platosFueraRangoDetalle: [],
@@ -164,6 +179,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [modoDistribucion, setModoDistribucion] = useState<'proveedor' | 'categoria'>('proveedor')
   const [modoCompras, setModoCompras] = useState<'semanal' | 'mensual'>('semanal')
+  const [modoComprasCat, setModoComprasCat] = useState<'semanal' | 'mensual'>('semanal')
   const [alertaModal, setAlertaModal] = useState<AlertaModal>(null)
 
   useEffect(() => {
@@ -172,6 +188,7 @@ export default function Home() {
 
   async function fetchDashboardData() {
     setIsLoading(true)
+    console.log('Iniciando fetchDashboardData...')
 
     try {
       // ===== KPIs BÁSICOS =====
@@ -445,7 +462,7 @@ export default function Home() {
         semanasMap.set(semanaKey, 0)
       }
 
-      (facturas || []).forEach((factura: any) => {
+      ;(facturas || []).forEach((factura: any) => {
         const fechaFactura = new Date(factura.fecha)
         const total = calcularTotalFactura(factura)
 
@@ -490,7 +507,7 @@ export default function Home() {
         mesesMap.set(mesKey, 0)
       }
 
-      (facturas || []).forEach((factura: any) => {
+      ;(facturas || []).forEach((factura: any) => {
         const fechaFactura = new Date(factura.fecha)
         const total = calcularTotalFactura(factura)
         const mesKey = `${mesesNombres[fechaFactura.getMonth()]} ${fechaFactura.getFullYear().toString().slice(-2)}`
@@ -502,6 +519,104 @@ export default function Home() {
 
       const comprasMensualesData = Array.from(mesesMap.entries())
         .map(([mes, valor]) => ({ mes, valor }))
+
+      // ===== COMPRAS POR CATEGORÍA EN EL TIEMPO =====
+      // Necesitamos facturas con items y categoría de insumos
+      const { data: facturasConCategoria, error: errorFactCat } = await supabase
+        .from('facturas_proveedor')
+        .select(`
+          fecha,
+          factura_items (
+            cantidad,
+            precio_unitario,
+            insumos (categoria, iva_porcentaje)
+          )
+        `)
+        .neq('activo', false)
+        .order('fecha', { ascending: true })
+
+      if (errorFactCat) {
+        console.error('Error fetching facturas para categorías:', errorFactCat)
+      }
+
+      // Mapa de categoría interna a label
+      const categToLabel: Record<string, string> = {
+        'Carnes': 'Carnes',
+        'Pescados_Mariscos': 'Pescados',
+        'Verduras_Frutas': 'Verduras',
+        'Almacen': 'Almacen',
+        'Lacteos_Fiambres': 'Lacteos',
+      }
+
+      // Inicializar datos semanales por categoría (últimas 8 semanas)
+      const semanasCategMap = new Map<string, ComprasPorCategoriaItem>()
+      for (let i = 0; i < 8; i++) {
+        const inicioSemana = new Date(inicioSemanaActual)
+        inicioSemana.setDate(inicioSemana.getDate() - (i * 7))
+        const semanaKey = `${inicioSemana.getDate()}/${inicioSemana.getMonth() + 1}`
+        semanasCategMap.set(semanaKey, {
+          periodo: semanaKey,
+          Carnes: 0, Pescados: 0, Verduras: 0, Almacen: 0, Lacteos: 0, total: 0
+        })
+      }
+
+      // Inicializar datos mensuales por categoría (últimos 6 meses)
+      const mesesCategMap = new Map<string, ComprasPorCategoriaItem>()
+      for (let i = 5; i >= 0; i--) {
+        const fecha = new Date()
+        fecha.setMonth(fecha.getMonth() - i)
+        const mesKey = `${mesesNombres[fecha.getMonth()]}`
+        mesesCategMap.set(mesKey, {
+          periodo: mesKey,
+          Carnes: 0, Pescados: 0, Verduras: 0, Almacen: 0, Lacteos: 0, total: 0
+        })
+      }
+
+      // Procesar facturas para compras por categoría
+      ;(facturasConCategoria || []).forEach((factura: any) => {
+        const fechaFactura = new Date(factura.fecha)
+
+        // Por cada item, sumar a la categoría correspondiente
+        ;(factura.factura_items || []).forEach((item: any) => {
+          if (!item.insumos?.categoria) return
+          const catInterna = item.insumos.categoria
+          const catLabel = categToLabel[catInterna]
+          if (!catLabel) return
+
+          const subtotal = item.cantidad * item.precio_unitario
+          const iva = subtotal * ((item.insumos.iva_porcentaje ?? 21) / 100)
+          const total = subtotal + iva
+
+          // Agregar a semana correspondiente
+          for (let i = 0; i < 8; i++) {
+            const inicioSemana = new Date(inicioSemanaActual)
+            inicioSemana.setDate(inicioSemana.getDate() - (i * 7))
+            const finSemana = new Date(inicioSemana)
+            finSemana.setDate(finSemana.getDate() + 6)
+
+            if (fechaFactura >= inicioSemana && fechaFactura <= finSemana) {
+              const semanaKey = `${inicioSemana.getDate()}/${inicioSemana.getMonth() + 1}`
+              const entry = semanasCategMap.get(semanaKey)
+              if (entry) {
+                (entry as any)[catLabel] += total
+                entry.total += total
+              }
+              break
+            }
+          }
+
+          // Agregar a mes correspondiente
+          const mesKey = `${mesesNombres[fechaFactura.getMonth()]}`
+          const mesEntry = mesesCategMap.get(mesKey)
+          if (mesEntry) {
+            (mesEntry as any)[catLabel] += total
+            mesEntry.total += total
+          }
+        })
+      })
+
+      const comprasPorCategoriaSemanales = Array.from(semanasCategMap.values()).reverse().slice(-4)
+      const comprasPorCategoriaMensuales = Array.from(mesesCategMap.values())
 
       // ===== VARIACIÓN POR CATEGORÍA =====
       const fecha30DiasAtras = new Date()
@@ -570,7 +685,7 @@ export default function Home() {
 
       const facturasConProveedor = facturasProveedorRes.data as any[] | null
 
-      (facturasConProveedor || []).forEach((factura: any) => {
+      ;(facturasConProveedor || []).forEach((factura: any) => {
         const total = calcularTotalFactura(factura)
         const proveedor = proveedores?.find((p: any) => p.id === factura.proveedor_id)
         if (proveedor) {
@@ -665,11 +780,14 @@ export default function Home() {
         distribucionProveedorData,
         distribucionCategoriaData,
         itemsConAumento: itemsConAumentoCount,
+        comprasPorCategoriaSemanales,
+        comprasPorCategoriaMensuales,
         itemsConAumentoDetalle,
         ordenesSinFacturaDetalle,
         platosFueraRangoDetalle,
         recetasSinCostoDetalle,
       })
+    console.log('fetchDashboardData completado')
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     }
@@ -1025,6 +1143,87 @@ export default function Home() {
             )
           })()}
         </div>
+      </div>
+
+      {/* Cuarta fila: Compras por Categoría en el Tiempo */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-gray-900">Compras por Categoría</h2>
+          <select
+            value={modoComprasCat}
+            onChange={(e) => setModoComprasCat(e.target.value as 'semanal' | 'mensual')}
+            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 text-gray-600 focus:outline-none"
+          >
+            <option value="semanal">Semanal</option>
+            <option value="mensual">Mensual</option>
+          </select>
+        </div>
+        {(() => {
+          const comprasData = modoComprasCat === 'semanal'
+            ? data.comprasPorCategoriaSemanales
+            : data.comprasPorCategoriaMensuales
+
+          if (comprasData.length === 0) {
+            return (
+              <div className="flex items-center justify-center h-52">
+                <p className="text-xs text-gray-400">Sin datos</p>
+              </div>
+            )
+          }
+
+          // Calcular totales y porcentajes para la leyenda
+          const totales = comprasData.reduce((acc, d) => ({
+            Carnes: acc.Carnes + d.Carnes,
+            Pescados: acc.Pescados + d.Pescados,
+            Verduras: acc.Verduras + d.Verduras,
+            Almacen: acc.Almacen + d.Almacen,
+            Lacteos: acc.Lacteos + d.Lacteos,
+            total: acc.total + d.total
+          }), { Carnes: 0, Pescados: 0, Verduras: 0, Almacen: 0, Lacteos: 0, total: 0 })
+
+          const pct = (val: number) => totales.total > 0 ? ((val / totales.total) * 100).toFixed(0) : '0'
+
+          return (
+            <>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={comprasData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="periodo" tick={{ fontSize: 10 }} />
+                    <YAxis tickFormatter={formatMoney} tick={{ fontSize: 9 }} />
+                    <Tooltip
+                      formatter={(value, name) => [formatMoney(Number(value)), name]}
+                      contentStyle={{ borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11 }}
+                    />
+                    <Line type="monotone" dataKey="Carnes" stroke={CATEG_COLORES.Carnes} strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Pescados" stroke={CATEG_COLORES.Pescados_Mariscos} strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Verduras" stroke={CATEG_COLORES.Verduras_Frutas} strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Almacen" stroke={CATEG_COLORES.Almacen} strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Lacteos" stroke={CATEG_COLORES.Lacteos_Fiambres} strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Leyenda con porcentajes */}
+              <div className="flex justify-center gap-4 mt-2">
+                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                  <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Carnes }} /> Carnes ({pct(totales.Carnes)}%)
+                </span>
+                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                  <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Pescados_Mariscos }} /> Pescados ({pct(totales.Pescados)}%)
+                </span>
+                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                  <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Verduras_Frutas }} /> Verduras ({pct(totales.Verduras)}%)
+                </span>
+                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                  <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Almacen }} /> Almacén ({pct(totales.Almacen)}%)
+                </span>
+                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                  <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Lacteos_Fiambres }} /> Lácteos ({pct(totales.Lacteos)}%)
+                </span>
+              </div>
+            </>
+          )
+        })()}
       </div>
 
       {/* Modal de Alertas */}

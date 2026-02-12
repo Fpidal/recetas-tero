@@ -234,6 +234,18 @@ export default function CartaPage() {
     return margen > 0 ? costo / (margen / 100) : 0
   }
 
+  // Margen objetivo por defecto según sección
+  function getMargenPorSeccion(seccion: string): number {
+    switch (seccion) {
+      case 'Entradas': return 15
+      case 'Principales': return 25
+      case 'Pastas y Arroces': return 20
+      case 'Ensaladas': return 15
+      case 'Postres': return 20
+      default: return 25
+    }
+  }
+
   function calcularFoodCost(costo: number, precio: number): number {
     return precio > 0 ? (costo / precio) * 100 : 0
   }
@@ -662,7 +674,15 @@ export default function CartaPage() {
               }))
             ]}
             value={selectedPlato}
-            onChange={(e) => setSelectedPlato(e.target.value)}
+            onChange={(e) => {
+              const platoId = e.target.value
+              setSelectedPlato(platoId)
+              // Autocompletar margen según sección del plato
+              const plato = platosDisponibles.find(p => p.id === platoId)
+              if (plato) {
+                setMargenObjetivoNew(getMargenPorSeccion(plato.seccion).toString())
+              }
+            }}
           />
 
           <div className="grid grid-cols-2 gap-4">

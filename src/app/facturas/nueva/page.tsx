@@ -451,13 +451,16 @@ export default function NuevaFacturaPage() {
 
     // Detectar faltantes y gestionar OC
     if (selectedOrden) {
-      const faltantes: { insumo_id: string; insumo_nombre: string; cantidad: number; precio_unitario: number }[] = []
+      // Items que NO vinieron (faltante total) → generan nueva OC
+      const faltantesTotal: { insumo_id: string; insumo_nombre: string; cantidad: number; precio_unitario: number }[] = []
+      // Items con diferencia de cantidad (vinieron pero distinta cantidad) → solo marcar como parcial
+      let hayDiferenciaCantidad = false
 
       for (const itemOC of selectedOrden.items) {
         const itemFactura = items.find(i => i.insumo_id === itemOC.insumo_id)
         if (!itemFactura) {
           // Item de la OC no está en la factura → faltante total
-          faltantes.push({
+          faltantesTotal.push({
             insumo_id: itemOC.insumo_id,
             insumo_nombre: itemOC.insumo_nombre,
             cantidad: itemOC.cantidad,
@@ -465,22 +468,18 @@ export default function NuevaFacturaPage() {
           })
         } else {
           const cantidadFactura = typeof itemFactura.cantidad === 'string' ? parsearNumero(itemFactura.cantidad) : itemFactura.cantidad
-          if (cantidadFactura < itemOC.cantidad) {
-            // Cantidad parcial → faltante por la diferencia
-            faltantes.push({
-              insumo_id: itemOC.insumo_id,
-              insumo_nombre: itemOC.insumo_nombre,
-              cantidad: itemOC.cantidad - cantidadFactura,
-              precio_unitario: itemOC.precio_unitario,
-            })
+          if (cantidadFactura !== itemOC.cantidad) {
+            // Diferencia de cantidad (más o menos) → solo marcar como parcial, NO genera OC
+            hayDiferenciaCantidad = true
           }
         }
       }
 
-      console.log('Faltantes detectados:', faltantes.length, faltantes)
+      console.log('Faltantes totales:', faltantesTotal.length, faltantesTotal)
+      console.log('Hay diferencia de cantidad:', hayDiferenciaCantidad)
 
-      if (faltantes.length > 0) {
-        // Crear OC de faltantes
+      if (faltantesTotal.length > 0) {
+        // Crear OC solo para items que NO vinieron
         const fechaOC = formatearFecha(selectedOrden.fecha)
         const numeroOC = await getNextOCNumber()
         const { data: nuevaOC, error: ocError } = await supabase
@@ -505,7 +504,7 @@ export default function NuevaFacturaPage() {
             .update({ numero: numeroOC } as any)
             .eq('id', nuevaOC.id)
           // Insertar items faltantes (el trigger calcula el total)
-          const itemsFaltantes = faltantes.map(f => ({
+          const itemsFaltantes = faltantesTotal.map(f => ({
             orden_compra_id: nuevaOC.id,
             insumo_id: f.insumo_id,
             cantidad: f.cantidad,
@@ -524,11 +523,17 @@ export default function NuevaFacturaPage() {
 
         if (updateErr) console.error('Error actualizando estado OC:', updateErr)
 
-        const nombresInsumos = faltantes.slice(0, 3).map(f => f.insumo_nombre).join(', ')
-        const masTexto = faltantes.length > 3 ? ` y ${faltantes.length - 3} más` : ''
-        alert(`Se generó OC de faltantes con ${faltantes.length} ítem(s): ${nombresInsumos}${masTexto}`)
+        const nombresInsumos = faltantesTotal.slice(0, 3).map(f => f.insumo_nombre).join(', ')
+        const masTexto = faltantesTotal.length > 3 ? ` y ${faltantesTotal.length - 3} más` : ''
+        alert(`Se generó OC de faltantes con ${faltantesTotal.length} ítem(s): ${nombresInsumos}${masTexto}`)
+      } else if (hayDiferenciaCantidad) {
+        // Solo diferencia de cantidad → marcar como parcial pero SIN generar OC
+        await supabase
+          .from('ordenes_compra')
+          .update({ estado: 'parcialmente_recibida' })
+          .eq('id', selectedOrden.id)
       } else {
-        // Sin faltantes → marcar como recibida
+        // Sin diferencias → marcar como recibida
         await supabase
           .from('ordenes_compra')
           .update({ estado: 'recibida' })

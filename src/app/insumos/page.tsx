@@ -333,10 +333,11 @@ export default function InsumosPage() {
       .order('facturas_proveedor(fecha)', { ascending: true })
 
     if (data) {
+      const ivaPorcentaje = insumo.iva_porcentaje || 0
       setHistorialData(
         data.map((d: any) => ({
           fecha: new Date(d.facturas_proveedor.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
-          precio: d.precio_unitario,
+          precio: Math.round(d.precio_unitario * (1 + ivaPorcentaje / 100)), // Precio con IVA incluido, sin decimales
           proveedor: d.facturas_proveedor.proveedores?.nombre || '-',
           cantidad: d.cantidad,
         }))
@@ -529,7 +530,7 @@ export default function InsumosPage() {
                     <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Cont.</th>
                     <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
                     <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">IVA</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">+IVA</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">IVA Incl.</th>
                     <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Mer.</th>
                     <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">C.Final</th>
                     <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Proveedor</th>

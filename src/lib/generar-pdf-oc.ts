@@ -424,9 +424,10 @@ export async function generarPDFOrden(ordenId: string) {
   doc.setTextColor(150, 130, 120)
   doc.text('Tero Restó  |  Orden de Compra', pageWidth / 2, footerY + 4, { align: 'center' })
 
-  // Guardar
-  const numPart = orden.numero ? `${orden.numero}_` : ''
-  const fileName = `OC_${numPart}${orden.proveedor_nombre.replace(/\s+/g, '_')}_${orden.fecha}.pdf`
+  // Guardar - Proveedor primero, luego número de OC
+  const proveedorNombre = orden.proveedor_nombre.replace(/\s+/g, '_')
+  const numPart = orden.numero ? `_${orden.numero}` : ''
+  const fileName = `OC_${proveedorNombre}${numPart}_${orden.fecha}.pdf`
   doc.save(fileName)
 
   // Si es borrador, marcar como enviada

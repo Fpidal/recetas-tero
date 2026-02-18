@@ -404,6 +404,23 @@ export default function NuevaFacturaPage() {
 
     setIsSaving(true)
 
+    // Verificar si ya existe una factura con el mismo número del mismo proveedor
+    const { data: facturaExistente } = await supabase
+      .from('facturas_proveedor')
+      .select('id, fecha')
+      .eq('proveedor_id', selectedProveedor)
+      .eq('numero_factura', numeroFactura.trim())
+      .neq('activo', false)
+      .maybeSingle()
+
+    if (facturaExistente) {
+      const proveedorNombre = proveedores.find(p => p.id === selectedProveedor)?.nombre || 'este proveedor'
+      const fechaExistente = formatearFecha(facturaExistente.fecha)
+      alert(`Ya existe una factura ${numeroFactura.trim()} de ${proveedorNombre} (fecha: ${fechaExistente}).\n\nNo se puede cargar la misma factura dos veces.`)
+      setIsSaving(false)
+      return
+    }
+
     // Filtrar percepciones con valor
     const percepcionesConValor = percepciones
       .filter(p => p.nombre.trim() && parsearNumero(p.valor) > 0)

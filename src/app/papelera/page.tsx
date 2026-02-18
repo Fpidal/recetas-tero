@@ -211,45 +211,94 @@ export default function PapeleraPage() {
     const confirmar = confirm(`¿Eliminar definitivamente "${item.nombre}"? Esta acción no se puede deshacer.`)
     if (!confirmar) return
 
-    if (item.tabla === 'ordenes_compra') {
-      // Eliminar items primero
-      await supabase.from('orden_compra_items').delete().eq('orden_compra_id', item.id)
+    try {
+      if (item.tabla === 'ordenes_compra') {
+        // Eliminar items primero
+        await supabase.from('orden_compra_items').delete().eq('orden_compra_id', item.id)
+        // Desvincular facturas que referencian esta OC
+        await supabase.from('facturas_proveedor').update({ orden_compra_id: null }).eq('orden_compra_id', item.id)
+      }
+
+      if (item.tabla === 'facturas_proveedor') {
+        // Obtener los items de la factura para limpiar referencias
+        const { data: facturaItems } = await supabase
+          .from('factura_items')
+          .select('id')
+          .eq('factura_id', item.id)
+
+        if (facturaItems && facturaItems.length > 0) {
+          const itemIds = facturaItems.map(fi => fi.id)
+          // Desvincular precios_insumo que referencian estos items
+          await supabase
+            .from('precios_insumo')
+            .update({ factura_item_id: null })
+            .in('factura_item_id', itemIds)
+        }
+
+        // Eliminar items de factura
+        await supabase.from('factura_items').delete().eq('factura_id', item.id)
+
+        // Eliminar historial de esta factura (si existe)
+        await supabase.from('facturas_historial').delete().eq('factura_id', item.id)
+      }
+
+      const { error } = await supabase
+        .from(item.tabla)
+        .delete()
+        .eq('id', item.id)
+
+      if (error) {
+        console.error('Error eliminando:', error)
+        alert(`Error al eliminar: ${error.message}`)
+        return
+      }
+
+      setItems(items.filter(i => i.id !== item.id))
+    } catch (err: any) {
+      console.error('Error inesperado:', err)
+      alert(`Error inesperado: ${err.message || 'Desconocido'}`)
     }
-
-    if (item.tabla === 'facturas_proveedor') {
-      // Eliminar items primero
-      await supabase.from('factura_items').delete().eq('factura_id', item.id)
-    }
-
-    const { error } = await supabase
-      .from(item.tabla)
-      .delete()
-      .eq('id', item.id)
-
-    if (error) {
-      console.error('Error eliminando:', error)
-      alert('Error al eliminar. Puede tener registros dependientes.')
-      return
-    }
-
-    setItems(items.filter(i => i.id !== item.id))
   }
 
   async function handleVaciarPapelera() {
     const confirmar = confirm(`¿Vaciar toda la papelera? Se eliminarán ${itemsFiltrados.length} elemento(s) definitivamente.`)
     if (!confirmar) return
 
+    let errores = 0
     for (const item of itemsFiltrados) {
-      if (item.tabla === 'ordenes_compra') {
-        await supabase.from('orden_compra_items').delete().eq('orden_compra_id', item.id)
+      try {
+        if (item.tabla === 'ordenes_compra') {
+          await supabase.from('orden_compra_items').delete().eq('orden_compra_id', item.id)
+          await supabase.from('facturas_proveedor').update({ orden_compra_id: null }).eq('orden_compra_id', item.id)
+        }
+        if (item.tabla === 'facturas_proveedor') {
+          const { data: facturaItems } = await supabase
+            .from('factura_items')
+            .select('id')
+            .eq('factura_id', item.id)
+
+          if (facturaItems && facturaItems.length > 0) {
+            const itemIds = facturaItems.map(fi => fi.id)
+            await supabase
+              .from('precios_insumo')
+              .update({ factura_item_id: null })
+              .in('factura_item_id', itemIds)
+          }
+          await supabase.from('factura_items').delete().eq('factura_id', item.id)
+          await supabase.from('facturas_historial').delete().eq('factura_id', item.id)
+        }
+        await supabase.from(item.tabla).delete().eq('id', item.id)
+      } catch (err) {
+        console.error(`Error eliminando ${item.nombre}:`, err)
+        errores++
       }
-      if (item.tabla === 'facturas_proveedor') {
-        await supabase.from('factura_items').delete().eq('factura_id', item.id)
-      }
-      await supabase.from(item.tabla).delete().eq('id', item.id)
     }
 
-    setItems(items.filter(i => !itemsFiltrados.includes(i)))
+    if (errores > 0) {
+      alert(`Se completó con ${errores} error(es). Algunos elementos pueden no haberse eliminado.`)
+    }
+
+    fetchPapelera() // Recargar para ver el estado actual
   }
 
   const itemsFiltrados = filtroTipo

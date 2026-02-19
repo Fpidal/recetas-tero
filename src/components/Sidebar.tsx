@@ -119,7 +119,13 @@ export default function Sidebar() {
   return (
     <>
       {/* Header mobile con hamburger */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 h-14 flex items-center px-4 shadow-lg">
+      <div
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 flex items-end px-4 pb-3 shadow-lg"
+        style={{
+          paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)',
+          minHeight: 'calc(56px + env(safe-area-inset-top, 0px))'
+        }}
+      >
         <button
           onClick={() => setMobileMenuOpen(true)}
           className="text-white p-2 -ml-2 hover:bg-gray-800 rounded-md"

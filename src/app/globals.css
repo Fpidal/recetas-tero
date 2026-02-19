@@ -43,3 +43,16 @@ body {
 .food-cost-danger {
   @apply bg-red-100 text-red-800;
 }
+
+/* Mobile header safe area padding */
+@media (max-width: 1023px) {
+  .mobile-content-padding {
+    padding-top: calc(56px + env(safe-area-inset-top, 0px) + 1rem) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-content-padding {
+    padding-top: 2rem;
+  }
+}

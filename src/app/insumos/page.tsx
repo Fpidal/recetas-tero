@@ -14,6 +14,7 @@ interface InsumoCompleto {
   nombre: string
   categoria: CategoriaInsumo
   unidad_medida: UnidadMedida
+  cantidad: number
   cantidad_por_paquete: number
   merma_porcentaje: number
   iva_porcentaje: number
@@ -30,6 +31,7 @@ interface InsumoForm {
   nombre: string
   categoria: CategoriaInsumo
   unidad_medida: UnidadMedida
+  cantidad: string
   cantidad_por_paquete: string
   merma_porcentaje: string
   iva_porcentaje: string
@@ -72,6 +74,7 @@ const initialForm: InsumoForm = {
   nombre: '',
   categoria: 'Almacen',
   unidad_medida: 'kg',
+  cantidad: '1',
   cantidad_por_paquete: '1',
   merma_porcentaje: '0',
   iva_porcentaje: '21',
@@ -171,12 +174,14 @@ export default function InsumosPage() {
   function handleOpenModal(insumo?: InsumoCompleto) {
     if (insumo) {
       setEditingId(insumo.id)
+      const cant = insumo.cantidad || 1
       const cantPaq = insumo.cantidad_por_paquete || 1
       const precioPaquete = insumo.precio_actual ? (insumo.precio_actual * cantPaq) : null
       setForm({
         nombre: insumo.nombre,
         categoria: insumo.categoria,
         unidad_medida: insumo.unidad_medida,
+        cantidad: formatearCantidad(cant, cant % 1 === 0 ? 0 : 2),
         cantidad_por_paquete: formatearCantidad(cantPaq, cantPaq % 1 === 0 ? 0 : 2),
         merma_porcentaje: (insumo.merma_porcentaje || 0).toString().replace('.', ','),
         iva_porcentaje: (insumo.iva_porcentaje ?? 21).toString(),
@@ -202,6 +207,7 @@ export default function InsumosPage() {
     setIsSaving(true)
 
     const ivaValue = parseFloat(form.iva_porcentaje)
+    const cant = parsearNumero(form.cantidad) || 1
     const cantPaq = parsearNumero(form.cantidad_por_paquete) || 1
     const data = {
       nombre: form.nombre,
@@ -223,9 +229,10 @@ export default function InsumosPage() {
         .eq('id', editingId)
 
       if (!error) {
+        // Actualizar campos numéricos por separado (evita problemas de schema cache)
         await supabase
           .from('insumos')
-          .update({ cantidad_por_paquete: cantPaq } as any)
+          .update({ cantidad: cant, cantidad_por_paquete: cantPaq } as any)
           .eq('id', editingId)
       }
 
@@ -271,9 +278,10 @@ export default function InsumosPage() {
       }
 
       if (newInsumo) {
+        // Actualizar campos numéricos por separado (evita problemas de schema cache)
         await supabase
           .from('insumos')
-          .update({ cantidad_por_paquete: cantPaq } as any)
+          .update({ cantidad: cant, cantidad_por_paquete: cantPaq } as any)
           .eq('id', newInsumo.id)
       }
 
@@ -704,7 +712,19 @@ export default function InsumosPage() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Input
+              label="Cantidad"
+              id="cantidad"
+              type="text"
+              inputMode="decimal"
+              value={form.cantidad}
+              onChange={(e) =>
+                setForm({ ...form, cantidad: formatearInputNumero(e.target.value) })
+              }
+              placeholder="Ej: 1"
+            />
+
             <Input
               label="Contenido"
               id="cantidad_por_paquete"
@@ -714,7 +734,7 @@ export default function InsumosPage() {
               onChange={(e) =>
                 setForm({ ...form, cantidad_por_paquete: formatearInputNumero(e.target.value) })
               }
-              placeholder="Ej: 5 kg por paquete"
+              placeholder="Ej: 360"
             />
 
             <Input
@@ -774,18 +794,24 @@ export default function InsumosPage() {
                 const iva = parseFloat(form.iva_porcentaje) || 0
                 const merma = parsearNumero(form.merma_porcentaje) || 0
                 const precioPaquete = parsearNumero(form.precio)
+                const cant = parsearNumero(form.cantidad) || 1
                 const cantPaq = parsearNumero(form.cantidad_por_paquete) || 1
                 const precioUnitario = precioPaquete / cantPaq
                 const costoConIva = calcularCostoConIva(precioUnitario, iva)
                 const costoFinal = calcularCostoFinal(precioUnitario, iva, merma)
 
+                // Formato de presentación: "1 x 360 u." o "1 kg"
+                const formatoPresentacion = cantPaq > 1
+                  ? `${formatearCantidad(cant, cant % 1 === 0 ? 0 : 1)} x ${formatearCantidad(cantPaq, cantPaq % 1 === 0 ? 0 : 1)} ${form.unidad_medida}`
+                  : `${formatearCantidad(cant, cant % 1 === 0 ? 0 : 1)} ${form.unidad_medida}`
+
                 return (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                     <div>
                       <p className="text-gray-500 text-xs">
-                        {cantPaq > 1 ? `Paquete (${cantPaq} u.)` : 'Precio'}
+                        Presentación
                       </p>
-                      <p className="font-medium">{formatCurrency(precioPaquete)}</p>
+                      <p className="font-medium text-purple-600">{formatoPresentacion}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Precio unit.</p>

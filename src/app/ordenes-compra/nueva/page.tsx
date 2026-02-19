@@ -20,6 +20,7 @@ interface Insumo {
   categoria: string
   precio_actual: number | null
   iva_porcentaje: number
+  cantidad?: number | null
   cantidad_por_paquete?: number | null
 }
 
@@ -28,6 +29,7 @@ interface ItemOrden {
   insumo_id: string
   insumo_nombre: string
   unidad_medida: string
+  contenido: number
   cantidad: number
   precio_unitario: number
   subtotal: number
@@ -86,7 +88,10 @@ export default function NuevaOrdenCompraPage() {
     setSelectedInsumo(insumoId)
     const insumo = insumos.find(i => i.id === insumoId)
     if (insumo && insumo.precio_actual) {
-      setPrecioUnitario(insumo.precio_actual.toString())
+      // Mostrar precio del paquete (precio unitario × contenido)
+      const contenido = insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1
+      const precioPaquete = insumo.precio_actual * contenido
+      setPrecioUnitario(precioPaquete.toFixed(2).replace('.', ','))
     } else {
       setPrecioUnitario('')
     }
@@ -112,11 +117,14 @@ export default function NuevaOrdenCompraPage() {
     const ivaPorcentaje = insumo.iva_porcentaje ?? 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
 
+    const contenido = insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1
+
     const nuevoItem: ItemOrden = {
       id: crypto.randomUUID(),
       insumo_id: insumo.id,
       insumo_nombre: insumo.nombre,
       unidad_medida: insumo.unidad_medida,
+      contenido,
       cantidad: cantidadNum,
       precio_unitario: precioNum,
       subtotal,
@@ -377,11 +385,12 @@ export default function NuevaOrdenCompraPage() {
                     options={[
                       { value: '', label: 'Seleccionar...' },
                       ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
+                        const cant = i.cantidad ? Number(i.cantidad) : 1
                         const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
-                        const contenidoInfo = cantPaq > 1 ? ` - Cont: ${cantPaq}` : ''
+                        const presentacion = cantPaq > 1 ? ` [${cant} x ${cantPaq}]` : ''
                         return {
                           value: i.id,
-                          label: `${i.nombre} (${i.unidad_medida})${contenidoInfo}`
+                          label: `${i.nombre} (${i.unidad_medida})${presentacion}`
                         }
                       })
                     ]}
@@ -452,11 +461,12 @@ export default function NuevaOrdenCompraPage() {
                   options={[
                     { value: '', label: 'Seleccionar insumo...' },
                     ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
+                      const cant = i.cantidad ? Number(i.cantidad) : 1
                       const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
-                      const contenidoInfo = cantPaq > 1 ? ` - Cont: ${cantPaq}` : ''
+                      const presentacion = cantPaq > 1 ? ` [${cant} x ${cantPaq}]` : ''
                       return {
                         value: i.id,
-                        label: `${i.nombre} (${i.unidad_medida})${contenidoInfo}`
+                        label: `${i.nombre} (${i.unidad_medida})${presentacion}`
                       }
                     })
                   ]}
@@ -508,7 +518,10 @@ export default function NuevaOrdenCompraPage() {
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-sm font-medium text-gray-900 truncate">{item.insumo_nombre}</span>
+                        <span className="text-sm font-medium text-gray-900 truncate">
+                          {item.insumo_nombre}
+                          {item.contenido > 1 && <span className="text-gray-500 font-normal"> [{item.contenido} {item.unidad_medida}]</span>}
+                        </span>
                       </div>
                       <select
                         value={item.iva_porcentaje}
@@ -616,7 +629,10 @@ export default function NuevaOrdenCompraPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <Package className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-900">{item.insumo_nombre}</span>
+                            <span className="text-sm text-gray-900">
+                              {item.insumo_nombre}
+                              {item.contenido > 1 && <span className="text-gray-500"> [{item.contenido} {item.unidad_medida}]</span>}
+                            </span>
                           </div>
                         </td>
                         <td className="px-4 py-3">

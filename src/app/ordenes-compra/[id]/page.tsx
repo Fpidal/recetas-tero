@@ -28,6 +28,7 @@ interface OrdenDetalle {
     insumo_id: string
     insumo_nombre: string
     unidad_medida: string
+    contenido: number
     cantidad: number
     precio_unitario: number
     subtotal: number
@@ -95,7 +96,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           cantidad,
           precio_unitario,
           subtotal,
-          insumos (nombre, unidad_medida, iva_porcentaje)
+          insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete)
         )
       `)
       .eq('id', id)
@@ -127,11 +128,13 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         const subtotal = parseFloat(item.subtotal)
         const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
+        const contenido = item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1
         return {
           id: item.id,
           insumo_id: item.insumo_id,
           insumo_nombre: item.insumos?.nombre || 'Desconocido',
           unidad_medida: item.insumos?.unidad_medida || '',
+          contenido,
           cantidad: parseFloat(item.cantidad),
           precio_unitario: parseFloat(item.precio_unitario),
           subtotal,
@@ -415,7 +418,10 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                       <span className={`text-sm truncate ${
                         esCompleto ? 'text-gray-400' :
                         esModificado ? 'font-bold text-gray-900' : 'text-gray-900'
-                      }`}>{item.insumo_nombre}</span>
+                      }`}>
+                        {item.insumo_nombre}
+                        {item.contenido > 1 && <span className="text-gray-500 font-normal"> [{item.contenido} {item.unidad_medida}]</span>}
+                      </span>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ml-2 ${
                       esCompleto ? 'bg-gray-100 text-gray-400' :
@@ -500,7 +506,10 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                           <span className={`text-sm ${
                             esCompleto ? 'text-gray-400' :
                             esModificado ? 'font-bold text-gray-900' : 'text-gray-900'
-                          }`}>{item.insumo_nombre}</span>
+                          }`}>
+                            {item.insumo_nombre}
+                            {item.contenido > 1 && <span className="text-gray-500 font-normal"> [{item.contenido} {item.unidad_medida}]</span>}
+                          </span>
                           {esModificado && estado === 'parcial' && fi && (
                             <span className="text-xs px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">
                               Recibido {fi.cantidad % 1 === 0 ? fi.cantidad : fi.cantidad.toLocaleString('es-AR')} de {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')}

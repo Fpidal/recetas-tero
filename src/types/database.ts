@@ -43,6 +43,7 @@ export interface Database {
           nombre: string
           categoria: CategoriaInsumo
           unidad_medida: UnidadMedida
+          cantidad: number
           cantidad_por_paquete: number
           merma_porcentaje: number
           iva_porcentaje: number

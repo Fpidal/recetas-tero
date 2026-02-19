@@ -20,6 +20,7 @@ interface Insumo {
   categoria: string
   precio_actual: number | null
   iva_porcentaje: number
+  cantidad?: number | null
   cantidad_por_paquete?: number | null
 }
 
@@ -699,11 +700,12 @@ export default function NuevaFacturaPage() {
                     ...insumos
                       .filter(i => !items.some(item => item.insumo_id === i.id))
                       .map(i => {
+                        const cant = i.cantidad ? Number(i.cantidad) : 1
                         const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
-                        const contenidoInfo = cantPaq > 1 ? ` - Cont: ${cantPaq}` : ''
+                        const presentacion = cantPaq > 1 ? ` [${cant} x ${cantPaq}]` : ''
                         return {
                           value: i.id,
-                          label: `${i.nombre} (${i.unidad_medida})${contenidoInfo}`
+                          label: `${i.nombre} (${i.unidad_medida})${presentacion}`
                         }
                       })
                   ]}

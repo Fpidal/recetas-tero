@@ -393,20 +393,20 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   }
 
   return (
-    <div className="max-w-4xl">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="w-full lg:max-w-4xl">
+      <div className="flex items-center gap-3 mb-4 lg:mb-6">
         <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Editar Factura</h1>
-          <p className="text-gray-600">Factura {numeroFactura}</p>
+          <h1 className="text-lg lg:text-2xl font-bold text-gray-900">Editar Factura</h1>
+          <p className="text-xs lg:text-base text-gray-600">Factura {numeroFactura}</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6 space-y-4 lg:space-y-6">
         {/* Datos de la factura */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <Select
             label="Proveedor *"
             options={[
@@ -431,10 +431,56 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         </div>
 
         {/* Agregar item */}
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Items</h3>
+        <div className="border-t pt-4 lg:pt-6">
+          <h3 className="text-base lg:text-lg font-medium text-gray-900 mb-3 lg:mb-4">Items</h3>
 
-          <div className="flex gap-4 items-end mb-4">
+          {/* Form agregar - Mobile */}
+          <div className="lg:hidden space-y-3 mb-4">
+            <Select
+              label="Agregar insumo"
+              options={[
+                { value: '', label: 'Seleccionar insumo...' },
+                ...insumos
+                  .filter(i => !items.some(item => item.insumo_id === i.id && !item.isDeleted))
+                  .map(i => ({ value: i.id, label: i.nombre }))
+              ]}
+              value={selectedInsumo}
+              onChange={(e) => handleSelectInsumo(e.target.value)}
+            />
+            <div className="grid grid-cols-3 gap-2">
+              <Input
+                label="Cantidad"
+                type="text"
+                inputMode="decimal"
+                value={cantidad}
+                onChange={(e) => setCantidad(formatearInputNumero(e.target.value))}
+                placeholder="0"
+              />
+              <Input
+                label="Precio ($)"
+                type="text"
+                inputMode="decimal"
+                value={precioUnitario}
+                onChange={(e) => setPrecioUnitario(formatearInputNumero(e.target.value))}
+                placeholder="0,00"
+              />
+              <Input
+                label="Dto %"
+                type="text"
+                inputMode="decimal"
+                value={descuento}
+                onChange={(e) => setDescuento(formatearInputNumero(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+            <Button onClick={handleAgregarItem} className="w-full">
+              <Plus className="w-4 h-4 mr-1" />
+              Agregar Item
+            </Button>
+          </div>
+
+          {/* Form agregar - Desktop */}
+          <div className="hidden lg:flex gap-4 items-end mb-4">
             <div className="flex-1">
               <Select
                 label="Agregar insumo"
@@ -493,133 +539,227 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
           {/* Lista de items */}
           {itemsActivos.length > 0 ? (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dto %</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {itemsActivos.map((item) => (
-                    <tr key={item.id} className={item.isNew ? 'bg-green-50' : ''}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-900">{item.insumo_nombre}</span>
-                          {item.isNew && (
-                            <span className="text-xs text-green-600">(nuevo)</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
+            <>
+              {/* Vista móvil - Cards */}
+              <div className="lg:hidden space-y-2">
+                {itemsActivos.map((item) => (
+                  <div key={item.id} className={`border rounded-lg p-3 ${item.isNew ? 'bg-green-50 border-green-200' : 'bg-white'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Package className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-900">{item.insumo_nombre}</span>
+                        {item.isNew && <span className="text-[10px] text-green-600">(nuevo)</span>}
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => handleEliminarItem(item.id)}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500">Cantidad</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={String(item.cantidad).replace('.', ',')}
+                          onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                        />
+                        <span className="text-[10px] text-gray-400">{item.unidad_medida}</span>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500">Precio</label>
                         <div className="flex items-center">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={String(item.cantidad).replace('.', ',')}
-                            onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
-                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
-                          />
-                          <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-500 mr-1">$</span>
+                          <span className="text-xs text-gray-400 mr-0.5">$</span>
                           <input
                             type="text"
                             inputMode="decimal"
                             value={String(item.precio_unitario).replace('.', ',')}
                             onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
-                            className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+                            className="w-full rounded border border-gray-300 px-1 py-1 text-sm"
                           />
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500">Dto %</label>
                         <input
                           type="text"
                           inputMode="decimal"
                           value={item.descuento ? String(item.descuento).replace('.', ',') : ''}
                           onChange={(e) => handleDescuentoChange(item.id, formatearInputNumero(e.target.value))}
-                          className="w-14 rounded border border-gray-300 px-2 py-1 text-sm text-center"
+                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm text-center"
                           placeholder="0"
                         />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500">IVA</label>
+                        <span className={`block text-center px-2 py-1 rounded text-xs font-medium ${
                           item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
                           item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
                           'bg-green-100 text-green-800'
                         }`}>
                           {item.iva_porcentaje}%
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">
-                        {formatearMoneda(item.subtotal)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEliminarItem(item.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-50">
-                  <tr>
-                    <td colSpan={5} className="px-4 py-2 text-right text-sm text-gray-600">
-                      Subtotal Neto:
-                    </td>
-                    <td className="px-4 py-2 text-right text-sm text-gray-900">
-                      {formatearMoneda(subtotalNeto)}
-                    </td>
-                    <td></td>
-                  </tr>
+                      </div>
+                    </div>
+                    <div className="flex justify-end mt-2 pt-2 border-t">
+                      <span className="text-sm font-medium">{formatearMoneda(item.subtotal)}</span>
+                    </div>
+                  </div>
+                ))}
+                {/* Totales móvil */}
+                <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal Neto:</span>
+                    <span>{formatearMoneda(subtotalNeto)}</span>
+                  </div>
                   {totalIva21 > 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
-                        IVA 21%:
-                      </td>
-                      <td className="px-4 py-1 text-right text-sm text-gray-900">
-                        {formatearMoneda(totalIva21)}
-                      </td>
-                      <td></td>
-                    </tr>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">IVA 21%:</span>
+                      <span>{formatearMoneda(totalIva21)}</span>
+                    </div>
                   )}
                   {totalIva105 > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">IVA 10.5%:</span>
+                      <span>{formatearMoneda(totalIva105)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t border-gray-300">
+                    <span className="font-medium">Total:</span>
+                    <span className="text-lg font-bold text-green-600">{formatearMoneda(total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vista desktop - Tabla */}
+              <div className="hidden lg:block border rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
-                        IVA 10.5%:
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dto %</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {itemsActivos.map((item) => (
+                      <tr key={item.id} className={item.isNew ? 'bg-green-50' : ''}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-900">{item.insumo_nombre}</span>
+                            {item.isNew && (
+                              <span className="text-xs text-green-600">(nuevo)</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={String(item.cantidad).replace('.', ',')}
+                              onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                              className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                            />
+                            <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-500 mr-1">$</span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={String(item.precio_unitario).replace('.', ',')}
+                              onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
+                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={item.descuento ? String(item.descuento).replace('.', ',') : ''}
+                            onChange={(e) => handleDescuentoChange(item.id, formatearInputNumero(e.target.value))}
+                            className="w-14 rounded border border-gray-300 px-2 py-1 text-sm text-center"
+                            placeholder="0"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
+                            item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {item.iva_porcentaje}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          {formatearMoneda(item.subtotal)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEliminarItem(item.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50">
+                    <tr>
+                      <td colSpan={5} className="px-4 py-2 text-right text-sm text-gray-600">
+                        Subtotal Neto:
                       </td>
-                      <td className="px-4 py-1 text-right text-sm text-gray-900">
-                        {formatearMoneda(totalIva105)}
+                      <td className="px-4 py-2 text-right text-sm text-gray-900">
+                        {formatearMoneda(subtotalNeto)}
                       </td>
                       <td></td>
                     </tr>
-                  )}
-                  <tr className="border-t border-gray-300">
-                    <td colSpan={5} className="px-4 py-3 text-right font-medium text-gray-900">
-                      Total:
-                    </td>
-                    <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
-                      {formatearMoneda(total)}
-                    </td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                    {totalIva21 > 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
+                          IVA 21%:
+                        </td>
+                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                          {formatearMoneda(totalIva21)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    )}
+                    {totalIva105 > 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
+                          IVA 10.5%:
+                        </td>
+                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                          {formatearMoneda(totalIva105)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    )}
+                    <tr className="border-t border-gray-300">
+                      <td colSpan={5} className="px-4 py-3 text-right font-medium text-gray-900">
+                        Total:
+                      </td>
+                      <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
+                        {formatearMoneda(total)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
           ) : (
             <div className="text-center py-8 border rounded-lg bg-gray-50">
               <p className="text-gray-500">No hay items agregados</p>
@@ -629,8 +769,8 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
         {/* Percepciones */}
         <div className="border-t pt-4">
-          <div className="flex justify-end">
-            <div className="w-96 space-y-1">
+          <div className="lg:flex lg:justify-end">
+            <div className="w-full lg:w-96 space-y-1">
               <p className="text-xs font-medium text-gray-700 mb-1">Percepciones</p>
               {percepciones.map((p, idx) => (
                 <div key={idx} className="flex gap-1 items-center">
@@ -644,7 +784,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                       setPercepciones(newPerc)
                     }}
                     placeholder="Percepción"
-                    className="w-32 rounded border border-gray-300 px-2 py-1 text-xs placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="flex-1 lg:w-32 lg:flex-none rounded border border-gray-300 px-2 py-1 text-xs placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                   <input
                     type="text"
@@ -656,7 +796,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                       setPercepciones(newPerc)
                     }}
                     placeholder="%"
-                    className="w-14 rounded border border-gray-300 px-2 py-1 text-xs text-center placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="w-12 lg:w-14 rounded border border-gray-300 px-2 py-1 text-xs text-center placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                   <span className="text-xs text-gray-400">$</span>
                   <input
@@ -670,7 +810,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                       setPercepciones(newPerc)
                     }}
                     placeholder="0,00"
-                    className="w-24 rounded border border-gray-300 px-2 py-1 text-xs text-right placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="w-20 lg:w-24 rounded border border-gray-300 px-2 py-1 text-xs text-right placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
               ))}
@@ -689,7 +829,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         </div>
 
         {/* Notas */}
-        <div className="border-t pt-6">
+        <div className="border-t pt-4 lg:pt-6">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Notas
           </label>
@@ -703,11 +843,11 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         </div>
 
         {/* Botones */}
-        <div className="flex justify-end gap-3 border-t pt-6">
-          <Button variant="secondary" onClick={() => router.back()}>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 border-t pt-4 lg:pt-6">
+          <Button variant="secondary" onClick={() => router.back()} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button onClick={handleGuardar} disabled={isSaving}>
+          <Button onClick={handleGuardar} disabled={isSaving} className="w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
             {isSaving ? 'Guardando...' : 'Guardar Cambios'}
           </Button>

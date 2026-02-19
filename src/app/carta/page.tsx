@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
@@ -489,7 +489,7 @@ export default function CartaPage() {
         </div>
       </div>
 
-      {/* Tabla */}
+      {/* Contenido */}
       {isLoading ? (
         <div className="text-center py-6 text-xs">Cargando...</div>
       ) : itemsActuales.length === 0 ? (
@@ -504,156 +504,299 @@ export default function CartaPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Plato</th>
-                <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">En Carta</th>
-                <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
-                <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Sug.</th>
-                <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Carta</th>
-                <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">M.Obj</th>
-                <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">FC</th>
-                <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">Contrib.</th>
-                <th className="px-2 py-2"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {itemsPorSeccion.map((grupo) => (
-                <>
-                  <tr
-                    key={`seccion-${grupo.seccion}`}
-                    className="bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
-                    onClick={() => toggleSeccion(grupo.seccion)}
-                  >
-                    <td colSpan={9} className="px-2 py-1.5">
+        <>
+          {/* Vista Móvil - Tarjetas */}
+          <div className="lg:hidden space-y-3">
+            {itemsPorSeccion.map((grupo) => (
+              <div key={`mobile-seccion-${grupo.seccion}`}>
+                <button
+                  className="w-full flex items-center gap-1.5 px-3 py-2 bg-gray-100 rounded-lg mb-2"
+                  onClick={() => toggleSeccion(grupo.seccion)}
+                >
+                  {seccionesExpandidas.has(grupo.seccion) ? (
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-gray-500" />
+                  )}
+                  <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    {grupo.seccion}
+                  </span>
+                  <span className="text-[10px] text-gray-400">({grupo.items.length})</span>
+                </button>
+                {seccionesExpandidas.has(grupo.seccion) && (
+                  <div className="space-y-2">
+                    {grupo.items.map((item) => {
+                      const IconComponent = getPlateIcon(item.plato_seccion, item.plato_nombre)
+                      return (
+                        <div
+                          key={item.id}
+                          className={`bg-white rounded-lg border p-3 ${item.estado_margen === 'danger' ? 'border-red-300 bg-red-50' : ''}`}
+                        >
+                          {/* Header del plato */}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 bg-orange-100 rounded">
+                                <IconComponent className="w-4 h-4 text-orange-600" />
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium text-gray-900">{item.plato_nombre}</span>
+                                <p className="text-[10px] text-gray-400">
+                                  {item.plato_dias_actualizacion === 0
+                                    ? 'Actualizado hoy'
+                                    : item.plato_dias_actualizacion === 1
+                                    ? 'Hace 1 día'
+                                    : item.plato_dias_actualizacion > 0
+                                    ? `Hace ${item.plato_dias_actualizacion} días`
+                                    : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleToggleEnCarta(item.id, tabActiva !== 'en_carta')}
+                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                                tabActiva === 'en_carta' ? 'bg-primary-600' : 'bg-gray-300'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                                  tabActiva === 'en_carta' ? 'translate-x-4' : 'translate-x-0.5'
+                                }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Datos en grid */}
+                          {editingId === item.id ? (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-[10px] text-gray-500">Precio Carta</label>
+                                  <input
+                                    type="number"
+                                    value={editPrecio}
+                                    onChange={(e) => setEditPrecio(e.target.value)}
+                                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500">Margen Obj %</label>
+                                  <input
+                                    type="number"
+                                    value={editMargen}
+                                    onChange={(e) => setEditMargen(e.target.value)}
+                                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-2 pt-1">
+                                <Button variant="secondary" size="sm" onClick={handleCancelEdit}>
+                                  Cancelar
+                                </Button>
+                                <Button size="sm" onClick={() => handleSaveEdit(item)} disabled={isSaving}>
+                                  <Save className="w-3.5 h-3.5 mr-1" />
+                                  Guardar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="grid grid-cols-4 gap-2 text-center mb-2">
+                                <div>
+                                  <p className="text-[10px] text-gray-500">Costo</p>
+                                  <p className="text-xs font-medium tabular-nums">${item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-gray-500">Sugerido</p>
+                                  <p className="text-xs text-gray-600 tabular-nums">${item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-gray-500">Carta</p>
+                                  <p className="text-xs font-bold tabular-nums">${item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-gray-500">Contrib.</p>
+                                  <p className="text-xs font-bold text-green-600 tabular-nums">${(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between pt-2 border-t">
+                                <div className="flex items-center gap-2">
+                                  {getEstadoIcon(item.estado_margen)}
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEstadoClass(item.estado_margen)}`}>
+                                    FC: {item.food_cost_real.toFixed(1)}%
+                                  </span>
+                                  <span className="text-[10px] text-gray-500">Obj: {item.margen_objetivo}%</span>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="sm" onClick={() => handleStartEdit(item)}>
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => handleEliminar(item.id)}>
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Vista Desktop - Tabla */}
+          <div className="hidden lg:block bg-white rounded-lg border overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Plato</th>
+                  <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">En Carta</th>
+                  <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
+                  <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Sug.</th>
+                  <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Carta</th>
+                  <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">M.Obj</th>
+                  <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">FC</th>
+                  <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">Contrib.</th>
+                  <th className="px-2 py-2"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {itemsPorSeccion.map((grupo) => (
+                  <Fragment key={`desktop-seccion-${grupo.seccion}`}>
+                    <tr
+                      className="bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+                      onClick={() => toggleSeccion(grupo.seccion)}
+                    >
+                      <td colSpan={9} className="px-2 py-1.5">
+                        <div className="flex items-center gap-1.5">
+                          {seccionesExpandidas.has(grupo.seccion) ? (
+                            <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                          )}
+                          <span className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide">
+                            {grupo.seccion}
+                          </span>
+                          <span className="text-[10px] text-gray-400">({grupo.items.length})</span>
+                        </div>
+                      </td>
+                    </tr>
+                    {seccionesExpandidas.has(grupo.seccion) && grupo.items.map((item) => {
+                      const IconComponent = getPlateIcon(item.plato_seccion, item.plato_nombre)
+                      return (
+                  <tr key={item.id} className={item.estado_margen === 'danger' ? 'bg-red-50' : ''}>
+                    <td className="px-2 py-1.5">
                       <div className="flex items-center gap-1.5">
-                        {seccionesExpandidas.has(grupo.seccion) ? (
-                          <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
-                        ) : (
-                          <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
-                        )}
-                        <span className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide">
-                          {grupo.seccion}
+                        <div className="p-1 bg-orange-100 rounded flex-shrink-0">
+                          <IconComponent className="w-3 h-3 text-orange-600" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-medium text-gray-900">{item.plato_nombre}</span>
+                          <p className="text-[9px] text-gray-400">
+                            {item.plato_dias_actualizacion === 0
+                              ? 'Hoy'
+                              : item.plato_dias_actualizacion === 1
+                              ? 'Hace 1 día'
+                              : item.plato_dias_actualizacion > 0
+                              ? `Hace ${item.plato_dias_actualizacion}d`
+                              : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleToggleEnCarta(item.id, tabActiva !== 'en_carta')
+                        }}
+                        className={`relative inline-flex h-4 w-[30px] items-center rounded-full transition-colors ${
+                          tabActiva === 'en_carta' ? 'bg-primary-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
+                            tabActiva === 'en_carta' ? 'translate-x-[15px]' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                    </td>
+                    <td className="px-2 py-1.5 text-right text-[11px] text-gray-600 tabular-nums">
+                      <span className="text-gray-400">$</span>{item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    </td>
+                    <td className="px-2 py-1.5 text-right text-[11px] text-gray-500 tabular-nums">
+                      <span className="text-gray-400">$</span>{item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    </td>
+                    <td className="px-2 py-1.5 text-right">
+                      {editingId === item.id ? (
+                        <input
+                          type="number"
+                          value={editPrecio}
+                          onChange={(e) => setEditPrecio(e.target.value)}
+                          className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-[11px] text-right"
+                        />
+                      ) : (
+                        <span className="text-xs font-medium tabular-nums">
+                          <span className="text-gray-400 font-normal">$</span>{item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </span>
-                        <span className="text-[10px] text-gray-400">({grupo.items.length})</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      {editingId === item.id ? (
+                        <input
+                          type="number"
+                          value={editMargen}
+                          onChange={(e) => setEditMargen(e.target.value)}
+                          className="w-12 rounded border border-gray-300 px-1 py-0.5 text-[11px] text-center"
+                        />
+                      ) : (
+                        <span className="text-[11px] text-gray-600">{item.margen_objetivo}%</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {getEstadoIcon(item.estado_margen)}
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(item.estado_margen)}`}>
+                          {item.food_cost_real.toFixed(1)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-1.5 text-right text-[11px] font-bold text-green-700 bg-green-50 tabular-nums">
+                      <span className="text-green-500 font-normal">$</span>{(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <div className="flex justify-end gap-0.5">
+                        {editingId === item.id ? (
+                          <>
+                            <Button variant="ghost" size="sm" onClick={() => handleSaveEdit(item)} disabled={isSaving}>
+                              <Save className="w-3.5 h-3.5 text-green-600" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
+                              <X className="w-3.5 h-3.5 text-gray-500" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="ghost" size="sm" onClick={() => handleStartEdit(item)}>
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleEliminar(item.id)}>
+                              <Trash2 className="w-3 h-3 text-red-500" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
-                  {seccionesExpandidas.has(grupo.seccion) && grupo.items.map((item) => {
-                    const IconComponent = getPlateIcon(item.plato_seccion, item.plato_nombre)
-                    return (
-                <tr key={item.id} className={item.estado_margen === 'danger' ? 'bg-red-50' : ''}>
-                  <td className="px-2 py-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <div className="p-1 bg-orange-100 rounded flex-shrink-0">
-                        <IconComponent className="w-3 h-3 text-orange-600" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-medium text-gray-900">{item.plato_nombre}</span>
-                        <p className="text-[9px] text-gray-400">
-                          {item.plato_dias_actualizacion === 0
-                            ? 'Hoy'
-                            : item.plato_dias_actualizacion === 1
-                            ? 'Hace 1 día'
-                            : item.plato_dias_actualizacion > 0
-                            ? `Hace ${item.plato_dias_actualizacion}d`
-                            : ''}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleToggleEnCarta(item.id, tabActiva !== 'en_carta')
-                      }}
-                      className={`relative inline-flex h-4 w-[30px] items-center rounded-full transition-colors ${
-                        tabActiva === 'en_carta' ? 'bg-primary-600' : 'bg-gray-300'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
-                          tabActiva === 'en_carta' ? 'translate-x-[15px]' : 'translate-x-0.5'
-                        }`}
-                      />
-                    </button>
-                  </td>
-                  <td className="px-2 py-1.5 text-right text-[11px] text-gray-600 tabular-nums">
-                    <span className="text-gray-400">$</span>{item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-2 py-1.5 text-right text-[11px] text-gray-500 tabular-nums">
-                    <span className="text-gray-400">$</span>{item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-2 py-1.5 text-right">
-                    {editingId === item.id ? (
-                      <input
-                        type="number"
-                        value={editPrecio}
-                        onChange={(e) => setEditPrecio(e.target.value)}
-                        className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-[11px] text-right"
-                      />
-                    ) : (
-                      <span className="text-xs font-medium tabular-nums">
-                        <span className="text-gray-400 font-normal">$</span>{item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
-                    {editingId === item.id ? (
-                      <input
-                        type="number"
-                        value={editMargen}
-                        onChange={(e) => setEditMargen(e.target.value)}
-                        className="w-12 rounded border border-gray-300 px-1 py-0.5 text-[11px] text-center"
-                      />
-                    ) : (
-                      <span className="text-[11px] text-gray-600">{item.margen_objetivo}%</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      {getEstadoIcon(item.estado_margen)}
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(item.estado_margen)}`}>
-                        {item.food_cost_real.toFixed(1)}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-2 py-1.5 text-right text-[11px] font-bold text-green-700 bg-green-50 tabular-nums">
-                    <span className="text-green-500 font-normal">$</span>{(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <div className="flex justify-end gap-0.5">
-                      {editingId === item.id ? (
-                        <>
-                          <Button variant="ghost" size="sm" onClick={() => handleSaveEdit(item)} disabled={isSaving}>
-                            <Save className="w-3.5 h-3.5 text-green-600" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-                            <X className="w-3.5 h-3.5 text-gray-500" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button variant="ghost" size="sm" onClick={() => handleStartEdit(item)}>
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleEliminar(item.id)}>
-                            <Trash2 className="w-3 h-3 text-red-500" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                  )})}
-                </>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    )})}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Modal Agregar */}

@@ -320,33 +320,33 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
   if (!orden) return null
 
   return (
-    <div className="max-w-4xl">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="w-full lg:max-w-4xl">
+      <div className="flex items-center gap-3 mb-4 lg:mb-6">
         <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Orden de Compra{orden.numero ? ` ${orden.numero}` : ''}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg lg:text-2xl font-bold text-gray-900 truncate">
+            OC{orden.numero ? ` ${orden.numero}` : ''}
           </h1>
-          <p className="text-gray-600">{orden.proveedor_nombre}</p>
+          <p className="text-xs lg:text-base text-gray-600 truncate">{orden.proveedor_nombre}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${estadoColors[orden.estado]}`}>
+        <span className={`px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium whitespace-nowrap ${estadoColors[orden.estado]}`}>
           {estadoLabels[orden.estado]}
         </span>
       </div>
 
       {/* Banner: esta OC fue generada por faltantes */}
       {orden.orden_origen_id && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 flex items-center justify-between">
-          <p className="text-sm text-yellow-800">
-            Esta orden fue generada por faltantes de OC del{' '}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 lg:p-4 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <p className="text-xs lg:text-sm text-yellow-800">
+            Generada por faltantes de OC del{' '}
             <span className="font-medium">
               {ordenOrigenFecha ? formatearFecha(ordenOrigenFecha) : '...'}
             </span>
           </p>
           <Link href={`/ordenes-compra/${orden.orden_origen_id}`}>
-            <Button variant="ghost" size="sm" className="text-yellow-700">
+            <Button variant="ghost" size="sm" className="text-yellow-700 text-xs">
               Ver OC original
             </Button>
           </Link>
@@ -354,27 +354,27 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
       )}
 
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6 space-y-4 lg:space-y-6">
         {/* Info */}
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <p className="text-sm text-gray-500">Proveedor</p>
-            <p className="font-medium">{orden.proveedor_nombre}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+          <div className="col-span-2 lg:col-span-1">
+            <p className="text-xs lg:text-sm text-gray-500">Proveedor</p>
+            <p className="font-medium text-sm lg:text-base">{orden.proveedor_nombre}</p>
             {orden.proveedor_contacto && (
-              <p className="text-sm text-gray-500">{orden.proveedor_contacto}</p>
+              <p className="text-xs lg:text-sm text-gray-500">{orden.proveedor_contacto}</p>
             )}
             {orden.proveedor_telefono && (
-              <p className="text-sm text-gray-500">{orden.proveedor_telefono}</p>
+              <p className="text-xs lg:text-sm text-gray-500">{orden.proveedor_telefono}</p>
             )}
           </div>
           <div>
-            <p className="text-sm text-gray-500">Fecha</p>
-            <p className="font-medium">{formatearFecha(orden.fecha)}</p>
+            <p className="text-xs lg:text-sm text-gray-500">Fecha</p>
+            <p className="font-medium text-sm lg:text-base">{formatearFecha(orden.fecha)}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Estado</p>
+            <p className="text-xs lg:text-sm text-gray-500">Estado</p>
             {(orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida') ? (
-              <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium mt-1 ${estadoColors[orden.estado]}`}>
+              <span className={`inline-flex items-center px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium mt-1 ${estadoColors[orden.estado]}`}>
                 {estadoLabels[orden.estado]}
               </span>
             ) : (
@@ -393,10 +393,85 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         </div>
 
         {/* Items */}
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Items</h3>
+        <div className="border-t pt-4 lg:pt-6">
+          <h3 className="text-base lg:text-lg font-medium text-gray-900 mb-3 lg:mb-4">Items</h3>
 
-          <div className="border rounded-lg overflow-hidden">
+          {/* Vista móvil - Cards */}
+          <div className="lg:hidden space-y-2">
+            {orden.items.map((item) => {
+              const estado = getItemEstado(item)
+              const esCompleto = esParcial && estado === 'completo'
+              const esModificado = esParcial && (estado === 'parcial' || estado === 'no_entregado')
+              const fi = facturaItems.find(f => f.insumo_id === item.insumo_id)
+
+              return (
+                <div key={item.id} className={`border rounded-lg p-3 ${esCompleto ? 'bg-gray-50 border-gray-200' : esModificado ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Package className={`w-4 h-4 flex-shrink-0 ${
+                        esCompleto ? 'text-gray-300' :
+                        esModificado ? 'text-orange-400' : 'text-gray-400'
+                      }`} />
+                      <span className={`text-sm truncate ${
+                        esCompleto ? 'text-gray-400' :
+                        esModificado ? 'font-bold text-gray-900' : 'text-gray-900'
+                      }`}>{item.insumo_nombre}</span>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ml-2 ${
+                      esCompleto ? 'bg-gray-100 text-gray-400' :
+                      item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
+                      item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {item.iva_porcentaje}%
+                    </span>
+                  </div>
+                  {esModificado && estado === 'parcial' && fi && (
+                    <p className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded mb-2 inline-block">
+                      Recibido {fi.cantidad % 1 === 0 ? fi.cantidad : fi.cantidad.toLocaleString('es-AR')} de {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')}
+                    </p>
+                  )}
+                  {esModificado && estado === 'no_entregado' && (
+                    <p className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded mb-2 inline-block">No entregado</p>
+                  )}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className={esCompleto ? 'text-gray-400' : 'text-gray-600'}>
+                      {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')} {item.unidad_medida} × {formatearMoneda(item.precio_unitario)}
+                    </span>
+                    <span className={`font-medium ${esCompleto ? 'text-gray-400' : ''}`}>
+                      {formatearMoneda(item.subtotal)}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+            {/* Totales móvil */}
+            <div className="bg-gray-50 rounded-lg p-3 space-y-1 mt-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal Neto:</span>
+                <span>{formatearMoneda(subtotalNeto)}</span>
+              </div>
+              {totalIva21 > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">IVA 21%:</span>
+                  <span>{formatearMoneda(totalIva21)}</span>
+                </div>
+              )}
+              {totalIva105 > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">IVA 10.5%:</span>
+                  <span>{formatearMoneda(totalIva105)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-2 border-t border-gray-300">
+                <span className="font-medium">Total:</span>
+                <span className="text-lg font-bold text-green-600">{formatearMoneda(totalConIva)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Vista desktop - Tabla */}
+          <div className="hidden lg:block border rounded-lg overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -408,7 +483,6 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {/* Items de la OC */}
                 {orden.items.map((item) => {
                   const estado = getItemEstado(item)
                   const esCompleto = esParcial && estado === 'completo'
@@ -504,41 +578,41 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
 
         {/* Observaciones */}
         {orden.notas && (
-          <div className="border-t pt-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Observaciones</h3>
-            <p className="text-gray-700 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">{orden.notas}</p>
+          <div className="border-t pt-4 lg:pt-6">
+            <h3 className="text-xs lg:text-sm font-medium text-gray-500 mb-2">Observaciones</h3>
+            <p className="text-sm text-gray-700 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">{orden.notas}</p>
           </div>
         )}
 
         {/* Acciones */}
-        <div className="flex justify-between items-center border-t pt-6">
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-t pt-4 lg:pt-6">
+          <div className="flex flex-wrap gap-2">
             {(orden.estado === 'borrador' || orden.estado === 'enviada') && (
-              <Button variant="secondary" onClick={() => handleCambiarEstado('cancelada')}>
-                <X className="w-4 h-4 mr-2" />
-                Cancelar Orden
+              <Button variant="secondary" size="sm" onClick={() => handleCambiarEstado('cancelada')} className="text-xs lg:text-sm">
+                <X className="w-4 h-4 mr-1 lg:mr-2" />
+                Cancelar
               </Button>
             )}
             {esParcial && (
-              <Button onClick={handleGenerarOCFaltantes} disabled={isSaving}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nueva OC Faltantes
+              <Button size="sm" onClick={handleGenerarOCFaltantes} disabled={isSaving} className="text-xs lg:text-sm">
+                <Plus className="w-4 h-4 mr-1 lg:mr-2" />
+                OC Faltantes
               </Button>
             )}
           </div>
 
-          <div className="flex gap-2">
-            {!isReadOnly && orden.estado !== 'recibida' && orden.estado !== 'parcialmente_recibida' && orden.estado !== 'cancelada' && (
-              <Button variant="secondary" onClick={() => router.push(`/ordenes-compra/${orden.id}/editar`)}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Editar
-              </Button>
-            )}
+          <div className="flex flex-wrap gap-2 justify-end">
             {isReadOnly && (
               <span className="text-xs text-red-500 px-2 py-1">En papelera</span>
             )}
-            <Button variant="ghost" onClick={() => router.push('/ordenes-compra')}>
-              <LogOut className="w-4 h-4 mr-2" />
+            {!isReadOnly && orden.estado !== 'recibida' && orden.estado !== 'parcialmente_recibida' && orden.estado !== 'cancelada' && (
+              <Button variant="secondary" size="sm" onClick={() => router.push(`/ordenes-compra/${orden.id}/editar`)} className="text-xs lg:text-sm">
+                <Pencil className="w-4 h-4 mr-1 lg:mr-2" />
+                Editar
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => router.push('/ordenes-compra')} className="text-xs lg:text-sm">
+              <LogOut className="w-4 h-4 mr-1 lg:mr-2" />
               Salir
             </Button>
           </div>

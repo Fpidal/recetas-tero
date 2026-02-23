@@ -192,7 +192,6 @@ export async function generarPDFStock(categoria: CategoriaStock): Promise<void> 
 
   // === TABLA ===
   // Preparar datos con subsecciones si aplica
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tableData: any[][] = []
 
   if (config.subsecciones) {

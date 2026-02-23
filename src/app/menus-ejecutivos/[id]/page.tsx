@@ -141,15 +141,16 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
         costoUnitario = item.platos.costo_total
       }
 
+      const cantidad = parseFloat(item.cantidad)
       return {
         id: item.id,
         tipo,
         referencia_id,
         nombre: nombreItem,
-        cantidad: parseFloat(item.cantidad),
+        cantidad,
         unidad,
         costo_unitario: costoUnitario,
-        costo_linea: parseFloat(item.costo_linea),
+        costo_linea: cantidad * costoUnitario, // Recalcular con precios actuales
         es_bebida: item.es_bebida,
       }
     })

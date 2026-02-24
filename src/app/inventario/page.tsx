@@ -191,53 +191,93 @@ export default function InventarioPage() {
               </p>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Insumo</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Categoria</th>
-                    <th className="px-3 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Unidad</th>
-                    <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-blue-50">Stock</th>
-                    <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {inventario.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-3 py-1.5">
+            <>
+              {/* Mobile: Cards */}
+              <div className="sm:hidden space-y-2">
+                {inventario.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-lg border border-gray-200 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <Package className="w-3.5 h-3.5 text-gray-400" />
-                          <span className="text-xs font-medium text-gray-900">{item.nombre}</span>
+                          <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="text-sm font-medium text-gray-900 truncate">{item.nombre}</span>
                         </div>
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <span className="text-xs text-gray-600">
+                        <p className="text-xs text-gray-500 mt-1">
                           {CATEGORIAS[item.categoria] || item.categoria}
-                        </span>
-                      </td>
-                      <td className="px-3 py-1.5 text-center">
-                        <span className="text-xs text-gray-500">{item.unidad_medida}</span>
-                      </td>
-                      <td className="px-3 py-1.5 text-right bg-blue-50">
-                        <span className={`text-xs font-bold ${item.stock_total > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className={`text-lg font-bold ${item.stock_total > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
                           {formatearCantidad(item.stock_total)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-1.5 text-right">
-                        <button
-                          onClick={() => fetchMovimientos(item)}
-                          title="Ver movimientos"
-                          className="p-1 hover:bg-gray-100 rounded"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-gray-500" />
-                        </button>
-                      </td>
+                        </div>
+                        <p className="text-[10px] text-gray-400">{item.unidad_medida}</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t flex justify-end">
+                      <button
+                        onClick={() => fetchMovimientos(item)}
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Ver movimientos
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden sm:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Insumo</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Categoria</th>
+                      <th className="px-3 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Unidad</th>
+                      <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-blue-50">Stock</th>
+                      <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {inventario.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-3 py-1.5">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-3.5 h-3.5 text-gray-400" />
+                            <span className="text-xs font-medium text-gray-900">{item.nombre}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <span className="text-xs text-gray-600">
+                            {CATEGORIAS[item.categoria] || item.categoria}
+                          </span>
+                        </td>
+                        <td className="px-3 py-1.5 text-center">
+                          <span className="text-xs text-gray-500">{item.unidad_medida}</span>
+                        </td>
+                        <td className="px-3 py-1.5 text-right bg-blue-50">
+                          <span className={`text-xs font-bold ${item.stock_total > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
+                            {formatearCantidad(item.stock_total)}
+                          </span>
+                        </td>
+                        <td className="px-3 py-1.5 text-right">
+                          <button
+                            onClick={() => fetchMovimientos(item)}
+                            title="Ver movimientos"
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-gray-500" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {/* Modal de movimientos */}
@@ -266,7 +306,29 @@ export default function InventarioPage() {
                   </p>
                 </div>
 
-                <div className="border rounded-lg overflow-hidden">
+                {/* Mobile: Cards */}
+                <div className="sm:hidden space-y-2">
+                  {movimientos.map((mov, idx) => (
+                    <div key={idx} className={`rounded-lg border p-3 ${idx === 0 ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs text-gray-500">
+                            {new Date(mov.fecha).toLocaleDateString('es-AR')}
+                          </p>
+                          <p className="text-sm font-medium text-gray-900">{mov.numero_factura}</p>
+                          <p className="text-xs text-gray-500">{mov.proveedor_nombre}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-blue-700">+{formatearCantidad(mov.cantidad)}</p>
+                          <p className="text-xs text-gray-500">{formatearMoneda(mov.precio_unitario)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: Table */}
+                <div className="hidden sm:block border rounded-lg overflow-hidden">
                   <table className="min-w-full divide-y divide-gray-200 text-sm">
                     <thead className="bg-gray-50">
                       <tr>

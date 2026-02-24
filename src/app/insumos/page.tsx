@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, LineChart as LineChartIcon, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, LineChart as LineChartIcon, Search, Package, BarChart2 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Modal, Select } from '@/components/ui'
 import { CategoriaInsumo, UnidadMedida } from '@/types/database'
 import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
+import ComparadorPrecios from '@/components/insumos/ComparadorPrecios'
 
 interface InsumoCompleto {
   id: string
@@ -90,7 +91,10 @@ interface HistorialPrecio {
   cantidad: number | null
 }
 
+type TabType = 'insumos' | 'comparador'
+
 export default function InsumosPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('insumos')
   const [insumos, setInsumos] = useState<InsumoCompleto[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -391,6 +395,11 @@ export default function InsumosPage() {
     return formatearMoneda(value, true)
   }
 
+  const tabs = [
+    { id: 'insumos' as TabType, label: 'Insumos', icon: Package },
+    { id: 'comparador' as TabType, label: 'Comparador de Precios', icon: BarChart2 },
+  ]
+
   // Card para mobile
   const InsumoCard = ({ insumo }: { insumo: InsumoCompleto }) => {
     const cantPaq = insumo.cantidad_por_paquete || 1
@@ -472,14 +481,46 @@ export default function InsumosPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Insumos</h1>
-          <p className="text-sm text-gray-600">Mercadería y materias primas</p>
+          <p className="text-sm text-gray-600">
+            {activeTab === 'insumos' ? 'Mercadería y materias primas' : 'Comparar precios entre proveedores'}
+          </p>
         </div>
-        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo Insumo
-        </Button>
+        {activeTab === 'insumos' && (
+          <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo Insumo
+          </Button>
+        )}
       </div>
 
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-6">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
+
+      {activeTab === 'comparador' ? (
+        <ComparadorPrecios />
+      ) : (
+        <>
       <div className="mb-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 sm:flex-none">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -903,6 +944,8 @@ export default function InsumosPage() {
           </div>
         )}
       </Modal>
+        </>
+      )}
     </div>
   )
 }

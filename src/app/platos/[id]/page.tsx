@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Trash2, ArrowLeft, Save, Package, ChefHat, RefreshCw, FileDown, ClipboardList } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
@@ -52,6 +52,8 @@ interface Ingrediente {
 export default function EditarPlatoPage({ params }: { params: { id: string } }) {
   const { id } = params
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const viewMode = searchParams.get('view') === 'true'
   const [nombre, setNombre] = useState('')
   const [seccion, setSeccion] = useState('Principales')
   const [descripcion, setDescripcion] = useState('')
@@ -69,6 +71,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isReadOnly, setIsReadOnly] = useState(false)
+  const [isInPapelera, setIsInPapelera] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -145,7 +148,8 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
     setPasoAPaso(plato.paso_a_paso || '')
     setRendimiento(plato.rendimiento_porciones || 1)
     setVersionReceta(plato.version_receta || '1.0')
-    setIsReadOnly(plato.activo === false)
+    setIsInPapelera(plato.activo === false)
+    setIsReadOnly(plato.activo === false || viewMode)
 
     // Cargar ingredientes
     const { data: ingredientesData } = await supabase
@@ -642,7 +646,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
           <h1 className="text-lg sm:text-xl font-bold text-gray-900">
             {isReadOnly ? 'Ver Plato' : 'Editar Plato'}
           </h1>
-          {isReadOnly && (
+          {isInPapelera && (
             <span className="text-xs text-red-500">En papelera</span>
           )}
         </div>
@@ -677,7 +681,8 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               <input
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                disabled={isReadOnly}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Ej: Bife de Chorizo"
               />
             </div>
@@ -686,7 +691,8 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               <select
                 value={seccion}
                 onChange={(e) => setSeccion(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                disabled={isReadOnly}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="Entradas">Entradas</option>
                 <option value="Principales">Principales</option>
@@ -702,7 +708,8 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                 min="1"
                 value={rendimiento.toString()}
                 onChange={(e) => setRendimiento(parseInt(e.target.value) || 1)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                disabled={isReadOnly}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             </div>
             <div className="col-span-2 sm:flex-1">
@@ -710,7 +717,8 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               <input
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                disabled={isReadOnly}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Descripción opcional del plato..."
               />
             </div>
@@ -718,6 +726,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
 
           {/* Fila de agregar ingrediente + botones de acción */}
           {/* Mobile: Stack vertical */}
+          {!isReadOnly && (
           <div className="sm:hidden space-y-3">
             <div className="flex gap-2">
               <button
@@ -791,8 +800,10 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               )}
             </div>
           </div>
+          )}
 
           {/* Desktop: Row */}
+          {!isReadOnly && (
           <div className="hidden sm:flex gap-2 items-end">
             <div className="flex gap-1">
               <button
@@ -862,6 +873,20 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               )}
             </div>
           </div>
+          )}
+
+          {/* Read-only mode: Solo botones */}
+          {isReadOnly && (
+            <div className="flex gap-2 items-center justify-end">
+              <Button variant="secondary" size="sm" onClick={handleGenerarPDF} disabled={ingredientes.length === 0}>
+                <FileDown className="w-4 h-4 mr-1" />
+                Descargar PDF
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => router.back()}>
+                Volver
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Parte con scroll - lista de ingredientes */}
@@ -883,13 +908,15 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                         )}
                         <span className="text-sm font-medium text-gray-900 truncate">{ing.nombre}</span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEliminarIngrediente(ing)}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
+                      {!isReadOnly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEliminarIngrediente(ing)}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      )}
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div>
@@ -900,7 +927,8 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                             inputMode="decimal"
                             value={typeof ing.cantidad === 'string' ? ing.cantidad : ing.cantidad.toString().replace('.', ',')}
                             onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
-                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                            disabled={isReadOnly}
+                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                           />
                           <span className="text-xs text-gray-500">{ing.unidad}</span>
                         </div>
@@ -933,7 +961,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                       <th className="px-2 py-2 text-right text-xs font-medium text-gray-500">C.Unit.</th>
                       <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-green-50">C.Total</th>
                       <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 bg-blue-50">%</th>
-                      <th className="px-2 py-2"></th>
+                      {!isReadOnly && <th className="px-2 py-2"></th>}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -953,7 +981,8 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                             inputMode="decimal"
                             value={typeof ing.cantidad === 'string' ? ing.cantidad : ing.cantidad.toString().replace('.', ',')}
                             onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
-                            className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
+                            disabled={isReadOnly}
+                            className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs disabled:bg-gray-100 disabled:cursor-not-allowed"
                           />
                           <span className="ml-1 text-xs text-gray-500">{ing.unidad}</span>
                         </td>
@@ -966,15 +995,17 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                         <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
                           {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
                         </td>
-                        <td className="px-2 py-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEliminarIngrediente(ing)}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                          </Button>
-                        </td>
+                        {!isReadOnly && (
+                          <td className="px-2 py-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEliminarIngrediente(ing)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            </Button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -1062,8 +1093,9 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               <textarea
                 value={pasoAPaso}
                 onChange={(e) => setPasoAPaso(e.target.value)}
+                disabled={isReadOnly}
                 placeholder="Ej: Sellar las vieiras, napar con salsa, gratinar 3 min…"
-                className="w-full h-32 text-xs border border-gray-200 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder:text-gray-300"
+                className="w-full h-32 text-xs border border-gray-200 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder:text-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             </div>
           </div>

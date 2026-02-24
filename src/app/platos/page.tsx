@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, Package, BookOpen, type LucideIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, Package, BookOpen, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
 import Link from 'next/link'
@@ -290,6 +290,12 @@ export default function PlatosPage() {
       )}
 
       <div className="flex justify-end gap-2 pt-3 border-t">
+        <Link href={`/platos/${plato.id}?view=true`}>
+          <Button variant="ghost" size="sm">
+            <Eye className="w-4 h-4 mr-1" />
+            Ver
+          </Button>
+        </Link>
         <Link href={`/platos/${plato.id}`}>
           <Button variant="ghost" size="sm">
             <Pencil className="w-4 h-4 mr-1" />
@@ -462,8 +468,13 @@ export default function PlatosPage() {
                         </td>
                         <td className="px-4 py-2 text-right">
                           <div className="flex justify-end gap-1">
+                            <Link href={`/platos/${p.id}?view=true`}>
+                              <Button variant="ghost" size="sm" title="Ver receta">
+                                <Eye className="w-3.5 h-3.5 text-blue-500" />
+                              </Button>
+                            </Link>
                             <Link href={`/platos/${p.id}`}>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" title="Editar receta">
                                 <Pencil className="w-3.5 h-3.5" />
                               </Button>
                             </Link>

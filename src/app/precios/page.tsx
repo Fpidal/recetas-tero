@@ -314,7 +314,10 @@ export default function PreciosPage() {
           // Solo incluir si tiene precio base y precio en esta fecha
           if (precioBase && precioBase > 0 && precioDelDia !== undefined) {
             const variacion = ((precioDelDia - precioBase) / precioBase) * 100
-            variacionesDelDia.push(variacion)
+            // Filtrar outliers: variaciones mayores a 200% son probables errores
+            if (Math.abs(variacion) <= 200) {
+              variacionesDelDia.push(variacion)
+            }
           }
         })
 
@@ -350,6 +353,7 @@ export default function PreciosPage() {
       if (preciosCat.length === 0) return null
 
       // Calcular variación individual de cada insumo que tiene 2+ registros
+      // Excluir variaciones extremas (>200%) que son probables errores de carga
       const variacionesPorInsumo: number[] = []
 
       categInsumos.forEach(insumo => {
@@ -362,7 +366,10 @@ export default function PreciosPage() {
           const ultimo = preciosInsumo[preciosInsumo.length - 1].precio
           if (primero > 0) {
             const varInsumo = ((ultimo - primero) / primero) * 100
-            variacionesPorInsumo.push(varInsumo)
+            // Filtrar outliers: variaciones mayores a 200% son probables errores
+            if (Math.abs(varInsumo) <= 200) {
+              variacionesPorInsumo.push(varInsumo)
+            }
           }
         }
       })

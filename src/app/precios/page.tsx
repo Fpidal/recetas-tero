@@ -21,14 +21,6 @@ interface PrecioRaw {
 
 const COLORES = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed']
 
-// Función para calcular mediana (más resistente a outliers que el promedio)
-function calcularMediana(valores: number[]): number {
-  if (valores.length === 0) return 0
-  const sorted = [...valores].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
-}
-
 const PERIODOS = [
   { value: '30', label: 'Últimos 30 días' },
   { value: '60', label: 'Últimos 60 días' },
@@ -271,10 +263,15 @@ export default function PreciosPage() {
   }, [categPreciosRaw, selectedCategoria, insumos])
 
   // Chart data para comparativa de todas las categorías (variación % acumulada)
+  // Solo considera insumos que tienen precios cargados en el período
   const allCategChartData = useMemo(() => {
     if (allCategPreciosRaw.length === 0 || insumos.length === 0) return []
 
-    const categorias = Array.from(new Set(insumos.map(i => i.categoria)))
+    // Solo insumos que tienen precios en el período
+    const insumosConPrecios = new Set(allCategPreciosRaw.map(p => p.insumo_id))
+    const insumosActivos = insumos.filter(i => insumosConPrecios.has(i.id))
+
+    const categorias = Array.from(new Set(insumosActivos.map(i => i.categoria)))
 
     // Para cada insumo, guardar su precio base (primer precio del período)
     const precioBaseInsumo: Record<string, number> = {}
@@ -307,7 +304,7 @@ export default function PreciosPage() {
       }
 
       categorias.forEach(cat => {
-        const categInsumos = insumos.filter(i => i.categoria === cat)
+        const categInsumos = insumosActivos.filter(i => i.categoria === cat)
         const variacionesDelDia: number[] = []
 
         categInsumos.forEach(insumo => {
@@ -321,9 +318,10 @@ export default function PreciosPage() {
           }
         })
 
-        // La variación de la categoría en este día es la mediana de las variaciones individuales
+        // La variación de la categoría en este día es el PROMEDIO de las variaciones individuales
         if (variacionesDelDia.length > 0) {
-          punto[CATEG_LABELS[cat] || cat] = parseFloat(calcularMediana(variacionesDelDia).toFixed(1))
+          const promedio = variacionesDelDia.reduce((sum, v) => sum + v, 0) / variacionesDelDia.length
+          punto[CATEG_LABELS[cat] || cat] = parseFloat(promedio.toFixed(1))
         }
       })
 
@@ -332,19 +330,26 @@ export default function PreciosPage() {
   }, [allCategPreciosRaw, insumos])
 
   // Resumen de categorías para la tabla
+  // Solo considera insumos que tienen precios cargados en el período seleccionado
   const allCategResumen = useMemo(() => {
     if (allCategPreciosRaw.length === 0 || insumos.length === 0) return []
 
-    const categorias = Array.from(new Set(insumos.map(i => i.categoria)))
+    // Obtener IDs de insumos que tienen precios en el período
+    const insumosConPrecios = new Set(allCategPreciosRaw.map(p => p.insumo_id))
+
+    // Solo considerar insumos que realmente tienen precios cargados en el período
+    const insumosActivos = insumos.filter(i => insumosConPrecios.has(i.id))
+
+    const categorias = Array.from(new Set(insumosActivos.map(i => i.categoria)))
 
     return categorias.map(cat => {
-      const categInsumos = insumos.filter(i => i.categoria === cat)
+      const categInsumos = insumosActivos.filter(i => i.categoria === cat)
       const categInsumoIds = categInsumos.map(i => i.id)
       const preciosCat = allCategPreciosRaw.filter(p => categInsumoIds.includes(p.insumo_id))
 
       if (preciosCat.length === 0) return null
 
-      // Calcular variación individual de cada insumo
+      // Calcular variación individual de cada insumo que tiene 2+ registros
       const variacionesPorInsumo: number[] = []
 
       categInsumos.forEach(insumo => {
@@ -362,16 +367,16 @@ export default function PreciosPage() {
         }
       })
 
-      // La variación de la categoría es la mediana de las variaciones individuales
+      // La variación de la categoría es el PROMEDIO de las variaciones individuales
       const variacion = variacionesPorInsumo.length > 0
-        ? calcularMediana(variacionesPorInsumo)
+        ? variacionesPorInsumo.reduce((sum, v) => sum + v, 0) / variacionesPorInsumo.length
         : 0
 
       return {
         categoria: cat,
         label: CATEG_LABELS[cat] || cat,
         color: CATEG_COLORES[cat] || '#6b7280',
-        insumos: categInsumoIds.length,
+        insumos: categInsumos.length, // Solo insumos con precios en el período
         variacion,
         registros: preciosCat.length,
         insumosConVariacion: variacionesPorInsumo.length,
@@ -648,7 +653,7 @@ export default function PreciosPage() {
                     </ResponsiveContainer>
                   </div>
                   <p className="text-[10px] text-gray-400 mt-2 text-center">
-                    Variación % respecto al primer día del período (mediana de precios por categoría)
+                    Variación % respecto al primer día del período (promedio de insumos con movimiento)
                   </p>
                 </div>
 

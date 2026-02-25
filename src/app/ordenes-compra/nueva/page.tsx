@@ -29,6 +29,7 @@ interface ItemOrden {
   insumo_id: string
   insumo_nombre: string
   unidad_medida: string
+  unidad_display: string // Unidad visual para la OC (puede ser diferente a unidad_medida)
   contenido: number
   cantidad: number
   precio_unitario: number
@@ -124,6 +125,7 @@ export default function NuevaOrdenCompraPage() {
       insumo_id: insumo.id,
       insumo_nombre: insumo.nombre,
       unidad_medida: insumo.unidad_medida,
+      unidad_display: insumo.unidad_medida, // Por defecto la misma unidad
       contenido,
       cantidad: cantidadNum,
       precio_unitario: precioNum,
@@ -185,6 +187,15 @@ export default function NuevaOrdenCompraPage() {
           iva_porcentaje: nuevoIva,
           iva_monto: ivaMonto,
         }
+      }
+      return item
+    }))
+  }
+
+  function handleUnidadDisplayChange(id: string, nuevaUnidad: string) {
+    setItems(items.map(item => {
+      if (item.id === id) {
+        return { ...item, unidad_display: nuevaUnidad }
       }
       return item
     }))
@@ -299,6 +310,7 @@ export default function NuevaOrdenCompraPage() {
       insumo_id: item.insumo_id,
       cantidad: item.cantidad,
       precio_unitario: item.precio_unitario,
+      unidad_display: item.unidad_display !== item.unidad_medida ? item.unidad_display : null,
     }))
 
     const { error: itemsError } = await supabase
@@ -548,7 +560,14 @@ export default function NuevaOrdenCompraPage() {
                             onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-14 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
-                          <span className="text-xs text-gray-500">{item.unidad_medida}</span>
+                          <select
+                            value={item.unidad_display}
+                            onChange={(e) => handleUnidadDisplayChange(item.id, e.target.value)}
+                            className="text-xs text-gray-600 bg-gray-100 border-0 rounded px-1 py-0.5 cursor-pointer"
+                          >
+                            <option value={item.unidad_medida}>{item.unidad_medida}</option>
+                            {item.unidad_medida !== 'unidad' && <option value="unidad">unidad</option>}
+                          </select>
                         </div>
                       </div>
                       <div>
@@ -636,14 +655,23 @@ export default function NuevaOrdenCompraPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={String(item.cantidad).replace('.', ',')}
-                            onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
-                            className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
-                          />
-                          <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={String(item.cantidad).replace('.', ',')}
+                              onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                              className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                            />
+                            <select
+                              value={item.unidad_display}
+                              onChange={(e) => handleUnidadDisplayChange(item.id, e.target.value)}
+                              className="text-sm text-gray-600 bg-gray-100 border-0 rounded px-1.5 py-1 cursor-pointer"
+                            >
+                              <option value={item.unidad_medida}>{item.unidad_medida}</option>
+                              {item.unidad_medida !== 'unidad' && <option value="unidad">unidad</option>}
+                            </select>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center">

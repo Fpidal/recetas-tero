@@ -15,6 +15,7 @@ interface OrdenPDF {
   items: {
     insumo_nombre: string
     unidad_medida: string
+    unidad_display: string // Unidad visual para el proveedor
     cantidad: number
     precio_unitario: number
     subtotal: number
@@ -40,7 +41,7 @@ export async function generarPDFOrden(ordenId: string) {
       id, numero, fecha, notas, estado,
       proveedores (nombre, contacto, telefono, email, direccion),
       orden_compra_items (
-        cantidad, precio_unitario, subtotal,
+        cantidad, precio_unitario, subtotal, unidad_display,
         insumos (nombre, unidad_medida, iva_porcentaje)
       )
     `)
@@ -68,9 +69,11 @@ export async function generarPDFOrden(ordenId: string) {
       const subtotal = parseFloat(item.subtotal)
       const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
+      const unidadMedida = item.insumos?.unidad_medida || ''
       return {
         insumo_nombre: item.insumos?.nombre || 'Desconocido',
-        unidad_medida: item.insumos?.unidad_medida || '',
+        unidad_medida: unidadMedida,
+        unidad_display: item.unidad_display || unidadMedida, // Usar unidad_display si existe
         cantidad: parseFloat(item.cantidad),
         precio_unitario: parseFloat(item.precio_unitario),
         subtotal,
@@ -300,7 +303,7 @@ export async function generarPDFOrden(ordenId: string) {
 
     doc.setTextColor(120, 120, 120)
     doc.setFontSize(6)
-    doc.text(item.unidad_medida, colX.unidad, textY)
+    doc.text(item.unidad_display, colX.unidad, textY)
     doc.setFontSize(6.5)
 
     doc.setTextColor(50, 50, 50)

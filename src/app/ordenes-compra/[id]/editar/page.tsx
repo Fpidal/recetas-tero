@@ -28,6 +28,7 @@ interface ItemOrden {
   insumo_id: string
   insumo_nombre: string
   unidad_medida: string
+  unidad_display: string
   contenido: number
   cantidad: number
   precio_unitario: number
@@ -82,7 +83,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         .select(`
           id, proveedor_id, notas, estado,
           orden_compra_items (
-            id, insumo_id, cantidad, precio_unitario, subtotal,
+            id, insumo_id, cantidad, precio_unitario, subtotal, unidad_display,
             insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete)
           )
         `)
@@ -102,11 +103,13 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
         const contenido = item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1
+        const unidadMedida = item.insumos?.unidad_medida || ''
         return {
           id: item.id,
           insumo_id: item.insumo_id,
           insumo_nombre: item.insumos?.nombre || 'Desconocido',
-          unidad_medida: item.insumos?.unidad_medida || '',
+          unidad_medida: unidadMedida,
+          unidad_display: item.unidad_display || unidadMedida, // Si no tiene, usar la unidad por defecto
           contenido,
           cantidad: parseFloat(item.cantidad),
           precio_unitario: parseFloat(item.precio_unitario),
@@ -162,6 +165,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
       insumo_id: insumo.id,
       insumo_nombre: insumo.nombre,
       unidad_medida: insumo.unidad_medida,
+      unidad_display: insumo.unidad_medida, // Por defecto usa la unidad del insumo
       contenido,
       cantidad: cantidadNum,
       precio_unitario: precioNum,
@@ -234,6 +238,15 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     }))
   }
 
+  function handleUnidadDisplayChange(itemId: string, nuevaUnidad: string) {
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        return { ...item, unidad_display: nuevaUnidad }
+      }
+      return item
+    }))
+  }
+
   const itemsActivos = items.filter(i => !i.isDeleted)
   const subtotalNeto = itemsActivos.reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva21 = itemsActivos.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
@@ -294,6 +307,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         .update({
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
+          unidad_display: item.unidad_display,
         })
         .eq('id', item.id)
 
@@ -310,6 +324,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         insumo_id: item.insumo_id,
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
+        unidad_display: item.unidad_display,
       }))
 
       console.log('Insertando items nuevos:', insertData)
@@ -537,7 +552,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     <div className="grid grid-cols-3 gap-2">
                       <div>
                         <label className="text-[10px] text-gray-500">Cantidad</label>
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-1">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -545,8 +560,15 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                             onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                           />
+                          <select
+                            value={item.unidad_display}
+                            onChange={(e) => handleUnidadDisplayChange(item.id, e.target.value)}
+                            className="text-[10px] px-1 py-1 border border-gray-300 rounded bg-white cursor-pointer"
+                          >
+                            <option value={item.unidad_medida}>{item.unidad_medida}</option>
+                            {item.unidad_medida !== 'unidad' && <option value="unidad">unidad</option>}
+                          </select>
                         </div>
-                        <span className="text-[10px] text-gray-400">{item.unidad_medida}</span>
                       </div>
                       <div>
                         <label className="text-[10px] text-gray-500">Precio Unit.</label>
@@ -643,14 +665,23 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={String(item.cantidad).replace('.', ',')}
-                            onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
-                            className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
-                          />
-                          <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={String(item.cantidad).replace('.', ',')}
+                              onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                              className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                            />
+                            <select
+                              value={item.unidad_display}
+                              onChange={(e) => handleUnidadDisplayChange(item.id, e.target.value)}
+                              className="text-sm px-1 py-1 border border-gray-300 rounded bg-white cursor-pointer"
+                            >
+                              <option value={item.unidad_medida}>{item.unidad_medida}</option>
+                              {item.unidad_medida !== 'unidad' && <option value="unidad">unidad</option>}
+                            </select>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center">

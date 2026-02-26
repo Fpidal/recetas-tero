@@ -50,16 +50,21 @@ export default function MenusEjecutivosPage() {
     }
   }
 
-  function calcularPrecioSugerido(costo: number, margen: number): number {
-    return costo / (1 - margen / 100)
+  function calcularPrecioSugerido(costo: number, fcObjetivo: number): number {
+    // P.Sug = Costo / (FC Objetivo / 100)
+    // Donde FC Objetivo es el % de food cost deseado
+    return fcObjetivo > 0 ? costo / (fcObjetivo / 100) : 0
   }
 
   function calcularFoodCost(costo: number, precio: number): number {
     return precio > 0 ? (costo / precio) * 100 : 0
   }
 
-  function getEstadoMargen(foodCost: number, margenObjetivo: number): 'ok' | 'warning' | 'danger' {
-    const fcObjetivo = 100 - margenObjetivo
+  function getEstadoMargen(foodCost: number, fcObjetivo: number): 'ok' | 'warning' | 'danger' {
+    // fcObjetivo es el % de food cost objetivo (ej: 30%)
+    // OK si el FC real está por debajo o igual al objetivo
+    // Warning si está hasta 5 puntos por encima
+    // Danger si está más de 5 puntos por encima
     if (foodCost <= fcObjetivo) return 'ok'
     if (foodCost <= fcObjetivo + 5) return 'warning'
     return 'danger'

@@ -126,11 +126,15 @@ export interface Database {
           nombre: string
           descripcion: string | null
           costo_total: number
+          precio_carta: number
+          margen_objetivo: number
+          precio_sugerido: number
+          food_cost_real: number
           activo: boolean
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['menus_ejecutivos']['Row'], 'id' | 'created_at' | 'updated_at' | 'costo_total'>
+        Insert: Omit<Database['public']['Tables']['menus_ejecutivos']['Row'], 'id' | 'created_at' | 'updated_at' | 'costo_total' | 'precio_sugerido' | 'food_cost_real'>
         Update: Partial<Database['public']['Tables']['menus_ejecutivos']['Insert']>
       }
       menu_ejecutivo_items: {

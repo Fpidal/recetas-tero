@@ -28,6 +28,7 @@ interface OrdenDetalle {
     insumo_id: string
     insumo_nombre: string
     unidad_medida: string
+    unidad_display: string
     contenido: number
     cantidad: number
     precio_unitario: number
@@ -96,6 +97,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           cantidad,
           precio_unitario,
           subtotal,
+          unidad_display,
           insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete)
         )
       `)
@@ -129,11 +131,13 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
         const contenido = item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1
+        const unidadMedida = item.insumos?.unidad_medida || ''
         return {
           id: item.id,
           insumo_id: item.insumo_id,
           insumo_nombre: item.insumos?.nombre || 'Desconocido',
-          unidad_medida: item.insumos?.unidad_medida || '',
+          unidad_medida: unidadMedida,
+          unidad_display: item.unidad_display || unidadMedida,
           contenido,
           cantidad: parseFloat(item.cantidad),
           precio_unitario: parseFloat(item.precio_unitario),
@@ -442,7 +446,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                   )}
                   <div className="flex justify-between items-center text-sm">
                     <span className={esCompleto ? 'text-gray-400' : 'text-gray-600'}>
-                      {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')} {item.unidad_medida} × {formatearMoneda(item.precio_unitario)}
+                      {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')} {item.unidad_display} × {formatearMoneda(item.precio_unitario)}
                     </span>
                     <span className={`font-medium ${esCompleto ? 'text-gray-400' : ''}`}>
                       {formatearMoneda(item.subtotal)}
@@ -521,7 +525,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                         </div>
                       </td>
                       <td className={`px-4 py-3 text-sm ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
-                        {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')} {item.unidad_medida}
+                        {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')} {item.unidad_display}
                       </td>
                       <td className={`px-4 py-3 text-sm text-right ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
                         {formatearMoneda(item.precio_unitario)}

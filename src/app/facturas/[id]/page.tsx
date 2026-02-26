@@ -204,7 +204,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
     router.push('/facturas')
   }
 
-  // Helper: badge de comparación con OC
+  // Helper: badge de comparación con OC (solo cantidad)
   function getComparacionBadge(item: FacturaDetalle['items'][0]) {
     if (ocItems.length === 0) return null
     const ocItem = ocItems.find(oc => oc.insumo_id === item.insumo_id)
@@ -213,30 +213,84 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
       return <span className="ml-2 text-xs px-1.5 py-0.5 bg-green-200 text-green-800 rounded">Nuevo</span>
     }
 
-    const badges = []
-
     // Badge de cantidad
     if (item.cantidad >= ocItem.cantidad) {
-      badges.push(<span key="cant" className="ml-2 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">Completo</span>)
+      return <span className="ml-2 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">Completo</span>
     } else {
-      badges.push(
-        <span key="cant" className="ml-2 text-xs px-1.5 py-0.5 bg-yellow-200 text-yellow-800 rounded">
+      return (
+        <span className="ml-2 text-xs px-1.5 py-0.5 bg-yellow-200 text-yellow-800 rounded">
           Parcial ({item.cantidad} de {ocItem.cantidad})
         </span>
       )
     }
+  }
 
-    // Badge de precio diferente
-    if (item.precio_unitario !== ocItem.precio_unitario) {
-      badges.push(
-        <span key="precio" className="ml-1 text-xs px-1.5 py-0.5 bg-orange-200 text-orange-800 rounded" title={`OC: ${formatearMoneda(ocItem.precio_unitario)}`}>
-          Precio dif.
-        </span>
+  // Helper: mostrar precio con comparación vs OC
+  function getPrecioConComparacion(item: FacturaDetalle['items'][0], mobile: boolean = false) {
+    const ocItem = ocItems.find(oc => oc.insumo_id === item.insumo_id)
+
+    if (!ocItem || item.precio_unitario === ocItem.precio_unitario) {
+      // Sin OC o precio igual
+      return <span>{formatearMoneda(item.precio_unitario)}</span>
+    }
+
+    // Calcular diferencia porcentual
+    const diferencia = item.precio_unitario - ocItem.precio_unitario
+    const porcentaje = ((diferencia / ocItem.precio_unitario) * 100).toFixed(1)
+    const subio = diferencia > 0
+
+    if (mobile) {
+      return (
+        <div className="flex flex-col items-end">
+          <span className="font-medium">{formatearMoneda(item.precio_unitario)}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-400 line-through">{formatearMoneda(ocItem.precio_unitario)}</span>
+            <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${subio ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+              {subio ? '▲' : '▼'} {Math.abs(parseFloat(porcentaje))}%
+            </span>
+          </div>
+        </div>
       )
     }
 
-    return <>{badges}</>
+    return (
+      <div className="flex flex-col items-end">
+        <span>{formatearMoneda(item.precio_unitario)}</span>
+        <div className="flex items-center gap-1 mt-0.5">
+          <span className="text-xs text-gray-400 line-through">{formatearMoneda(ocItem.precio_unitario)}</span>
+          <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${subio ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            {subio ? '▲' : '▼'} {Math.abs(parseFloat(porcentaje))}%
+          </span>
+        </div>
+      </div>
+    )
   }
+
+  // Calcular diferencia total vs OC
+  function calcularDiferenciaTotalOC() {
+    if (ocItems.length === 0 || !factura) return null
+
+    let totalFactura = 0
+    let totalOC = 0
+
+    factura.items.forEach(item => {
+      const ocItem = ocItems.find(oc => oc.insumo_id === item.insumo_id)
+      totalFactura += item.cantidad * item.precio_unitario
+      if (ocItem) {
+        totalOC += item.cantidad * ocItem.precio_unitario // Usar cantidad de factura para comparación justa
+      } else {
+        totalOC += item.cantidad * item.precio_unitario // Item nuevo, no hay diferencia
+      }
+    })
+
+    const diferencia = totalFactura - totalOC
+    if (diferencia === 0) return null
+
+    const porcentaje = ((diferencia / totalOC) * 100).toFixed(1)
+    return { diferencia, porcentaje, subio: diferencia > 0 }
+  }
+
+  const diferenciaOC = factura ? calcularDiferenciaTotalOC() : null
 
   // Items de la OC que no están en la factura
   const itemsNoEntregados = ocItems.filter(
@@ -307,8 +361,13 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                 )}
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-600">
-                    {item.cantidad} {item.unidad_medida} × {formatearMoneda(item.precio_unitario)}
+                    {item.cantidad} {item.unidad_medida} ×
                   </span>
+                  <div className="flex items-center gap-2">
+                    {getPrecioConComparacion(item, true)}
+                  </div>
+                </div>
+                <div className="flex justify-end mt-1">
                   <span className="font-medium">{formatearMoneda(item.subtotal)}</span>
                 </div>
               </div>
@@ -350,6 +409,16 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                 <span className="font-medium">Total:</span>
                 <span className="text-lg font-bold text-green-600">{formatearMoneda(totalConIva)}</span>
               </div>
+              {diferenciaOC && (
+                <div className={`flex justify-between pt-2 mt-2 border-t ${diferenciaOC.subio ? 'border-red-200' : 'border-green-200'}`}>
+                  <span className={`text-sm ${diferenciaOC.subio ? 'text-red-600' : 'text-green-600'}`}>
+                    Dif. vs OC:
+                  </span>
+                  <span className={`text-sm font-bold ${diferenciaOC.subio ? 'text-red-600' : 'text-green-600'}`}>
+                    {diferenciaOC.subio ? '+' : ''}{formatearMoneda(diferenciaOC.diferencia)} ({diferenciaOC.subio ? '▲' : '▼'} {Math.abs(parseFloat(diferenciaOC.porcentaje))}%)
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -379,7 +448,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                       {item.cantidad} {item.unidad_medida}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      {formatearMoneda(item.precio_unitario)}
+                      {getPrecioConComparacion(item)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -464,6 +533,16 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                     {formatearMoneda(totalConIva)}
                   </td>
                 </tr>
+                {diferenciaOC && (
+                  <tr className={diferenciaOC.subio ? 'bg-red-50' : 'bg-green-50'}>
+                    <td colSpan={4} className={`px-4 py-2 text-right text-sm ${diferenciaOC.subio ? 'text-red-600' : 'text-green-600'}`}>
+                      Diferencia vs OC:
+                    </td>
+                    <td className={`px-4 py-2 text-right text-sm font-bold ${diferenciaOC.subio ? 'text-red-600' : 'text-green-600'}`}>
+                      {diferenciaOC.subio ? '+' : ''}{formatearMoneda(diferenciaOC.diferencia)} ({diferenciaOC.subio ? '▲' : '▼'} {Math.abs(parseFloat(diferenciaOC.porcentaje))}%)
+                    </td>
+                  </tr>
+                )}
               </tfoot>
             </table>
           </div>

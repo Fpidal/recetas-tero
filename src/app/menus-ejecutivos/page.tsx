@@ -234,7 +234,7 @@ export default function MenusEjecutivosPage() {
                         </div>
                         <div>
                           <p className="text-[10px] text-gray-500">P.Sug.</p>
-                          <p className="text-xs text-gray-600 tabular-nums">{fmt(menu.precio_sugerido || precioSugerido)}</p>
+                          <p className="text-xs text-gray-600 tabular-nums">{fmt(precioSugerido)}</p>
                         </div>
                         <div>
                           <p className="text-[10px] text-gray-500">P.Carta</p>
@@ -319,7 +319,7 @@ export default function MenusEjecutivosPage() {
                         <span className="text-sm text-gray-500">
                           {fmt(editingId === menu.id
                             ? calcularPrecioSugerido(menu.costo_total, parseFloat(editMargen) || 30)
-                            : (menu.precio_sugerido || precioSugerido)
+                            : precioSugerido
                           )}
                         </span>
                       </td>

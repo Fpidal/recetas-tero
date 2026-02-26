@@ -12,7 +12,6 @@ export default function MenusEjecutivosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editPrecio, setEditPrecio] = useState('')
-  const [editPrecioSugerido, setEditPrecioSugerido] = useState('')
   const [editMargen, setEditMargen] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
@@ -69,42 +68,21 @@ export default function MenusEjecutivosPage() {
   function handleStartEdit(menu: MenuEjecutivo) {
     setEditingId(menu.id)
     setEditPrecio(menu.precio_carta?.toString() || '0')
-    const precioSug = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || 30)
-    setEditPrecioSugerido(Math.round(precioSug).toString())
     setEditMargen(menu.margen_objetivo?.toString() || '30')
   }
 
   function handleCancelEdit() {
     setEditingId(null)
     setEditPrecio('')
-    setEditPrecioSugerido('')
     setEditMargen('')
-  }
-
-  // Cuando cambia el margen, recalcular precio sugerido
-  function handleMargenChange(value: string, costo: number) {
-    setEditMargen(value)
-    const margen = parseFloat(value) || 30
-    const precioSug = calcularPrecioSugerido(costo, margen)
-    setEditPrecioSugerido(Math.round(precioSug).toString())
-  }
-
-  // Cuando cambia el precio sugerido, recalcular margen
-  function handlePrecioSugeridoChange(value: string, costo: number) {
-    setEditPrecioSugerido(value)
-    const precio = parseFloat(value) || 0
-    if (precio > 0) {
-      const margen = ((precio - costo) / precio) * 100
-      setEditMargen(margen.toFixed(1))
-    }
   }
 
   async function handleSaveEdit(menu: MenuEjecutivo) {
     setIsSaving(true)
 
     const precio = parseFloat(editPrecio) || 0
-    const precioSugerido = parseFloat(editPrecioSugerido) || 0
     const margen = parseFloat(editMargen) || 30
+    const precioSugerido = calcularPrecioSugerido(menu.costo_total, margen)
     const foodCost = calcularFoodCost(menu.costo_total, precio)
 
     const { error } = await supabase
@@ -211,16 +189,7 @@ export default function MenusEjecutivosPage() {
 
                   {editingId === menu.id ? (
                     <div className="space-y-3">
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10px] text-gray-500">P.Sug.</label>
-                          <input
-                            type="number"
-                            value={editPrecioSugerido}
-                            onChange={(e) => handlePrecioSugeridoChange(e.target.value, menu.costo_total)}
-                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                          />
-                        </div>
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] text-gray-500">P.Carta</label>
                           <input
@@ -235,7 +204,7 @@ export default function MenusEjecutivosPage() {
                           <input
                             type="number"
                             value={editMargen}
-                            onChange={(e) => handleMargenChange(e.target.value, menu.costo_total)}
+                            onChange={(e) => setEditMargen(e.target.value)}
                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                         </div>
@@ -342,16 +311,12 @@ export default function MenusEjecutivosPage() {
                         <span className="text-sm font-medium text-green-600">{fmt(menu.costo_total)}</span>
                       </td>
                       <td className="px-3 py-3 text-right">
-                        {editingId === menu.id ? (
-                          <input
-                            type="number"
-                            value={editPrecioSugerido}
-                            onChange={(e) => handlePrecioSugeridoChange(e.target.value, menu.costo_total)}
-                            className="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-right"
-                          />
-                        ) : (
-                          <span className="text-sm text-gray-500">{fmt(menu.precio_sugerido || precioSugerido)}</span>
-                        )}
+                        <span className="text-sm text-gray-500">
+                          {fmt(editingId === menu.id
+                            ? calcularPrecioSugerido(menu.costo_total, parseFloat(editMargen) || 30)
+                            : (menu.precio_sugerido || precioSugerido)
+                          )}
+                        </span>
                       </td>
                       <td className="px-3 py-3 text-right">
                         {editingId === menu.id ? (
@@ -370,7 +335,7 @@ export default function MenusEjecutivosPage() {
                           <input
                             type="number"
                             value={editMargen}
-                            onChange={(e) => handleMargenChange(e.target.value, menu.costo_total)}
+                            onChange={(e) => setEditMargen(e.target.value)}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm text-center"
                           />
                         ) : (

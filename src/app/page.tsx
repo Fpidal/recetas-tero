@@ -109,9 +109,10 @@ interface PlatoFueraRangoDetalle {
   margenObjetivo: number
 }
 
-interface RecetaSinCostoDetalle {
-  id: string
+interface ItemConBajaDetalle {
   nombre: string
+  categoria: string
+  variacion: number
 }
 
 interface ComprasPorCategoriaItem {
@@ -130,7 +131,7 @@ interface DashboardData {
   ordenesSinFactura: number
   totalOrdenesSinFacturar: number
   platosFueraRango: number
-  recetasSinCosto: number
+  itemsConBaja: number
   mayorVariacion: { nombre: string; variacion: number; categoria: string } | null
   comprasSemanaActual: number
   comprasSemanaPasada: number
@@ -145,12 +146,12 @@ interface DashboardData {
   comprasPorCategoriaMensuales: ComprasPorCategoriaItem[]
   // Detalles para alertas clickeables
   itemsConAumentoDetalle: ItemConAumentoDetalle[]
+  itemsConBajaDetalle: ItemConBajaDetalle[]
   ordenesSinFacturaDetalle: OrdenSinFacturaDetalle[]
   platosFueraRangoDetalle: PlatoFueraRangoDetalle[]
-  recetasSinCostoDetalle: RecetaSinCostoDetalle[]
 }
 
-type AlertaModal = 'itemsAumento' | 'ordenesSinFactura' | 'platosFuera' | 'recetasSinCosto' | null
+type AlertaModal = 'itemsAumento' | 'itemsBaja' | 'ordenesSinFactura' | 'platosFuera' | null
 
 export default function Home() {
   const [data, setData] = useState<DashboardData>({
@@ -159,7 +160,7 @@ export default function Home() {
     ordenesSinFactura: 0,
     totalOrdenesSinFacturar: 0,
     platosFueraRango: 0,
-    recetasSinCosto: 0,
+    itemsConBaja: 0,
     mayorVariacion: null,
     comprasSemanaActual: 0,
     comprasSemanaPasada: 0,
@@ -172,9 +173,9 @@ export default function Home() {
     comprasPorCategoriaSemanales: [],
     comprasPorCategoriaMensuales: [],
     itemsConAumentoDetalle: [],
+    itemsConBajaDetalle: [],
     ordenesSinFacturaDetalle: [],
     platosFueraRangoDetalle: [],
-    recetasSinCostoDetalle: [],
   })
   const [isLoading, setIsLoading] = useState(true)
   const [modoDistribucion, setModoDistribucion] = useState<'proveedor' | 'categoria'>('proveedor')
@@ -332,19 +333,6 @@ export default function Home() {
         margenObjetivo: c.margen_objetivo,
       }))
 
-      // Recetas sin costo actualizado (costo = 0 o null)
-      const { data: recetasSinCostoData } = await supabase
-        .from('platos')
-        .select('id, nombre')
-        .eq('activo', true)
-        .or('costo.is.null,costo.eq.0')
-
-      const recetasSinCosto = recetasSinCostoData?.length || 0
-      const recetasSinCostoDetalle: RecetaSinCostoDetalle[] = (recetasSinCostoData || []).map((p: any) => ({
-        id: p.id,
-        nombre: p.nombre,
-      }))
-
       // ===== MAYOR VARIACIÓN DE INSUMO (último precio vs anterior) =====
       const { data: insumos } = await supabase
         .from('insumos')
@@ -365,7 +353,9 @@ export default function Home() {
 
       let mayorVariacion: DashboardData['mayorVariacion'] = null
       let itemsConAumentoCount = 0
+      let itemsConBajaCount = 0
       const itemsConAumentoDetalle: ItemConAumentoDetalle[] = []
+      const itemsConBajaDetalle: ItemConBajaDetalle[] = []
 
       if (preciosActuales && todosPrecios && insumos) {
         const variaciones: { insumoId: string; nombre: string; categoria: string; variacion: number }[] = []
@@ -391,9 +381,20 @@ export default function Home() {
               variacion,
             })
 
-            if (variacion > 10) {
+            // Items con aumento >7%
+            if (variacion > 7) {
               itemsConAumentoCount++
               itemsConAumentoDetalle.push({
+                nombre: insumo.nombre,
+                categoria: CATEG_LABELS[insumo.categoria] || insumo.categoria,
+                variacion,
+              })
+            }
+
+            // Items con baja >5% (variación menor a -5%)
+            if (variacion < -5) {
+              itemsConBajaCount++
+              itemsConBajaDetalle.push({
                 nombre: insumo.nombre,
                 categoria: CATEG_LABELS[insumo.categoria] || insumo.categoria,
                 variacion,
@@ -402,8 +403,9 @@ export default function Home() {
           }
         })
 
-        // Ordenar detalles por variación descendente
+        // Ordenar detalles por variación descendente (aumento) y ascendente (baja)
         itemsConAumentoDetalle.sort((a, b) => b.variacion - a.variacion)
+        itemsConBajaDetalle.sort((a, b) => a.variacion - b.variacion)
 
         // Ordenar por mayor variación absoluta
         variaciones.sort((a, b) => Math.abs(b.variacion) - Math.abs(a.variacion))
@@ -770,7 +772,7 @@ export default function Home() {
         ordenesSinFactura,
         totalOrdenesSinFacturar,
         platosFueraRango,
-        recetasSinCosto,
+        itemsConBaja: itemsConBajaCount,
         mayorVariacion,
         comprasSemanaActual,
         comprasSemanaPasada,
@@ -783,9 +785,9 @@ export default function Home() {
         comprasPorCategoriaSemanales,
         comprasPorCategoriaMensuales,
         itemsConAumentoDetalle,
+        itemsConBajaDetalle,
         ordenesSinFacturaDetalle,
         platosFueraRangoDetalle,
-        recetasSinCostoDetalle,
       })
     console.log('fetchDashboardData completado')
     } catch (error) {
@@ -893,16 +895,16 @@ export default function Home() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
           <h2 className="text-sm font-semibold text-gray-900 mb-2">Alertas</h2>
           <div className="space-y-1.5">
-            {/* Alerta 1 - Ítems con aumento */}
+            {/* Alerta 1 - Ítems con aumento >7% */}
             <button
               onClick={() => data.itemsConAumento > 0 && setAlertaModal('itemsAumento')}
               className={`w-full flex items-center justify-between p-2 bg-gray-50 rounded-md transition-colors ${data.itemsConAumento > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
             >
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.naranjaBg }}>
-                  <ArrowUpRight className="w-3 h-3" style={{ color: COLORS.naranja }} />
+                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.rojoBg }}>
+                  <TrendingUp className="w-3 h-3" style={{ color: COLORS.rojo }} />
                 </div>
-                <span className="text-xs text-gray-700">Ítems con aumento &gt;10%</span>
+                <span className="text-xs text-gray-700">Ítems con aumento &gt;7%</span>
               </div>
               <span
                 className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
@@ -912,60 +914,60 @@ export default function Home() {
               </span>
             </button>
 
-            {/* Alerta 2 - Órdenes sin factura */}
+            {/* Alerta 2 - Ítems con baja de precio */}
+            <button
+              onClick={() => data.itemsConBaja > 0 && setAlertaModal('itemsBaja')}
+              className={`w-full flex items-center justify-between p-2 bg-gray-50 rounded-md transition-colors ${data.itemsConBaja > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
+            >
+              <div className="flex items-center gap-2">
+                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.verdeBg }}>
+                  <TrendingDown className="w-3 h-3" style={{ color: COLORS.verde }} />
+                </div>
+                <span className="text-xs text-gray-700">Ítems con baja &gt;5%</span>
+              </div>
+              <span
+                className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
+                style={{ backgroundColor: data.itemsConBaja > 0 ? COLORS.verde : COLORS.gris }}
+              >
+                {data.itemsConBaja}
+              </span>
+            </button>
+
+            {/* Alerta 3 - Órdenes sin factura */}
             <button
               onClick={() => data.ordenesSinFactura > 0 && setAlertaModal('ordenesSinFactura')}
               className={`w-full flex items-center justify-between p-2 bg-gray-50 rounded-md transition-colors ${data.ordenesSinFactura > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
             >
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.rojoBg }}>
-                  <XCircle className="w-3 h-3" style={{ color: COLORS.rojo }} />
+                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.naranjaBg }}>
+                  <XCircle className="w-3 h-3" style={{ color: COLORS.naranja }} />
                 </div>
                 <span className="text-xs text-gray-700">Órdenes sin factura</span>
               </div>
               <span
                 className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
-                style={{ backgroundColor: data.ordenesSinFactura > 0 ? COLORS.rojo : COLORS.verde }}
+                style={{ backgroundColor: data.ordenesSinFactura > 0 ? COLORS.naranja : COLORS.verde }}
               >
                 {data.ordenesSinFactura}
               </span>
             </button>
 
-            {/* Alerta 3 - Platos fuera de rango */}
+            {/* Alerta 4 - Platos fuera de rango */}
             <button
               onClick={() => data.platosFueraRango > 0 && setAlertaModal('platosFuera')}
               className={`w-full flex items-center justify-between p-2 bg-gray-50 rounded-md transition-colors ${data.platosFueraRango > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
             >
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.naranjaBg }}>
-                  <ChefHat className="w-3 h-3" style={{ color: COLORS.naranja }} />
+                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.moradoBg }}>
+                  <ChefHat className="w-3 h-3" style={{ color: COLORS.morado }} />
                 </div>
                 <span className="text-xs text-gray-700">Platos fuera de rango</span>
               </div>
               <span
                 className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
-                style={{ backgroundColor: data.platosFueraRango > 0 ? COLORS.naranja : COLORS.verde }}
+                style={{ backgroundColor: data.platosFueraRango > 0 ? COLORS.morado : COLORS.verde }}
               >
                 {data.platosFueraRango}
-              </span>
-            </button>
-
-            {/* Alerta 4 - Recetas sin actualizar */}
-            <button
-              onClick={() => data.recetasSinCosto > 0 && setAlertaModal('recetasSinCosto')}
-              className={`w-full flex items-center justify-between p-2 bg-gray-50 rounded-md transition-colors ${data.recetasSinCosto > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
-            >
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.moradoBg }}>
-                  <RefreshCw className="w-3 h-3" style={{ color: COLORS.morado }} />
-                </div>
-                <span className="text-xs text-gray-700">Recetas sin costo</span>
-              </div>
-              <span
-                className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
-                style={{ backgroundColor: data.recetasSinCosto > 0 ? COLORS.morado : COLORS.verde }}
-              >
-                {data.recetasSinCosto}
               </span>
             </button>
           </div>
@@ -1233,10 +1235,10 @@ export default function Home() {
             {/* Header del modal */}
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-semibold text-gray-900">
-                {alertaModal === 'itemsAumento' && 'Ítems con aumento >10%'}
+                {alertaModal === 'itemsAumento' && 'Ítems con aumento >7%'}
+                {alertaModal === 'itemsBaja' && 'Ítems con baja >5%'}
                 {alertaModal === 'ordenesSinFactura' && 'Órdenes sin factura'}
                 {alertaModal === 'platosFuera' && 'Platos fuera de rango'}
-                {alertaModal === 'recetasSinCosto' && 'Recetas sin costo actualizado'}
               </h3>
               <button
                 onClick={() => setAlertaModal(null)}
@@ -1320,18 +1322,23 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Recetas sin costo */}
-              {alertaModal === 'recetasSinCosto' && (
+              {/* Items con baja de precio */}
+              {alertaModal === 'itemsBaja' && (
                 <div className="space-y-2">
-                  {data.recetasSinCostoDetalle.map((receta, i) => (
+                  {data.itemsConBajaDetalle.map((item, i) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <p className="font-medium text-gray-900">{receta.nombre}</p>
-                      <span className="text-xs text-gray-400">Sin costo</span>
+                      <div>
+                        <p className="font-medium text-gray-900">{item.nombre}</p>
+                        <p className="text-xs text-gray-500">{item.categoria}</p>
+                      </div>
+                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-semibold">
+                        {item.variacion.toFixed(0)}%
+                      </span>
                     </div>
                   ))}
                   <div className="pt-3 border-t mt-3">
-                    <Link href="/platos" className="text-sm text-primary-600 hover:underline">
-                      Ver todos los platos →
+                    <Link href="/precios" className="text-sm text-primary-600 hover:underline">
+                      Ver comparador de precios →
                     </Link>
                   </div>
                 </div>

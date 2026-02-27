@@ -11,6 +11,9 @@ interface Insumo {
   nombre: string
   unidad_medida: string
   categoria: string
+  precio_actual: number | null
+  iva_porcentaje: number
+  merma_porcentaje: number
 }
 
 interface RecetaBase {
@@ -19,6 +22,11 @@ interface RecetaBase {
   costo_total: number
   costo_por_porcion: number
   rendimiento_porciones: number
+}
+
+interface RecetaIngrediente {
+  insumo_id: string
+  cantidad: number
 }
 
 interface Plato {
@@ -68,9 +76,43 @@ export default function NuevoMenuEjecutivoPage() {
     fetchData()
   }, [])
 
+  // Función para calcular el costo real de una elaboración (igual que en recetas-base)
+  async function calcularCostoRealRecetaBase(recetaId: string, rendimiento: number): Promise<number> {
+    // Obtener ingredientes de la receta
+    const { data: ingredientes } = await supabase
+      .from('receta_base_ingredientes')
+      .select('insumo_id, cantidad')
+      .eq('receta_base_id', recetaId)
+
+    if (!ingredientes || ingredientes.length === 0) return 0
+
+    // Obtener precios actuales de los insumos
+    const insumoIds = ingredientes.map(i => i.insumo_id)
+    const { data: insumosData } = await supabase
+      .from('v_insumos_con_precio')
+      .select('id, precio_actual, iva_porcentaje, merma_porcentaje')
+      .in('id', insumoIds)
+
+    if (!insumosData) return 0
+
+    // Calcular costo total aplicando IVA y merma
+    let costoTotal = 0
+    for (const ing of ingredientes) {
+      const insumo = insumosData.find(i => i.id === ing.insumo_id)
+      if (insumo && insumo.precio_actual !== null) {
+        const costoFinal = insumo.precio_actual *
+          (1 + (insumo.iva_porcentaje || 0) / 100) *
+          (1 + (insumo.merma_porcentaje || 0) / 100)
+        costoTotal += ing.cantidad * costoFinal
+      }
+    }
+
+    return rendimiento > 0 ? costoTotal / rendimiento : costoTotal
+  }
+
   async function fetchData() {
     const [insumosRes, recetasRes, platosRes] = await Promise.all([
-      supabase.from('insumos').select('id, nombre, unidad_medida, categoria').eq('activo', true).order('nombre'),
+      supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, categoria, precio_actual, iva_porcentaje, merma_porcentaje').eq('activo', true).order('nombre'),
       supabase.from('recetas_base').select('id, nombre, costo_total, costo_por_porcion, rendimiento_porciones').eq('activo', true).order('nombre'),
       supabase.from('platos').select('id, nombre, costo_total, seccion').eq('activo', true).order('nombre'),
     ])
@@ -80,16 +122,12 @@ export default function NuevoMenuEjecutivoPage() {
     if (platosRes.data) setPlatos(platosRes.data)
   }
 
-  // Obtener precio unitario del insumo
-  async function getPrecioInsumo(insumoId: string): Promise<number> {
-    const { data } = await supabase
-      .from('precios_insumo')
-      .select('precio')
-      .eq('insumo_id', insumoId)
-      .order('fecha', { ascending: false })
-      .limit(1)
-      .single()
-    return data?.precio || 0
+  // Obtener costo final del insumo aplicando IVA y merma
+  function getCostoFinalInsumo(insumo: Insumo): number {
+    if (insumo.precio_actual === null) return 0
+    return insumo.precio_actual *
+      (1 + (insumo.iva_porcentaje || 0) / 100) *
+      (1 + (insumo.merma_porcentaje || 0) / 100)
   }
 
   // Opciones filtradas según tipo
@@ -102,12 +140,12 @@ export default function NuevoMenuEjecutivoPage() {
     } else if (nuevoTipo === 'receta_base') {
       return [
         { value: '', label: 'Seleccionar elaboración...' },
-        ...recetasBase.map(r => ({ value: r.id, label: `${r.nombre} ($${(r.costo_por_porcion || 0).toFixed(2)}/porción)` }))
+        ...recetasBase.map(r => ({ value: r.id, label: `${r.nombre} ($${(r.costo_por_porcion || 0).toFixed(0)}/porción)` }))
       ]
     } else {
       return [
         { value: '', label: 'Seleccionar plato...' },
-        ...platos.map(p => ({ value: p.id, label: `${p.nombre} ($${p.costo_total.toFixed(2)})` }))
+        ...platos.map(p => ({ value: p.id, label: `${p.nombre} ($${p.costo_total.toFixed(0)})` }))
       ]
     }
   }, [nuevoTipo, insumos, recetasBase, platos])
@@ -118,26 +156,28 @@ export default function NuevoMenuEjecutivoPage() {
     const cantidad = parseFloat(nuevoCantidad)
     if (isNaN(cantidad) || cantidad <= 0) return
 
-    let nombre = ''
+    let nombreItem = ''
     let unidad = ''
     let costoUnitario = 0
 
     if (nuevoTipo === 'insumo') {
       const insumo = insumos.find(i => i.id === nuevoReferenciaId)
       if (!insumo) return
-      nombre = insumo.nombre
+      nombreItem = insumo.nombre
       unidad = insumo.unidad_medida
-      costoUnitario = await getPrecioInsumo(insumo.id)
+      // Usar costo con IVA y merma aplicados
+      costoUnitario = getCostoFinalInsumo(insumo)
     } else if (nuevoTipo === 'receta_base') {
       const receta = recetasBase.find(r => r.id === nuevoReferenciaId)
       if (!receta) return
-      nombre = receta.nombre
+      nombreItem = receta.nombre
       unidad = 'porción'
-      costoUnitario = receta.costo_por_porcion || (receta.rendimiento_porciones > 0 ? receta.costo_total / receta.rendimiento_porciones : receta.costo_total)
+      // Calcular costo real de la elaboración (igual que en recetas-base)
+      costoUnitario = await calcularCostoRealRecetaBase(receta.id, receta.rendimiento_porciones || 1)
     } else {
       const plato = platos.find(p => p.id === nuevoReferenciaId)
       if (!plato) return
-      nombre = plato.nombre
+      nombreItem = plato.nombre
       unidad = 'porción'
       costoUnitario = plato.costo_total
     }
@@ -146,7 +186,7 @@ export default function NuevoMenuEjecutivoPage() {
       id: crypto.randomUUID(),
       tipo: nuevoTipo,
       referencia_id: nuevoReferenciaId,
-      nombre,
+      nombre: nombreItem,
       cantidad,
       unidad,
       costo_unitario: costoUnitario,
@@ -357,10 +397,10 @@ export default function NuevoMenuEjecutivoPage() {
                         {item.cantidad} {item.unidad}
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-600">
-                        ${item.costo_unitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        ${item.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                        ${item.costo_linea.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        ${item.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Button variant="ghost" size="sm" onClick={() => handleEliminarItem(item.id)}>
@@ -376,7 +416,7 @@ export default function NuevoMenuEjecutivoPage() {
                       Costo Total:
                     </td>
                     <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
-                      ${costoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
                     <td></td>
                   </tr>

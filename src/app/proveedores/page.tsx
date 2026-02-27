@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Phone, Mail } from 'lucide-react'
+import { Plus, Pencil, Trash2, Phone, Mail, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal, Table } from '@/components/ui'
 import { Proveedor } from '@/types/database'
@@ -98,6 +98,7 @@ export default function ProveedoresPage() {
   const [form, setForm] = useState<ProveedorForm>(initialForm)
   const [isSaving, setIsSaving] = useState(false)
   const [nextCodigo, setNextCodigo] = useState('')
+  const [busqueda, setBusqueda] = useState('')
 
   useEffect(() => {
     fetchProveedores()
@@ -175,6 +176,14 @@ export default function ProveedoresPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setIsSaving(true)
+
+    // Verificar duplicados
+    const duplicado = await verificarDuplicados()
+    if (duplicado) {
+      alert(duplicado)
+      setIsSaving(false)
+      return
+    }
 
     const payload = {
       nombre: form.nombre,
@@ -258,6 +267,75 @@ export default function ProveedoresPage() {
       fetchProveedores()
     }
   }
+
+  // Verificar duplicados antes de guardar
+  async function verificarDuplicados(): Promise<string | null> {
+    // Construir condiciones para buscar duplicados
+    const condiciones = []
+
+    if (form.nombre.trim()) {
+      condiciones.push(`nombre.ilike.%${form.nombre.trim()}%`)
+    }
+    if (form.cuit && form.cuit.trim()) {
+      condiciones.push(`cuit.eq.${form.cuit.trim()}`)
+    }
+    if (form.celular && form.celular.trim()) {
+      condiciones.push(`celular.eq.${form.celular.trim()}`)
+    }
+    if (form.telefono && form.telefono.trim()) {
+      condiciones.push(`telefono.eq.${form.telefono.trim()}`)
+    }
+
+    if (condiciones.length === 0) return null
+
+    // Buscar proveedores que coincidan con alguna condición
+    let query = supabase
+      .from('proveedores')
+      .select('id, nombre, cuit, celular, telefono')
+      .eq('activo', true)
+
+    // Si estamos editando, excluir el proveedor actual
+    if (editingId) {
+      query = query.neq('id', editingId)
+    }
+
+    const { data } = await query
+
+    if (!data || data.length === 0) return null
+
+    // Verificar coincidencias
+    for (const p of data) {
+      if (form.cuit && form.cuit.trim() && p.cuit === form.cuit.trim()) {
+        return `Ya existe un proveedor con el CUIT ${form.cuit}: "${p.nombre}"`
+      }
+      if (form.celular && form.celular.trim() && p.celular === form.celular.trim()) {
+        return `Ya existe un proveedor con el celular ${form.celular}: "${p.nombre}"`
+      }
+      if (form.telefono && form.telefono.trim() && p.telefono === form.telefono.trim()) {
+        return `Ya existe un proveedor con el teléfono ${form.telefono}: "${p.nombre}"`
+      }
+      if (form.nombre.trim() && p.nombre.toLowerCase() === form.nombre.trim().toLowerCase()) {
+        return `Ya existe un proveedor con el nombre "${p.nombre}"`
+      }
+    }
+
+    return null
+  }
+
+  // Filtrar proveedores por búsqueda
+  const proveedoresFiltrados = proveedores.filter(p => {
+    if (!busqueda.trim()) return true
+    const term = busqueda.toLowerCase()
+    return (
+      p.nombre.toLowerCase().includes(term) ||
+      (p.contacto && p.contacto.toLowerCase().includes(term)) ||
+      (p.categoria && p.categoria.toLowerCase().includes(term)) ||
+      (p.celular && p.celular.includes(term)) ||
+      (p.telefono && p.telefono.includes(term)) ||
+      (p.cuit && p.cuit.includes(term)) ||
+      (p.email && p.email.toLowerCase().includes(term))
+    )
+  })
 
   const columns = [
     {
@@ -403,12 +481,31 @@ export default function ProveedoresPage() {
         </Button>
       </div>
 
+      {/* Buscador */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre, contacto, teléfono, CUIT..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+        {busqueda && (
+          <p className="text-sm text-gray-500 mt-1">
+            {proveedoresFiltrados.length} de {proveedores.length} proveedores
+          </p>
+        )}
+      </div>
+
       <Table
         columns={columns}
-        data={proveedores}
+        data={proveedoresFiltrados}
         keyExtractor={(p) => p.id}
         isLoading={isLoading}
-        emptyMessage="No hay proveedores registrados"
+        emptyMessage={busqueda ? "No se encontraron proveedores" : "No hay proveedores registrados"}
         mobileCard={mobileCard}
       />
 

@@ -103,6 +103,8 @@ export default function InsumosPage() {
   const [form, setForm] = useState<InsumoForm>(initialForm)
   const [isSaving, setIsSaving] = useState(false)
   const [filtroCategoria, setFiltroCategoria] = useState<string>('')
+  const [filtroProveedor, setFiltroProveedor] = useState<string>('')
+  const [filtroVariacion, setFiltroVariacion] = useState<string>('')
   const [busqueda, setBusqueda] = useState('')
   const [showHistorial, setShowHistorial] = useState(false)
   const [historialData, setHistorialData] = useState<HistorialPrecio[]>([])
@@ -374,6 +376,15 @@ export default function InsumosPage() {
 
   const filteredInsumos = insumos
     .filter((i) => !filtroCategoria || i.categoria === filtroCategoria)
+    .filter((i) => !filtroProveedor || i.proveedor_id === filtroProveedor)
+    .filter((i) => {
+      if (!filtroVariacion) return true
+      const variacion = calcularVariacion(i.precio_actual, i.precio_anterior)
+      if (filtroVariacion === 'aumento') return variacion !== null && variacion > 0
+      if (filtroVariacion === 'baja') return variacion !== null && variacion < 0
+      if (filtroVariacion === 'sin_cambio') return variacion === null || variacion === 0
+      return true
+    })
     .filter((i) => !busqueda || i.nombre.toLowerCase().includes(busqueda.toLowerCase()))
     .sort((a, b) => {
       if (!filtroCategoria) return a.nombre.localeCompare(b.nombre, 'es')
@@ -521,26 +532,47 @@ export default function InsumosPage() {
         <ComparadorPrecios />
       ) : (
         <>
-      <div className="mb-4 flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 sm:flex-none">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      <div className="mb-4 flex items-center gap-1.5">
+        <div className="relative">
+          <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
           <input
             type="text"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar insumo..."
-            className="pl-9 pr-3 py-2.5 sm:py-2 w-full sm:w-64 rounded-lg border border-gray-300 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="Buscar..."
+            className="pl-6 pr-2 py-1 w-28 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         </div>
-        <Select
-          options={[
-            { value: '', label: 'Todas las categorías' },
-            ...categorias.map((c) => ({ value: c.value, label: c.label })),
-          ]}
+        <select
           value={filtroCategoria}
           onChange={(e) => setFiltroCategoria(e.target.value)}
-          className="w-full sm:w-64"
-        />
+          className="py-1 px-2 w-32 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+        >
+          <option value="">Categoría</option>
+          {categorias.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+        <select
+          value={filtroProveedor}
+          onChange={(e) => setFiltroProveedor(e.target.value)}
+          className="py-1 px-2 w-32 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+        >
+          <option value="">Proveedor</option>
+          {proveedores.map((p) => (
+            <option key={p.id} value={p.id}>{p.nombre}</option>
+          ))}
+        </select>
+        <select
+          value={filtroVariacion}
+          onChange={(e) => setFiltroVariacion(e.target.value)}
+          className="py-1 px-2 w-28 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+        >
+          <option value="">Variación</option>
+          <option value="aumento">Con aumento</option>
+          <option value="baja">Con baja</option>
+          <option value="sin_cambio">Sin cambio</option>
+        </select>
       </div>
 
       {isLoading ? (

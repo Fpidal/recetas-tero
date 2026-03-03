@@ -72,16 +72,19 @@ export default function InventarioPage() {
       .select(`
         insumo_id,
         cantidad,
-        facturas_proveedor!inner (activo)
+        facturas_proveedor!inner (activo, tipo)
       `)
       .in('insumo_id', insumosData.map(i => i.id))
       .eq('facturas_proveedor.activo', true)
 
     // Calcular stock total por insumo
+    // Las NC restan del inventario (devolución de mercadería)
     const stockMap = new Map<string, number>()
     for (const item of (itemsData || [])) {
       const current = stockMap.get(item.insumo_id) || 0
-      stockMap.set(item.insumo_id, current + (item.cantidad || 0))
+      const esNotaCredito = (item.facturas_proveedor as any)?.tipo === 'nota_credito'
+      const cantidad = esNotaCredito ? -(item.cantidad || 0) : (item.cantidad || 0)
+      stockMap.set(item.insumo_id, current + cantidad)
     }
 
     // Armar lista de inventario
@@ -111,6 +114,7 @@ export default function InventarioPage() {
           numero_factura,
           fecha,
           activo,
+          tipo,
           proveedores (nombre)
         )
       `)
@@ -118,14 +122,17 @@ export default function InventarioPage() {
       .eq('facturas_proveedor.activo', true)
       .order('facturas_proveedor(fecha)', { ascending: false })
 
-    const movimientosData: MovimientoDetalle[] = (data || []).map((item: any) => ({
-      factura_id: item.facturas_proveedor.id,
-      numero_factura: item.facturas_proveedor.numero_factura,
-      fecha: item.facturas_proveedor.fecha,
-      cantidad: item.cantidad,
-      precio_unitario: item.precio_unitario,
-      proveedor_nombre: item.facturas_proveedor.proveedores?.nombre || '-',
-    }))
+    const movimientosData: MovimientoDetalle[] = (data || []).map((item: any) => {
+      const esNotaCredito = item.facturas_proveedor.tipo === 'nota_credito'
+      return {
+        factura_id: item.facturas_proveedor.id,
+        numero_factura: item.facturas_proveedor.numero_factura,
+        fecha: item.facturas_proveedor.fecha,
+        cantidad: esNotaCredito ? -item.cantidad : item.cantidad,
+        precio_unitario: item.precio_unitario,
+        proveedor_nombre: item.facturas_proveedor.proveedores?.nombre || '-',
+      }
+    })
 
     setMovimientos(movimientosData)
     setLoadingMovimientos(false)
@@ -309,17 +316,22 @@ export default function InventarioPage() {
                 {/* Mobile: Cards */}
                 <div className="sm:hidden space-y-2">
                   {movimientos.map((mov, idx) => (
-                    <div key={idx} className={`rounded-lg border p-3 ${idx === 0 ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
+                    <div key={idx} className={`rounded-lg border p-3 ${mov.cantidad < 0 ? 'bg-red-50 border-red-200' : idx === 0 ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-xs text-gray-500">
                             {new Date(mov.fecha).toLocaleDateString('es-AR')}
                           </p>
-                          <p className="text-sm font-medium text-gray-900">{mov.numero_factura}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {mov.numero_factura}
+                            {mov.cantidad < 0 && <span className="ml-1 text-[10px] px-1 py-0.5 bg-red-100 text-red-700 rounded">NC</span>}
+                          </p>
                           <p className="text-xs text-gray-500">{mov.proveedor_nombre}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-blue-700">+{formatearCantidad(mov.cantidad)}</p>
+                          <p className={`text-lg font-bold ${mov.cantidad < 0 ? 'text-red-600' : 'text-blue-700'}`}>
+                            {mov.cantidad >= 0 ? '+' : ''}{formatearCantidad(mov.cantidad)}
+                          </p>
                           <p className="text-xs text-gray-500">{formatearMoneda(mov.precio_unitario)}</p>
                         </div>
                       </div>
@@ -341,18 +353,19 @@ export default function InventarioPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {movimientos.map((mov, idx) => (
-                        <tr key={idx} className={idx === 0 ? 'bg-blue-50' : ''}>
+                        <tr key={idx} className={mov.cantidad < 0 ? 'bg-red-50' : idx === 0 ? 'bg-blue-50' : ''}>
                           <td className="px-3 py-2 text-gray-600">
                             {new Date(mov.fecha).toLocaleDateString('es-AR')}
                           </td>
                           <td className="px-3 py-2 font-medium text-gray-900">
                             {mov.numero_factura}
+                            {mov.cantidad < 0 && <span className="ml-1 text-[10px] px-1 py-0.5 bg-red-100 text-red-700 rounded">NC</span>}
                           </td>
                           <td className="px-3 py-2 text-gray-600">
                             {mov.proveedor_nombre}
                           </td>
-                          <td className="px-3 py-2 text-right font-medium text-blue-700">
-                            +{formatearCantidad(mov.cantidad)}
+                          <td className={`px-3 py-2 text-right font-medium ${mov.cantidad < 0 ? 'text-red-600' : 'text-blue-700'}`}>
+                            {mov.cantidad >= 0 ? '+' : ''}{formatearCantidad(mov.cantidad)}
                           </td>
                           <td className="px-3 py-2 text-right text-gray-600">
                             {formatearMoneda(mov.precio_unitario)}

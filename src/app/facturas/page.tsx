@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { Plus, Eye, FileText, Pencil, PackageSearch, Filter, X } from 'lucide-react'
+import { Plus, Eye, FileText, Pencil, PackageSearch, Filter, X, FileMinus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Table, Select } from '@/components/ui'
 import Link from 'next/link'
@@ -21,6 +21,7 @@ interface FacturaConDetalle {
   total: number
   notas: string | null
   orden_compra_id: string | null
+  tipo: 'factura' | 'nota_credito'
   proveedores: {
     nombre: string
   }
@@ -267,9 +268,18 @@ function FacturasContent() {
       render: (f: FacturaConDetalle) => (
         <div className="flex items-center gap-3">
           {renderSemaforo(f)}
-          <FileText className="w-4 h-4 text-gray-400" />
+          {f.tipo === 'nota_credito' ? (
+            <FileMinus className="w-4 h-4 text-red-500" />
+          ) : (
+            <FileText className="w-4 h-4 text-gray-400" />
+          )}
           <div>
-            <span className="font-medium">{f.numero_factura}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{f.numero_factura}</span>
+              {f.tipo === 'nota_credito' && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-medium">NC</span>
+              )}
+            </div>
             {f.orden_compra_id && f.ordenes_compra && (
               <p className="text-xs text-gray-400 mt-0.5">
                 OC {f.ordenes_compra.numero || formatearFecha(f.ordenes_compra.fecha)}
@@ -297,7 +307,7 @@ function FacturasContent() {
       key: 'total',
       header: 'Total',
       render: (f: FacturaConDetalle) => (
-        <span className="font-medium">
+        <span className={`font-medium ${f.tipo === 'nota_credito' ? 'text-red-600' : ''}`}>
           {formatearMoneda(f.total)}
         </span>
       ),

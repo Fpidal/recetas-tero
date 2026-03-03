@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, ArrowLeft, Save, Package, AlertCircle, FileDown, PlusCircle } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Save, Package, AlertCircle, FileDown, PlusCircle, FileText, FileMinus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getNextOCNumber } from '@/lib/oc-numero'
 import { Button, Input, Select, Modal } from '@/components/ui'
@@ -61,6 +61,7 @@ export default function NuevaFacturaPage() {
   const [ordenesPendientes, setOrdenesPendientes] = useState<OrdenCompra[]>([])
   const [selectedProveedor, setSelectedProveedor] = useState('')
   const [selectedOrden, setSelectedOrden] = useState<OrdenCompra | null>(null)
+  const [tipoComprobante, setTipoComprobante] = useState<'factura' | 'nota_credito'>('factura')
   const [numeroFactura, setNumeroFactura] = useState('')
   const [fecha, setFecha] = useState(() => {
     const hoy = new Date()
@@ -434,10 +435,11 @@ export default function NuevaFacturaPage() {
         proveedor_id: selectedProveedor,
         numero_factura: numeroFactura.trim(),
         fecha: fecha,
-        total: total,
+        total: tipoComprobante === 'nota_credito' ? -Math.abs(total) : total,
         orden_compra_id: selectedOrden?.id || null,
         notas: notas || null,
         percepciones: percepcionesConValor.length > 0 ? percepcionesConValor : null,
+        tipo: tipoComprobante,
       })
       .select()
       .single()
@@ -467,8 +469,8 @@ export default function NuevaFacturaPage() {
       alert('Factura creada pero hubo un error con los items')
     }
 
-    // Detectar faltantes y gestionar OC
-    if (selectedOrden) {
+    // Detectar faltantes y gestionar OC (solo para facturas, no NC)
+    if (selectedOrden && tipoComprobante === 'factura') {
       // Items que NO vinieron (faltante total) → generan nueva OC
       const faltantesTotal: { insumo_id: string; insumo_nombre: string; cantidad: number; precio_unitario: number }[] = []
       // Items con diferencia de cantidad (vinieron pero distinta cantidad) → solo marcar como parcial
@@ -604,8 +606,12 @@ export default function NuevaFacturaPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nueva Factura</h1>
-          <p className="text-gray-600">Registro de compra a proveedor</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {tipoComprobante === 'nota_credito' ? 'Nueva Nota de Crédito' : 'Nueva Factura'}
+          </h1>
+          <p className="text-gray-600">
+            {tipoComprobante === 'nota_credito' ? 'Devolución de mercadería' : 'Registro de compra a proveedor'}
+          </p>
         </div>
       </div>
 
@@ -651,15 +657,59 @@ export default function NuevaFacturaPage() {
       )}
 
       {/* Aviso de actualización */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm text-amber-800 font-medium">Los precios se actualizan automáticamente</p>
-          <p className="text-sm text-amber-600">Al guardar, los precios de los insumos se actualizarán con los valores de esta factura.</p>
+      {tipoComprobante === 'factura' ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-amber-800 font-medium">Los precios se actualizan automáticamente</p>
+            <p className="text-sm text-amber-600">Al guardar, los precios de los insumos se actualizarán con los valores de esta factura.</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+          <FileMinus className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-red-800 font-medium">Nota de Crédito - Devolución de mercadería</p>
+            <p className="text-sm text-red-600">Los precios de insumos NO se actualizarán. El monto se restará de los reportes de compras.</p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+        {/* Selector de tipo de comprobante */}
+        <div className="flex gap-4">
+          <button
+            type="button"
+            onClick={() => setTipoComprobante('factura')}
+            className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-lg border-2 transition-all ${
+              tipoComprobante === 'factura'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+            <div className="text-left">
+              <p className="font-medium">Factura</p>
+              <p className="text-xs opacity-75">Actualiza precios de insumos</p>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipoComprobante('nota_credito')}
+            className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-lg border-2 transition-all ${
+              tipoComprobante === 'nota_credito'
+                ? 'border-red-500 bg-red-50 text-red-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <FileMinus className="w-5 h-5" />
+            <div className="text-left">
+              <p className="font-medium">Nota de Crédito</p>
+              <p className="text-xs opacity-75">Devolución - NO actualiza precios</p>
+            </div>
+          </button>
+        </div>
+
         {/* Datos de la factura */}
         <div className="grid grid-cols-3 gap-4">
           <Select
@@ -993,7 +1043,7 @@ export default function NuevaFacturaPage() {
           </Button>
           <Button onClick={handleGuardar} disabled={isSaving}>
             <Save className="w-4 h-4 mr-2" />
-            {isSaving ? 'Guardando...' : 'Guardar Factura'}
+            {isSaving ? 'Guardando...' : tipoComprobante === 'nota_credito' ? 'Guardar NC' : 'Guardar Factura'}
           </Button>
         </div>
       </div>

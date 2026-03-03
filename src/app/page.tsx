@@ -423,14 +423,19 @@ export default function Home() {
       const { data: facturas } = await supabase
         .from('facturas_proveedor')
         .select(`
-          id, fecha, total,
+          id, fecha, total, tipo,
           factura_items (cantidad, precio_unitario, insumos (iva_porcentaje))
         `)
         .neq('activo', false)
         .order('fecha', { ascending: true })
 
       // Función para calcular total con IVA
+      // Para NC, usar el total almacenado (que ya es negativo)
       const calcularTotalFactura = (factura: any): number => {
+        // Si es nota de crédito, usar el total almacenado directamente (negativo)
+        if (factura.tipo === 'nota_credito') {
+          return factura.total || 0
+        }
         if (!factura.factura_items || factura.factura_items.length === 0) return factura.total || 0
         return factura.factura_items.reduce((sum: number, item: any) => {
           const subtotal = item.cantidad * item.precio_unitario
@@ -527,7 +532,7 @@ export default function Home() {
       const { data: facturasConCategoria, error: errorFactCat } = await supabase
         .from('facturas_proveedor')
         .select(`
-          fecha,
+          fecha, tipo, total,
           factura_items (
             cantidad,
             precio_unitario,
@@ -577,8 +582,9 @@ export default function Home() {
       // Procesar facturas para compras por categoría
       ;(facturasConCategoria || []).forEach((factura: any) => {
         const fechaFactura = new Date(factura.fecha)
+        const esNotaCredito = factura.tipo === 'nota_credito'
 
-        // Por cada item, sumar a la categoría correspondiente
+        // Por cada item, sumar a la categoría correspondiente (o restar si es NC)
         ;(factura.factura_items || []).forEach((item: any) => {
           if (!item.insumos?.categoria) return
           const catInterna = item.insumos.categoria
@@ -587,7 +593,8 @@ export default function Home() {
 
           const subtotal = item.cantidad * item.precio_unitario
           const iva = subtotal * ((item.insumos.iva_porcentaje ?? 21) / 100)
-          const total = subtotal + iva
+          // Si es NC, el monto es negativo (resta)
+          const total = esNotaCredito ? -(subtotal + iva) : (subtotal + iva)
 
           // Agregar a semana correspondiente
           for (let i = 0; i < 8; i++) {
@@ -679,7 +686,7 @@ export default function Home() {
       const facturasProveedorRes = await supabase
         .from('facturas_proveedor')
         .select(`
-          proveedor_id, total,
+          proveedor_id, total, tipo,
           factura_items (cantidad, precio_unitario, insumos (iva_porcentaje))
         `)
         .neq('activo', false)
@@ -727,6 +734,7 @@ export default function Home() {
       const { data: facturasConItems } = await supabase
         .from('facturas_proveedor')
         .select(`
+          tipo,
           factura_items (
             cantidad,
             precio_unitario,
@@ -742,11 +750,13 @@ export default function Home() {
       CATEGORIAS_GRAFICOS.forEach(cat => categoriaTotales.set(cat, 0))
 
       ;(facturasConItems || []).forEach((factura: any) => {
+        const esNotaCredito = factura.tipo === 'nota_credito'
         ;(factura.factura_items || []).forEach((item: any) => {
           if (item.insumos?.categoria && CATEGORIAS_GRAFICOS.includes(item.insumos.categoria)) {
             const subtotal = item.cantidad * item.precio_unitario
             const iva = subtotal * ((item.insumos.iva_porcentaje ?? 21) / 100)
-            const total = subtotal + iva
+            // Si es NC, el monto es negativo (resta)
+            const total = esNotaCredito ? -(subtotal + iva) : (subtotal + iva)
             const cat = item.insumos.categoria
             categoriaTotales.set(cat, (categoriaTotales.get(cat) || 0) + total)
           }

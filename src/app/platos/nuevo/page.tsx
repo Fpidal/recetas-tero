@@ -14,8 +14,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Verduras_Frutas': '#ffd54f',
   'Lacteos_Fiambres': '#ffb74d',
   'Bebidas': '#4fc3f7',
-  'Salsas_Recetas': '#81c784',
   'Almacen': '#bdbdbd',
+  'Elaboracion': '#81c784',
 }
 
 interface Insumo {
@@ -57,6 +57,7 @@ export default function NuevoPlatoPage() {
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [recetasBase, setRecetasBase] = useState<RecetaBase[]>([])
   const [tipoIngrediente, setTipoIngrediente] = useState<'insumo' | 'receta_base'>('insumo')
+  const [filtroCategoria, setFiltroCategoria] = useState('')
   const [selectedItem, setSelectedItem] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [rendimiento, setRendimiento] = useState(1)
@@ -181,7 +182,7 @@ export default function NuevoPlatoPage() {
         item_id: receta.id,
         nombre: receta.nombre,
         unidad: 'porción',
-        categoria: 'Salsas_Recetas',
+        categoria: 'Elaboracion',
         cantidad: cantidadNum,
         costo_unitario: costoUnitario,
         costo_linea: costoLinea,
@@ -272,8 +273,12 @@ export default function NuevoPlatoPage() {
     router.push('/platos')
   }
 
+  const insumosFiltrados = filtroCategoria
+    ? insumos.filter(i => i.categoria === filtroCategoria)
+    : insumos
+
   const opcionesItems = tipoIngrediente === 'insumo'
-    ? insumos.map(i => ({
+    ? insumosFiltrados.map(i => ({
         value: i.id,
         label: `${i.nombre} (${i.unidad_medida}) - $${(i.costo_final || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
       }))
@@ -377,7 +382,7 @@ export default function NuevoPlatoPage() {
           <div className="flex gap-2 mb-3">
             <button
               type="button"
-              onClick={() => { setTipoIngrediente('insumo'); setSelectedItem('') }}
+              onClick={() => { setTipoIngrediente('insumo'); setSelectedItem(''); setFiltroCategoria('') }}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-colors ${
                 tipoIngrediente === 'insumo'
                   ? 'bg-green-100 text-green-800 border-2 border-green-500'
@@ -402,6 +407,24 @@ export default function NuevoPlatoPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:items-end mb-3">
+            {tipoIngrediente === 'insumo' && (
+              <div className="sm:w-40">
+                <Select
+                  label="Categoría"
+                  options={[
+                    { value: '', label: 'Todas' },
+                    { value: 'Carnes', label: 'Carnes' },
+                    { value: 'Almacen', label: 'Almacén' },
+                    { value: 'Verduras_Frutas', label: 'Verduras' },
+                    { value: 'Pescados_Mariscos', label: 'Pescados' },
+                    { value: 'Lacteos_Fiambres', label: 'Lácteos' },
+                    { value: 'Bebidas', label: 'Bebidas' },
+                  ]}
+                  value={filtroCategoria}
+                  onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedItem('') }}
+                />
+              </div>
+            )}
             <div className="flex-1">
               <Select
                 label={tipoIngrediente === 'insumo' ? 'Insumo' : 'Elaboración'}

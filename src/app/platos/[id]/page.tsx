@@ -15,8 +15,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Verduras_Frutas': '#ffd54f',
   'Lacteos_Fiambres': '#ffb74d',
   'Bebidas': '#4fc3f7',
-  'Salsas_Recetas': '#81c784',
   'Almacen': '#bdbdbd',
+  'Elaboracion': '#81c784',
 }
 
 interface Insumo {
@@ -64,6 +64,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [recetasBase, setRecetasBase] = useState<RecetaBase[]>([])
   const [tipoIngrediente, setTipoIngrediente] = useState<'insumo' | 'receta_base'>('insumo')
+  const [filtroCategoria, setFiltroCategoria] = useState('')
   const [selectedItem, setSelectedItem] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [rendimiento, setRendimiento] = useState(1)
@@ -194,7 +195,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
             item_id: ing.receta_base_id,
             nombre: ing.recetas_base?.nombre || 'Desconocido',
             unidad: 'porción',
-            categoria: 'Salsas_Recetas',
+            categoria: 'Elaboracion',
             cantidad: cantidadNum,
             costo_unitario: costoUnitario,
             costo_linea: cantidadNum * costoUnitario,
@@ -265,7 +266,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
         item_id: receta.id,
         nombre: receta.nombre,
         unidad: 'porción',
-        categoria: 'Salsas_Recetas',
+        categoria: 'Elaboracion',
         cantidad: cantidadNum,
         costo_unitario: costoUnitario,
         costo_linea: costoLinea,
@@ -410,8 +411,12 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
     router.push('/platos')
   }
 
+  const insumosFiltrados = filtroCategoria
+    ? insumos.filter(i => i.categoria === filtroCategoria)
+    : insumos
+
   const opcionesItems = tipoIngrediente === 'insumo'
-    ? insumos.map(i => ({
+    ? insumosFiltrados.map(i => ({
         value: i.id,
         label: `${i.nombre} (${i.unidad_medida}) - $${(i.costo_final || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
       }))
@@ -731,7 +736,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => { setTipoIngrediente('insumo'); setSelectedItem('') }}
+                onClick={() => { setTipoIngrediente('insumo'); setSelectedItem(''); setFiltroCategoria('') }}
                 className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium ${
                   tipoIngrediente === 'insumo'
                     ? 'bg-green-100 text-green-800 border-2 border-green-500'
@@ -743,7 +748,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               </button>
               <button
                 type="button"
-                onClick={() => { setTipoIngrediente('receta_base'); setSelectedItem('') }}
+                onClick={() => { setTipoIngrediente('receta_base'); setSelectedItem(''); setFiltroCategoria('') }}
                 className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium ${
                   tipoIngrediente === 'receta_base'
                     ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
@@ -754,6 +759,22 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                 Elaboración
               </button>
             </div>
+            {tipoIngrediente === 'insumo' && (
+              <Select
+                label="Categoría"
+                options={[
+                  { value: '', label: 'Todas' },
+                  { value: 'Carnes', label: 'Carnes' },
+                  { value: 'Almacen', label: 'Almacén' },
+                  { value: 'Verduras_Frutas', label: 'Verduras' },
+                  { value: 'Pescados_Mariscos', label: 'Pescados' },
+                  { value: 'Lacteos_Fiambres', label: 'Lácteos' },
+                  { value: 'Bebidas', label: 'Bebidas' },
+                ]}
+                value={filtroCategoria}
+                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedItem('') }}
+              />
+            )}
             <div>
               <Select
                 label={tipoIngrediente === 'insumo' ? 'Insumo' : 'Elaboración'}
@@ -820,7 +841,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               </button>
               <button
                 type="button"
-                onClick={() => { setTipoIngrediente('receta_base'); setSelectedItem('') }}
+                onClick={() => { setTipoIngrediente('receta_base'); setSelectedItem(''); setFiltroCategoria('') }}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                   tipoIngrediente === 'receta_base'
                     ? 'bg-purple-100 text-purple-800 border border-purple-500'
@@ -831,6 +852,24 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                 Elaboración
               </button>
             </div>
+            {tipoIngrediente === 'insumo' && (
+              <div className="w-28">
+                <Select
+                  label="Categoría"
+                  options={[
+                    { value: '', label: 'Todas' },
+                    { value: 'Carnes', label: 'Carnes' },
+                    { value: 'Almacen', label: 'Almacén' },
+                    { value: 'Verduras_Frutas', label: 'Verduras' },
+                    { value: 'Pescados_Mariscos', label: 'Pescados' },
+                    { value: 'Lacteos_Fiambres', label: 'Lácteos' },
+                    { value: 'Bebidas', label: 'Bebidas' },
+                  ]}
+                  value={filtroCategoria}
+                  onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedItem('') }}
+                />
+              </div>
+            )}
             <div className="flex-1">
               <Select
                 label={tipoIngrediente === 'insumo' ? 'Insumo' : 'Elaboración'}

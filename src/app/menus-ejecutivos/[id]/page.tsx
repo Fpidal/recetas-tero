@@ -49,12 +49,6 @@ interface ItemMenu {
   isNew?: boolean
 }
 
-const TIPO_OPTIONS = [
-  { value: 'insumo', label: 'Insumo' },
-  { value: 'receta_base', label: 'Elaboración' },
-  { value: 'plato', label: 'Receta (Plato)' },
-]
-
 export default function EditarMenuEjecutivoPage({ params }: { params: { id: string } }) {
   const { id } = params
   const router = useRouter()
@@ -72,6 +66,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
 
   // Estado para agregar nuevo item
   const [nuevoTipo, setNuevoTipo] = useState<'insumo' | 'receta_base' | 'plato'>('insumo')
+  const [filtroCategoria, setFiltroCategoria] = useState('')
   const [nuevoReferenciaId, setNuevoReferenciaId] = useState('')
   const [nuevoCantidad, setNuevoCantidad] = useState('')
   const [nuevoEsBebida, setNuevoEsBebida] = useState(false)
@@ -220,11 +215,17 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
       (1 + (insumo.merma_porcentaje || 0) / 100)
   }
 
+  // Insumos filtrados por categoría
+  const insumosFiltrados = filtroCategoria
+    ? insumos.filter(i => i.categoria === filtroCategoria)
+    : insumos
+
   const referenciaOptions = useMemo(() => {
     if (nuevoTipo === 'insumo') {
+      const lista = filtroCategoria ? insumosFiltrados : insumos
       return [
         { value: '', label: 'Seleccionar insumo...' },
-        ...insumos.map(i => ({ value: i.id, label: `${i.nombre} (${i.unidad_medida})` }))
+        ...lista.map(i => ({ value: i.id, label: `${i.nombre} (${i.unidad_medida})` }))
       ]
     } else if (nuevoTipo === 'receta_base') {
       return [
@@ -237,7 +238,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
         ...platos.map(p => ({ value: p.id, label: `${p.nombre} ($${p.costo_total.toFixed(0)})` }))
       ]
     }
-  }, [nuevoTipo, insumos, recetasBase, platos])
+  }, [nuevoTipo, insumos, insumosFiltrados, filtroCategoria, recetasBase, platos])
 
   async function handleAgregarItem() {
     if (!nuevoReferenciaId || !nuevoCantidad) return
@@ -416,21 +417,70 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
         </div>
 
         {/* Agregar items */}
+        {!isReadOnly && (
         <div className="border-t pt-6">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">Agregar Componentes</h3>
 
+          {/* Botones Tab de tipo */}
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => { setNuevoTipo('insumo'); setNuevoReferenciaId(''); setFiltroCategoria('') }}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                nuevoTipo === 'insumo'
+                  ? 'bg-green-100 text-green-800 border-2 border-green-500'
+                  : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              Insumo
+            </button>
+            <button
+              type="button"
+              onClick={() => { setNuevoTipo('receta_base'); setNuevoReferenciaId(''); setFiltroCategoria('') }}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                nuevoTipo === 'receta_base'
+                  ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
+                  : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              Elaboración
+            </button>
+            <button
+              type="button"
+              onClick={() => { setNuevoTipo('plato'); setNuevoReferenciaId(''); setFiltroCategoria('') }}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                nuevoTipo === 'plato'
+                  ? 'bg-orange-100 text-orange-800 border-2 border-orange-500'
+                  : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+              }`}
+            >
+              <ChefHat className="w-4 h-4" />
+              Plato
+            </button>
+          </div>
+
+          {/* Selectores según tipo */}
           <div className="flex items-end gap-3 flex-wrap">
-            <div className="w-40">
-              <Select
-                label="Tipo"
-                options={TIPO_OPTIONS}
-                value={nuevoTipo}
-                onChange={(e) => {
-                  setNuevoTipo(e.target.value as any)
-                  setNuevoReferenciaId('')
-                }}
-              />
-            </div>
+            {nuevoTipo === 'insumo' && (
+              <div className="w-32">
+                <Select
+                  label="Categoría"
+                  options={[
+                    { value: '', label: 'Todas' },
+                    { value: 'Carnes', label: 'Carnes' },
+                    { value: 'Almacen', label: 'Almacén' },
+                    { value: 'Verduras_Frutas', label: 'Verduras' },
+                    { value: 'Pescados_Mariscos', label: 'Pescados' },
+                    { value: 'Lacteos_Fiambres', label: 'Lácteos' },
+                    { value: 'Bebidas', label: 'Bebidas' },
+                  ]}
+                  value={filtroCategoria}
+                  onChange={(e) => { setFiltroCategoria(e.target.value); setNuevoReferenciaId('') }}
+                />
+              </div>
+            )}
             <div className="flex-1 min-w-[200px]">
               <Select
                 label={nuevoTipo === 'insumo' ? 'Insumo' : nuevoTipo === 'receta_base' ? 'Elaboración' : 'Plato'}
@@ -465,6 +515,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
             </Button>
           </div>
         </div>
+        )}
 
         {/* Lista de items */}
         {items.length > 0 && (

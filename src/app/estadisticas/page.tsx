@@ -189,7 +189,9 @@ export default function EstadisticasPage() {
   const [rangoFechas, setRangoFechas] = useState({ desde: '', hasta: '' })
 
   // Datos para comparador de precios
+  const [modoComparador, setModoComparador] = useState<'insumo' | 'categoria'>('insumo')
   const [insumoSeleccionado, setInsumoSeleccionado] = useState('')
+  const [categoriaComparador, setCategoriaComparador] = useState('')
   const [busquedaInsumo, setBusquedaInsumo] = useState('')
 
   // Todos los precios históricos para comparador y alertas
@@ -502,9 +504,9 @@ export default function EstadisticasPage() {
 
   // ============ COMPARADOR DE PRECIOS ============
   const insumosFiltrados = useMemo(() => {
-    if (!busquedaInsumo) return insumos.slice(0, 20)
+    if (!busquedaInsumo) return insumos
     const busqueda = busquedaInsumo.toLowerCase()
-    return insumos.filter(i => i.nombre.toLowerCase().includes(busqueda)).slice(0, 20)
+    return insumos.filter(i => i.nombre.toLowerCase().includes(busqueda))
   }, [insumos, busquedaInsumo])
 
   const comparacionPrecios = useMemo((): PrecioProveedor[] => {
@@ -551,6 +553,74 @@ export default function EstadisticasPage() {
     if (comparacionPrecios.length === 0) return 0
     return comparacionPrecios[0].ultimoPrecio
   }, [comparacionPrecios])
+
+  // Matriz de precios por categoría (proveedores vs insumos)
+  const matrizPreciosCategoria = useMemo(() => {
+    if (!categoriaComparador) return { insumos: [], proveedores: [], precios: new Map<string, number>() }
+
+    // Filtrar insumos de la categoría seleccionada
+    const insumosCategoria = insumos.filter(i => i.categoria === categoriaComparador)
+    const insumoIds = new Set(insumosCategoria.map(i => i.id))
+
+    // Filtrar precios de esos insumos
+    const preciosFiltrados = todosLosPrecios.filter(p => insumoIds.has(p.insumo_id))
+
+    // Obtener lista de proveedores únicos que tienen precios en esta categoría
+    const proveedoresSet = new Set<string>()
+    preciosFiltrados.forEach(p => proveedoresSet.add(p.proveedor_nombre))
+    const proveedoresList = Array.from(proveedoresSet).sort()
+
+    // Crear mapa de último precio por insumo-proveedor
+    const ultimosPreciosMap = new Map<string, { precio: number; fecha: string }>()
+    preciosFiltrados.forEach(p => {
+      const key = `${p.insumo_id}|${p.proveedor_nombre}`
+      const existing = ultimosPreciosMap.get(key)
+      if (!existing || p.fecha > existing.fecha) {
+        ultimosPreciosMap.set(key, { precio: p.precio, fecha: p.fecha })
+      }
+    })
+
+    // Filtrar insumos que tienen al menos un precio
+    const insumosConPrecios = insumosCategoria.filter(i => {
+      return proveedoresList.some(prov => ultimosPreciosMap.has(`${i.id}|${prov}`))
+    })
+
+    // Crear mapa simple de precios
+    const preciosSimple = new Map<string, number>()
+    ultimosPreciosMap.forEach((val, key) => {
+      preciosSimple.set(key, val.precio)
+    })
+
+    return {
+      insumos: insumosConPrecios,
+      proveedores: proveedoresList,
+      precios: preciosSimple,
+    }
+  }, [categoriaComparador, insumos, todosLosPrecios])
+
+  // Encontrar el mejor precio por insumo
+  const mejorPrecioPorInsumo = useMemo(() => {
+    const mejores = new Map<string, { proveedor: string; precio: number }>()
+
+    matrizPreciosCategoria.insumos.forEach(insumo => {
+      let mejorPrecio = Infinity
+      let mejorProveedor = ''
+
+      matrizPreciosCategoria.proveedores.forEach(prov => {
+        const precio = matrizPreciosCategoria.precios.get(`${insumo.id}|${prov}`)
+        if (precio !== undefined && precio < mejorPrecio) {
+          mejorPrecio = precio
+          mejorProveedor = prov
+        }
+      })
+
+      if (mejorProveedor) {
+        mejores.set(insumo.id, { proveedor: mejorProveedor, precio: mejorPrecio })
+      }
+    })
+
+    return mejores
+  }, [matrizPreciosCategoria])
 
   // ============ ALERTAS ============
   const alertas = useMemo((): Alerta[] => {
@@ -883,142 +953,262 @@ export default function EstadisticasPage() {
       ) : activeTab === 'comparador' ? (
         /* ============ TAB COMPARADOR DE PRECIOS ============ */
         <div className="space-y-6">
-          {/* Selector de insumo */}
+          {/* Selector de modo */}
           <div className="bg-white rounded-lg border p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Seleccionar Insumo</h3>
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar insumo..."
-                  value={busquedaInsumo}
-                  onChange={(e) => setBusquedaInsumo(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex-1">
-                <Select
-                  options={[
-                    { value: '', label: 'Seleccionar insumo...' },
-                    ...insumosFiltrados.map(i => ({ value: i.id, label: `${i.nombre} (${CATEG_LABELS[i.categoria] || i.categoria})` }))
-                  ]}
-                  value={insumoSeleccionado}
-                  onChange={(e) => setInsumoSeleccionado(e.target.value)}
-                />
-              </div>
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => { setModoComparador('insumo'); setCategoriaComparador('') }}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  modoComparador === 'insumo'
+                    ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
+                    : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+                }`}
+              >
+                <Package className="w-4 h-4" />
+                Por Insumo
+              </button>
+              <button
+                type="button"
+                onClick={() => { setModoComparador('categoria'); setInsumoSeleccionado('') }}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  modoComparador === 'categoria'
+                    ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
+                    : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                Por Categoría
+              </button>
             </div>
+
+            {modoComparador === 'insumo' ? (
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar insumo..."
+                    value={busquedaInsumo}
+                    onChange={(e) => setBusquedaInsumo(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Select
+                    options={[
+                      { value: '', label: 'Seleccionar insumo...' },
+                      ...insumosFiltrados.map(i => ({ value: i.id, label: `${i.nombre} (${CATEG_LABELS[i.categoria] || i.categoria})` }))
+                    ]}
+                    value={insumoSeleccionado}
+                    onChange={(e) => setInsumoSeleccionado(e.target.value)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-md">
+                <Select
+                  label="Categoría"
+                  options={[
+                    { value: '', label: 'Seleccionar categoría...' },
+                    { value: 'Carnes', label: 'Carnes' },
+                    { value: 'Almacen', label: 'Almacén' },
+                    { value: 'Verduras_Frutas', label: 'Verduras y Frutas' },
+                    { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
+                    { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
+                    { value: 'Bebidas', label: 'Bebidas' },
+                  ]}
+                  value={categoriaComparador}
+                  onChange={(e) => setCategoriaComparador(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Tabla comparativa */}
-          {insumoSeleccionado && comparacionPrecios.length > 0 ? (
-            <>
+          {/* Contenido según modo */}
+          {modoComparador === 'insumo' ? (
+            /* MODO INSUMO */
+            insumoSeleccionado && comparacionPrecios.length > 0 ? (
+              <>
+                <div className="bg-white rounded-lg border overflow-hidden">
+                  <div className="px-4 py-3 bg-gray-50 border-b">
+                    <h3 className="text-sm font-semibold text-gray-700">
+                      Comparación de precios: {insumos.find(i => i.id === insumoSeleccionado)?.nombre}
+                    </h3>
+                  </div>
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Último Precio</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Promedio</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Mín / Máx</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Var. 1ra/Últ</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Compras</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {comparacionPrecios.map((p, idx) => (
+                        <tr key={p.proveedor} className={`hover:bg-gray-50 ${idx === 0 ? 'bg-green-50' : ''}`}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-900">{p.proveedor}</span>
+                              {p.ultimoPrecio === menorPrecioActual && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium">
+                                  MEJOR PRECIO
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-gray-500">
+                              Última compra: {new Date(p.fechaUltimo + 'T12:00:00').toLocaleDateString('es-AR')}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`text-sm font-bold ${idx === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                              {formatMoney(p.ultimoPrecio)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-600">
+                            {formatMoney(p.precioPromedio)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-600">
+                            {formatMoney(p.precioMin)} / {formatMoney(p.precioMax)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {p.variacionPrimeraUltima > 0 ? (
+                                <TrendingUp className="w-3 h-3 text-red-500" />
+                              ) : p.variacionPrimeraUltima < 0 ? (
+                                <TrendingDown className="w-3 h-3 text-green-500" />
+                              ) : (
+                                <Minus className="w-3 h-3 text-gray-400" />
+                              )}
+                              <span className={`text-xs font-semibold ${
+                                p.variacionPrimeraUltima > 0 ? 'text-red-600' : p.variacionPrimeraUltima < 0 ? 'text-green-600' : 'text-gray-500'
+                              }`}>
+                                {p.variacionPrimeraUltima > 0 ? '+' : ''}{p.variacionPrimeraUltima.toFixed(1)}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-600">
+                            {p.cantidadCompras}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Gráfico de barras horizontal */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Comparación Visual - Último Precio</h3>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        layout="vertical"
+                        data={comparacionPrecios.map(p => ({
+                          proveedor: p.proveedor,
+                          precio: p.ultimoPrecio,
+                          fill: p.ultimoPrecio === menorPrecioActual ? '#16a34a' : '#6b7280'
+                        }))}
+                        margin={{ left: 100, right: 30 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" tickFormatter={(v) => formatMoney(v)} tick={{ fontSize: 11 }} />
+                        <YAxis dataKey="proveedor" type="category" tick={{ fontSize: 11 }} width={90} />
+                        <Tooltip formatter={(v: any) => formatMoney(v || 0)} />
+                        <Bar dataKey="precio" fill="#6b7280">
+                          {comparacionPrecios.map((entry, idx) => (
+                            <Cell key={idx} fill={entry.ultimoPrecio === menorPrecioActual ? '#16a34a' : '#6b7280'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </>
+            ) : insumoSeleccionado ? (
+              <div className="bg-white rounded-lg border p-12 text-center">
+                <p className="text-gray-400">No hay compras registradas para este insumo</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg border p-12 text-center">
+                <Scale className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-400">Seleccioná un insumo para comparar precios entre proveedores</p>
+              </div>
+            )
+          ) : (
+            /* MODO CATEGORÍA - Matriz proveedores vs insumos */
+            categoriaComparador && matrizPreciosCategoria.insumos.length > 0 ? (
               <div className="bg-white rounded-lg border overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 border-b">
                   <h3 className="text-sm font-semibold text-gray-700">
-                    Comparación de precios: {insumos.find(i => i.id === insumoSeleccionado)?.nombre}
+                    Matriz de precios: {CATEG_LABELS[categoriaComparador] || categoriaComparador}
                   </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {matrizPreciosCategoria.insumos.length} insumos · {matrizPreciosCategoria.proveedores.length} proveedores
+                  </p>
                 </div>
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Último Precio</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Promedio</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Mín / Máx</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Var. 1ra/Últ</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Compras</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {comparacionPrecios.map((p, idx) => (
-                      <tr key={p.proveedor} className={`hover:bg-gray-50 ${idx === 0 ? 'bg-green-50' : ''}`}>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-900">{p.proveedor}</span>
-                            {p.ultimoPrecio === menorPrecioActual && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium">
-                                MEJOR PRECIO
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-gray-500">
-                            Última compra: {new Date(p.fechaUltimo + 'T12:00:00').toLocaleDateString('es-AR')}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className={`text-sm font-bold ${idx === 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                            {formatMoney(p.ultimoPrecio)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-gray-600">
-                          {formatMoney(p.precioPromedio)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-gray-600">
-                          {formatMoney(p.precioMin)} / {formatMoney(p.precioMax)}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {p.variacionPrimeraUltima > 0 ? (
-                              <TrendingUp className="w-3 h-3 text-red-500" />
-                            ) : p.variacionPrimeraUltima < 0 ? (
-                              <TrendingDown className="w-3 h-3 text-green-500" />
-                            ) : (
-                              <Minus className="w-3 h-3 text-gray-400" />
-                            )}
-                            <span className={`text-xs font-semibold ${
-                              p.variacionPrimeraUltima > 0 ? 'text-red-600' : p.variacionPrimeraUltima < 0 ? 'text-green-600' : 'text-gray-500'
-                            }`}>
-                              {p.variacionPrimeraUltima > 0 ? '+' : ''}{p.variacionPrimeraUltima.toFixed(1)}%
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-600">
-                          {p.cantidadCompras}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Gráfico de barras horizontal */}
-              <div className="bg-white rounded-lg border p-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">Comparación Visual - Último Precio</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={comparacionPrecios.map(p => ({
-                        proveedor: p.proveedor,
-                        precio: p.ultimoPrecio,
-                        fill: p.ultimoPrecio === menorPrecioActual ? '#16a34a' : '#6b7280'
-                      }))}
-                      margin={{ left: 100, right: 30 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" tickFormatter={(v) => formatMoney(v)} tick={{ fontSize: 11 }} />
-                      <YAxis dataKey="proveedor" type="category" tick={{ fontSize: 11 }} width={90} />
-                      <Tooltip formatter={(v: any) => formatMoney(v || 0)} />
-                      <Bar dataKey="precio" fill="#6b7280">
-                        {comparacionPrecios.map((entry, idx) => (
-                          <Cell key={idx} fill={entry.ultimoPrecio === menorPrecioActual ? '#16a34a' : '#6b7280'} />
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-10 min-w-[150px]">
+                          Proveedor
+                        </th>
+                        {matrizPreciosCategoria.insumos.map(insumo => (
+                          <th key={insumo.id} className="px-2 py-3 text-center text-[10px] font-medium text-gray-500 uppercase min-w-[80px]">
+                            <div className="truncate max-w-[80px]" title={insumo.nombre}>
+                              {insumo.nombre}
+                            </div>
+                          </th>
                         ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {matrizPreciosCategoria.proveedores.map(proveedor => (
+                        <tr key={proveedor} className="hover:bg-gray-50">
+                          <td className="px-3 py-2 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r">
+                            {proveedor}
+                          </td>
+                          {matrizPreciosCategoria.insumos.map(insumo => {
+                            const precio = matrizPreciosCategoria.precios.get(`${insumo.id}|${proveedor}`)
+                            const mejorPrecio = mejorPrecioPorInsumo.get(insumo.id)
+                            const esMejor = mejorPrecio?.proveedor === proveedor && precio !== undefined
+
+                            return (
+                              <td key={insumo.id} className={`px-2 py-2 text-center text-xs ${esMejor ? 'bg-green-50' : ''}`}>
+                                {precio !== undefined ? (
+                                  <span className={`font-medium ${esMejor ? 'text-green-700' : 'text-gray-900'}`}>
+                                    {formatMoney(precio)}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300">-</span>
+                                )}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-4 py-2 bg-gray-50 border-t text-xs text-gray-500">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-3 h-3 bg-green-100 rounded" /> Mejor precio por insumo
+                  </span>
                 </div>
               </div>
-            </>
-          ) : insumoSeleccionado ? (
-            <div className="bg-white rounded-lg border p-12 text-center">
-              <p className="text-gray-400">No hay compras registradas para este insumo</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg border p-12 text-center">
-              <Scale className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-400">Seleccioná un insumo para comparar precios entre proveedores</p>
-            </div>
+            ) : categoriaComparador ? (
+              <div className="bg-white rounded-lg border p-12 text-center">
+                <p className="text-gray-400">No hay datos de precios para esta categoría</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg border p-12 text-center">
+                <Scale className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-400">Seleccioná una categoría para ver la matriz de precios</p>
+              </div>
+            )
           )}
         </div>
       ) : activeTab === 'variacion' ? (

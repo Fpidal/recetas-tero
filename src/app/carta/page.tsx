@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, type LucideIcon } from 'lucide-react'
+import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, FileDown, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
+import { generarPDFCarta } from '@/lib/generar-pdf-carta'
 
 const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Pastas y Arroces', 'Ensaladas', 'Postres']
 
@@ -414,10 +415,22 @@ export default function CartaPage() {
           <h1 className="text-lg font-bold text-gray-900">Carta</h1>
           <p className="text-xs text-gray-600">Precios y análisis de food cost</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} disabled={platosDisponibles.length === 0} size="sm">
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Agregar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => generarPDFCarta(items, 'TERO')}
+            disabled={items.length === 0}
+            title="Descargar PDF de la carta"
+          >
+            <FileDown className="w-3.5 h-3.5 mr-1" />
+            PDF
+          </Button>
+          <Button onClick={() => setIsModalOpen(true)} disabled={platosDisponibles.length === 0} size="sm">
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            Agregar
+          </Button>
+        </div>
       </div>
 
       {/* Resumen - solo para tab En Carta */}

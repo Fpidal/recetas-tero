@@ -418,7 +418,6 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
                   { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
                   { value: 'Bebidas', label: 'Bebidas' },
-                  { value: 'Salsas_Recetas', label: 'Salsas y Recetas' },
                 ]}
                 value={filtroCategoria}
                 onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo('') }}
@@ -478,7 +477,6 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
                   { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
                   { value: 'Bebidas', label: 'Bebidas' },
-                  { value: 'Salsas_Recetas', label: 'Salsas y Recetas' },
                 ]}
                 value={filtroCategoria}
                 onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo('') }}

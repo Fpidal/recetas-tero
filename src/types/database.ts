@@ -5,7 +5,6 @@ export type CategoriaInsumo =
   | 'Pescados_Mariscos'
   | 'Lacteos_Fiambres'
   | 'Bebidas'
-  | 'Salsas_Recetas'
 
 export type UnidadMedida = 'kg' | 'lt' | 'unidad' | 'gr' | 'ml' | 'porcion'
 

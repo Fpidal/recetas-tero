@@ -53,7 +53,6 @@ const categorias: { value: CategoriaInsumo; label: string }[] = [
   { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
   { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
   { value: 'Bebidas', label: 'Bebidas' },
-  { value: 'Salsas_Recetas', label: 'Salsas y Recetas' },
 ]
 
 const unidades: { value: UnidadMedida; label: string }[] = [

@@ -1124,7 +1124,6 @@ export default function NuevaFacturaPage() {
               { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
               { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
               { value: 'Bebidas', label: 'Bebidas' },
-              { value: 'Salsas_Recetas', label: 'Salsas y Recetas' },
             ]}
           />
           <div className="grid grid-cols-2 gap-4">

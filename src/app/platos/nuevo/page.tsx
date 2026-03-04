@@ -324,6 +324,7 @@ export default function NuevoPlatoPage() {
               options={[
                 { value: 'Entradas', label: 'Entradas' },
                 { value: 'Principales', label: 'Principales' },
+                { value: 'Parrilla', label: 'Parrilla' },
                 { value: 'Pastas y Arroces', label: 'Pastas y Arroces' },
                 { value: 'Ensaladas', label: 'Ensaladas' },
                 { value: 'Postres', label: 'Postres' },

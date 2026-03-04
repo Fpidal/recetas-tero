@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
 import Link from 'next/link'
 
-const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Pastas y Arroces', 'Ensaladas', 'Postres']
+const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
 
 interface PlatoConCosto {
   id: string
@@ -36,6 +36,7 @@ function getPlateIcon(seccion: string, nombrePlato?: string): LucideIcon {
   if (s.includes('pescado') || s.includes('marisco') || n.includes('langostino') || n.includes('salmon') || n.includes('trucha')) return Fish
   if (s.includes('postre')) return Cake
   if (s.includes('sopa') || s.includes('guiso')) return Soup
+  if (s.includes('parrilla')) return Beef
   if (s.includes('principal') || s.includes('carne') || n.includes('bife') || n.includes('lomo') || n.includes('costilla') || n.includes('entraña')) return Beef
 
   return UtensilsCrossed // default

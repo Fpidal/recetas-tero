@@ -6,7 +6,7 @@ interface CartaItem {
   precio_carta: number
 }
 
-const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Pastas y Arroces', 'Ensaladas', 'Postres']
+const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
 
 export function generarPDFCarta(items: CartaItem[], nombreRestaurante: string = 'TERO') {
   const doc = new jsPDF({

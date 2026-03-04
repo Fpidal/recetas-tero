@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
 import { generarPDFCarta } from '@/lib/generar-pdf-carta'
 
-const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Pastas y Arroces', 'Ensaladas', 'Postres']
+const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
 
 interface PlatoConCosto {
   id: string
@@ -240,6 +240,7 @@ export default function CartaPage() {
     switch (seccion) {
       case 'Entradas': return 15
       case 'Principales': return 25
+      case 'Parrilla': return 25
       case 'Pastas y Arroces': return 20
       case 'Ensaladas': return 15
       case 'Postres': return 20

@@ -36,7 +36,7 @@ interface OpcionMenu {
 // Secciones del menú especial
 const SECCIONES_MENU = [
   { value: 'Entradas', label: 'Entradas', secciones_plato: ['Entradas'], esInsumo: false },
-  { value: 'Principales', label: 'Principales', secciones_plato: ['Principales', 'Pastas y Arroces', 'Ensaladas'], esInsumo: false },
+  { value: 'Principales', label: 'Principales', secciones_plato: ['Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas'], esInsumo: false },
   { value: 'Postres', label: 'Postres', secciones_plato: ['Postres'], esInsumo: false },
   { value: 'Bebidas', label: 'Bebidas', secciones_plato: [], esInsumo: true },
 ]
@@ -48,6 +48,7 @@ function normalizarTipoOpcion(tipo: string): string {
     'Entrada': 'Entradas',
     'principal': 'Principales',
     'Principal': 'Principales',
+    'Parrilla': 'Principales',
     'Pastas y Arroces': 'Principales',
     'Ensaladas': 'Principales',
     'postre': 'Postres',

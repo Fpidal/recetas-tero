@@ -701,6 +701,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
               >
                 <option value="Entradas">Entradas</option>
                 <option value="Principales">Principales</option>
+                <option value="Parrilla">Parrilla</option>
                 <option value="Pastas y Arroces">Pastas y Arroces</option>
                 <option value="Ensaladas">Ensaladas</option>
                 <option value="Postres">Postres</option>

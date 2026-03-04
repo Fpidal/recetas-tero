@@ -32,6 +32,7 @@ function normalizarTipoOpcion(tipo: string): string {
     'Entrada': 'Entradas',
     'principal': 'Principales',
     'Principal': 'Principales',
+    'Parrilla': 'Principales',
     'Pastas y Arroces': 'Principales',
     'Ensaladas': 'Principales',
     'postre': 'Postres',

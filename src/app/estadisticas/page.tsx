@@ -1138,7 +1138,7 @@ export default function EstadisticasPage() {
               </div>
             )
           ) : (
-            /* MODO CATEGORÍA - Matriz proveedores vs insumos */
+            /* MODO CATEGORÍA - Matriz insumos vs proveedores */
             categoriaComparador && matrizPreciosCategoria.insumos.length > 0 ? (
               <div className="bg-white rounded-lg border overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 border-b">
@@ -1153,43 +1153,45 @@ export default function EstadisticasPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-10 min-w-[150px]">
-                          Proveedor
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-10 min-w-[180px]">
+                          Insumo
                         </th>
-                        {matrizPreciosCategoria.insumos.map(insumo => (
-                          <th key={insumo.id} className="px-2 py-3 text-center text-[10px] font-medium text-gray-500 uppercase min-w-[80px]">
-                            <div className="truncate max-w-[80px]" title={insumo.nombre}>
-                              {insumo.nombre}
+                        {matrizPreciosCategoria.proveedores.map(proveedor => (
+                          <th key={proveedor} className="px-3 py-3 text-center text-[10px] font-medium text-gray-500 uppercase min-w-[100px]">
+                            <div className="truncate max-w-[100px]" title={proveedor}>
+                              {proveedor}
                             </div>
                           </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {matrizPreciosCategoria.proveedores.map(proveedor => (
-                        <tr key={proveedor} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r">
-                            {proveedor}
-                          </td>
-                          {matrizPreciosCategoria.insumos.map(insumo => {
-                            const precio = matrizPreciosCategoria.precios.get(`${insumo.id}|${proveedor}`)
-                            const mejorPrecio = mejorPrecioPorInsumo.get(insumo.id)
-                            const esMejor = mejorPrecio?.proveedor === proveedor && precio !== undefined
+                      {matrizPreciosCategoria.insumos.map(insumo => {
+                        const mejorPrecio = mejorPrecioPorInsumo.get(insumo.id)
+                        return (
+                          <tr key={insumo.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r">
+                              {insumo.nombre}
+                            </td>
+                            {matrizPreciosCategoria.proveedores.map(proveedor => {
+                              const precio = matrizPreciosCategoria.precios.get(`${insumo.id}|${proveedor}`)
+                              const esMejor = mejorPrecio?.proveedor === proveedor && precio !== undefined
 
-                            return (
-                              <td key={insumo.id} className={`px-2 py-2 text-center text-xs ${esMejor ? 'bg-green-50' : ''}`}>
-                                {precio !== undefined ? (
-                                  <span className={`font-medium ${esMejor ? 'text-green-700' : 'text-gray-900'}`}>
-                                    {formatMoney(precio)}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-300">-</span>
-                                )}
-                              </td>
-                            )
-                          })}
-                        </tr>
-                      ))}
+                              return (
+                                <td key={proveedor} className={`px-3 py-2 text-center text-xs ${esMejor ? 'bg-green-50' : ''}`}>
+                                  {precio !== undefined ? (
+                                    <span className={`font-medium ${esMejor ? 'text-green-700' : 'text-gray-900'}`}>
+                                      {formatMoney(precio)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-300">-</span>
+                                  )}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>

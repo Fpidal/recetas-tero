@@ -33,6 +33,7 @@ interface FacturaConDetalle {
   proveedor_id: string
   proveedores: { nombre: string } | null
   factura_items: {
+    insumo_id: string
     cantidad: number
     precio_unitario: number
     insumos: { categoria: string; iva_porcentaje: number } | null
@@ -43,11 +44,65 @@ interface FacturaConDetalle {
 const COLORES = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#ec4899', '#14b8a6', '#f59e0b']
 
 const PERIODOS = [
-  { value: '7', label: 'Últimos 7 días' },
+  { value: 'esta_semana', label: 'Esta semana' },
+  { value: 'semana_pasada', label: 'Semana pasada' },
   { value: '30', label: 'Últimos 30 días' },
   { value: '60', label: 'Últimos 60 días' },
   { value: '90', label: 'Últimos 90 días' },
 ]
+
+// Helper: obtener lunes de una semana
+function getLunes(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Ajustar cuando es domingo
+  d.setDate(diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+// Calcular rango de fechas según período
+function calcularRangoFechas(periodo: string): { desde: string; hasta: string } {
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const lunesActual = getLunes(hoy)
+
+  let desde: Date
+  let hasta: Date
+
+  switch (periodo) {
+    case 'esta_semana':
+      // Esta semana: desde el lunes hasta hoy
+      desde = new Date(lunesActual)
+      hasta = new Date(hoy)
+      break
+    case 'semana_pasada':
+      // Semana pasada: lunes a domingo
+      desde = new Date(lunesActual)
+      desde.setDate(desde.getDate() - 7)
+      hasta = new Date(desde)
+      hasta.setDate(hasta.getDate() + 6)
+      break
+    case '30':
+    case '60':
+    case '90':
+      // Últimos X días
+      const dias = parseInt(periodo)
+      desde = new Date(hoy)
+      desde.setDate(desde.getDate() - dias)
+      hasta = new Date(hoy)
+      break
+    default:
+      desde = new Date(hoy)
+      desde.setDate(desde.getDate() - 30)
+      hasta = new Date(hoy)
+  }
+
+  return {
+    desde: desde.toISOString().split('T')[0],
+    hasta: hasta.toISOString().split('T')[0],
+  }
+}
 
 const CATEG_LABELS: Record<string, string> = {
   Carnes: 'Carnes',
@@ -82,7 +137,7 @@ interface InsumoVariacion {
 
 export default function EstadisticasPage() {
   const [activeTab, setActiveTab] = useState<TabType>('proveedores')
-  const [periodo, setPeriodo] = useState('30')
+  const [periodo, setPeriodo] = useState('semana_pasada')
   const [isLoading, setIsLoading] = useState(true)
   const [categoriaExpandida, setCategoriaExpandida] = useState<string | null>(null)
 
@@ -92,6 +147,8 @@ export default function EstadisticasPage() {
   // Datos para variación de precios
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [preciosDeFacturas, setPreciosDeFacturas] = useState<FacturaItemConFecha[]>([])
+  const [preciosAnterioresMapa, setPreciosAnterioresMapa] = useState<Map<string, number>>(new Map())
+  const [rangoFechas, setRangoFechas] = useState({ desde: '', hasta: '' })
 
   useEffect(() => {
     fetchData()
@@ -99,34 +156,61 @@ export default function EstadisticasPage() {
 
   async function fetchData() {
     setIsLoading(true)
-    const fechaDesde = new Date()
-    fechaDesde.setDate(fechaDesde.getDate() - parseInt(periodo))
-    const fechaDesdeStr = fechaDesde.toISOString().split('T')[0]
+    const { desde, hasta } = calcularRangoFechas(periodo)
+    setRangoFechas({ desde, hasta })
 
-    const [insumosRes, facturasRes, itemsRes] = await Promise.all([
+    const [insumosRes, facturasRes, facturasAnterioresRes] = await Promise.all([
       supabase.from('insumos').select('id, nombre, categoria').eq('activo', true),
       supabase.from('facturas_proveedor').select(`
         id, fecha, total, tipo, proveedor_id,
         proveedores (nombre),
-        factura_items (cantidad, precio_unitario, insumos (categoria, iva_porcentaje))
-      `).eq('activo', true).gte('fecha', fechaDesdeStr),
-      // Obtener precios de items de facturas activas (no de precios_insumo)
-      supabase.from('factura_items').select(`
-        insumo_id, precio_unitario,
-        facturas_proveedor!inner (fecha, activo)
-      `).eq('facturas_proveedor.activo', true).gte('facturas_proveedor.fecha', fechaDesdeStr),
+        factura_items (insumo_id, cantidad, precio_unitario, insumos (categoria, iva_porcentaje))
+      `).eq('activo', true).gte('fecha', desde).lte('fecha', hasta),
+      // Traer facturas ANTERIORES al período para obtener precios previos
+      supabase.from('facturas_proveedor').select(`
+        fecha,
+        factura_items (insumo_id, precio_unitario)
+      `).eq('activo', true).lt('fecha', desde).order('fecha', { ascending: false }),
     ])
 
     if (insumosRes.data) setInsumos(insumosRes.data)
-    if (facturasRes.data) setFacturas(facturasRes.data as unknown as FacturaConDetalle[])
 
-    // Transformar items a formato de precios
-    if (itemsRes.data) {
-      const precios: FacturaItemConFecha[] = itemsRes.data.map((item: any) => ({
-        insumo_id: item.insumo_id,
-        precio: item.precio_unitario,
-        fecha: item.facturas_proveedor?.fecha || '',
-      }))
+    // Guardar el precio más reciente ANTERIOR al período para cada insumo
+    if (facturasAnterioresRes.data) {
+      const mapAnteriores = new Map<string, number>()
+      // Las facturas vienen ordenadas por fecha desc, así que la primera que encontremos es la más reciente
+      facturasAnterioresRes.data.forEach((factura: any) => {
+        if (factura.factura_items) {
+          factura.factura_items.forEach((item: any) => {
+            // Solo guardar si no tenemos ya un precio para este insumo (el primero es el más reciente)
+            if (item.insumo_id && !mapAnteriores.has(item.insumo_id)) {
+              mapAnteriores.set(item.insumo_id, item.precio_unitario)
+            }
+          })
+        }
+      })
+      setPreciosAnterioresMapa(mapAnteriores)
+    }
+
+    if (facturasRes.data) {
+      const facturasList = facturasRes.data as unknown as FacturaConDetalle[]
+      setFacturas(facturasList)
+
+      // Extraer precios de los items de facturas
+      const precios: FacturaItemConFecha[] = []
+      facturasList.forEach(factura => {
+        if (factura.factura_items) {
+          factura.factura_items.forEach((item: any) => {
+            if (item.insumo_id) {
+              precios.push({
+                insumo_id: item.insumo_id,
+                precio: item.precio_unitario,
+                fecha: factura.fecha,
+              })
+            }
+          })
+        }
+      })
       setPreciosDeFacturas(precios)
     }
 
@@ -223,12 +307,17 @@ export default function EstadisticasPage() {
           .sort((a, b) => a.fecha.localeCompare(b.fecha))
 
         if (preciosInsumo.length >= 1) {
-          const primero = preciosInsumo[0].precio
-          const ultimo = preciosInsumo[preciosInsumo.length - 1].precio
+          // Precio actual: último precio del período
+          const precioActual = preciosInsumo[preciosInsumo.length - 1].precio
+          // Precio anterior: del mapa de precios anteriores (de facturas previas)
+          const precioAnterior = preciosAnterioresMapa.get(insumo.id)
+
+          const precioInicialFinal = precioAnterior && precioAnterior > 0 ? precioAnterior : precioActual
           let varInsumo = 0
 
-          if (preciosInsumo.length >= 2 && primero > 0) {
-            varInsumo = ((ultimo - primero) / primero) * 100
+          // Calcular variación si hay precio anterior diferente al actual
+          if (precioInicialFinal !== precioActual && precioInicialFinal > 0) {
+            varInsumo = ((precioActual - precioInicialFinal) / precioInicialFinal) * 100
             if (Math.abs(varInsumo) <= 200) {
               variacionesPorInsumo.push(varInsumo)
             }
@@ -237,8 +326,8 @@ export default function EstadisticasPage() {
           insumosDetalle.push({
             id: insumo.id,
             nombre: insumo.nombre,
-            precioInicial: primero,
-            precioFinal: ultimo,
+            precioInicial: precioInicialFinal,
+            precioFinal: precioActual,
             variacion: varInsumo,
             cantidadRegistros: preciosInsumo.length,
           })
@@ -264,7 +353,7 @@ export default function EstadisticasPage() {
     }).filter(Boolean).sort((a, b) => Math.abs(b!.variacion) - Math.abs(a!.variacion)) as {
       categoria: string; label: string; color: string; insumos: number; variacion: number; insumosConVariacion: number; insumosDetalle: InsumoVariacion[];
     }[]
-  }, [preciosDeFacturas, insumos])
+  }, [preciosDeFacturas, insumos, preciosAnterioresMapa])
 
   const formatMoney = (v: number) => `$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 
@@ -278,7 +367,15 @@ export default function EstadisticasPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Estadísticas</h1>
-          <p className="text-gray-600">Análisis de compras y precios</p>
+          <p className="text-gray-600">
+            {rangoFechas.desde && rangoFechas.hasta ? (
+              <>
+                {new Date(rangoFechas.desde + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                {' — '}
+                {new Date(rangoFechas.hasta + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </>
+            ) : 'Análisis de compras y precios'}
+          </p>
         </div>
         <div className="w-44">
           <Select
@@ -529,7 +626,7 @@ export default function EstadisticasPage() {
                                           {formatMoney(ins.precioFinal)}
                                         </td>
                                         <td className="px-4 py-2 text-right">
-                                          {ins.cantidadRegistros >= 2 ? (
+                                          {ins.precioInicial !== ins.precioFinal ? (
                                             <div className="flex items-center justify-end gap-1">
                                               {ins.variacion > 0 ? (
                                                 <TrendingUp className="w-3 h-3 text-red-500" />

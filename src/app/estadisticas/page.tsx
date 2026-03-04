@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Select } from '@/components/ui'
-import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown } from 'lucide-react'
 
 // ============ TIPOS ============
 interface Insumo {
@@ -14,6 +14,12 @@ interface Insumo {
 }
 
 interface PrecioRaw {
+  insumo_id: string
+  precio: number
+  fecha: string
+}
+
+interface FacturaItemConFecha {
   insumo_id: string
   precio: number
   fecha: string
@@ -65,17 +71,27 @@ const CATEG_COLORES: Record<string, string> = {
 
 type TabType = 'proveedores' | 'variacion'
 
+interface InsumoVariacion {
+  id: string
+  nombre: string
+  precioInicial: number
+  precioFinal: number
+  variacion: number
+  cantidadRegistros: number
+}
+
 export default function EstadisticasPage() {
   const [activeTab, setActiveTab] = useState<TabType>('proveedores')
   const [periodo, setPeriodo] = useState('30')
   const [isLoading, setIsLoading] = useState(true)
+  const [categoriaExpandida, setCategoriaExpandida] = useState<string | null>(null)
 
   // Datos para proveedores
   const [facturas, setFacturas] = useState<FacturaConDetalle[]>([])
 
   // Datos para variación de precios
   const [insumos, setInsumos] = useState<Insumo[]>([])
-  const [allCategPreciosRaw, setAllCategPreciosRaw] = useState<PrecioRaw[]>([])
+  const [preciosDeFacturas, setPreciosDeFacturas] = useState<FacturaItemConFecha[]>([])
 
   useEffect(() => {
     fetchData()
@@ -87,19 +103,32 @@ export default function EstadisticasPage() {
     fechaDesde.setDate(fechaDesde.getDate() - parseInt(periodo))
     const fechaDesdeStr = fechaDesde.toISOString().split('T')[0]
 
-    const [insumosRes, facturasRes, preciosRes] = await Promise.all([
+    const [insumosRes, facturasRes, itemsRes] = await Promise.all([
       supabase.from('insumos').select('id, nombre, categoria').eq('activo', true),
       supabase.from('facturas_proveedor').select(`
         id, fecha, total, tipo, proveedor_id,
         proveedores (nombre),
         factura_items (cantidad, precio_unitario, insumos (categoria, iva_porcentaje))
-      `).neq('activo', false).gte('fecha', fechaDesdeStr),
-      supabase.from('precios_insumo').select('insumo_id, precio, fecha').gte('fecha', fechaDesdeStr).order('fecha', { ascending: true }),
+      `).eq('activo', true).gte('fecha', fechaDesdeStr),
+      // Obtener precios de items de facturas activas (no de precios_insumo)
+      supabase.from('factura_items').select(`
+        insumo_id, precio_unitario,
+        facturas_proveedor!inner (fecha, activo)
+      `).eq('facturas_proveedor.activo', true).gte('facturas_proveedor.fecha', fechaDesdeStr),
     ])
 
     if (insumosRes.data) setInsumos(insumosRes.data)
     if (facturasRes.data) setFacturas(facturasRes.data as unknown as FacturaConDetalle[])
-    if (preciosRes.data) setAllCategPreciosRaw(preciosRes.data)
+
+    // Transformar items a formato de precios
+    if (itemsRes.data) {
+      const precios: FacturaItemConFecha[] = itemsRes.data.map((item: any) => ({
+        insumo_id: item.insumo_id,
+        precio: item.precio_unitario,
+        fecha: item.facturas_proveedor?.fecha || '',
+      }))
+      setPreciosDeFacturas(precios)
+    }
 
     setIsLoading(false)
   }
@@ -172,37 +201,52 @@ export default function EstadisticasPage() {
 
   // ============ CÁLCULOS VARIACIÓN ============
   const allCategResumen = useMemo(() => {
-    if (allCategPreciosRaw.length === 0 || insumos.length === 0) return []
+    if (preciosDeFacturas.length === 0 || insumos.length === 0) return []
 
-    const insumosConPrecios = new Set(allCategPreciosRaw.map(p => p.insumo_id))
+    const insumosConPrecios = new Set(preciosDeFacturas.map(p => p.insumo_id))
     const insumosActivos = insumos.filter(i => insumosConPrecios.has(i.id))
     const categorias = Array.from(new Set(insumosActivos.map(i => i.categoria)))
 
     return categorias.map(cat => {
       const categInsumos = insumosActivos.filter(i => i.categoria === cat)
       const categInsumoIds = categInsumos.map(i => i.id)
-      const preciosCat = allCategPreciosRaw.filter(p => categInsumoIds.includes(p.insumo_id))
+      const preciosCat = preciosDeFacturas.filter(p => categInsumoIds.includes(p.insumo_id))
 
       if (preciosCat.length === 0) return null
 
       const variacionesPorInsumo: number[] = []
+      const insumosDetalle: InsumoVariacion[] = []
 
       categInsumos.forEach(insumo => {
         const preciosInsumo = preciosCat
           .filter(p => p.insumo_id === insumo.id)
           .sort((a, b) => a.fecha.localeCompare(b.fecha))
 
-        if (preciosInsumo.length >= 2) {
+        if (preciosInsumo.length >= 1) {
           const primero = preciosInsumo[0].precio
           const ultimo = preciosInsumo[preciosInsumo.length - 1].precio
-          if (primero > 0) {
-            const varInsumo = ((ultimo - primero) / primero) * 100
+          let varInsumo = 0
+
+          if (preciosInsumo.length >= 2 && primero > 0) {
+            varInsumo = ((ultimo - primero) / primero) * 100
             if (Math.abs(varInsumo) <= 200) {
               variacionesPorInsumo.push(varInsumo)
             }
           }
+
+          insumosDetalle.push({
+            id: insumo.id,
+            nombre: insumo.nombre,
+            precioInicial: primero,
+            precioFinal: ultimo,
+            variacion: varInsumo,
+            cantidadRegistros: preciosInsumo.length,
+          })
         }
       })
+
+      // Ordenar insumos por variación absoluta
+      insumosDetalle.sort((a, b) => Math.abs(b.variacion) - Math.abs(a.variacion))
 
       const variacion = variacionesPorInsumo.length > 0
         ? variacionesPorInsumo.reduce((sum, v) => sum + v, 0) / variacionesPorInsumo.length
@@ -215,11 +259,12 @@ export default function EstadisticasPage() {
         insumos: categInsumos.length,
         variacion,
         insumosConVariacion: variacionesPorInsumo.length,
+        insumosDetalle,
       }
     }).filter(Boolean).sort((a, b) => Math.abs(b!.variacion) - Math.abs(a!.variacion)) as {
-      categoria: string; label: string; color: string; insumos: number; variacion: number; insumosConVariacion: number;
+      categoria: string; label: string; color: string; insumos: number; variacion: number; insumosConVariacion: number; insumosDetalle: InsumoVariacion[];
     }[]
-  }, [allCategPreciosRaw, insumos])
+  }, [preciosDeFacturas, insumos])
 
   const formatMoney = (v: number) => `$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 
@@ -417,38 +462,106 @@ export default function EstadisticasPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {allCategResumen.map((cat) => (
-                    <tr key={cat.categoria} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: cat.color }}
-                          />
-                          <span className="text-sm font-medium text-gray-900">{cat.label}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-600">
-                        {cat.insumosConVariacion} / {cat.insumos}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {cat.variacion > 0 ? (
-                            <TrendingUp className="w-3.5 h-3.5 text-red-500" />
-                          ) : cat.variacion < 0 ? (
-                            <TrendingDown className="w-3.5 h-3.5 text-green-500" />
-                          ) : (
-                            <Minus className="w-3.5 h-3.5 text-gray-400" />
-                          )}
-                          <span className={`text-sm font-bold ${
-                            cat.variacion > 0 ? 'text-red-600' : cat.variacion < 0 ? 'text-green-600' : 'text-gray-500'
-                          }`}>
-                            {cat.variacion > 0 ? '+' : ''}{cat.variacion.toFixed(1)}%
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {allCategResumen.map((cat) => {
+                    const isExpanded = categoriaExpandida === cat.categoria
+                    return (
+                      <React.Fragment key={cat.categoria}>
+                        <tr
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => setCategoriaExpandida(isExpanded ? null : cat.categoria)}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                              )}
+                              <span
+                                className="w-3 h-3 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: cat.color }}
+                              />
+                              <span className="text-sm font-medium text-gray-900">{cat.label}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-600">
+                            {cat.insumosDetalle.length} insumos
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {cat.variacion > 0 ? (
+                                <TrendingUp className="w-3.5 h-3.5 text-red-500" />
+                              ) : cat.variacion < 0 ? (
+                                <TrendingDown className="w-3.5 h-3.5 text-green-500" />
+                              ) : (
+                                <Minus className="w-3.5 h-3.5 text-gray-400" />
+                              )}
+                              <span className={`text-sm font-bold ${
+                                cat.variacion > 0 ? 'text-red-600' : cat.variacion < 0 ? 'text-green-600' : 'text-gray-500'
+                              }`}>
+                                {cat.variacion > 0 ? '+' : ''}{cat.variacion.toFixed(1)}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={3} className="px-0 py-0">
+                              <div className="bg-gray-50 border-y">
+                                <table className="min-w-full">
+                                  <thead>
+                                    <tr className="text-[10px] text-gray-500 uppercase">
+                                      <th className="px-6 py-2 text-left font-medium">Insumo</th>
+                                      <th className="px-4 py-2 text-right font-medium">Precio Inicial</th>
+                                      <th className="px-4 py-2 text-right font-medium">Precio Final</th>
+                                      <th className="px-4 py-2 text-right font-medium">Variación</th>
+                                      <th className="px-4 py-2 text-center font-medium">Compras</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-200">
+                                    {cat.insumosDetalle.map((ins) => (
+                                      <tr key={ins.id} className="bg-white hover:bg-gray-50">
+                                        <td className="px-6 py-2 text-sm text-gray-900">{ins.nombre}</td>
+                                        <td className="px-4 py-2 text-sm text-gray-600 text-right">
+                                          {formatMoney(ins.precioInicial)}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-600 text-right">
+                                          {formatMoney(ins.precioFinal)}
+                                        </td>
+                                        <td className="px-4 py-2 text-right">
+                                          {ins.cantidadRegistros >= 2 ? (
+                                            <div className="flex items-center justify-end gap-1">
+                                              {ins.variacion > 0 ? (
+                                                <TrendingUp className="w-3 h-3 text-red-500" />
+                                              ) : ins.variacion < 0 ? (
+                                                <TrendingDown className="w-3 h-3 text-green-500" />
+                                              ) : (
+                                                <Minus className="w-3 h-3 text-gray-400" />
+                                              )}
+                                              <span className={`text-xs font-semibold ${
+                                                ins.variacion > 0 ? 'text-red-600' : ins.variacion < 0 ? 'text-green-600' : 'text-gray-500'
+                                              }`}>
+                                                {ins.variacion > 0 ? '+' : ''}{ins.variacion.toFixed(1)}%
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <span className="text-xs text-gray-400">-</span>
+                                          )}
+                                        </td>
+                                        <td className="px-4 py-2 text-center">
+                                          <span className="text-xs text-gray-500">{ins.cantidadRegistros}</span>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
 

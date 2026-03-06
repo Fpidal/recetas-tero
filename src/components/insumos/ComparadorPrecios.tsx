@@ -318,34 +318,53 @@ export default function ComparadorPrecios() {
       return
     }
 
-    // 1. Obtener proveedores existentes de esta comparación
-    const proveedoresExistentes = proveedoresComparacion
+    // 1. Obtener datos FRESCOS desde la base de datos (no del estado)
+    const { data: proveedoresEnDB } = await supabase
+      .from('comparacion_proveedores')
+      .select('*')
+      .eq('comparacion_id', activeComparacionId)
 
-    // Identificar qué proveedores ya existen y cuáles son nuevos
-    const provExistentesRealesIds = new Set(proveedoresExistentes.filter(p => p.proveedor_id).map(p => p.proveedor_id))
-    const provExistentesTempNames = new Set(proveedoresExistentes.filter(p => p.nombre_temporal).map(p => p.nombre_temporal))
+    const { data: itemsEnDB } = await supabase
+      .from('comparacion_items')
+      .select('*')
+      .eq('comparacion_id', activeComparacionId)
+
+    const proveedoresExistentes = proveedoresEnDB || []
+    const itemsExistentes = itemsEnDB || []
+
+    // 2. Identificar qué proveedores ya existen y cuáles son nuevos
+    const provExistentesRealesIds = new Set(
+      proveedoresExistentes.filter(p => p.proveedor_id).map(p => p.proveedor_id)
+    )
+    const provExistentesTempNames = new Set(
+      proveedoresExistentes.filter(p => p.nombre_temporal).map(p => p.nombre_temporal)
+    )
 
     const proveedoresNuevosReales = proveedoresSeleccionados.filter(id => !provExistentesRealesIds.has(id))
     const proveedoresNuevosTemp = proveedoresTemporales.filter(nombre => !provExistentesTempNames.has(nombre))
 
-    // Proveedores a eliminar (estaban pero ya no están seleccionados)
-    const proveedoresAEliminarIds = proveedoresExistentes
-      .filter(p => {
-        if (p.proveedor_id) return !proveedoresSeleccionados.includes(p.proveedor_id)
-        if (p.nombre_temporal) return !proveedoresTemporales.includes(p.nombre_temporal)
-        return true
-      })
-      .map(p => p.id)
+    // 3. Proveedores a eliminar (estaban pero ya no están seleccionados)
+    const proveedoresAEliminar = proveedoresExistentes.filter(p => {
+      if (p.proveedor_id) return !proveedoresSeleccionados.includes(p.proveedor_id)
+      if (p.nombre_temporal) return !proveedoresTemporales.includes(p.nombre_temporal)
+      return true
+    })
 
-    // 2. Eliminar solo los proveedores que fueron deseleccionados (y sus items en cascada)
-    if (proveedoresAEliminarIds.length > 0) {
+    if (proveedoresAEliminar.length > 0) {
+      // Eliminar items de estos proveedores primero
+      await supabase
+        .from('comparacion_items')
+        .delete()
+        .in('comparacion_proveedor_id', proveedoresAEliminar.map(p => p.id))
+
+      // Luego eliminar los proveedores
       await supabase
         .from('comparacion_proveedores')
         .delete()
-        .in('id', proveedoresAEliminarIds)
+        .in('id', proveedoresAEliminar.map(p => p.id))
     }
 
-    // 3. Crear solo los proveedores nuevos
+    // 4. Crear solo los proveedores nuevos
     const maxOrden = proveedoresExistentes.length > 0
       ? Math.max(...proveedoresExistentes.map(p => p.orden)) + 1
       : 0
@@ -375,9 +394,22 @@ export default function ComparadorPrecios() {
       if (data) newProvs = data
     }
 
-    // 4. Buscar precios históricos solo para proveedores nuevos reales
-    let preciosHist: PrecioHistorico[] = []
+    // 5. Identificar items existentes (para no duplicar)
+    const itemsExistentesSet = new Set(
+      itemsExistentes.map(i => `${i.insumo_id}:${i.comparacion_proveedor_id}`)
+    )
 
+    // 6. Identificar insumos que ya tienen items vs nuevos
+    const insumosConItems = new Set(itemsExistentes.map(i => i.insumo_id))
+    const insumosNuevos = insumosSeleccionados.filter(id => !insumosConItems.has(id))
+
+    // 7. Obtener proveedores que quedaron (los que no fueron eliminados)
+    const proveedoresQueQuedaron = proveedoresExistentes.filter(
+      p => !proveedoresAEliminar.some(pe => pe.id === p.id)
+    )
+
+    // 8. Buscar precios históricos para proveedores nuevos
+    let preciosHistNuevos: PrecioHistorico[] = []
     if (proveedoresNuevosReales.length > 0) {
       const { data: facturaItems } = await supabase
         .from('factura_items')
@@ -404,83 +436,72 @@ export default function ComparadorPrecios() {
             })
           }
         })
-        preciosHist = Array.from(precioMap.values())
+        preciosHistNuevos = Array.from(precioMap.values())
       }
     }
 
-    // 5. Identificar insumos nuevos (que no tenían items antes)
-    const insumosConItems = new Set(itemsComparacion.map(i => i.insumo_id))
-    const insumosNuevos = insumosSeleccionados.filter(id => !insumosConItems.has(id))
-
-    // 6. Obtener todos los proveedores actuales (existentes que quedaron + nuevos)
-    const { data: allProveedoresActuales } = await supabase
-      .from('comparacion_proveedores')
-      .select('*')
-      .eq('comparacion_id', activeComparacionId)
-
-    if (!allProveedoresActuales) {
-      await fetchComparacionData(activeComparacionId)
-      setShowConfig(false)
-      return
-    }
-
-    // 7. Crear items solo para combinaciones que no existen
+    // 9. Crear items SOLO para combinaciones que NO existen
     const itemsToInsert: any[] = []
 
-    // Para proveedores nuevos: crear items para TODOS los insumos seleccionados
+    // Para proveedores NUEVOS: crear items para todos los insumos seleccionados
     for (const prov of newProvs) {
       for (const insumoId of insumosSeleccionados) {
-        let precio: number | null = null
-        if (prov.proveedor_id) {
-          const hist = preciosHist.find(
-            h => h.insumo_id === insumoId && h.proveedor_id === prov.proveedor_id
-          )
-          if (hist) precio = hist.precio
-        }
+        const key = `${insumoId}:${prov.id}`
+        if (!itemsExistentesSet.has(key)) {
+          let precio: number | null = null
+          if (prov.proveedor_id) {
+            const hist = preciosHistNuevos.find(
+              h => h.insumo_id === insumoId && h.proveedor_id === prov.proveedor_id
+            )
+            if (hist) precio = hist.precio
+          }
 
-        itemsToInsert.push({
-          comparacion_id: activeComparacionId,
-          insumo_id: insumoId,
-          comparacion_proveedor_id: prov.id,
-          precio
-        })
+          itemsToInsert.push({
+            comparacion_id: activeComparacionId,
+            insumo_id: insumoId,
+            comparacion_proveedor_id: prov.id,
+            precio
+          })
+        }
       }
     }
 
-    // Para insumos nuevos: crear items para proveedores existentes (que quedaron)
-    const proveedoresQueQuedaron = allProveedoresActuales.filter(p => !newProvs.some(np => np.id === p.id))
+    // Para insumos NUEVOS: crear items para proveedores que ya existían
     for (const insumoId of insumosNuevos) {
       for (const prov of proveedoresQueQuedaron) {
-        // Buscar precio histórico si es proveedor real
-        let precio: number | null = null
-        if (prov.proveedor_id && proveedoresSeleccionados.includes(prov.proveedor_id)) {
-          // Buscar en facturas para este insumo nuevo
-          const { data: facturaItem } = await supabase
-            .from('factura_items')
-            .select(`
-              precio_unitario,
-              facturas_proveedor!inner(proveedor_id, fecha, activo)
-            `)
-            .eq('insumo_id', insumoId)
-            .eq('facturas_proveedor.proveedor_id', prov.proveedor_id)
-            .eq('facturas_proveedor.activo', true)
-            .order('facturas_proveedor(fecha)', { ascending: false })
-            .limit(1)
-            .single()
+        const key = `${insumoId}:${prov.id}`
+        if (!itemsExistentesSet.has(key)) {
+          let precio: number | null = null
 
-          if (facturaItem) precio = facturaItem.precio_unitario
+          // Buscar precio histórico para este insumo nuevo
+          if (prov.proveedor_id) {
+            const { data: facturaItem } = await supabase
+              .from('factura_items')
+              .select(`
+                precio_unitario,
+                facturas_proveedor!inner(proveedor_id, fecha, activo)
+              `)
+              .eq('insumo_id', insumoId)
+              .eq('facturas_proveedor.proveedor_id', prov.proveedor_id)
+              .eq('facturas_proveedor.activo', true)
+              .order('facturas_proveedor(fecha)', { ascending: false })
+              .limit(1)
+              .single()
+
+            if (facturaItem) precio = facturaItem.precio_unitario
+          }
+
+          itemsToInsert.push({
+            comparacion_id: activeComparacionId,
+            insumo_id: insumoId,
+            comparacion_proveedor_id: prov.id,
+            precio
+          })
         }
-
-        itemsToInsert.push({
-          comparacion_id: activeComparacionId,
-          insumo_id: insumoId,
-          comparacion_proveedor_id: prov.id,
-          precio
-        })
       }
     }
 
-    // 8. Eliminar items de insumos que fueron deseleccionados
+    // 10. Eliminar items de insumos que fueron DESELECCIONADOS
     const insumosAEliminar = Array.from(insumosConItems).filter(id => !insumosSeleccionados.includes(id))
     if (insumosAEliminar.length > 0) {
       await supabase
@@ -490,14 +511,14 @@ export default function ComparadorPrecios() {
         .in('insumo_id', insumosAEliminar)
     }
 
-    // 9. Insertar los nuevos items
+    // 11. Insertar los nuevos items (solo los que no existían)
     if (itemsToInsert.length > 0) {
       await supabase
         .from('comparacion_items')
         .insert(itemsToInsert)
     }
 
-    // 10. Recargar datos
+    // 12. Recargar datos
     await fetchComparacionData(activeComparacionId)
     setShowConfig(false)
   }

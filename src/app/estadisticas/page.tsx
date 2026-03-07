@@ -737,11 +737,11 @@ export default function EstadisticasPage() {
   ]
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Estadísticas</h1>
-          <p className="text-gray-600">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Estadísticas</h1>
+          <p className="text-sm text-gray-600">
             {rangoFechas.desde && rangoFechas.hasta ? (
               <>
                 {new Date(rangoFechas.desde + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
@@ -751,7 +751,7 @@ export default function EstadisticasPage() {
             ) : 'Análisis de compras y precios'}
           </p>
         </div>
-        <div className="w-44">
+        <div className="w-full sm:w-44">
           <Select
             options={PERIODOS}
             value={periodo}
@@ -761,8 +761,8 @@ export default function EstadisticasPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-6">
+      <div className="border-b border-gray-200 mb-6 -mx-4 px-4 overflow-x-auto">
+        <nav className="-mb-px flex space-x-2 sm:space-x-6">
           {tabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
@@ -770,14 +770,15 @@ export default function EstadisticasPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1 sm:gap-2 py-2.5 sm:py-3 px-1 border-b-2 text-[11px] sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                   isActive
                     ? 'border-purple-500 text-purple-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                {tab.label}
+                <Icon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.id === 'proveedores' ? 'Compras' : tab.id === 'comparador' ? 'Comparar' : tab.id === 'variacion' ? 'Variación' : 'Alertas'}</span>
               </button>
             )
           })}
@@ -790,56 +791,55 @@ export default function EstadisticasPage() {
         </div>
       ) : activeTab === 'proveedores' ? (
         /* ============ TAB PROVEEDORES ============ */
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 overflow-hidden">
           {/* Resumen rápido */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg border p-4">
-              <div className="flex items-center gap-2 text-gray-500 mb-1">
-                <DollarSign className="w-4 h-4" />
-                <span className="text-xs">Total Compras</span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
+                <DollarSign className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs">Total Compras</span>
               </div>
-              <p className="text-xl font-bold text-gray-900">{formatMoney(totalCompras)}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900">{formatMoney(totalCompras)}</p>
             </div>
-            <div className="bg-white rounded-lg border p-4">
-              <div className="flex items-center gap-2 text-gray-500 mb-1">
-                <Users className="w-4 h-4" />
-                <span className="text-xs">Proveedores</span>
+            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
+                <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs">Proveedores</span>
               </div>
-              <p className="text-xl font-bold text-gray-900">{datosProveedores.length}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900">{datosProveedores.length}</p>
             </div>
-            <div className="bg-white rounded-lg border p-4">
-              <div className="flex items-center gap-2 text-gray-500 mb-1">
-                <Package className="w-4 h-4" />
-                <span className="text-xs">Categorías</span>
+            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
+                <Package className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs">Categorías</span>
               </div>
-              <p className="text-xl font-bold text-gray-900">{datosPorCategoria.length}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900">{datosPorCategoria.length}</p>
             </div>
-            <div className="bg-white rounded-lg border p-4">
-              <div className="flex items-center gap-2 text-gray-500 mb-1">
-                <TrendingUp className="w-4 h-4" />
-                <span className="text-xs">Proveedor Principal</span>
+            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
+                <TrendingUp className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs">Principal</span>
               </div>
-              <p className="text-lg font-bold text-gray-900 truncate">{datosProveedores[0]?.nombre || '-'}</p>
+              <p className="text-sm sm:text-lg font-bold text-gray-900 truncate">{datosProveedores[0]?.nombre || '-'}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Distribución por proveedor */}
-            <div className="bg-white rounded-lg border p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Distribución por Proveedor</h3>
+            <div className="bg-white rounded-lg border p-3 sm:p-4 overflow-hidden">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Distribución por Proveedor</h3>
               {datosPieProveedores.length > 0 ? (
-                <div className="h-64">
+                <div className="h-48 sm:h-64 overflow-hidden">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={datosPieProveedores}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
+                        innerRadius={30}
+                        outerRadius={50}
                         dataKey="value"
-                        label={({ name, percent }: any) => `${name || ''} (${((percent || 0) * 100).toFixed(0)}%)`}
-                        labelLine={false}
+                        label={false}
                       >
                         {datosPieProveedores.map((entry, idx) => (
                           <Cell key={idx} fill={entry.color} />
@@ -850,33 +850,33 @@ export default function EstadisticasPage() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <p className="text-gray-400 text-center py-12">Sin datos</p>
+                <p className="text-gray-400 text-center py-8 sm:py-12 text-sm">Sin datos</p>
               )}
             </div>
 
             {/* Ranking proveedores */}
-            <div className="bg-white rounded-lg border p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Ranking de Proveedores</h3>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="bg-white rounded-lg border p-3 sm:p-4 overflow-hidden">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Ranking de Proveedores</h3>
+              <div className="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto">
                 {datosProveedores.map((prov, idx) => (
-                  <div key={prov.nombre} className="flex items-center gap-3 p-2 rounded hover:bg-gray-50">
-                    <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
+                  <div key={prov.nombre} className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded hover:bg-gray-50">
+                    <span className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] sm:text-xs font-bold text-gray-500">
                       {idx + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{prov.nombre}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
-                          <FileText className="w-3 h-3" />
-                          {prov.cantidadFacturas} fact.
+                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{prov.nombre}</p>
+                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+                        <span className="text-[9px] sm:text-[10px] text-gray-500 flex items-center gap-0.5">
+                          <FileText className="w-2.5 sm:w-3 h-2.5 sm:h-3" />
+                          {prov.cantidadFacturas}
                         </span>
-                        <span className="text-[10px] text-gray-500">
+                        <span className="text-[9px] sm:text-[10px] text-gray-500 hidden sm:inline">
                           Ticket: {formatMoney(prov.ticketPromedio)}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+                      <div className="w-full bg-gray-100 rounded-full h-1 sm:h-1.5 mt-1">
                         <div
-                          className="h-1.5 rounded-full"
+                          className="h-1 sm:h-1.5 rounded-full"
                           style={{
                             width: `${(prov.total / totalCompras) * 100}%`,
                             backgroundColor: COLORES[idx % COLORES.length],
@@ -885,8 +885,8 @@ export default function EstadisticasPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-gray-900">{formatMoney(prov.total)}</p>
-                      <p className="text-[10px] text-gray-500">{((prov.total / totalCompras) * 100).toFixed(1)}%</p>
+                      <p className="text-xs sm:text-sm font-bold text-gray-900">{formatMoney(prov.total)}</p>
+                      <p className="text-[9px] sm:text-[10px] text-gray-500">{((prov.total / totalCompras) * 100).toFixed(0)}%</p>
                     </div>
                   </div>
                 ))}
@@ -894,18 +894,18 @@ export default function EstadisticasPage() {
             </div>
           </div>
 
-          {/* Evolución mensual */}
+          {/* Evolución mensual - solo en desktop */}
           {evolucionMensual.length > 0 && (
-            <div className="bg-white rounded-lg border p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Evolución Mensual (Últimos 6 meses)</h3>
-              <div className="h-72">
+            <div className="bg-white rounded-lg border p-3 sm:p-4 hidden sm:block">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Evolución Mensual (Últimos 6 meses)</h3>
+              <div className="h-56 sm:h-72 overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={evolucionMensual}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-                    <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+                    <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
                     <Tooltip formatter={(v: any) => formatMoney(v || 0)} />
-                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                    <Legend wrapperStyle={{ fontSize: '10px' }} />
                     {datosProveedores.slice(0, 5).map((prov, idx) => (
                       <Bar
                         key={prov.nombre}
@@ -921,26 +921,26 @@ export default function EstadisticasPage() {
           )}
 
           {/* Compras por categoría */}
-          <div className="bg-white rounded-lg border p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Compras por Categoría</h3>
-            <div className="space-y-4">
+          <div className="bg-white rounded-lg border p-3 sm:p-4 overflow-hidden">
+            <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Compras por Categoría</h3>
+            <div className="space-y-3 sm:space-y-4">
               {datosPorCategoria.map(cat => (
-                <div key={cat.categoria} className="border-b pb-3 last:border-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
+                <div key={cat.categoria} className="border-b pb-2.5 sm:pb-3 last:border-0">
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                       <span
-                        className="w-3 h-3 rounded-full"
+                        className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: CATEG_COLORES[cat.categoria] || '#6b7280' }}
                       />
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-xs sm:text-sm font-medium text-gray-900">
                         {CATEG_LABELS[cat.categoria] || cat.categoria}
                       </span>
                     </div>
-                    <span className="text-sm font-bold text-gray-900">{formatMoney(cat.total)}</span>
+                    <span className="text-xs sm:text-sm font-bold text-gray-900">{formatMoney(cat.total)}</span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {cat.proveedoresList.slice(0, 4).map(p => (
-                      <span key={p.nombre} className="text-[10px] px-2 py-0.5 bg-gray-100 rounded text-gray-600">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    {cat.proveedoresList.slice(0, 3).map(p => (
+                      <span key={p.nombre} className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 bg-gray-100 rounded text-gray-600">
                         {p.nombre}: {formatMoney(p.total)}
                       </span>
                     ))}
@@ -952,39 +952,39 @@ export default function EstadisticasPage() {
         </div>
       ) : activeTab === 'comparador' ? (
         /* ============ TAB COMPARADOR DE PRECIOS ============ */
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Selector de modo */}
-          <div className="bg-white rounded-lg border p-4">
-            <div className="flex gap-2 mb-4">
+          <div className="bg-white rounded-lg border p-3 sm:p-4">
+            <div className="flex gap-2 mb-3 sm:mb-4">
               <button
                 type="button"
                 onClick={() => { setModoComparador('insumo'); setCategoriaComparador('') }}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                   modoComparador === 'insumo'
                     ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
                     : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
                 }`}
               >
-                <Package className="w-4 h-4" />
+                <Package className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 Por Insumo
               </button>
               <button
                 type="button"
                 onClick={() => { setModoComparador('categoria'); setInsumoSeleccionado('') }}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                   modoComparador === 'categoria'
                     ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
                     : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
                 }`}
               >
-                <Users className="w-4 h-4" />
+                <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 Por Categoría
               </button>
             </div>
 
             {modoComparador === 'insumo' ? (
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-md">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                <div className="relative flex-1 sm:max-w-md">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
@@ -1036,45 +1036,46 @@ export default function EstadisticasPage() {
                       Comparación de precios: {insumos.find(i => i.id === insumoSeleccionado)?.nombre}
                     </h3>
                   </div>
+                  <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Último Precio</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Promedio</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Mín / Máx</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Var. 1ra/Últ</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Compras</th>
+                        <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Proveedor</th>
+                        <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Últ. Precio</th>
+                        <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Promedio</th>
+                        <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Mín / Máx</th>
+                        <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Var.</th>
+                        <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Compras</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {comparacionPrecios.map((p, idx) => (
                         <tr key={p.proveedor} className={`hover:bg-gray-50 ${idx === 0 ? 'bg-green-50' : ''}`}>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-900">{p.proveedor}</span>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3">
+                            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                              <span className="text-xs sm:text-sm font-medium text-gray-900">{p.proveedor}</span>
                               {p.ultimoPrecio === menorPrecioActual && (
-                                <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium">
-                                  MEJOR PRECIO
+                                <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium">
+                                  MEJOR
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-gray-500">
+                            <span className="text-[10px] text-gray-500 hidden sm:block">
                               Última compra: {new Date(p.fechaUltimo + 'T12:00:00').toLocaleDateString('es-AR')}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className={`text-sm font-bold ${idx === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
+                            <span className={`text-xs sm:text-sm font-bold ${idx === 0 ? 'text-green-600' : 'text-gray-900'}`}>
                               {formatMoney(p.ultimoPrecio)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right text-sm text-gray-600">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
                             {formatMoney(p.precioPromedio)}
                           </td>
-                          <td className="px-4 py-3 text-right text-sm text-gray-600">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
                             {formatMoney(p.precioMin)} / {formatMoney(p.precioMax)}
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               {p.variacionPrimeraUltima > 0 ? (
                                 <TrendingUp className="w-3 h-3 text-red-500" />
@@ -1083,26 +1084,27 @@ export default function EstadisticasPage() {
                               ) : (
                                 <Minus className="w-3 h-3 text-gray-400" />
                               )}
-                              <span className={`text-xs font-semibold ${
+                              <span className={`text-[10px] sm:text-xs font-semibold ${
                                 p.variacionPrimeraUltima > 0 ? 'text-red-600' : p.variacionPrimeraUltima < 0 ? 'text-green-600' : 'text-gray-500'
                               }`}>
                                 {p.variacionPrimeraUltima > 0 ? '+' : ''}{p.variacionPrimeraUltima.toFixed(1)}%
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center text-sm text-gray-600">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
                             {p.cantidadCompras}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
 
                 {/* Gráfico de barras horizontal */}
-                <div className="bg-white rounded-lg border p-4">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Comparación Visual - Último Precio</h3>
-                  <div className="h-64">
+                <div className="bg-white rounded-lg border p-3 sm:p-4">
+                  <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Comparación Visual</h3>
+                  <div className="h-48 sm:h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         layout="vertical"
@@ -1111,11 +1113,11 @@ export default function EstadisticasPage() {
                           precio: p.ultimoPrecio,
                           fill: p.ultimoPrecio === menorPrecioActual ? '#16a34a' : '#6b7280'
                         }))}
-                        margin={{ left: 100, right: 30 }}
+                        margin={{ left: 70, right: 20 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" tickFormatter={(v) => formatMoney(v)} tick={{ fontSize: 11 }} />
-                        <YAxis dataKey="proveedor" type="category" tick={{ fontSize: 11 }} width={90} />
+                        <XAxis type="number" tickFormatter={(v) => formatMoney(v)} tick={{ fontSize: 10 }} />
+                        <YAxis dataKey="proveedor" type="category" tick={{ fontSize: 10 }} width={65} />
                         <Tooltip formatter={(v: any) => formatMoney(v || 0)} />
                         <Bar dataKey="precio" fill="#6b7280">
                           {comparacionPrecios.map((entry, idx) => (
@@ -1128,24 +1130,24 @@ export default function EstadisticasPage() {
                 </div>
               </>
             ) : insumoSeleccionado ? (
-              <div className="bg-white rounded-lg border p-12 text-center">
-                <p className="text-gray-400">No hay compras registradas para este insumo</p>
+              <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
+                <p className="text-gray-400 text-sm">No hay compras registradas para este insumo</p>
               </div>
             ) : (
-              <div className="bg-white rounded-lg border p-12 text-center">
-                <Scale className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-400">Seleccioná un insumo para comparar precios entre proveedores</p>
+              <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
+                <Scale className="w-10 sm:w-12 h-10 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
+                <p className="text-gray-400 text-sm">Seleccioná un insumo para comparar precios</p>
               </div>
             )
           ) : (
             /* MODO CATEGORÍA - Matriz insumos vs proveedores */
             categoriaComparador && matrizPreciosCategoria.insumos.length > 0 ? (
               <div className="bg-white rounded-lg border overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    Matriz de precios: {CATEG_LABELS[categoriaComparador] || categoriaComparador}
+                <div className="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border-b">
+                  <h3 className="text-xs sm:text-sm font-semibold text-gray-700">
+                    Matriz: {CATEG_LABELS[categoriaComparador] || categoriaComparador}
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
                     {matrizPreciosCategoria.insumos.length} insumos · {matrizPreciosCategoria.proveedores.length} proveedores
                   </p>
                 </div>
@@ -1153,12 +1155,12 @@ export default function EstadisticasPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-10 min-w-[180px]">
+                        <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-10 min-w-[120px] sm:min-w-[180px]">
                           Insumo
                         </th>
                         {matrizPreciosCategoria.proveedores.map(proveedor => (
-                          <th key={proveedor} className="px-3 py-3 text-center text-[10px] font-medium text-gray-500 uppercase min-w-[100px]">
-                            <div className="truncate max-w-[100px]" title={proveedor}>
+                          <th key={proveedor} className="px-2 sm:px-3 py-2 sm:py-3 text-center text-[9px] sm:text-[10px] font-medium text-gray-500 uppercase min-w-[70px] sm:min-w-[100px]">
+                            <div className="truncate max-w-[70px] sm:max-w-[100px]" title={proveedor}>
                               {proveedor}
                             </div>
                           </th>
@@ -1170,7 +1172,7 @@ export default function EstadisticasPage() {
                         const mejorPrecio = mejorPrecioPorInsumo.get(insumo.id)
                         return (
                           <tr key={insumo.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r">
+                            <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r">
                               {insumo.nombre}
                             </td>
                             {matrizPreciosCategoria.proveedores.map(proveedor => {
@@ -1178,7 +1180,7 @@ export default function EstadisticasPage() {
                               const esMejor = mejorPrecio?.proveedor === proveedor && precio !== undefined
 
                               return (
-                                <td key={proveedor} className={`px-3 py-2 text-center text-xs ${esMejor ? 'bg-green-50' : ''}`}>
+                                <td key={proveedor} className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs ${esMejor ? 'bg-green-50' : ''}`}>
                                   {precio !== undefined ? (
                                     <span className={`font-medium ${esMejor ? 'text-green-700' : 'text-gray-900'}`}>
                                       {formatMoney(precio)}
@@ -1195,20 +1197,20 @@ export default function EstadisticasPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="px-4 py-2 bg-gray-50 border-t text-xs text-gray-500">
+                <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-50 border-t text-[10px] sm:text-xs text-gray-500">
                   <span className="inline-flex items-center gap-1">
-                    <span className="w-3 h-3 bg-green-100 rounded" /> Mejor precio por insumo
+                    <span className="w-2.5 sm:w-3 h-2.5 sm:h-3 bg-green-100 rounded" /> Mejor precio
                   </span>
                 </div>
               </div>
             ) : categoriaComparador ? (
-              <div className="bg-white rounded-lg border p-12 text-center">
-                <p className="text-gray-400">No hay datos de precios para esta categoría</p>
+              <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
+                <p className="text-gray-400 text-sm">No hay datos de precios para esta categoría</p>
               </div>
             ) : (
-              <div className="bg-white rounded-lg border p-12 text-center">
-                <Scale className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-400">Seleccioná una categoría para ver la matriz de precios</p>
+              <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
+                <Scale className="w-10 sm:w-12 h-10 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
+                <p className="text-gray-400 text-sm">Seleccioná una categoría para ver la matriz</p>
               </div>
             )
           )}
@@ -1217,17 +1219,18 @@ export default function EstadisticasPage() {
         /* ============ TAB VARIACIÓN ============ */
         <div className="space-y-4">
           {allCategResumen.length === 0 ? (
-            <div className="bg-white rounded-lg border p-12 text-center">
-              <p className="text-gray-400">No hay datos de precios en el período seleccionado</p>
+            <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
+              <p className="text-gray-400 text-sm">No hay datos de precios en el período seleccionado</p>
             </div>
           ) : (
             <div className="bg-white rounded-lg border overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Insumos c/Var</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Variación Promedio</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Categoría</th>
+                    <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Insumos</th>
+                    <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Variación</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -1239,33 +1242,33 @@ export default function EstadisticasPage() {
                           className="hover:bg-gray-50 cursor-pointer"
                           onClick={() => setCategoriaExpandida(isExpanded ? null : cat.categoria)}
                         >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
                               {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                                <ChevronDown className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-gray-400" />
                               ) : (
-                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                                <ChevronRight className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-gray-400" />
                               )}
                               <span
-                                className="w-3 h-3 rounded-full flex-shrink-0"
+                                className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: cat.color }}
                               />
-                              <span className="text-sm font-medium text-gray-900">{cat.label}</span>
+                              <span className="text-xs sm:text-sm font-medium text-gray-900">{cat.label}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center text-sm text-gray-600">
-                            {cat.insumosDetalle.length} insumos
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600">
+                            {cat.insumosDetalle.length}
                           </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
                               {cat.variacion > 0 ? (
-                                <TrendingUp className="w-3.5 h-3.5 text-red-500" />
+                                <TrendingUp className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-red-500" />
                               ) : cat.variacion < 0 ? (
-                                <TrendingDown className="w-3.5 h-3.5 text-green-500" />
+                                <TrendingDown className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-green-500" />
                               ) : (
-                                <Minus className="w-3.5 h-3.5 text-gray-400" />
+                                <Minus className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-gray-400" />
                               )}
-                              <span className={`text-sm font-bold ${
+                              <span className={`text-xs sm:text-sm font-bold ${
                                 cat.variacion > 0 ? 'text-red-600' : cat.variacion < 0 ? 'text-green-600' : 'text-gray-500'
                               }`}>
                                 {cat.variacion > 0 ? '+' : ''}{cat.variacion.toFixed(1)}%
@@ -1276,28 +1279,27 @@ export default function EstadisticasPage() {
                         {isExpanded && (
                           <tr>
                             <td colSpan={3} className="px-0 py-0">
-                              <div className="bg-gray-50 border-y">
+                              <div className="bg-gray-50 border-y overflow-x-auto">
                                 <table className="min-w-full">
                                   <thead>
                                     <tr className="text-[10px] text-gray-500 uppercase">
-                                      <th className="px-6 py-2 text-left font-medium">Insumo</th>
-                                      <th className="px-4 py-2 text-right font-medium">Precio Inicial</th>
-                                      <th className="px-4 py-2 text-right font-medium">Precio Final</th>
-                                      <th className="px-4 py-2 text-right font-medium">Variación</th>
-                                      <th className="px-4 py-2 text-center font-medium">Compras</th>
+                                      <th className="px-4 sm:px-6 py-2 text-left font-medium">Insumo</th>
+                                      <th className="px-2 sm:px-4 py-2 text-right font-medium hidden sm:table-cell">P. Inicial</th>
+                                      <th className="px-2 sm:px-4 py-2 text-right font-medium">P. Final</th>
+                                      <th className="px-2 sm:px-4 py-2 text-right font-medium">Var.</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-200">
                                     {cat.insumosDetalle.map((ins) => (
                                       <tr key={ins.id} className="bg-white hover:bg-gray-50">
-                                        <td className="px-6 py-2 text-sm text-gray-900">{ins.nombre}</td>
-                                        <td className="px-4 py-2 text-sm text-gray-600 text-right">
+                                        <td className="px-4 sm:px-6 py-2 text-xs sm:text-sm text-gray-900">{ins.nombre}</td>
+                                        <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 text-right hidden sm:table-cell">
                                           {formatMoney(ins.precioInicial)}
                                         </td>
-                                        <td className="px-4 py-2 text-sm text-gray-600 text-right">
+                                        <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 text-right">
                                           {formatMoney(ins.precioFinal)}
                                         </td>
-                                        <td className="px-4 py-2 text-right">
+                                        <td className="px-2 sm:px-4 py-2 text-right">
                                           {ins.precioInicial !== ins.precioFinal ? (
                                             <div className="flex items-center justify-end gap-1">
                                               {ins.variacion > 0 ? (
@@ -1307,7 +1309,7 @@ export default function EstadisticasPage() {
                                               ) : (
                                                 <Minus className="w-3 h-3 text-gray-400" />
                                               )}
-                                              <span className={`text-xs font-semibold ${
+                                              <span className={`text-[10px] sm:text-xs font-semibold ${
                                                 ins.variacion > 0 ? 'text-red-600' : ins.variacion < 0 ? 'text-green-600' : 'text-gray-500'
                                               }`}>
                                                 {ins.variacion > 0 ? '+' : ''}{ins.variacion.toFixed(1)}%
@@ -1316,9 +1318,6 @@ export default function EstadisticasPage() {
                                           ) : (
                                             <span className="text-xs text-gray-400">-</span>
                                           )}
-                                        </td>
-                                        <td className="px-4 py-2 text-center">
-                                          <span className="text-xs text-gray-500">{ins.cantidadRegistros}</span>
                                         </td>
                                       </tr>
                                     ))}
@@ -1333,11 +1332,12 @@ export default function EstadisticasPage() {
                   })}
                 </tbody>
               </table>
+              </div>
 
               {/* Promedio general */}
-              <div className="bg-gray-50 px-4 py-3 border-t flex items-center justify-between">
-                <span className="text-xs text-gray-500">
-                  Variación promedio general: {' '}
+              <div className="bg-gray-50 px-3 sm:px-4 py-2 sm:py-3 border-t flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+                <span className="text-[10px] sm:text-xs text-gray-500">
+                  Variación promedio: {' '}
                   <span className={`font-bold ${
                     (allCategResumen.reduce((s, r) => s + r.variacion, 0) / allCategResumen.length) > 0
                       ? 'text-red-600' : 'text-green-600'
@@ -1346,7 +1346,7 @@ export default function EstadisticasPage() {
                     {(allCategResumen.reduce((s, r) => s + r.variacion, 0) / allCategResumen.length).toFixed(1)}%
                   </span>
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-[10px] text-gray-400">
                   Ordenado por mayor variación
                 </span>
               </div>
@@ -1357,22 +1357,22 @@ export default function EstadisticasPage() {
         /* ============ TAB ALERTAS ============ */
         <div className="space-y-4">
           {/* Resumen de alertas */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-red-50 rounded-lg border border-red-200 p-4">
-              <div className="flex items-center gap-2 text-red-700 mb-1">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="text-xs font-medium">Aumentos &gt;10%</span>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="bg-red-50 rounded-lg border border-red-200 p-3 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-red-700 mb-1">
+                <AlertTriangle className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs font-medium">Aumentos &gt;10%</span>
               </div>
-              <p className="text-2xl font-bold text-red-700">
+              <p className="text-xl sm:text-2xl font-bold text-red-700">
                 {alertas.filter(a => a.tipo === 'aumento').length}
               </p>
             </div>
-            <div className="bg-green-50 rounded-lg border border-green-200 p-4">
-              <div className="flex items-center gap-2 text-green-700 mb-1">
-                <Lightbulb className="w-4 h-4" />
-                <span className="text-xs font-medium">Oportunidades</span>
+            <div className="bg-green-50 rounded-lg border border-green-200 p-3 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-green-700 mb-1">
+                <Lightbulb className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs font-medium">Oportunidades</span>
               </div>
-              <p className="text-2xl font-bold text-green-700">
+              <p className="text-xl sm:text-2xl font-bold text-green-700">
                 {alertas.filter(a => a.tipo === 'oportunidad').length}
               </p>
             </div>
@@ -1385,26 +1385,26 @@ export default function EstadisticasPage() {
                 {alertas.map(alerta => (
                   <div
                     key={alerta.id}
-                    className={`p-4 ${alerta.tipo === 'aumento' ? 'hover:bg-red-50' : 'hover:bg-green-50'}`}
+                    className={`p-3 sm:p-4 ${alerta.tipo === 'aumento' ? 'hover:bg-red-50' : 'hover:bg-green-50'}`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-full ${
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <div className={`p-1.5 sm:p-2 rounded-full flex-shrink-0 ${
                         alerta.tipo === 'aumento' ? 'bg-red-100' : 'bg-green-100'
                       }`}>
                         {alerta.tipo === 'aumento' ? (
-                          <AlertTriangle className={`w-4 h-4 text-red-600`} />
+                          <AlertTriangle className={`w-3.5 sm:w-4 h-3.5 sm:h-4 text-red-600`} />
                         ) : (
-                          <Lightbulb className={`w-4 h-4 text-green-600`} />
+                          <Lightbulb className={`w-3.5 sm:w-4 h-3.5 sm:h-4 text-green-600`} />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-sm font-semibold ${
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
+                          <span className={`text-xs sm:text-sm font-semibold ${
                             alerta.tipo === 'aumento' ? 'text-red-700' : 'text-green-700'
                           }`}>
-                            {alerta.tipo === 'aumento' ? 'Aumento de precio' : 'Oportunidad de ahorro'}
+                            {alerta.tipo === 'aumento' ? 'Aumento' : 'Oportunidad'}
                           </span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                          <span className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded font-medium ${
                             alerta.tipo === 'aumento'
                               ? 'bg-red-100 text-red-700'
                               : 'bg-green-100 text-green-700'
@@ -1412,19 +1412,19 @@ export default function EstadisticasPage() {
                             {alerta.tipo === 'aumento' ? '+' : '-'}{Math.abs(alerta.porcentaje).toFixed(0)}%
                           </span>
                         </div>
-                        <p className="text-sm text-gray-900 font-medium">{alerta.insumoNombre}</p>
-                        <p className="text-xs text-gray-600 mt-0.5">
+                        <p className="text-xs sm:text-sm text-gray-900 font-medium">{alerta.insumoNombre}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">
                           {alerta.tipo === 'aumento' ? (
-                            <>Proveedor: <span className="font-medium">{alerta.proveedorAfectado}</span></>
+                            <>Prov: <span className="font-medium">{alerta.proveedorAfectado}</span></>
                           ) : (
                             <>
-                              <span className="font-medium">{alerta.proveedorAlternativo}</span> tiene mejor precio que <span className="font-medium">{alerta.proveedorAfectado}</span>
+                              <span className="font-medium">{alerta.proveedorAlternativo}</span> mejor que <span className="font-medium">{alerta.proveedorAfectado}</span>
                             </>
                           )}
                         </p>
                         <p className="text-[10px] text-gray-400 mt-1">
                           {new Date(alerta.fecha + 'T12:00:00').toLocaleDateString('es-AR', {
-                            day: 'numeric', month: 'short', year: 'numeric'
+                            day: 'numeric', month: 'short'
                           })}
                         </p>
                       </div>
@@ -1434,10 +1434,10 @@ export default function EstadisticasPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg border p-12 text-center">
-              <AlertTriangle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-400">No hay alertas en este momento</p>
-              <p className="text-xs text-gray-400 mt-1">Las alertas se generan automáticamente desde las facturas</p>
+            <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
+              <AlertTriangle className="w-10 sm:w-12 h-10 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
+              <p className="text-gray-400 text-sm">No hay alertas en este momento</p>
+              <p className="text-[10px] sm:text-xs text-gray-400 mt-1">Se generan automáticamente desde las facturas</p>
             </div>
           )}
         </div>

@@ -13,15 +13,18 @@ interface OrdenPDF {
   proveedor_email: string | null
   proveedor_direccion: string | null
   items: {
+    insumo_id: string
     insumo_nombre: string
     unidad_medida: string
     unidad_display: string // Unidad visual para el proveedor
     cantidad: number
+    cantidad_recibida?: number // Cantidad según factura
     precio_unitario: number
     subtotal: number
     iva_porcentaje: number
     iva_monto: number
   }[]
+  tieneFactura?: boolean
 }
 
 // Datos fijos de Tero
@@ -41,7 +44,7 @@ export async function generarPDFOrden(ordenId: string) {
       id, numero, fecha, notas, estado,
       proveedores (nombre, contacto, telefono, email, direccion),
       orden_compra_items (
-        cantidad, precio_unitario, subtotal, unidad_display,
+        insumo_id, cantidad, precio_unitario, subtotal, unidad_display,
         insumos (nombre, unidad_medida, iva_porcentaje)
       )
     `)
@@ -52,6 +55,15 @@ export async function generarPDFOrden(ordenId: string) {
     alert('Error al cargar la orden para PDF')
     return
   }
+
+  // Buscar factura asociada para obtener cantidades recibidas
+  const { data: facturaData } = await supabase
+    .from('facturas_proveedor')
+    .select('id, factura_items (insumo_id, cantidad)')
+    .eq('orden_compra_id', ordenId)
+    .maybeSingle()
+
+  const facturaItems = facturaData?.factura_items as { insumo_id: string; cantidad: number }[] | null
 
   const prov = data.proveedores as any
   const orden: OrdenPDF = {
@@ -65,16 +77,24 @@ export async function generarPDFOrden(ordenId: string) {
     proveedor_telefono: prov?.telefono || null,
     proveedor_email: prov?.email || null,
     proveedor_direccion: prov?.direccion || null,
+    tieneFactura: !!facturaData,
     items: (data.orden_compra_items as any[]).map((item: any) => {
       const subtotal = parseFloat(item.subtotal)
       const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
       const unidadMedida = item.insumos?.unidad_medida || ''
+
+      // Buscar cantidad recibida en la factura
+      const facturaItem = facturaItems?.find(fi => fi.insumo_id === item.insumo_id)
+      const cantidadRecibida = facturaItem ? parseFloat(String(facturaItem.cantidad)) : undefined
+
       return {
+        insumo_id: item.insumo_id,
         insumo_nombre: item.insumos?.nombre || 'Desconocido',
         unidad_medida: unidadMedida,
-        unidad_display: item.unidad_display || unidadMedida, // Usar unidad_display si existe
+        unidad_display: item.unidad_display || unidadMedida,
         cantidad: parseFloat(item.cantidad),
+        cantidad_recibida: cantidadRecibida,
         precio_unitario: parseFloat(item.precio_unitario),
         subtotal,
         iva_porcentaje: ivaPorcentaje,
@@ -239,7 +259,19 @@ export async function generarPDFOrden(ordenId: string) {
 
   // === TABLA ===
   const rowH = 7
-  const colX = {
+  const esParcialORecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
+
+  // Columnas diferentes según si tiene factura o no
+  const colX = esParcialORecibida ? {
+    num: margin + 2,
+    insumo: margin + 8,
+    pedidoRight: margin + contentWidth * 0.38,
+    recibidoRight: margin + contentWidth * 0.50,
+    faltanteRight: margin + contentWidth * 0.62,
+    unidad: margin + contentWidth * 0.64,
+    precioRight: margin + contentWidth * 0.80,
+    subtotalRight: pageWidth - margin - 3,
+  } : {
     num: margin + 2,
     insumo: margin + 10,
     ivaRight: margin + contentWidth * 0.42,
@@ -259,8 +291,15 @@ export async function generarPDFOrden(ordenId: string) {
   const hTextY = y + 4.5
   doc.text('#', colX.num, hTextY)
   doc.text('INSUMO', colX.insumo, hTextY)
-  doc.text('IVA', colX.ivaRight, hTextY, { align: 'right' })
-  doc.text('CANT', colX.cantRight, hTextY, { align: 'right' })
+
+  if (esParcialORecibida) {
+    doc.text('PEDIDO', (colX as any).pedidoRight, hTextY, { align: 'right' })
+    doc.text('RECIB.', (colX as any).recibidoRight, hTextY, { align: 'right' })
+    doc.text('FALT.', (colX as any).faltanteRight, hTextY, { align: 'right' })
+  } else {
+    doc.text('IVA', (colX as any).ivaRight, hTextY, { align: 'right' })
+    doc.text('CANT', (colX as any).cantRight, hTextY, { align: 'right' })
+  }
   doc.text('UN', colX.unidad, hTextY)
   doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
   doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
@@ -269,7 +308,15 @@ export async function generarPDFOrden(ordenId: string) {
 
   // Filas
   orden.items.forEach((item, idx) => {
-    if (idx % 2 === 0) {
+    const cantidadRecibida = item.cantidad_recibida ?? 0
+    const faltante = item.cantidad - cantidadRecibida
+    const hayFaltante = esParcialORecibida && faltante > 0
+
+    // Fondo: naranja si hay faltante, gris alterno normal
+    if (hayFaltante) {
+      doc.setFillColor(255, 240, 230) // naranja claro
+      doc.rect(margin, y, contentWidth, rowH, 'F')
+    } else if (idx % 2 === 0) {
       doc.setFillColor(250, 250, 250)
       doc.rect(margin, y, contentWidth, rowH, 'F')
     }
@@ -285,21 +332,44 @@ export async function generarPDFOrden(ordenId: string) {
     doc.text(`${idx + 1}`, colX.num, textY)
 
     doc.setTextColor(30, 30, 30)
-    const nombreTruncado = item.insumo_nombre.length > 20
-      ? item.insumo_nombre.substring(0, 20) + '...'
+    const maxNombreLen = esParcialORecibida ? 16 : 20
+    const nombreTruncado = item.insumo_nombre.length > maxNombreLen
+      ? item.insumo_nombre.substring(0, maxNombreLen) + '...'
       : item.insumo_nombre
     doc.text(nombreTruncado, colX.insumo, textY)
 
-    // IVA
-    doc.setTextColor(100, 100, 100)
-    doc.setFontSize(5.5)
-    const ivaStr = item.iva_porcentaje === 10.5 ? '10,5%' : item.iva_porcentaje === 0 ? '0%' : '21%'
-    doc.text(ivaStr, colX.ivaRight, textY, { align: 'right' })
-    doc.setFontSize(6.5)
+    if (esParcialORecibida) {
+      // Columnas: PEDIDO, RECIBIDO, FALTANTE
+      doc.setTextColor(50, 50, 50)
+      const pedidoStr = item.cantidad % 1 === 0 ? item.cantidad.toFixed(0) : item.cantidad.toFixed(2).replace('.', ',')
+      doc.text(pedidoStr, (colX as any).pedidoRight, textY, { align: 'right' })
 
-    doc.setTextColor(50, 50, 50)
-    const cantStr = item.cantidad % 1 === 0 ? item.cantidad.toFixed(0) : item.cantidad.toFixed(2).replace('.', ',')
-    doc.text(cantStr, colX.cantRight, textY, { align: 'right' })
+      doc.setTextColor(34, 139, 34) // verde
+      const recibidoStr = cantidadRecibida % 1 === 0 ? cantidadRecibida.toFixed(0) : cantidadRecibida.toFixed(2).replace('.', ',')
+      doc.text(recibidoStr, (colX as any).recibidoRight, textY, { align: 'right' })
+
+      if (faltante > 0) {
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(200, 50, 50) // rojo
+        const faltanteStr = faltante % 1 === 0 ? faltante.toFixed(0) : faltante.toFixed(2).replace('.', ',')
+        doc.text(faltanteStr, (colX as any).faltanteRight, textY, { align: 'right' })
+        doc.setFont('helvetica', 'normal')
+      } else {
+        doc.setTextColor(150, 150, 150)
+        doc.text('-', (colX as any).faltanteRight, textY, { align: 'right' })
+      }
+    } else {
+      // IVA y CANT normales
+      doc.setTextColor(100, 100, 100)
+      doc.setFontSize(5.5)
+      const ivaStr = item.iva_porcentaje === 10.5 ? '10,5%' : item.iva_porcentaje === 0 ? '0%' : '21%'
+      doc.text(ivaStr, (colX as any).ivaRight, textY, { align: 'right' })
+      doc.setFontSize(6.5)
+
+      doc.setTextColor(50, 50, 50)
+      const cantStr = item.cantidad % 1 === 0 ? item.cantidad.toFixed(0) : item.cantidad.toFixed(2).replace('.', ',')
+      doc.text(cantStr, (colX as any).cantRight, textY, { align: 'right' })
+    }
 
     doc.setTextColor(120, 120, 120)
     doc.setFontSize(6)

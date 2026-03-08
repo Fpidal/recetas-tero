@@ -167,6 +167,16 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
       })))
     }
 
+    // Si tiene factura pero no está marcada como recibida, actualizar automáticamente
+    if (facturaData && (ordenData.estado === 'borrador' || ordenData.estado === 'enviada')) {
+      await supabase
+        .from('ordenes_compra')
+        .update({ estado: 'recibida' })
+        .eq('id', id)
+      ordenData.estado = 'recibida'
+      setOrden({ ...ordenData })
+    }
+
     // Si esta OC es faltante de otra, buscar fecha de OC original
     if (ordenData.orden_origen_id) {
       const { data: origenData } = await supabase
@@ -185,6 +195,12 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
 
   async function handleCambiarEstado(nuevoEstado: string) {
     if (!orden) return
+
+    // No permitir cancelar si tiene factura asociada
+    if (nuevoEstado === 'cancelada' && tieneFactura) {
+      alert('No se puede cancelar una orden que ya tiene factura asociada')
+      return
+    }
 
     setIsSaving(true)
 
@@ -386,7 +402,10 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
               </span>
             ) : (
               <Select
-                options={[
+                options={tieneFactura ? [
+                  { value: 'borrador', label: 'Borrador' },
+                  { value: 'enviada', label: 'Enviada' },
+                ] : [
                   { value: 'borrador', label: 'Borrador' },
                   { value: 'enviada', label: 'Enviada' },
                   { value: 'cancelada', label: 'Cancelada' },
@@ -600,7 +619,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         {/* Acciones */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-t pt-4 lg:pt-6">
           <div className="flex flex-wrap gap-2">
-            {(orden.estado === 'borrador' || orden.estado === 'enviada') && (
+            {(orden.estado === 'borrador' || orden.estado === 'enviada') && !tieneFactura && (
               <Button variant="secondary" size="sm" onClick={() => handleCambiarEstado('cancelada')} className="text-xs lg:text-sm">
                 <X className="w-4 h-4 mr-1 lg:mr-2" />
                 Cancelar

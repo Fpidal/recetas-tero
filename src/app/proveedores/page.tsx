@@ -99,6 +99,7 @@ export default function ProveedoresPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [nextCodigo, setNextCodigo] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [filtroCategoria, setFiltroCategoria] = useState('')
 
   useEffect(() => {
     fetchProveedores()
@@ -322,8 +323,12 @@ export default function ProveedoresPage() {
     return null
   }
 
-  // Filtrar proveedores por búsqueda
+  // Filtrar proveedores por búsqueda y categoría
   const proveedoresFiltrados = proveedores.filter(p => {
+    // Filtro por categoría
+    if (filtroCategoria && p.categoria !== filtroCategoria) return false
+
+    // Filtro por búsqueda
     if (!busqueda.trim()) return true
     const term = busqueda.toLowerCase()
     return (
@@ -481,19 +486,31 @@ export default function ProveedoresPage() {
         </Button>
       </div>
 
-      {/* Buscador */}
+      {/* Buscador y filtro por categoría */}
       <div className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, contacto, teléfono, CUIT..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, contacto, teléfono, CUIT..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+          <select
+            value={filtroCategoria}
+            onChange={(e) => setFiltroCategoria(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white sm:w-48"
+          >
+            <option value="">Todas las categorías</option>
+            {CATEGORIAS.filter(c => c.value).map(cat => (
+              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            ))}
+          </select>
         </div>
-        {busqueda && (
+        {(busqueda || filtroCategoria) && (
           <p className="text-sm text-gray-500 mt-1">
             {proveedoresFiltrados.length} de {proveedores.length} proveedores
           </p>

@@ -245,6 +245,23 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['factura_items']['Row'], 'id' | 'created_at' | 'subtotal'>
         Update: Partial<Database['public']['Tables']['factura_items']['Insert']>
       }
+      vinos: {
+        Row: {
+          id: string
+          bodega: string
+          nombre: string
+          categoria: string
+          cepa: string
+          zona: string | null
+          precio_caja: number
+          unidades_caja: number
+          descuento_porcentaje: number
+          activo: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['vinos']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['vinos']['Insert']>
+      }
     }
   }
 }
@@ -266,3 +283,4 @@ export type OrdenCompra = Database['public']['Tables']['ordenes_compra']['Row']
 export type OrdenCompraItem = Database['public']['Tables']['orden_compra_items']['Row']
 export type FacturaProveedor = Database['public']['Tables']['facturas_proveedor']['Row']
 export type FacturaItem = Database['public']['Tables']['factura_items']['Row']
+export type Vino = Database['public']['Tables']['vinos']['Row']

@@ -11,14 +11,14 @@ import {
   ClipboardList,
   FileText,
   Users,
-  LayoutGrid,
   BookOpen,
   Home,
   BarChart3,
   Trash2,
   Menu,
   X,
-  Warehouse
+  Warehouse,
+  Wine
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -26,11 +26,11 @@ const navigation = [
   { name: 'Inicio', href: '/', icon: Home, color: '#FFFFFF' },
   { name: 'Proveedores', href: '/proveedores', icon: Users, color: '#4F8EF7' },
   { name: 'Insumos', href: '/insumos', icon: Package, color: '#10B981' },
+  { name: 'Vinos', href: '/vinos', icon: Wine, color: '#7C3AED' },
   { name: 'Estadísticas', href: '/estadisticas', icon: BarChart3, color: '#8B5CF6' },
   { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen, color: '#EF4444' },
   { name: 'Recetas', href: '/platos', icon: ChefHat, color: '#A855F7' },
-  { name: 'Menús Ejecutivos', href: '/menus-ejecutivos', icon: UtensilsCrossed, color: '#14B8A6' },
-  { name: 'Menús Especiales', href: '/menus-especiales', icon: LayoutGrid, color: '#EC4899' },
+  { name: 'Menús', href: '/menus-ejecutivos', icon: UtensilsCrossed, color: '#14B8A6' },
   { name: 'Carta', href: '/carta', icon: ClipboardList, color: '#EF4444' },
   { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart, color: '#6366F1' },
   { name: 'Facturas', href: '/facturas', icon: FileText, color: '#6B7280' },
@@ -87,7 +87,8 @@ export default function Sidebar() {
       <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = pathname === item.href ||
-            (item.href !== '/' && pathname.startsWith(item.href))
+            (item.href !== '/' && pathname.startsWith(item.href)) ||
+            (item.href === '/menus-ejecutivos' && pathname.startsWith('/menus-especiales'))
           const isPapelera = item.href === '/papelera'
           return (
             <Link

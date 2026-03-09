@@ -262,6 +262,19 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['vinos']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['vinos']['Insert']>
       }
+      carta_vinos: {
+        Row: {
+          id: string
+          vino_id: string
+          precio_carta: number
+          margen_objetivo: number
+          activo: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['carta_vinos']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['carta_vinos']['Insert']>
+      }
     }
   }
 }
@@ -284,3 +297,4 @@ export type OrdenCompraItem = Database['public']['Tables']['orden_compra_items']
 export type FacturaProveedor = Database['public']['Tables']['facturas_proveedor']['Row']
 export type FacturaItem = Database['public']['Tables']['factura_items']['Row']
 export type Vino = Database['public']['Tables']['vinos']['Row']
+export type CartaVino = Database['public']['Tables']['carta_vinos']['Row']

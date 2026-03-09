@@ -194,8 +194,8 @@ export default function VinosPage() {
     setIsSaving(false)
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('¿Estás seguro de eliminar este vino?')) return
+  async function handleDelete(id: string, nombre: string) {
+    if (!confirm(`¿Estás seguro de eliminar "${nombre}"?`)) return
 
     const { error } = await supabase
       .from('vinos')
@@ -360,7 +360,7 @@ export default function VinosPage() {
                       <button onClick={() => handleOpenModal(vino)} className="p-1 hover:bg-gray-100 rounded">
                         <Pencil className="w-3.5 h-3.5 text-gray-500" />
                       </button>
-                      <button onClick={() => handleDelete(vino.id)} className="p-1 hover:bg-gray-100 rounded">
+                      <button onClick={() => handleDelete(vino.id, vino.nombre)} className="p-1 hover:bg-gray-100 rounded">
                         <Trash2 className="w-3.5 h-3.5 text-red-500" />
                       </button>
                     </div>
@@ -429,7 +429,7 @@ export default function VinosPage() {
                           <button onClick={() => handleOpenModal(vino)} className="p-1 hover:bg-gray-100 rounded">
                             <Pencil className="w-3.5 h-3.5 text-gray-500" />
                           </button>
-                          <button onClick={() => handleDelete(vino.id)} className="p-1 hover:bg-gray-100 rounded">
+                          <button onClick={() => handleDelete(vino.id, vino.nombre)} className="p-1 hover:bg-gray-100 rounded">
                             <Trash2 className="w-3.5 h-3.5 text-red-500" />
                           </button>
                         </div>

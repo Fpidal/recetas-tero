@@ -16,11 +16,18 @@ const CEPAS = [
 ]
 
 const ZONAS = [
-  { grupo: 'Mendoza', zonas: ['Luján de Cuyo', 'Valle de Uco', 'Maipú', 'San Rafael'] },
-  { grupo: 'Noroeste', zonas: ['Cafayate (Salta)', 'Valles Calchaquíes (Salta)', 'Quebrada de Humahuaca (Jujuy)'] },
-  { grupo: 'San Juan', zonas: ['Valle de Pedernal', 'Valle de Tulum'] },
-  { grupo: 'Patagonia', zonas: ['Alto Valle de Río Negro', 'San Patricio del Chañar (Neuquén)'] },
-  { grupo: 'Costa Atlántica', zonas: ['Chapadmalal (Buenos Aires)'] }
+  'Luján de Cuyo (Mendoza)',
+  'Valle de Uco (Mendoza)',
+  'Maipú (Mendoza)',
+  'San Rafael (Mendoza)',
+  'Cafayate (Salta)',
+  'Valles Calchaquíes (Salta)',
+  'Quebrada de Humahuaca (Jujuy)',
+  'Valle de Pedernal (San Juan)',
+  'Valle de Tulum (San Juan)',
+  'Alto Valle (Río Negro)',
+  'San Patricio del Chañar (Neuquén)',
+  'Chapadmalal (Buenos Aires)'
 ]
 
 interface VinoForm {
@@ -539,7 +546,7 @@ export default function VinosPage() {
                             )}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            <span className={`text-xs font-medium ${foodCost > 35 ? 'text-red-600' : foodCost > 30 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            <span className={`text-xs font-medium ${Math.round(foodCost) >= 40 ? 'text-red-600' : Math.round(foodCost) > margenObj ? 'text-yellow-600' : 'text-green-600'}`}>
                               {precioCarta > 0 ? pct(foodCost) : '-'}
                             </span>
                           </td>
@@ -610,7 +617,7 @@ export default function VinosPage() {
                         </div>
                         <div>
                           <p className="text-gray-500">FC</p>
-                          <p className={`font-medium ${foodCost > 35 ? 'text-red-600' : 'text-green-600'}`}>
+                          <p className={`font-medium ${Math.round(foodCost) >= 40 ? 'text-red-600' : Math.round(foodCost) > margenObj ? 'text-yellow-600' : 'text-green-600'}`}>
                             {precioCarta > 0 ? pct(foodCost) : '-'}
                           </p>
                         </div>
@@ -669,7 +676,7 @@ export default function VinosPage() {
               <select value={form.zona} onChange={(e) => setForm({ ...form, zona: e.target.value })}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500">
                 <option value="">Seleccionar...</option>
-                {ZONAS.map(g => <optgroup key={g.grupo} label={g.grupo}>{g.zonas.map(z => <option key={z} value={z}>{z}</option>)}</optgroup>)}
+                {ZONAS.map(z => <option key={z} value={z}>{z}</option>)}
               </select>
             </div>
           </div>

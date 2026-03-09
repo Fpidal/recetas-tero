@@ -101,10 +101,10 @@ export default function VinosPage() {
   }
 
   async function fetchVinosConCarta() {
+    // Traer TODOS los registros (activos e inactivos) para poder hacer toggle
     const { data: cartaData } = await supabase
       .from('carta_vinos')
       .select('*')
-      .eq('activo', true)
 
     const cartaMap = new Map((cartaData || []).map(c => [c.vino_id, c]))
 
@@ -206,11 +206,12 @@ export default function VinosPage() {
     if (vino.carta) {
       await supabase.from('carta_vinos').update({ activo: !vino.carta.activo }).eq('id', vino.carta.id)
     } else {
-      // Crear con precio sugerido
+      // Crear con precio sugerido usando misma fórmula que carta: costo / (margen / 100)
       const margen = 30
-      const precioSugerido = vino.costo / (1 - margen / 100)
+      const precioSugerido = margen > 0 ? vino.costo / (margen / 100) : 0
       await supabase.from('carta_vinos')
-        .insert({ vino_id: vino.id, precio_carta: precioSugerido, margen_objetivo: margen, activo: true })
+        .upsert({ vino_id: vino.id, precio_carta: precioSugerido, margen_objetivo: margen, activo: true },
+          { onConflict: 'vino_id' })
     }
     fetchVinosConCarta()
   }
@@ -479,7 +480,7 @@ export default function VinosPage() {
                   <tbody className="divide-y divide-gray-200">
                     {vinosCat.map((vino) => {
                       const margenObj = vino.carta?.margen_objetivo || 30
-                      const precioSugerido = vino.costo / (1 - margenObj / 100)
+                      const precioSugerido = margenObj > 0 ? vino.costo / (margenObj / 100) : 0
                       const precioCarta = vino.carta?.precio_carta || 0
                       const foodCost = precioCarta > 0 ? (vino.costo / precioCarta) * 100 : 0
                       const contribucion = precioCarta - vino.costo

@@ -106,15 +106,61 @@ export default function NuevoMenuEjecutivoPage() {
   }
 
   async function fetchData() {
-    const [insumosRes, recetasRes, platosRes] = await Promise.all([
+    const [insumosRes, recetasRes, platosRes, recetaIngredientesRes, platoIngredientesRes] = await Promise.all([
       supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, categoria, precio_actual, iva_porcentaje, merma_porcentaje').eq('activo', true).order('nombre'),
       supabase.from('recetas_base').select('id, nombre, costo_total, costo_por_porcion, rendimiento_porciones').eq('activo', true).order('nombre'),
       supabase.from('platos').select('id, nombre, costo_total, seccion').eq('activo', true).order('nombre'),
+      supabase.from('receta_base_ingredientes').select('receta_base_id, insumo_id, cantidad'),
+      supabase.from('plato_ingredientes').select('plato_id, insumo_id, receta_base_id, cantidad'),
     ])
 
-    if (insumosRes.data) setInsumos(insumosRes.data)
-    if (recetasRes.data) setRecetasBase(recetasRes.data)
-    if (platosRes.data) setPlatos(platosRes.data)
+    const insumosData = insumosRes.data || []
+    if (insumosData) setInsumos(insumosData)
+
+    // Calcular costos actualizados de recetas base
+    const recetasActualizadas = (recetasRes.data || []).map(receta => {
+      const ingredientes = (recetaIngredientesRes.data || []).filter(i => i.receta_base_id === receta.id)
+      let costoTotal = 0
+      for (const ing of ingredientes) {
+        const insumo = insumosData.find(i => i.id === ing.insumo_id)
+        if (insumo && insumo.precio_actual !== null) {
+          const costoFinal = insumo.precio_actual *
+            (1 + (insumo.iva_porcentaje || 0) / 100) *
+            (1 + (insumo.merma_porcentaje || 0) / 100)
+          costoTotal += ing.cantidad * costoFinal
+        }
+      }
+      const costoPorPorcion = receta.rendimiento_porciones > 0 ? costoTotal / receta.rendimiento_porciones : costoTotal
+      return { ...receta, costo_total: costoTotal, costo_por_porcion: costoPorPorcion }
+    })
+    setRecetasBase(recetasActualizadas)
+
+    // Crear mapa de costos de recetas para usar en platos
+    const recetaCostosMap = new Map(recetasActualizadas.map(r => [r.id, r.costo_por_porcion]))
+
+    // Calcular costos actualizados de platos
+    const platosActualizados = (platosRes.data || []).map(plato => {
+      const ingredientes = (platoIngredientesRes.data || []).filter(i => i.plato_id === plato.id)
+      let costoTotal = 0
+      for (const ing of ingredientes) {
+        if (ing.insumo_id) {
+          // Es un insumo
+          const insumo = insumosData.find(i => i.id === ing.insumo_id)
+          if (insumo && insumo.precio_actual !== null) {
+            const costoFinal = insumo.precio_actual *
+              (1 + (insumo.iva_porcentaje || 0) / 100) *
+              (1 + (insumo.merma_porcentaje || 0) / 100)
+            costoTotal += ing.cantidad * costoFinal
+          }
+        } else if (ing.receta_base_id) {
+          // Es una receta base - usar el costo actualizado
+          const costoReceta = recetaCostosMap.get(ing.receta_base_id) || 0
+          costoTotal += ing.cantidad * costoReceta
+        }
+      }
+      return { ...plato, costo_total: costoTotal }
+    })
+    setPlatos(platosActualizados)
   }
 
   // Obtener costo final del insumo aplicando IVA y merma

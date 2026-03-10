@@ -208,7 +208,8 @@ export interface Database {
         Row: {
           id: string
           orden_compra_id: string
-          insumo_id: string
+          insumo_id: string | null
+          vino_id: string | null
           cantidad: number
           precio_unitario: number
           subtotal: number

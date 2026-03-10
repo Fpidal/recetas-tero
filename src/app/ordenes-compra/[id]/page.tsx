@@ -25,7 +25,8 @@ interface OrdenDetalle {
   orden_origen_id: string | null
   items: {
     id: string
-    insumo_id: string
+    insumo_id: string | null
+    vino_id: string | null
     insumo_nombre: string
     unidad_medida: string
     unidad_display: string
@@ -39,7 +40,8 @@ interface OrdenDetalle {
 }
 
 interface FacturaItem {
-  insumo_id: string
+  insumo_id: string | null
+  vino_id: string | null
   cantidad: number
   precio_unitario: number
 }
@@ -94,11 +96,13 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         orden_compra_items (
           id,
           insumo_id,
+          vino_id,
           cantidad,
           precio_unitario,
           subtotal,
           unidad_display,
-          insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete)
+          insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete),
+          vinos (bodega, nombre)
         )
       `)
       .eq('id', id)
@@ -128,14 +132,19 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
       orden_origen_id: (data as any).orden_origen_id || null,
       items: (data.orden_compra_items as any[]).map((item: any) => {
         const subtotal = parseFloat(item.subtotal)
-        const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
+        const esVino = !!item.vino_id
+        const ivaPorcentaje = esVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
-        const contenido = item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1
-        const unidadMedida = item.insumos?.unidad_medida || ''
+        const contenido = esVino ? 1 : (item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1)
+        const unidadMedida = esVino ? 'caja' : (item.insumos?.unidad_medida || '')
+        const nombreItem = esVino
+          ? `${item.vinos?.bodega || ''} - ${item.vinos?.nombre || 'Vino desconocido'}`
+          : (item.insumos?.nombre || 'Desconocido')
         return {
           id: item.id,
           insumo_id: item.insumo_id,
-          insumo_nombre: item.insumos?.nombre || 'Desconocido',
+          vino_id: item.vino_id,
+          insumo_nombre: nombreItem,
           unidad_medida: unidadMedida,
           unidad_display: item.unidad_display || unidadMedida,
           contenido,
@@ -151,17 +160,19 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
     setOrden(ordenData)
     setIsReadOnly((data as any).activo === false)
 
-    // Verificar si tiene factura asociada y cargar sus items
+    // Verificar si tiene factura ACTIVA asociada y cargar sus items
     const { data: facturaData } = await supabase
       .from('facturas_proveedor')
-      .select('id, factura_items (insumo_id, cantidad, precio_unitario)')
+      .select('id, factura_items (insumo_id, vino_id, cantidad, precio_unitario)')
       .eq('orden_compra_id', id)
+      .eq('activo', true)
       .maybeSingle()
 
     setTieneFactura(!!facturaData)
     if (facturaData?.factura_items) {
       setFacturaItems((facturaData.factura_items as any[]).map((fi: any) => ({
         insumo_id: fi.insumo_id,
+        vino_id: fi.vino_id,
         cantidad: parseFloat(fi.cantidad),
         precio_unitario: parseFloat(fi.precio_unitario),
       })))
@@ -234,14 +245,17 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
       return
     }
 
-    const itemsFaltantes: { insumo_id: string; cantidad: number; precio_unitario: number; subtotal: number }[] = []
+    const itemsFaltantes: { insumo_id: string | null; vino_id: string | null; cantidad: number; precio_unitario: number; subtotal: number }[] = []
 
     for (const item of orden.items) {
-      const fi = facturaItems.find(f => f.insumo_id === item.insumo_id)
+      const fi = facturaItems.find(f =>
+        item.vino_id ? f.vino_id === item.vino_id : f.insumo_id === item.insumo_id
+      )
       if (!fi) {
         // No entregado → cantidad completa
         itemsFaltantes.push({
           insumo_id: item.insumo_id,
+          vino_id: item.vino_id,
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
           subtotal: item.cantidad * item.precio_unitario,
@@ -251,6 +265,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         const cantFaltante = item.cantidad - fi.cantidad
         itemsFaltantes.push({
           insumo_id: item.insumo_id,
+          vino_id: item.vino_id,
           cantidad: cantFaltante,
           precio_unitario: item.precio_unitario,
           subtotal: cantFaltante * item.precio_unitario,
@@ -298,7 +313,8 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
     // Insertar items
     const itemsData = itemsFaltantes.map(i => ({
       orden_compra_id: nuevaOC.id,
-      insumo_id: i.insumo_id,
+      insumo_id: i.insumo_id || null,
+      vino_id: i.vino_id || null,
       cantidad: i.cantidad,
       precio_unitario: i.precio_unitario,
     }))
@@ -317,7 +333,9 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
   // Determinar estado de entrega de cada ítem comparando con factura
   function getItemEstado(item: OrdenDetalle['items'][0]): 'completo' | 'parcial' | 'no_entregado' | null {
     if (facturaItems.length === 0) return null // no hay factura vinculada
-    const fi = facturaItems.find(f => f.insumo_id === item.insumo_id)
+    const fi = facturaItems.find(f =>
+      item.vino_id ? f.vino_id === item.vino_id : f.insumo_id === item.insumo_id
+    )
     if (!fi) return 'no_entregado'
     if (fi.cantidad < item.cantidad) return 'parcial'
     return 'completo'

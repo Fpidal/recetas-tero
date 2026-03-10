@@ -31,7 +31,8 @@ interface OrdenCompra {
   proveedor_id: string
   proveedor_nombre: string
   items: {
-    insumo_id: string
+    insumo_id: string | null
+    vino_id: string | null
     insumo_nombre: string
     unidad_medida: string
     cantidad: number
@@ -42,7 +43,8 @@ interface OrdenCompra {
 
 interface ItemFactura {
   id: string
-  insumo_id: string
+  insumo_id: string | null
+  vino_id: string | null
   insumo_nombre: string
   unidad_medida: string
   cantidad: number | string  // string mientras edita
@@ -107,8 +109,9 @@ export default function NuevaFacturaPage() {
           id, fecha, total, proveedor_id,
           proveedores (nombre),
           orden_compra_items (
-            insumo_id, cantidad, precio_unitario,
-            insumos (nombre, unidad_medida, iva_porcentaje)
+            insumo_id, vino_id, cantidad, precio_unitario,
+            insumos (nombre, unidad_medida, iva_porcentaje),
+            vinos (bodega, nombre)
           )
         `)
         .eq('estado', 'enviada')
@@ -125,14 +128,21 @@ export default function NuevaFacturaPage() {
         total: o.total,
         proveedor_id: o.proveedor_id,
         proveedor_nombre: o.proveedores?.nombre || 'Desconocido',
-        items: o.orden_compra_items.map((item: any) => ({
-          insumo_id: item.insumo_id,
-          insumo_nombre: item.insumos?.nombre || 'Desconocido',
-          unidad_medida: item.insumos?.unidad_medida || '',
-          cantidad: parseFloat(item.cantidad),
-          precio_unitario: parseFloat(item.precio_unitario),
-          iva_porcentaje: item.insumos?.iva_porcentaje ?? 21,
-        }))
+        items: o.orden_compra_items.map((item: any) => {
+          const esVino = !!item.vino_id
+          const nombreItem = esVino
+            ? `${item.vinos?.bodega || ''} - ${item.vinos?.nombre || 'Vino desconocido'}`
+            : (item.insumos?.nombre || 'Desconocido')
+          return {
+            insumo_id: item.insumo_id,
+            vino_id: item.vino_id,
+            insumo_nombre: nombreItem,
+            unidad_medida: esVino ? 'caja' : (item.insumos?.unidad_medida || ''),
+            cantidad: parseFloat(item.cantidad),
+            precio_unitario: parseFloat(item.precio_unitario),
+            iva_porcentaje: esVino ? 21 : (item.insumos?.iva_porcentaje ?? 21),
+          }
+        })
       }))
       setOrdenesPendientes(ordenes)
     }
@@ -146,14 +156,16 @@ export default function NuevaFacturaPage() {
 
     // Convertir items de la orden a items de factura
     const itemsFactura: ItemFactura[] = orden.items.map(item => {
-      // Usar IVA actual del insumo, no el de la OC
-      const insumoActual = insumos.find(i => i.id === item.insumo_id)
+      // Usar IVA actual del insumo, no el de la OC (solo para insumos, no vinos)
+      const esVino = !!item.vino_id
+      const insumoActual = !esVino ? insumos.find(i => i.id === item.insumo_id) : null
       const ivaPorcentaje = insumoActual?.iva_porcentaje ?? item.iva_porcentaje
       const subtotal = item.cantidad * item.precio_unitario
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
       return {
         id: crypto.randomUUID(),
         insumo_id: item.insumo_id,
+        vino_id: item.vino_id,
         insumo_nombre: item.insumo_nombre,
         unidad_medida: item.unidad_medida,
         cantidad: item.cantidad,
@@ -209,6 +221,7 @@ export default function NuevaFacturaPage() {
     const nuevoItem: ItemFactura = {
       id: crypto.randomUUID(),
       insumo_id: insumo.id,
+      vino_id: null,
       insumo_nombre: insumo.nombre,
       unidad_medida: insumo.unidad_medida,
       cantidad: cantidadNum,
@@ -240,7 +253,9 @@ export default function NuevaFacturaPage() {
         // Detectar diferencia con orden original
         let diferencia = item.diferencia
         if (selectedOrden && diferencia !== 'nuevo') {
-          const itemOrden = selectedOrden.items.find(i => i.insumo_id === item.insumo_id)
+          const itemOrden = selectedOrden.items.find(i =>
+            item.vino_id ? i.vino_id === item.vino_id : i.insumo_id === item.insumo_id
+          )
           if (itemOrden && cantidadNum !== itemOrden.cantidad) {
             diferencia = 'cantidad'
           } else if (itemOrden && precioNum !== itemOrden.precio_unitario) {
@@ -272,7 +287,9 @@ export default function NuevaFacturaPage() {
         // Detectar diferencia con orden original
         let diferencia = item.diferencia
         if (selectedOrden && diferencia !== 'nuevo') {
-          const itemOrden = selectedOrden.items.find(i => i.insumo_id === item.insumo_id)
+          const itemOrden = selectedOrden.items.find(i =>
+            item.vino_id ? i.vino_id === item.vino_id : i.insumo_id === item.insumo_id
+          )
           if (itemOrden && precioNum !== itemOrden.precio_unitario) {
             diferencia = 'precio'
           } else if (itemOrden && cantidadNum !== itemOrden.cantidad) {
@@ -454,7 +471,8 @@ export default function NuevaFacturaPage() {
     // Insertar items (esto dispara el trigger que actualiza precios)
     const itemsData = items.map(item => ({
       factura_id: factura.id,
-      insumo_id: item.insumo_id,
+      insumo_id: item.insumo_id || null,
+      vino_id: item.vino_id || null,
       cantidad: typeof item.cantidad === 'string' ? parsearNumero(item.cantidad) : item.cantidad,
       precio_unitario: typeof item.precio_unitario === 'string' ? parsearNumero(item.precio_unitario) : item.precio_unitario,
       descuento: typeof item.descuento === 'string' ? parsearNumero(item.descuento) : (item.descuento || 0),
@@ -472,16 +490,19 @@ export default function NuevaFacturaPage() {
     // Detectar faltantes y gestionar OC (solo para facturas, no NC)
     if (selectedOrden && tipoComprobante === 'factura') {
       // Items que NO vinieron (faltante total) → generan nueva OC
-      const faltantesTotal: { insumo_id: string; insumo_nombre: string; cantidad: number; precio_unitario: number }[] = []
+      const faltantesTotal: { insumo_id: string | null; vino_id: string | null; insumo_nombre: string; cantidad: number; precio_unitario: number }[] = []
       // Items con diferencia de cantidad (vinieron pero distinta cantidad) → solo marcar como parcial
       let hayDiferenciaCantidad = false
 
       for (const itemOC of selectedOrden.items) {
-        const itemFactura = items.find(i => i.insumo_id === itemOC.insumo_id)
+        const itemFactura = items.find(i =>
+          itemOC.vino_id ? i.vino_id === itemOC.vino_id : i.insumo_id === itemOC.insumo_id
+        )
         if (!itemFactura) {
           // Item de la OC no está en la factura → faltante total
           faltantesTotal.push({
             insumo_id: itemOC.insumo_id,
+            vino_id: itemOC.vino_id,
             insumo_nombre: itemOC.insumo_nombre,
             cantidad: itemOC.cantidad,
             precio_unitario: itemOC.precio_unitario,
@@ -526,7 +547,8 @@ export default function NuevaFacturaPage() {
           // Insertar items faltantes (el trigger calcula el total)
           const itemsFaltantes = faltantesTotal.map(f => ({
             orden_compra_id: nuevaOC.id,
-            insumo_id: f.insumo_id,
+            insumo_id: f.insumo_id || null,
+            vino_id: f.vino_id || null,
             cantidad: f.cantidad,
             precio_unitario: f.precio_unitario,
           }))

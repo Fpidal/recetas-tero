@@ -237,7 +237,8 @@ export interface Database {
         Row: {
           id: string
           factura_id: string
-          insumo_id: string
+          insumo_id: string | null
+          vino_id: string | null
           cantidad: number
           precio_unitario: number
           subtotal: number

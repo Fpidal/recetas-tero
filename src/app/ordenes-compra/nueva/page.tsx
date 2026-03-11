@@ -141,10 +141,7 @@ export default function NuevaOrdenCompraPage() {
       const vino = vinos.find(v => v.id === selectedInsumo)
       if (!vino) return
 
-      if (items.some(item => item.vino_id === selectedInsumo)) {
-        alert('Este vino ya está en la orden')
-        return
-      }
+      // Vinos SÍ pueden repetirse (para promociones 10+2, etc.)
 
       const ivaPorcentaje = 21 // Vinos tienen 21% de IVA
       const ivaMonto = subtotal * (ivaPorcentaje / 100)

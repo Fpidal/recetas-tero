@@ -154,7 +154,7 @@ export default function NuevaOrdenCompraPage() {
         insumo_id: '', // No tiene insumo_id
         vino_id: vino.id,
         es_vino: true,
-        insumo_nombre: vino.nombre, // Solo el nombre del vino, la bodega ya está en la OC
+        insumo_nombre: `${vino.nombre} (${vino.cepa})`, // Nombre + cepa, la bodega ya está en la OC
         unidad_medida: 'caja',
         unidad_display: 'caja',
         contenido: vino.unidades_caja,

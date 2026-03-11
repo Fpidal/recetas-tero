@@ -111,7 +111,7 @@ export default function NuevaFacturaPage() {
           orden_compra_items (
             insumo_id, vino_id, cantidad, precio_unitario,
             insumos (nombre, unidad_medida, iva_porcentaje),
-            vinos (bodega, nombre)
+            vinos (bodega, nombre, cepa)
           )
         `)
         .eq('estado', 'enviada')
@@ -131,7 +131,7 @@ export default function NuevaFacturaPage() {
         items: o.orden_compra_items.map((item: any) => {
           const esVino = !!item.vino_id
           const nombreItem = esVino
-            ? (item.vinos?.nombre || 'Vino desconocido')
+            ? `${item.vinos?.nombre || 'Vino desconocido'} (${item.vinos?.cepa || ''})`
             : (item.insumos?.nombre || 'Desconocido')
           return {
             insumo_id: item.insumo_id,

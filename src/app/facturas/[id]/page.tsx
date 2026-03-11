@@ -81,7 +81,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
           precio_unitario,
           subtotal,
           insumos (nombre, unidad_medida, iva_porcentaje),
-          vinos (bodega, nombre)
+          vinos (bodega, nombre, cepa)
         )
       `)
       .eq('id', id)
@@ -109,7 +109,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
         const ivaPorcentaje = esVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
         const nombreItem = esVino
-          ? (item.vinos?.nombre || 'Vino desconocido')
+          ? `${item.vinos?.nombre || 'Vino desconocido'} (${item.vinos?.cepa || ''})`
           : (item.insumos?.nombre || 'Desconocido')
         return {
           id: item.id,
@@ -133,14 +133,14 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
     if (data.orden_compra_id) {
       const { data: ocData } = await supabase
         .from('orden_compra_items')
-        .select('insumo_id, vino_id, cantidad, precio_unitario, insumos (nombre, unidad_medida), vinos (bodega, nombre)')
+        .select('insumo_id, vino_id, cantidad, precio_unitario, insumos (nombre, unidad_medida), vinos (bodega, nombre, cepa)')
         .eq('orden_compra_id', data.orden_compra_id)
 
       if (ocData) {
         setOcItems((ocData as any[]).map((oc: any) => {
           const esVino = !!oc.vino_id
           const nombreItem = esVino
-            ? (oc.vinos?.nombre || 'Vino desconocido')
+            ? `${oc.vinos?.nombre || 'Vino desconocido'} (${oc.vinos?.cepa || ''})`
             : (oc.insumos?.nombre || 'Desconocido')
           return {
             insumo_id: oc.insumo_id,

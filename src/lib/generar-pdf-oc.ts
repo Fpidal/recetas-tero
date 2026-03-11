@@ -47,7 +47,7 @@ export async function generarPDFOrden(ordenId: string) {
       orden_compra_items (
         insumo_id, vino_id, cantidad, precio_unitario, subtotal, unidad_display,
         insumos (nombre, unidad_medida, iva_porcentaje),
-        vinos (bodega, nombre)
+        vinos (bodega, nombre, cepa)
       )
     `)
     .eq('id', ordenId)
@@ -88,7 +88,7 @@ export async function generarPDFOrden(ordenId: string) {
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
       const unidadMedida = esVino ? 'caja' : (item.insumos?.unidad_medida || '')
       const nombreItem = esVino
-        ? (item.vinos?.nombre || 'Vino desconocido')
+        ? `${item.vinos?.nombre || 'Vino desconocido'} (${item.vinos?.cepa || ''})`
         : (item.insumos?.nombre || 'Desconocido')
 
       // Buscar cantidad recibida en la factura

@@ -275,19 +275,19 @@ export async function generarPDFOrden(ordenId: string) {
   const colX = esParcialORecibida ? {
     num: margin + 2,
     insumo: margin + 8,
-    pedidoRight: margin + contentWidth * 0.38,
-    recibidoRight: margin + contentWidth * 0.50,
-    faltanteRight: margin + contentWidth * 0.62,
-    unidad: margin + contentWidth * 0.64,
-    precioRight: margin + contentWidth * 0.80,
+    pedidoRight: margin + contentWidth * 0.45,
+    recibidoRight: margin + contentWidth * 0.55,
+    faltanteRight: margin + contentWidth * 0.65,
+    unidad: margin + contentWidth * 0.67,
+    precioRight: margin + contentWidth * 0.82,
     subtotalRight: pageWidth - margin - 3,
   } : {
     num: margin + 2,
-    insumo: margin + 10,
-    ivaRight: margin + contentWidth * 0.42,
-    cantRight: margin + contentWidth * 0.52,
-    unidad: margin + contentWidth * 0.54,
-    precioRight: margin + contentWidth * 0.76,
+    insumo: margin + 8,
+    ivaRight: margin + contentWidth * 0.52,
+    cantRight: margin + contentWidth * 0.60,
+    unidad: margin + contentWidth * 0.62,
+    precioRight: margin + contentWidth * 0.78,
     subtotalRight: pageWidth - margin - 3,
   }
 
@@ -342,7 +342,7 @@ export async function generarPDFOrden(ordenId: string) {
     doc.text(`${idx + 1}`, colX.num, textY)
 
     doc.setTextColor(30, 30, 30)
-    const maxNombreLen = esParcialORecibida ? 16 : 20
+    const maxNombreLen = esParcialORecibida ? 22 : 28
     const nombreTruncado = item.insumo_nombre.length > maxNombreLen
       ? item.insumo_nombre.substring(0, maxNombreLen) + '...'
       : item.insumo_nombre

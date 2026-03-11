@@ -131,7 +131,7 @@ export default function NuevaFacturaPage() {
         items: o.orden_compra_items.map((item: any) => {
           const esVino = !!item.vino_id
           const nombreItem = esVino
-            ? `${item.vinos?.bodega || ''} - ${item.vinos?.nombre || 'Vino desconocido'}`
+            ? (item.vinos?.nombre || 'Vino desconocido')
             : (item.insumos?.nombre || 'Desconocido')
           return {
             insumo_id: item.insumo_id,

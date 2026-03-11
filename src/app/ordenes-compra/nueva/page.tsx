@@ -62,6 +62,7 @@ export default function NuevaOrdenCompraPage() {
   const [cantidad, setCantidad] = useState('')
   const [precioUnitario, setPrecioUnitario] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
+  const [selectedBodega, setSelectedBodega] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [nextNumero, setNextNumero] = useState('')
@@ -153,7 +154,7 @@ export default function NuevaOrdenCompraPage() {
         insumo_id: '', // No tiene insumo_id
         vino_id: vino.id,
         es_vino: true,
-        insumo_nombre: `${vino.bodega} - ${vino.nombre}`,
+        insumo_nombre: vino.nombre, // Solo el nombre del vino, la bodega ya está en la OC
         unidad_medida: 'caja',
         unidad_display: 'caja',
         contenido: vino.unidades_caja,
@@ -317,6 +318,14 @@ export default function NuevaOrdenCompraPage() {
     setSavingInsumo(false)
   }
 
+  // Obtener bodegas únicas
+  const bodegasUnicas = Array.from(new Set(vinos.map(v => v.bodega))).sort()
+
+  // Vinos filtrados por bodega
+  const vinosFiltrados = selectedBodega
+    ? vinos.filter(v => v.bodega === selectedBodega)
+    : vinos
+
   // Calcular totales con desglose de IVA
   const subtotalNeto = items.reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva21 = items.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
@@ -453,39 +462,39 @@ export default function NuevaOrdenCompraPage() {
                   { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
-                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setPrecioUnitario('') }}
+                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setPrecioUnitario(''); setSelectedBodega('') }}
               />
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Select
-                    label={filtroCategoria === 'Vinos' ? 'Vino' : 'Insumo'}
-                    options={
-                      filtroCategoria === 'Vinos'
-                        ? [
-                            { value: '', label: 'Seleccionar vino...' },
-                            ...vinos.map(v => ({
-                              value: v.id,
-                              label: `${v.bodega} - ${v.nombre} (${v.cepa}) [${v.unidades_caja} bot.]`
-                            }))
-                          ]
-                        : [
-                            { value: '', label: 'Seleccionar...' },
-                            ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
-                              const cant = i.cantidad ? Number(i.cantidad) : 1
-                              const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
-                              const presentacion = cantPaq > 1 ? ` [${cant} x ${cantPaq}]` : ''
-                              return {
-                                value: i.id,
-                                label: `${i.nombre} (${i.unidad_medida})${presentacion}`
-                              }
-                            })
-                          ]
-                    }
-                    value={selectedInsumo}
-                    onChange={(e) => handleSelectInsumo(e.target.value)}
-                  />
-                </div>
-                {filtroCategoria !== 'Vinos' && (
+              {filtroCategoria === 'Vinos' ? (
+                <Select
+                  label="Bodega"
+                  options={[
+                    { value: '', label: 'Todas las bodegas' },
+                    ...bodegasUnicas.map(b => ({ value: b, label: b }))
+                  ]}
+                  value={selectedBodega}
+                  onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo(''); setPrecioUnitario('') }}
+                />
+              ) : (
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <Select
+                      label="Insumo"
+                      options={[
+                        { value: '', label: 'Seleccionar...' },
+                        ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
+                          const cant = i.cantidad ? Number(i.cantidad) : 1
+                          const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
+                          const presentacion = cantPaq > 1 ? ` [${cant} x ${cantPaq}]` : ''
+                          return {
+                            value: i.id,
+                            label: `${i.nombre} (${i.unidad_medida})${presentacion}`
+                          }
+                        })
+                      ]}
+                      value={selectedInsumo}
+                      onChange={(e) => handleSelectInsumo(e.target.value)}
+                    />
+                  </div>
                   <Button
                     variant="secondary"
                     size="sm"
@@ -494,9 +503,23 @@ export default function NuevaOrdenCompraPage() {
                   >
                     <PlusCircle className="w-4 h-4" />
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
+            {filtroCategoria === 'Vinos' && (
+              <Select
+                label="Vino"
+                options={[
+                  { value: '', label: 'Seleccionar vino...' },
+                  ...vinosFiltrados.map(v => ({
+                    value: v.id,
+                    label: `${v.nombre} (${v.cepa}) [${v.unidades_caja} bot.]`
+                  }))
+                ]}
+                value={selectedInsumo}
+                onChange={(e) => handleSelectInsumo(e.target.value)}
+              />
+            )}
             <div className="flex gap-3 items-end">
               <div className="flex-1">
                 <Input
@@ -540,9 +563,22 @@ export default function NuevaOrdenCompraPage() {
                   { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
-                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setPrecioUnitario('') }}
+                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setPrecioUnitario(''); setSelectedBodega('') }}
               />
             </div>
+            {filtroCategoria === 'Vinos' && (
+              <div className="w-40">
+                <Select
+                  label="Bodega"
+                  options={[
+                    { value: '', label: 'Todas' },
+                    ...bodegasUnicas.map(b => ({ value: b, label: b }))
+                  ]}
+                  value={selectedBodega}
+                  onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo(''); setPrecioUnitario('') }}
+                />
+              </div>
+            )}
             <div className="flex-1 flex gap-2 items-end">
               <div className="flex-1">
                 <Select
@@ -551,9 +587,9 @@ export default function NuevaOrdenCompraPage() {
                     filtroCategoria === 'Vinos'
                       ? [
                           { value: '', label: 'Seleccionar vino...' },
-                          ...vinos.map(v => ({
+                          ...vinosFiltrados.map(v => ({
                             value: v.id,
-                            label: `${v.bodega} - ${v.nombre} (${v.cepa}) [${v.unidades_caja} bot.]`
+                            label: `${v.nombre} (${v.cepa}) [${v.unidades_caja} bot.]`
                           }))
                         ]
                       : [

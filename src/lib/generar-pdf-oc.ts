@@ -88,7 +88,7 @@ export async function generarPDFOrden(ordenId: string) {
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
       const unidadMedida = esVino ? 'caja' : (item.insumos?.unidad_medida || '')
       const nombreItem = esVino
-        ? `${item.vinos?.bodega || ''} - ${item.vinos?.nombre || 'Vino desconocido'}`
+        ? (item.vinos?.nombre || 'Vino desconocido')
         : (item.insumos?.nombre || 'Desconocido')
 
       // Buscar cantidad recibida en la factura

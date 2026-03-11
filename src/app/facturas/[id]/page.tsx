@@ -109,7 +109,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
         const ivaPorcentaje = esVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
         const nombreItem = esVino
-          ? `${item.vinos?.bodega || ''} - ${item.vinos?.nombre || 'Vino desconocido'}`
+          ? (item.vinos?.nombre || 'Vino desconocido')
           : (item.insumos?.nombre || 'Desconocido')
         return {
           id: item.id,
@@ -140,7 +140,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
         setOcItems((ocData as any[]).map((oc: any) => {
           const esVino = !!oc.vino_id
           const nombreItem = esVino
-            ? `${oc.vinos?.bodega || ''} - ${oc.vinos?.nombre || 'Vino desconocido'}`
+            ? (oc.vinos?.nombre || 'Vino desconocido')
             : (oc.insumos?.nombre || 'Desconocido')
           return {
             insumo_id: oc.insumo_id,

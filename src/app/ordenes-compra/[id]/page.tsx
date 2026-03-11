@@ -138,7 +138,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         const contenido = esVino ? 1 : (item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1)
         const unidadMedida = esVino ? 'caja' : (item.insumos?.unidad_medida || '')
         const nombreItem = esVino
-          ? `${item.vinos?.bodega || ''} - ${item.vinos?.nombre || 'Vino desconocido'}`
+          ? (item.vinos?.nombre || 'Vino desconocido')
           : (item.insumos?.nombre || 'Desconocido')
         return {
           id: item.id,

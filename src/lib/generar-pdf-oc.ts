@@ -13,7 +13,8 @@ interface OrdenPDF {
   proveedor_email: string | null
   proveedor_direccion: string | null
   items: {
-    insumo_id: string
+    insumo_id: string | null
+    vino_id: string | null
     insumo_nombre: string
     unidad_medida: string
     unidad_display: string // Unidad visual para el proveedor
@@ -44,8 +45,9 @@ export async function generarPDFOrden(ordenId: string) {
       id, numero, fecha, notas, estado,
       proveedores (nombre, contacto, telefono, email, direccion),
       orden_compra_items (
-        insumo_id, cantidad, precio_unitario, subtotal, unidad_display,
-        insumos (nombre, unidad_medida, iva_porcentaje)
+        insumo_id, vino_id, cantidad, precio_unitario, subtotal, unidad_display,
+        insumos (nombre, unidad_medida, iva_porcentaje),
+        vinos (bodega, nombre)
       )
     `)
     .eq('id', ordenId)
@@ -59,11 +61,12 @@ export async function generarPDFOrden(ordenId: string) {
   // Buscar factura asociada para obtener cantidades recibidas
   const { data: facturaData } = await supabase
     .from('facturas_proveedor')
-    .select('id, factura_items (insumo_id, cantidad)')
+    .select('id, factura_items (insumo_id, vino_id, cantidad)')
     .eq('orden_compra_id', ordenId)
+    .eq('activo', true)
     .maybeSingle()
 
-  const facturaItems = facturaData?.factura_items as { insumo_id: string; cantidad: number }[] | null
+  const facturaItems = facturaData?.factura_items as { insumo_id: string | null; vino_id: string | null; cantidad: number }[] | null
 
   const prov = data.proveedores as any
   const orden: OrdenPDF = {
@@ -80,17 +83,24 @@ export async function generarPDFOrden(ordenId: string) {
     tieneFactura: !!facturaData,
     items: (data.orden_compra_items as any[]).map((item: any) => {
       const subtotal = parseFloat(item.subtotal)
-      const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
+      const esVino = !!item.vino_id
+      const ivaPorcentaje = esVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
-      const unidadMedida = item.insumos?.unidad_medida || ''
+      const unidadMedida = esVino ? 'caja' : (item.insumos?.unidad_medida || '')
+      const nombreItem = esVino
+        ? `${item.vinos?.bodega || ''} - ${item.vinos?.nombre || 'Vino desconocido'}`
+        : (item.insumos?.nombre || 'Desconocido')
 
       // Buscar cantidad recibida en la factura
-      const facturaItem = facturaItems?.find(fi => fi.insumo_id === item.insumo_id)
+      const facturaItem = facturaItems?.find(fi =>
+        esVino ? fi.vino_id === item.vino_id : fi.insumo_id === item.insumo_id
+      )
       const cantidadRecibida = facturaItem ? parseFloat(String(facturaItem.cantidad)) : undefined
 
       return {
         insumo_id: item.insumo_id,
-        insumo_nombre: item.insumos?.nombre || 'Desconocido',
+        vino_id: item.vino_id,
+        insumo_nombre: nombreItem,
         unidad_medida: unidadMedida,
         unidad_display: item.unidad_display || unidadMedida,
         cantidad: parseFloat(item.cantidad),

@@ -24,7 +24,8 @@ interface FacturaDetalle {
   percepciones: Percepcion[]
   items: {
     id: string
-    insumo_id: string
+    insumo_id: string | null
+    vino_id: string | null
     insumo_nombre: string
     unidad_medida: string
     cantidad: number
@@ -36,7 +37,8 @@ interface FacturaDetalle {
 }
 
 interface OCItem {
-  insumo_id: string
+  insumo_id: string | null
+  vino_id: string | null
   insumo_nombre: string
   unidad_medida: string
   cantidad: number
@@ -74,10 +76,12 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
         factura_items (
           id,
           insumo_id,
+          vino_id,
           cantidad,
           precio_unitario,
           subtotal,
-          insumos (nombre, unidad_medida, iva_porcentaje)
+          insumos (nombre, unidad_medida, iva_porcentaje),
+          vinos (bodega, nombre)
         )
       `)
       .eq('id', id)
@@ -101,13 +105,18 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
       percepciones: Array.isArray(data.percepciones) ? data.percepciones : [],
       items: (data.factura_items as any[]).map((item: any) => {
         const subtotal = parseFloat(item.subtotal)
-        const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
+        const esVino = !!item.vino_id
+        const ivaPorcentaje = esVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
+        const nombreItem = esVino
+          ? `${item.vinos?.bodega || ''} - ${item.vinos?.nombre || 'Vino desconocido'}`
+          : (item.insumos?.nombre || 'Desconocido')
         return {
           id: item.id,
           insumo_id: item.insumo_id,
-          insumo_nombre: item.insumos?.nombre || 'Desconocido',
-          unidad_medida: item.insumos?.unidad_medida || '',
+          vino_id: item.vino_id,
+          insumo_nombre: nombreItem,
+          unidad_medida: esVino ? 'caja' : (item.insumos?.unidad_medida || ''),
           cantidad: parseFloat(item.cantidad),
           precio_unitario: parseFloat(item.precio_unitario),
           subtotal,
@@ -124,17 +133,24 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
     if (data.orden_compra_id) {
       const { data: ocData } = await supabase
         .from('orden_compra_items')
-        .select('insumo_id, cantidad, precio_unitario, insumos (nombre, unidad_medida)')
+        .select('insumo_id, vino_id, cantidad, precio_unitario, insumos (nombre, unidad_medida), vinos (bodega, nombre)')
         .eq('orden_compra_id', data.orden_compra_id)
 
       if (ocData) {
-        setOcItems((ocData as any[]).map((oc: any) => ({
-          insumo_id: oc.insumo_id,
-          insumo_nombre: oc.insumos?.nombre || 'Desconocido',
-          unidad_medida: oc.insumos?.unidad_medida || '',
-          cantidad: parseFloat(oc.cantidad),
-          precio_unitario: parseFloat(oc.precio_unitario),
-        })))
+        setOcItems((ocData as any[]).map((oc: any) => {
+          const esVino = !!oc.vino_id
+          const nombreItem = esVino
+            ? `${oc.vinos?.bodega || ''} - ${oc.vinos?.nombre || 'Vino desconocido'}`
+            : (oc.insumos?.nombre || 'Desconocido')
+          return {
+            insumo_id: oc.insumo_id,
+            vino_id: oc.vino_id,
+            insumo_nombre: nombreItem,
+            unidad_medida: esVino ? 'caja' : (oc.insumos?.unidad_medida || ''),
+            cantidad: parseFloat(oc.cantidad),
+            precio_unitario: parseFloat(oc.precio_unitario),
+          }
+        }))
       }
     }
 
@@ -207,7 +223,9 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
   // Helper: badge de comparación con OC (solo cantidad)
   function getComparacionBadge(item: FacturaDetalle['items'][0]) {
     if (ocItems.length === 0) return null
-    const ocItem = ocItems.find(oc => oc.insumo_id === item.insumo_id)
+    const ocItem = ocItems.find(oc =>
+      item.vino_id ? oc.vino_id === item.vino_id : oc.insumo_id === item.insumo_id
+    )
     if (!ocItem) {
       // Item nuevo, no estaba en la OC
       return <span className="ml-2 text-xs px-1.5 py-0.5 bg-green-200 text-green-800 rounded">Nuevo</span>
@@ -227,7 +245,9 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
 
   // Helper: mostrar precio con comparación vs OC
   function getPrecioConComparacion(item: FacturaDetalle['items'][0], mobile: boolean = false) {
-    const ocItem = ocItems.find(oc => oc.insumo_id === item.insumo_id)
+    const ocItem = ocItems.find(oc =>
+      item.vino_id ? oc.vino_id === item.vino_id : oc.insumo_id === item.insumo_id
+    )
 
     if (!ocItem || item.precio_unitario === ocItem.precio_unitario) {
       // Sin OC o precio igual
@@ -274,7 +294,9 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
     let totalOC = 0
 
     factura.items.forEach(item => {
-      const ocItem = ocItems.find(oc => oc.insumo_id === item.insumo_id)
+      const ocItem = ocItems.find(oc =>
+        item.vino_id ? oc.vino_id === item.vino_id : oc.insumo_id === item.insumo_id
+      )
       totalFactura += item.cantidad * item.precio_unitario
       if (ocItem) {
         totalOC += item.cantidad * ocItem.precio_unitario // Usar cantidad de factura para comparación justa
@@ -294,7 +316,9 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
 
   // Items de la OC que no están en la factura
   const itemsNoEntregados = ocItems.filter(
-    oc => !factura.items.some(fi => fi.insumo_id === oc.insumo_id)
+    oc => !factura.items.some(fi =>
+      oc.vino_id ? fi.vino_id === oc.vino_id : fi.insumo_id === oc.insumo_id
+    )
   )
 
   // Calcular totales de IVA
@@ -373,7 +397,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
               </div>
             ))}
             {itemsNoEntregados.map((oc) => (
-              <div key={`no-${oc.insumo_id}`} className="border rounded-lg p-3 bg-gray-50">
+              <div key={`no-${oc.vino_id || oc.insumo_id}`} className="border rounded-lg p-3 bg-gray-50">
                 <div className="flex items-center gap-2 mb-1">
                   <Package className="w-4 h-4 text-gray-300" />
                   <span className="text-sm text-gray-400 line-through">{oc.insumo_nombre}</span>
@@ -465,7 +489,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                   </tr>
                 ))}
                 {itemsNoEntregados.map((oc) => (
-                  <tr key={`no-${oc.insumo_id}`} className="bg-gray-50">
+                  <tr key={`no-${oc.vino_id || oc.insumo_id}`} className="bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Package className="w-4 h-4 text-gray-300" />

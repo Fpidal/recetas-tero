@@ -271,6 +271,7 @@ export interface Database {
           precio_carta: number
           margen_objetivo: number
           activo: boolean
+          recomendado: boolean
           created_at: string
           updated_at: string
         }

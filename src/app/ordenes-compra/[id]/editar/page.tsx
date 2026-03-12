@@ -23,9 +23,19 @@ interface Insumo {
   cantidad_por_paquete?: number | null
 }
 
+interface Vino {
+  id: string
+  bodega: string
+  nombre: string
+  cepa: string
+  precio_caja: number
+  unidades_caja: number
+}
+
 interface ItemOrden {
   id: string
-  insumo_id: string
+  insumo_id: string | null
+  vino_id: string | null
   insumo_nombre: string
   unidad_medida: string
   unidad_display: string
@@ -44,6 +54,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
   const router = useRouter()
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [insumos, setInsumos] = useState<Insumo[]>([])
+  const [vinos, setVinos] = useState<Vino[]>([])
   const [selectedProveedor, setSelectedProveedor] = useState('')
   const [notas, setNotas] = useState('')
   const [items, setItems] = useState<ItemOrden[]>([])
@@ -76,15 +87,17 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
       return
     }
 
-    const [proveedoresRes, insumosRes, ordenRes] = await Promise.all([
+    const [proveedoresRes, insumosRes, vinosRes, ordenRes] = await Promise.all([
       supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre'),
       supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, categoria, precio_actual, iva_porcentaje, cantidad_por_paquete').eq('activo', true).order('categoria').order('nombre'),
+      supabase.from('vinos').select('id, bodega, nombre, cepa, precio_caja, unidades_caja').eq('activo', true).order('bodega').order('nombre'),
       supabase.from('ordenes_compra')
         .select(`
           id, proveedor_id, notas, estado,
           orden_compra_items (
-            id, insumo_id, cantidad, precio_unitario, subtotal, unidad_display,
-            insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete)
+            id, insumo_id, vino_id, cantidad, precio_unitario, subtotal, unidad_display,
+            insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete),
+            vinos (bodega, nombre, cepa)
           )
         `)
         .eq('id', id)
@@ -93,6 +106,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
 
     if (proveedoresRes.data) setProveedores(proveedoresRes.data)
     if (insumosRes.data) setInsumos(insumosRes.data)
+    if (vinosRes.data) setVinos(vinosRes.data)
 
     if (ordenRes.data) {
       setSelectedProveedor(ordenRes.data.proveedor_id)
@@ -100,16 +114,27 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
 
       const itemsData: ItemOrden[] = (ordenRes.data.orden_compra_items as any[]).map((item: any) => {
         const subtotal = parseFloat(item.subtotal)
-        const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
+        const isVino = !!item.vino_id
+        const ivaPorcentaje = isVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
-        const contenido = item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1
-        const unidadMedida = item.insumos?.unidad_medida || ''
+        const contenido = isVino ? 1 : (item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1)
+        const unidadMedida = isVino ? 'caja' : (item.insumos?.unidad_medida || '')
+
+        // Nombre del item
+        let nombre = 'Desconocido'
+        if (isVino && item.vinos) {
+          nombre = `${item.vinos.nombre} (${item.vinos.cepa})`
+        } else if (item.insumos) {
+          nombre = item.insumos.nombre
+        }
+
         return {
           id: item.id,
           insumo_id: item.insumo_id,
-          insumo_nombre: item.insumos?.nombre || 'Desconocido',
+          vino_id: item.vino_id,
+          insumo_nombre: nombre,
           unidad_medida: unidadMedida,
-          unidad_display: item.unidad_display || unidadMedida, // Si no tiene, usar la unidad por defecto
+          unidad_display: item.unidad_display || unidadMedida,
           contenido,
           cantidad: parseFloat(item.cantidad),
           precio_unitario: parseFloat(item.precio_unitario),
@@ -126,16 +151,27 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     setIsLoading(false)
   }
 
-  function handleSelectInsumo(insumoId: string) {
-    setSelectedInsumo(insumoId)
-    const insumo = insumos.find(i => i.id === insumoId)
-    if (insumo && insumo.precio_actual) {
-      // Mostrar precio del paquete (precio unitario × contenido)
-      const contenido = insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1
-      const precioPaquete = insumo.precio_actual * contenido
-      setPrecioUnitario(precioPaquete.toFixed(2).replace('.', ','))
+  function handleSelectInsumo(itemId: string) {
+    setSelectedInsumo(itemId)
+
+    // Check if it's a vino
+    if (itemId.startsWith('vino_')) {
+      const vinoId = itemId.replace('vino_', '')
+      const vino = vinos.find(v => v.id === vinoId)
+      if (vino && vino.precio_caja) {
+        setPrecioUnitario(vino.precio_caja.toFixed(2).replace('.', ','))
+      } else {
+        setPrecioUnitario('')
+      }
     } else {
-      setPrecioUnitario('')
+      const insumo = insumos.find(i => i.id === itemId)
+      if (insumo && insumo.precio_actual) {
+        const contenido = insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1
+        const precioPaquete = insumo.precio_actual * contenido
+        setPrecioUnitario(precioPaquete.toFixed(2).replace('.', ','))
+      } else {
+        setPrecioUnitario('')
+      }
     }
   }
 
@@ -145,34 +181,64 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
       return
     }
 
-    const insumo = insumos.find(i => i.id === selectedInsumo)
-    if (!insumo) return
-
-    if (items.some(item => item.insumo_id === selectedInsumo && !item.isDeleted)) {
-      alert('Este insumo ya está en la orden')
-      return
-    }
-
     const cantidadNum = parsearNumero(cantidad)
     const precioNum = parsearNumero(precioUnitario)
     const subtotal = cantidadNum * precioNum
-    const ivaPorcentaje = insumo.iva_porcentaje ?? 21
-    const ivaMonto = subtotal * (ivaPorcentaje / 100)
-    const contenido = insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1
 
-    const nuevoItem: ItemOrden = {
-      id: crypto.randomUUID(),
-      insumo_id: insumo.id,
-      insumo_nombre: insumo.nombre,
-      unidad_medida: insumo.unidad_medida,
-      unidad_display: insumo.unidad_medida, // Por defecto usa la unidad del insumo
-      contenido,
-      cantidad: cantidadNum,
-      precio_unitario: precioNum,
-      subtotal,
-      iva_porcentaje: ivaPorcentaje,
-      iva_monto: ivaMonto,
-      isNew: true,
+    let nuevoItem: ItemOrden
+
+    // Check if it's a vino
+    if (selectedInsumo.startsWith('vino_')) {
+      const vinoId = selectedInsumo.replace('vino_', '')
+      const vino = vinos.find(v => v.id === vinoId)
+      if (!vino) return
+
+      const ivaPorcentaje = 21
+      const ivaMonto = subtotal * (ivaPorcentaje / 100)
+
+      nuevoItem = {
+        id: crypto.randomUUID(),
+        insumo_id: null,
+        vino_id: vino.id,
+        insumo_nombre: `${vino.nombre} (${vino.cepa})`,
+        unidad_medida: 'caja',
+        unidad_display: 'caja',
+        contenido: vino.unidades_caja,
+        cantidad: cantidadNum,
+        precio_unitario: precioNum,
+        subtotal,
+        iva_porcentaje: ivaPorcentaje,
+        iva_monto: ivaMonto,
+        isNew: true,
+      }
+    } else {
+      const insumo = insumos.find(i => i.id === selectedInsumo)
+      if (!insumo) return
+
+      if (items.some(item => item.insumo_id === selectedInsumo && !item.isDeleted)) {
+        alert('Este insumo ya está en la orden')
+        return
+      }
+
+      const ivaPorcentaje = insumo.iva_porcentaje ?? 21
+      const ivaMonto = subtotal * (ivaPorcentaje / 100)
+      const contenido = insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1
+
+      nuevoItem = {
+        id: crypto.randomUUID(),
+        insumo_id: insumo.id,
+        vino_id: null,
+        insumo_nombre: insumo.nombre,
+        unidad_medida: insumo.unidad_medida,
+        unidad_display: insumo.unidad_medida,
+        contenido,
+        cantidad: cantidadNum,
+        precio_unitario: precioNum,
+        subtotal,
+        iva_porcentaje: ivaPorcentaje,
+        iva_monto: ivaMonto,
+        isNew: true,
+      }
     }
 
     setItems([...items, nuevoItem])
@@ -322,6 +388,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
       const insertData = itemsNuevos.map(item => ({
         orden_compra_id: id,
         insumo_id: item.insumo_id,
+        vino_id: item.vino_id,
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
         unidad_display: item.unidad_display,
@@ -418,23 +485,30 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
                   { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
                   { value: 'Bebidas', label: 'Bebidas' },
+                  { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
                 onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo('') }}
               />
               <Select
-                label="Insumo"
+                label={filtroCategoria === 'Vinos' ? 'Vino' : 'Insumo'}
                 options={[
                   { value: '', label: 'Seleccionar...' },
-                  ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
-                    const cant = i.cantidad ? Number(i.cantidad) : 1
-                    const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
-                    const presentacion = cantPaq > 1 ? ` [${cant}x${cantPaq}]` : ''
-                    return {
-                      value: i.id,
-                      label: `${i.nombre}${presentacion}`
-                    }
-                  })
+                  ...(filtroCategoria === 'Vinos'
+                    ? vinos.map(v => ({
+                        value: `vino_${v.id}`,
+                        label: `${v.nombre} (${v.cepa})`
+                      }))
+                    : (filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
+                        const cant = i.cantidad ? Number(i.cantidad) : 1
+                        const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
+                        const presentacion = cantPaq > 1 ? ` [${cant}x${cantPaq}]` : ''
+                        return {
+                          value: i.id,
+                          label: `${i.nombre}${presentacion}`
+                        }
+                      })
+                  )
                 ]}
                 value={selectedInsumo}
                 onChange={(e) => handleSelectInsumo(e.target.value)}
@@ -477,6 +551,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
                   { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
                   { value: 'Bebidas', label: 'Bebidas' },
+                  { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
                 onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo('') }}
@@ -484,18 +559,24 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
             </div>
             <div className="flex-1">
               <Select
-                label="Insumo"
+                label={filtroCategoria === 'Vinos' ? 'Vino' : 'Insumo'}
                 options={[
-                  { value: '', label: 'Seleccionar insumo...' },
-                  ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
-                    const cant = i.cantidad ? Number(i.cantidad) : 1
-                    const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
-                    const presentacion = cantPaq > 1 ? ` [${cant} x ${cantPaq}]` : ''
-                    return {
-                      value: i.id,
-                      label: `${i.nombre} (${i.unidad_medida})${presentacion}`
-                    }
-                  })
+                  { value: '', label: filtroCategoria === 'Vinos' ? 'Seleccionar vino...' : 'Seleccionar insumo...' },
+                  ...(filtroCategoria === 'Vinos'
+                    ? vinos.map(v => ({
+                        value: `vino_${v.id}`,
+                        label: `${v.nombre} (${v.cepa}) [${v.unidades_caja} bot]`
+                      }))
+                    : (filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
+                        const cant = i.cantidad ? Number(i.cantidad) : 1
+                        const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
+                        const presentacion = cantPaq > 1 ? ` [${cant} x ${cantPaq}]` : ''
+                        return {
+                          value: i.id,
+                          label: `${i.nombre} (${i.unidad_medida})${presentacion}`
+                        }
+                      })
+                  )
                 ]}
                 value={selectedInsumo}
                 onChange={(e) => handleSelectInsumo(e.target.value)}

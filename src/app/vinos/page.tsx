@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen } from 'lucide-react'
+import { Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen, FileText, Star } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Modal } from '@/components/ui'
 import { Vino, CartaVino } from '@/types/database'
+import { generarPDFCartaVinos } from '@/lib/generar-pdf-carta-vinos'
 
 const CATEGORIAS_VINO = ['Tintos', 'Blancos', 'Espumantes']
 
@@ -223,6 +224,18 @@ export default function VinosPage() {
     fetchVinosConCarta()
   }
 
+  async function handleToggleRecomendado(vino: VinoConCarta) {
+    if (!vino.carta) return
+    await supabase.from('carta_vinos')
+      .update({ recomendado: !vino.carta.recomendado })
+      .eq('id', vino.carta.id)
+    fetchVinosConCarta()
+  }
+
+  async function handleDescargarPDF() {
+    await generarPDFCartaVinos()
+  }
+
   // Helpers
   function calcularValores(precioCaja: number, unidadesCaja: number, descuentoPorcentaje: number) {
     const precioUnidad = unidadesCaja > 0 ? precioCaja / unidadesCaja : 0
@@ -340,6 +353,12 @@ export default function VinosPage() {
           <button onClick={() => { setFiltroBodega(''); setFiltroCategoria(''); setFiltroCepa(''); setFiltroZona(''); setSearch('') }}
             className="text-gray-400 hover:text-gray-600 p-1">
             <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {activeTab === 'carta' && (
+          <button onClick={handleDescargarPDF} className="px-2 py-1 border border-gray-300 rounded text-[10px] text-gray-600 hover:bg-gray-50 flex items-center gap-1">
+            <FileText className="w-3 h-3" />
+            Carta de Vinos
           </button>
         )}
       </div>
@@ -474,6 +493,7 @@ export default function VinosPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-8">Carta</th>
+                      <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase w-8">Rec</th>
                       <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Vino</th>
                       <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
                       <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Sug.</th>
@@ -504,9 +524,28 @@ export default function VinosPage() {
                               className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                             />
                           </td>
+                          <td className="px-2 py-2 text-center">
+                            <button
+                              onClick={() => handleToggleRecomendado(vino)}
+                              disabled={!enCarta}
+                              className={`p-1 rounded transition-colors ${
+                                vino.carta?.recomendado
+                                  ? 'text-yellow-500 hover:text-yellow-600'
+                                  : 'text-gray-300 hover:text-gray-400'
+                              } ${!enCarta ? 'cursor-not-allowed' : ''}`}
+                              title={vino.carta?.recomendado ? 'Quitar de recomendados' : 'Marcar como recomendado'}
+                            >
+                              <Star className={`w-4 h-4 ${vino.carta?.recomendado ? 'fill-current' : ''}`} />
+                            </button>
+                          </td>
                           <td className="px-3 py-2">
-                            <p className="text-xs font-medium text-gray-900">{vino.bodega} - {vino.nombre}</p>
-                            <p className="text-[10px] text-gray-500">{vino.cepa}{vino.zona ? ` · ${vino.zona}` : ''}</p>
+                            <button
+                              onClick={() => handleOpenModal(vino)}
+                              className="text-left hover:bg-purple-50 rounded px-1 -mx-1 transition-colors"
+                            >
+                              <p className="text-xs font-medium text-gray-900 hover:text-purple-700">{vino.bodega} - {vino.nombre}</p>
+                              <p className="text-[10px] text-gray-500">{vino.cepa}{vino.zona ? ` · ${vino.zona}` : ''}</p>
+                            </button>
                           </td>
                           <td className="px-3 py-2 text-right">
                             <span className="text-xs font-medium text-gray-900">{fmtDec(vino.costo)}</span>
@@ -597,10 +636,21 @@ export default function VinosPage() {
                             onChange={() => handleToggleEnCarta(vino)}
                             className="mt-1 w-4 h-4 rounded border-gray-300 text-purple-600"
                           />
-                          <div>
+                          <button
+                            onClick={() => handleToggleRecomendado(vino)}
+                            disabled={!enCarta}
+                            className={`mt-0.5 ${
+                              vino.carta?.recomendado
+                                ? 'text-yellow-500'
+                                : 'text-gray-300'
+                            }`}
+                          >
+                            <Star className={`w-4 h-4 ${vino.carta?.recomendado ? 'fill-current' : ''}`} />
+                          </button>
+                          <button onClick={() => handleOpenModal(vino)} className="text-left">
                             <p className="text-xs font-medium text-gray-900">{vino.bodega} - {vino.nombre}</p>
                             <p className="text-[10px] text-gray-500">{vino.cepa}</p>
-                          </div>
+                          </button>
                         </div>
                         <button onClick={() => handleEditCarta(vino)} className="p-1">
                           <Pencil className="w-3.5 h-3.5 text-gray-500" />

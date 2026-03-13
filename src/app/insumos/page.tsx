@@ -397,12 +397,14 @@ export default function InsumosPage() {
 
   const formatCurrency = (value: number | null) => {
     if (value === null) return '-'
-    return formatearMoneda(value, true)
+    // Sin decimales para números grandes
+    return '$' + Math.round(value).toLocaleString('es-AR')
   }
 
   const formatCurrencyDecimal = (value: number | null) => {
     if (value === null) return '-'
-    return formatearMoneda(value, true)
+    // Sin decimales para números grandes
+    return '$' + Math.round(value).toLocaleString('es-AR')
   }
 
   const tabs = [

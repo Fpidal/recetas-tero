@@ -61,6 +61,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
   const [itemsOriginales, setItemsOriginales] = useState<string[]>([])
   const [selectedInsumo, setSelectedInsumo] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
+  const [selectedBodega, setSelectedBodega] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [precioUnitario, setPrecioUnitario] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -313,6 +314,14 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     }))
   }
 
+  // Bodegas únicas para filtro
+  const bodegasUnicas = Array.from(new Set(vinos.map(v => v.bodega))).sort()
+
+  // Vinos filtrados por bodega
+  const vinosFiltrados = selectedBodega
+    ? vinos.filter(v => v.bodega === selectedBodega)
+    : vinos
+
   const itemsActivos = items.filter(i => !i.isDeleted)
   const subtotalNeto = itemsActivos.reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva21 = itemsActivos.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
@@ -474,7 +483,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
 
           {/* Form agregar - Mobile */}
           <div className="lg:hidden space-y-3 mb-4">
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid gap-2 ${filtroCategoria === 'Vinos' ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <Select
                 label="Categoría"
                 options={[
@@ -488,14 +497,25 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
-                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo('') }}
+                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setSelectedBodega('') }}
               />
+              {filtroCategoria === 'Vinos' && (
+                <Select
+                  label="Bodega"
+                  options={[
+                    { value: '', label: 'Todas' },
+                    ...bodegasUnicas.map(b => ({ value: b, label: b }))
+                  ]}
+                  value={selectedBodega}
+                  onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo('') }}
+                />
+              )}
               <Select
                 label={filtroCategoria === 'Vinos' ? 'Vino' : 'Insumo'}
                 options={[
                   { value: '', label: 'Seleccionar...' },
                   ...(filtroCategoria === 'Vinos'
-                    ? vinos.map(v => ({
+                    ? vinosFiltrados.map(v => ({
                         value: `vino_${v.id}`,
                         label: `${v.nombre} (${v.cepa})`
                       }))
@@ -554,16 +574,29 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
-                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo('') }}
+                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setSelectedBodega('') }}
               />
             </div>
+            {filtroCategoria === 'Vinos' ? (
+              <div className="w-40">
+                <Select
+                  label="Bodega"
+                  options={[
+                    { value: '', label: 'Todas' },
+                    ...bodegasUnicas.map(b => ({ value: b, label: b }))
+                  ]}
+                  value={selectedBodega}
+                  onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo('') }}
+                />
+              </div>
+            ) : null}
             <div className="flex-1">
               <Select
                 label={filtroCategoria === 'Vinos' ? 'Vino' : 'Insumo'}
                 options={[
                   { value: '', label: filtroCategoria === 'Vinos' ? 'Seleccionar vino...' : 'Seleccionar insumo...' },
                   ...(filtroCategoria === 'Vinos'
-                    ? vinos.map(v => ({
+                    ? vinosFiltrados.map(v => ({
                         value: `vino_${v.id}`,
                         label: `${v.nombre} (${v.cepa}) [${v.unidades_caja} bot]`
                       }))

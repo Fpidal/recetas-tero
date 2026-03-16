@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Select, Input } from '@/components/ui'
-import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Scale } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Scale, Calendar } from 'lucide-react'
 
 // ============ TIPOS ============
 interface Insumo {
@@ -124,7 +124,7 @@ const CATEG_COLORES: Record<string, string> = {
   Salsas_Recetas: '#db2777',
 }
 
-type TabType = 'proveedores' | 'comparador' | 'variacion' | 'alertas'
+type TabType = 'proveedores' | 'comparador' | 'variacion' | 'alertas' | 'compras_semanales'
 
 interface FacturaResumenProveedor {
   proveedor_id: string
@@ -172,8 +172,48 @@ interface InsumoVariacion {
   cantidadRegistros: number
 }
 
+interface SemanaOption {
+  value: string
+  label: string
+  desde: string
+  hasta: string
+}
+
+// Helper: generar opciones de semanas
+function generarOpcionesSemanas(): SemanaOption[] {
+  const opciones: SemanaOption[] = []
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+
+  for (let i = 0; i < 12; i++) {
+    const fecha = new Date(hoy)
+    fecha.setDate(fecha.getDate() - (i * 7))
+    const lunes = getLunes(fecha)
+    const domingo = new Date(lunes)
+    domingo.setDate(domingo.getDate() + 6)
+
+    const desdeStr = lunes.toISOString().split('T')[0]
+    const hastaStr = domingo.toISOString().split('T')[0]
+
+    const label = i === 0
+      ? 'Esta semana'
+      : i === 1
+        ? 'Semana pasada'
+        : `${lunes.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} - ${domingo.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`
+
+    opciones.push({
+      value: `semana_${i}`,
+      label,
+      desde: desdeStr,
+      hasta: hastaStr,
+    })
+  }
+
+  return opciones
+}
+
 export default function EstadisticasPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('proveedores')
+  const [activeTab, setActiveTab] = useState<TabType>('compras_semanales')
   const [periodo, setPeriodo] = useState('semana_pasada')
   const [isLoading, setIsLoading] = useState(true)
   const [categoriaExpandida, setCategoriaExpandida] = useState<string | null>(null)
@@ -187,6 +227,10 @@ export default function EstadisticasPage() {
   const [preciosDeFacturas, setPreciosDeFacturas] = useState<FacturaItemConFecha[]>([])
   const [preciosAnterioresMapa, setPreciosAnterioresMapa] = useState<Map<string, number>>(new Map())
   const [rangoFechas, setRangoFechas] = useState({ desde: '', hasta: '' })
+
+  // Datos para compras semanales
+  const [modoComprasSemanal, setModoComprasSemanal] = useState<'insumos' | 'proveedores' | 'frecuencia'>('insumos')
+  const [categoriaFiltro, setCategoriaFiltro] = useState('')
 
   // Datos para comparador de precios
   const [modoComparador, setModoComparador] = useState<'insumo' | 'categoria'>('insumo')
@@ -727,9 +771,189 @@ export default function EstadisticasPage() {
     return listaAlertas.sort((a, b) => b.fecha.localeCompare(a.fecha))
   }, [todosLosPrecios, insumos])
 
+  // ============ COMPRAS SEMANALES ============
+  const semanas = useMemo(() => generarOpcionesSemanas().slice(0, 5), [])
+
+  const comprasPorInsumoSemana = useMemo(() => {
+    if (facturas6Meses.length === 0) return { porInsumo: [], resumen: { insumosDistintos: 0, proveedores: 0, lineasCompra: 0, recurrentes: 0 }, porCategoria: [] }
+
+    // Mapear facturas a semanas
+    const getNumeroSemana = (fecha: string): number => {
+      const fechaObj = new Date(fecha + 'T12:00:00')
+      for (let i = 0; i < semanas.length; i++) {
+        if (fecha >= semanas[i].desde && fecha <= semanas[i].hasta) {
+          return i
+        }
+      }
+      return -1
+    }
+
+    // Estructura: { insumoId: { nombre, categoria, unidad, semanas: [{ cantidad, veces }], total, vecesTotal } }
+    const porInsumo = new Map<string, {
+      id: string
+      nombre: string
+      categoria: string
+      unidad: string
+      semanas: { cantidad: number; veces: number }[]
+      total: number
+      vecesTotal: number
+      proveedores: Set<string>
+    }>()
+
+    const proveedoresSet = new Set<string>()
+    let lineasCompra = 0
+
+    facturas6Meses.forEach(f => {
+      const numSemana = getNumeroSemana(f.fecha)
+      if (numSemana < 0 || numSemana >= semanas.length) return
+
+      const provNombre = f.proveedores?.nombre || 'Sin proveedor'
+      proveedoresSet.add(provNombre)
+
+      f.factura_items?.forEach((item: any) => {
+        if (!item.insumo_id) return
+
+        const insumo = insumos.find(i => i.id === item.insumo_id)
+        if (!insumo) return
+
+        lineasCompra++
+
+        if (!porInsumo.has(item.insumo_id)) {
+          porInsumo.set(item.insumo_id, {
+            id: item.insumo_id,
+            nombre: insumo.nombre,
+            categoria: insumo.categoria,
+            unidad: 'kg', // Simplificado, se podría mejorar
+            semanas: semanas.map(() => ({ cantidad: 0, veces: 0 })),
+            total: 0,
+            vecesTotal: 0,
+            proveedores: new Set()
+          })
+        }
+
+        const data = porInsumo.get(item.insumo_id)!
+        data.semanas[numSemana].cantidad += item.cantidad
+        data.semanas[numSemana].veces += 1
+        data.total += item.cantidad
+        data.vecesTotal += 1
+        data.proveedores.add(provNombre)
+      })
+    })
+
+    // Convertir a array y calcular frecuencia
+    const resultado = Array.from(porInsumo.values()).map(item => ({
+      ...item,
+      proveedoresList: Array.from(item.proveedores),
+      frecuencia: item.semanas.filter(s => s.cantidad > 0).length,
+      frecuenciaLabel: `${item.semanas.filter(s => s.cantidad > 0).length}/${semanas.length}`
+    }))
+
+    // Ordenar por categoría y luego por frecuencia
+    resultado.sort((a, b) => {
+      if (a.categoria !== b.categoria) return a.categoria.localeCompare(b.categoria)
+      return b.frecuencia - a.frecuencia
+    })
+
+    // Agrupar por categoría
+    const porCategoria = new Map<string, typeof resultado>()
+    resultado.forEach(item => {
+      if (!porCategoria.has(item.categoria)) {
+        porCategoria.set(item.categoria, [])
+      }
+      porCategoria.get(item.categoria)!.push(item)
+    })
+
+    const categoriasArray = Array.from(porCategoria.entries()).map(([cat, items]) => ({
+      categoria: cat,
+      label: CATEG_LABELS[cat] || cat,
+      color: CATEG_COLORES[cat] || '#6b7280',
+      items,
+      totalInsumos: items.length,
+      totalCompras: items.reduce((sum, i) => sum + i.vecesTotal, 0)
+    }))
+
+    return {
+      porInsumo: resultado,
+      resumen: {
+        insumosDistintos: resultado.length,
+        proveedores: proveedoresSet.size,
+        lineasCompra,
+        recurrentes: resultado.filter(r => r.frecuencia >= 4).length
+      },
+      porCategoria: categoriasArray
+    }
+  }, [facturas6Meses, insumos, semanas])
+
+  // Compras por proveedor semanal
+  const comprasPorProveedorSemana = useMemo(() => {
+    if (facturas6Meses.length === 0) return []
+
+    const getNumeroSemana = (fecha: string): number => {
+      for (let i = 0; i < semanas.length; i++) {
+        if (fecha >= semanas[i].desde && fecha <= semanas[i].hasta) {
+          return i
+        }
+      }
+      return -1
+    }
+
+    const porProveedor = new Map<string, {
+      nombre: string
+      semanas: { total: number; facturas: number; items: { insumo: string; cantidad: number; precio: number }[] }[]
+      totalGeneral: number
+      facturasTotal: number
+    }>()
+
+    facturas6Meses.forEach(f => {
+      const numSemana = getNumeroSemana(f.fecha)
+      if (numSemana < 0 || numSemana >= semanas.length) return
+
+      const provNombre = f.proveedores?.nombre || 'Sin proveedor'
+      const esNC = f.tipo === 'nota_credito'
+
+      if (!porProveedor.has(provNombre)) {
+        porProveedor.set(provNombre, {
+          nombre: provNombre,
+          semanas: semanas.map(() => ({ total: 0, facturas: 0, items: [] })),
+          totalGeneral: 0,
+          facturasTotal: 0
+        })
+      }
+
+      const provData = porProveedor.get(provNombre)!
+      if (!esNC) {
+        provData.semanas[numSemana].facturas += 1
+        provData.facturasTotal += 1
+      }
+
+      f.factura_items?.forEach((item: any) => {
+        const insumo = insumos.find(i => i.id === item.insumo_id)
+        const subtotal = item.cantidad * item.precio_unitario
+        const iva = subtotal * ((item.insumos?.iva_porcentaje ?? 21) / 100)
+        const totalItem = esNC ? -(subtotal + iva) : (subtotal + iva)
+
+        provData.semanas[numSemana].total += totalItem
+        provData.totalGeneral += totalItem
+
+        if (insumo) {
+          provData.semanas[numSemana].items.push({
+            insumo: insumo.nombre,
+            cantidad: item.cantidad,
+            precio: item.precio_unitario
+          })
+        }
+      })
+    })
+
+    return Array.from(porProveedor.values())
+      .filter(p => p.totalGeneral > 0)
+      .sort((a, b) => b.totalGeneral - a.totalGeneral)
+  }, [facturas6Meses, insumos, semanas])
+
   const formatMoney = (v: number) => `$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 
   const tabs = [
+    { id: 'compras_semanales' as TabType, label: 'Compras Semanales', icon: Calendar },
     { id: 'proveedores' as TabType, label: 'Compras por Proveedor', icon: Users },
     { id: 'comparador' as TabType, label: 'Comparador de Precios', icon: Scale },
     { id: 'variacion' as TabType, label: 'Variación de Precios', icon: TrendingUp },
@@ -778,7 +1002,7 @@ export default function EstadisticasPage() {
               >
                 <Icon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.id === 'proveedores' ? 'Compras' : tab.id === 'comparador' ? 'Comparar' : tab.id === 'variacion' ? 'Variación' : 'Alertas'}</span>
+                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'proveedores' ? 'Compras' : tab.id === 'comparador' ? 'Comparar' : tab.id === 'variacion' ? 'Variación' : 'Alertas'}</span>
               </button>
             )
           })}
@@ -788,6 +1012,322 @@ export default function EstadisticasPage() {
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <p className="text-gray-500">Cargando datos...</p>
+        </div>
+      ) : activeTab === 'compras_semanales' ? (
+        /* ============ TAB COMPRAS SEMANALES ============ */
+        <div className="space-y-4 sm:space-y-6">
+          {/* Resumen */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
+                <Package className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs">Insumos distintos</span>
+              </div>
+              <p className="text-base sm:text-xl font-bold text-gray-900">{comprasPorInsumoSemana.resumen.insumosDistintos}</p>
+            </div>
+            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
+                <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs">Proveedores</span>
+              </div>
+              <p className="text-base sm:text-xl font-bold text-gray-900">{comprasPorInsumoSemana.resumen.proveedores}</p>
+            </div>
+            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
+                <FileText className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs">Líneas de compra</span>
+              </div>
+              <p className="text-base sm:text-xl font-bold text-gray-900">{comprasPorInsumoSemana.resumen.lineasCompra}</p>
+            </div>
+            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
+                <TrendingUp className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                <span className="text-[10px] sm:text-xs">Recurrentes (4+)</span>
+              </div>
+              <p className="text-base sm:text-xl font-bold text-gray-900">{comprasPorInsumoSemana.resumen.recurrentes}</p>
+            </div>
+          </div>
+
+          {/* Selector de modo */}
+          <div className="bg-white rounded-lg border p-3 sm:p-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setModoComprasSemanal('insumos')}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                  modoComprasSemanal === 'insumos'
+                    ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
+                    : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+                }`}
+              >
+                <Package className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                Por Insumo
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoComprasSemanal('proveedores')}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                  modoComprasSemanal === 'proveedores'
+                    ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
+                    : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+                }`}
+              >
+                <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                Por Proveedor
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoComprasSemanal('frecuencia')}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                  modoComprasSemanal === 'frecuencia'
+                    ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
+                    : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+                }`}
+              >
+                <Calendar className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                Frecuencia
+              </button>
+            </div>
+          </div>
+
+          {/* Contenido según modo */}
+          {modoComprasSemanal === 'insumos' ? (
+            /* VISTA POR INSUMOS */
+            <div className="space-y-4">
+              {comprasPorInsumoSemana.porCategoria.map(cat => (
+                <div key={cat.categoria} className="bg-white rounded-lg border overflow-hidden">
+                  <div
+                    className="px-3 sm:px-4 py-2 sm:py-3 border-b flex items-center justify-between"
+                    style={{ backgroundColor: cat.color + '15' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-800">{cat.label}</h3>
+                    </div>
+                    <span className="text-[10px] sm:text-xs text-gray-500">{cat.totalInsumos} insumos · {cat.totalCompras} compras</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-2 sm:px-3 py-2 text-left text-[9px] sm:text-[10px] font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-10 min-w-[120px] sm:min-w-[180px]">
+                            Insumo
+                          </th>
+                          {semanas.map((sem, idx) => (
+                            <th key={idx} className="px-2 sm:px-3 py-2 text-center text-[8px] sm:text-[9px] font-medium text-gray-500 uppercase min-w-[50px] sm:min-w-[70px]">
+                              <div>{idx === 0 ? 'Esta' : idx === 1 ? 'Ant.' : `Sem ${idx + 1}`}</div>
+                              <div className="font-normal text-gray-400">{sem.desde.slice(5)}</div>
+                            </th>
+                          ))}
+                          <th className="px-2 sm:px-3 py-2 text-center text-[9px] sm:text-[10px] font-medium text-gray-500 uppercase min-w-[50px]">Total</th>
+                          <th className="px-2 sm:px-3 py-2 text-center text-[9px] sm:text-[10px] font-medium text-gray-500 uppercase min-w-[40px]">Frec.</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {cat.items.map(item => (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r">
+                              {item.nombre}
+                            </td>
+                            {item.semanas.map((sem, idx) => (
+                              <td key={idx} className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs ${sem.cantidad > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                                {sem.cantidad > 0 ? (
+                                  <span>
+                                    {sem.cantidad % 1 === 0 ? sem.cantidad : sem.cantidad.toFixed(1)}
+                                    {sem.veces > 1 && <span className="text-orange-500 ml-0.5">({sem.veces}x)</span>}
+                                  </span>
+                                ) : '-'}
+                              </td>
+                            ))}
+                            <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-bold text-gray-900">
+                              {item.total % 1 === 0 ? item.total : item.total.toFixed(1)}
+                            </td>
+                            <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-semibold ${
+                              item.frecuencia >= 4 ? 'text-green-600' : item.frecuencia >= 2 ? 'text-orange-500' : 'text-red-500'
+                            }`}>
+                              {item.frecuenciaLabel}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : modoComprasSemanal === 'proveedores' ? (
+            /* VISTA POR PROVEEDORES */
+            <div className="bg-white rounded-lg border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-10 min-w-[120px] sm:min-w-[180px]">
+                        Proveedor
+                      </th>
+                      {semanas.map((sem, idx) => (
+                        <th key={idx} className="px-2 sm:px-3 py-2 text-center text-[8px] sm:text-[9px] font-medium text-gray-500 uppercase min-w-[70px] sm:min-w-[90px]">
+                          <div>{idx === 0 ? 'Esta sem.' : idx === 1 ? 'Sem. ant.' : `Sem ${idx + 1}`}</div>
+                          <div className="font-normal text-gray-400">{sem.desde.slice(5)}</div>
+                        </th>
+                      ))}
+                      <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase min-w-[80px]">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {comprasPorProveedorSemana.map((prov, idx) => (
+                      <tr key={prov.nombre} className="hover:bg-gray-50">
+                        <td className="px-3 sm:px-4 py-2 sm:py-3 sticky left-0 bg-white z-10 border-r">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] sm:text-xs font-bold text-gray-500">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs sm:text-sm font-medium text-gray-900">{prov.nombre}</span>
+                          </div>
+                        </td>
+                        {prov.semanas.map((sem, semIdx) => (
+                          <td key={semIdx} className={`px-2 sm:px-3 py-2 sm:py-3 text-center ${sem.total > 0 ? '' : 'text-gray-300'}`}>
+                            {sem.total > 0 ? (
+                              <div>
+                                <div className="text-xs sm:text-sm font-medium text-gray-900">{formatMoney(sem.total)}</div>
+                                <div className="text-[9px] sm:text-[10px] text-gray-500">{sem.facturas} fact.</div>
+                              </div>
+                            ) : '-'}
+                          </td>
+                        ))}
+                        <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
+                          <span className="text-xs sm:text-sm font-bold text-gray-900">{formatMoney(prov.totalGeneral)}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            /* VISTA FRECUENCIA */
+            <div className="space-y-4">
+              {/* Recurrentes */}
+              <div className="bg-white rounded-lg border overflow-hidden">
+                <div className="px-3 sm:px-4 py-2 sm:py-3 bg-green-50 border-b">
+                  <h3 className="text-sm sm:text-base font-semibold text-green-800">Compra recurrente (4-5 semanas)</h3>
+                  <p className="text-[10px] sm:text-xs text-green-600">Insumos que se compran regularmente</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Insumo</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Categoría</th>
+                        <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Frec.</th>
+                        <th className="px-3 sm:px-4 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Compras</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Proveedor(es)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {comprasPorInsumoSemana.porInsumo
+                        .filter(i => i.frecuencia >= 4)
+                        .sort((a, b) => b.frecuencia - a.frecuencia || b.total - a.total)
+                        .map(item => (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-900">{item.nombre}</td>
+                            <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
+                              <span className="inline-flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEG_COLORES[item.categoria] || '#6b7280' }} />
+                                {CATEG_LABELS[item.categoria] || item.categoria}
+                              </span>
+                            </td>
+                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm font-semibold text-green-600">{item.frecuenciaLabel}</td>
+                            <td className="px-3 sm:px-4 py-2 text-right text-xs sm:text-sm font-bold text-gray-900">
+                              {item.total % 1 === 0 ? item.total : item.total.toFixed(1)}
+                            </td>
+                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm text-gray-600">{item.vecesTotal}</td>
+                            <td className="px-3 sm:px-4 py-2 text-xs text-gray-500 hidden sm:table-cell">{item.proveedoresList.join(', ')}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Esporádicos */}
+              <div className="bg-white rounded-lg border overflow-hidden">
+                <div className="px-3 sm:px-4 py-2 sm:py-3 bg-red-50 border-b">
+                  <h3 className="text-sm sm:text-base font-semibold text-red-800">Compra esporádica (1-2 semanas)</h3>
+                  <p className="text-[10px] sm:text-xs text-red-600">Insumos que se compran ocasionalmente</p>
+                </div>
+                <div className="overflow-x-auto max-h-96">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Insumo</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Categoría</th>
+                        <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Frec.</th>
+                        <th className="px-3 sm:px-4 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Compras</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Proveedor(es)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {comprasPorInsumoSemana.porInsumo
+                        .filter(i => i.frecuencia <= 2)
+                        .sort((a, b) => b.total - a.total)
+                        .map(item => (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-900">{item.nombre}</td>
+                            <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
+                              <span className="inline-flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEG_COLORES[item.categoria] || '#6b7280' }} />
+                                {CATEG_LABELS[item.categoria] || item.categoria}
+                              </span>
+                            </td>
+                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm font-semibold text-red-500">{item.frecuenciaLabel}</td>
+                            <td className="px-3 sm:px-4 py-2 text-right text-xs sm:text-sm font-bold text-gray-900">
+                              {item.total % 1 === 0 ? item.total : item.total.toFixed(1)}
+                            </td>
+                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm text-gray-600">{item.vecesTotal}</td>
+                            <td className="px-3 sm:px-4 py-2 text-xs text-gray-500 hidden sm:table-cell">{item.proveedoresList.join(', ')}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Resumen por categoría */}
+              <div className="bg-white rounded-lg border overflow-hidden">
+                <div className="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border-b">
+                  <h3 className="text-sm sm:text-base font-semibold text-gray-800">Resumen por Categoría</h3>
+                </div>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Categoría</th>
+                      <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Insumos</th>
+                      <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Compras Totales</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {comprasPorInsumoSemana.porCategoria
+                      .sort((a, b) => b.totalCompras - a.totalCompras)
+                      .map(cat => (
+                        <tr key={cat.categoria} className="hover:bg-gray-50">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3">
+                            <span className="inline-flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                              <span className="text-xs sm:text-sm font-medium text-gray-900">{cat.label}</span>
+                            </span>
+                          </td>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600">{cat.totalInsumos}</td>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold text-gray-900">{cat.totalCompras}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       ) : activeTab === 'proveedores' ? (
         /* ============ TAB PROVEEDORES ============ */

@@ -701,7 +701,8 @@ export default function EstadisticasPage() {
         if (primerPrecioMes > 0) {
           const variacion = ((ultimoPrecioMes - primerPrecioMes) / primerPrecioMes) * 100
 
-          if (variacion > 10) {
+          // Solo mostrar alertas entre 10% y 200% - valores mayores son probables errores de carga
+          if (variacion > 10 && variacion <= 200) {
             listaAlertas.push({
               id: `aumento-${insumoId}-${preciosRecientes[0].proveedor_nombre}`,
               tipo: 'aumento',

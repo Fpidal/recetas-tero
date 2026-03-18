@@ -499,6 +499,7 @@ export default function NuevaOrdenCompraPage() {
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
                     <Select
+                      name="select-insumo-mobile"
                       label="Insumo"
                       options={[
                         { value: '', label: 'Seleccionar...' },
@@ -529,6 +530,7 @@ export default function NuevaOrdenCompraPage() {
             </div>
             {filtroCategoria === 'Vinos' && (
               <Select
+                name="select-vino-mobile"
                 label="Vino"
                 options={[
                   { value: '', label: 'Seleccionar vino...' },
@@ -633,6 +635,7 @@ export default function NuevaOrdenCompraPage() {
             <div className="flex-1 flex gap-2 items-end">
               <div className="flex-1">
                 <Select
+                  name={filtroCategoria === 'Vinos' ? 'select-vino-desktop' : 'select-insumo-desktop'}
                   label={filtroCategoria === 'Vinos' ? 'Vino' : 'Insumo'}
                   options={
                     filtroCategoria === 'Vinos'

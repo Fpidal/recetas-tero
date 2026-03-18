@@ -30,6 +30,7 @@ interface Vino {
   cepa: string
   precio_caja: number
   unidades_caja: number
+  descuento_porcentaje: number
 }
 
 interface ItemOrden {
@@ -64,6 +65,8 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
   const [selectedBodega, setSelectedBodega] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [precioUnitario, setPrecioUnitario] = useState('')
+  const [precioListaVino, setPrecioListaVino] = useState('')
+  const [descuentoVino, setDescuentoVino] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [tieneFactura, setTieneFactura] = useState(false)
@@ -91,7 +94,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     const [proveedoresRes, insumosRes, vinosRes, ordenRes] = await Promise.all([
       supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre'),
       supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, categoria, precio_actual, iva_porcentaje, cantidad_por_paquete').eq('activo', true).order('categoria').order('nombre'),
-      supabase.from('vinos').select('id, bodega, nombre, cepa, precio_caja, unidades_caja').eq('activo', true).order('bodega').order('nombre'),
+      supabase.from('vinos').select('id, bodega, nombre, cepa, precio_caja, unidades_caja, descuento_porcentaje').eq('activo', true).order('bodega').order('nombre'),
       supabase.from('ordenes_compra')
         .select(`
           id, proveedor_id, notas, estado,
@@ -160,8 +163,17 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
       const vinoId = itemId.replace('vino_', '')
       const vino = vinos.find(v => v.id === vinoId)
       if (vino && vino.precio_caja) {
-        setPrecioUnitario(vino.precio_caja.toFixed(2).replace('.', ','))
+        // Guardar precio de lista (full)
+        setPrecioListaVino(vino.precio_caja.toFixed(2).replace('.', ','))
+        // Guardar descuento del vino
+        const descuento = vino.descuento_porcentaje || 0
+        setDescuentoVino(String(descuento).replace('.', ','))
+        // Calcular precio final con descuento
+        const precioFinal = vino.precio_caja * (1 - descuento / 100)
+        setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
       } else {
+        setPrecioListaVino('')
+        setDescuentoVino('')
         setPrecioUnitario('')
       }
     } else {
@@ -173,6 +185,16 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
       } else {
         setPrecioUnitario('')
       }
+    }
+  }
+
+  function handleDescuentoVinoChange(nuevoDescuento: string) {
+    setDescuentoVino(nuevoDescuento)
+    const descuentoNum = parsearNumero(nuevoDescuento)
+    const precioListaNum = parsearNumero(precioListaVino)
+    if (precioListaNum > 0) {
+      const precioFinal = precioListaNum * (1 - descuentoNum / 100)
+      setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
     }
   }
 
@@ -246,6 +268,8 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     setSelectedInsumo('')
     setCantidad('')
     setPrecioUnitario('')
+    setPrecioListaVino('')
+    setDescuentoVino('')
   }
 
   function handleEliminarItem(itemId: string) {
@@ -497,7 +521,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
-                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setSelectedBodega('') }}
+                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setSelectedBodega(''); setPrecioUnitario(''); setPrecioListaVino(''); setDescuentoVino('') }}
               />
               {filtroCategoria === 'Vinos' && (
                 <Select
@@ -507,7 +531,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     ...bodegasUnicas.map(b => ({ value: b, label: b }))
                   ]}
                   value={selectedBodega}
-                  onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo('') }}
+                  onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo(''); setPrecioUnitario(''); setPrecioListaVino(''); setDescuentoVino('') }}
                 />
               )}
               <Select
@@ -534,7 +558,35 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                 onChange={(e) => handleSelectInsumo(e.target.value)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            {/* Campos especiales para vinos: Precio Lista y Descuento */}
+            {filtroCategoria === 'Vinos' && selectedInsumo && (
+              <div className="grid grid-cols-3 gap-2">
+                <Input
+                  label="P. Lista"
+                  type="text"
+                  value={precioListaVino}
+                  disabled
+                  className="bg-gray-100"
+                />
+                <Input
+                  label="Desc %"
+                  type="text"
+                  inputMode="decimal"
+                  value={descuentoVino}
+                  onChange={(e) => handleDescuentoVinoChange(formatearInputNumero(e.target.value))}
+                  placeholder="0"
+                />
+                <Input
+                  label="P. Final"
+                  type="text"
+                  inputMode="decimal"
+                  value={precioUnitario}
+                  onChange={(e) => setPrecioUnitario(formatearInputNumero(e.target.value))}
+                  placeholder="0,00"
+                />
+              </div>
+            )}
+            <div className={`grid gap-2 ${filtroCategoria === 'Vinos' && selectedInsumo ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <Input
                 label="Cantidad"
                 type="text"
@@ -543,14 +595,16 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                 onChange={(e) => setCantidad(formatearInputNumero(e.target.value))}
                 placeholder="0"
               />
-              <Input
-                label="Precio Unit. ($)"
-                type="text"
-                inputMode="decimal"
-                value={precioUnitario}
-                onChange={(e) => setPrecioUnitario(formatearInputNumero(e.target.value))}
-                placeholder="0,00"
-              />
+              {!(filtroCategoria === 'Vinos' && selectedInsumo) && (
+                <Input
+                  label="Precio Unit. ($)"
+                  type="text"
+                  inputMode="decimal"
+                  value={precioUnitario}
+                  onChange={(e) => setPrecioUnitario(formatearInputNumero(e.target.value))}
+                  placeholder="0,00"
+                />
+              )}
             </div>
             <Button onClick={handleAgregarItem} className="w-full">
               <Plus className="w-4 h-4 mr-1" />
@@ -574,7 +628,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
-                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setSelectedBodega('') }}
+                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setSelectedBodega(''); setPrecioUnitario(''); setPrecioListaVino(''); setDescuentoVino('') }}
               />
             </div>
             {filtroCategoria === 'Vinos' ? (
@@ -586,7 +640,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     ...bodegasUnicas.map(b => ({ value: b, label: b }))
                   ]}
                   value={selectedBodega}
-                  onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo('') }}
+                  onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo(''); setPrecioUnitario(''); setPrecioListaVino(''); setDescuentoVino('') }}
                 />
               </div>
             ) : null}
@@ -615,7 +669,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                 onChange={(e) => handleSelectInsumo(e.target.value)}
               />
             </div>
-            <div className="w-28">
+            <div className="w-24">
               <Input
                 label="Cantidad"
                 type="text"
@@ -625,16 +679,50 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                 placeholder="0"
               />
             </div>
-            <div className="w-32">
-              <Input
-                label="Precio Unit. ($)"
-                type="text"
-                inputMode="decimal"
-                value={precioUnitario}
-                onChange={(e) => setPrecioUnitario(formatearInputNumero(e.target.value))}
-                placeholder="0,00"
-              />
-            </div>
+            {filtroCategoria === 'Vinos' && selectedInsumo ? (
+              <>
+                <div className="w-28">
+                  <Input
+                    label="P. Lista"
+                    type="text"
+                    value={precioListaVino}
+                    disabled
+                    className="bg-gray-100"
+                  />
+                </div>
+                <div className="w-20">
+                  <Input
+                    label="Desc %"
+                    type="text"
+                    inputMode="decimal"
+                    value={descuentoVino}
+                    onChange={(e) => handleDescuentoVinoChange(formatearInputNumero(e.target.value))}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="w-28">
+                  <Input
+                    label="P. Final"
+                    type="text"
+                    inputMode="decimal"
+                    value={precioUnitario}
+                    onChange={(e) => setPrecioUnitario(formatearInputNumero(e.target.value))}
+                    placeholder="0,00"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="w-32">
+                <Input
+                  label="Precio Unit. ($)"
+                  type="text"
+                  inputMode="decimal"
+                  value={precioUnitario}
+                  onChange={(e) => setPrecioUnitario(formatearInputNumero(e.target.value))}
+                  placeholder="0,00"
+                />
+              </div>
+            )}
             <Button onClick={handleAgregarItem}>
               <Plus className="w-4 h-4 mr-1" />
               Agregar

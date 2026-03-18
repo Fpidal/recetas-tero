@@ -21,6 +21,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           id={id}
+          autoComplete="off"
           className={`
             block w-full rounded-lg border px-3 py-2.5 sm:py-2 text-base sm:text-sm
             focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent

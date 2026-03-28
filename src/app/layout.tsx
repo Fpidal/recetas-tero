@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import { headers } from "next/headers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -45,6 +46,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = headers()
+  const pathname = headersList.get('x-next-pathname') || ''
+  const isLoginPage = pathname === '/login'
+
   return (
     <html lang="es">
       <head>
@@ -58,12 +63,16 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
       </head>
       <body className={inter.className}>
-        <div className="flex h-screen bg-gray-100">
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 mobile-content-padding">
-            {children}
-          </main>
-        </div>
+        {isLoginPage ? (
+          children
+        ) : (
+          <div className="flex h-screen bg-gray-100">
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 mobile-content-padding">
+              {children}
+            </main>
+          </div>
+        )}
         <script
           dangerouslySetInnerHTML={{
             __html: `

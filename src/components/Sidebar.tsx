@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Package,
   ShoppingCart,
@@ -18,7 +18,9 @@ import {
   Menu,
   X,
   Warehouse,
-  Wine
+  Wine,
+  LogOut,
+  User
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -40,17 +42,42 @@ const navigation = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [papeleraCount, setPapeleraCount] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userName, setUserName] = useState('')
+  const [userRole, setUserRole] = useState('')
 
   useEffect(() => {
     fetchPapeleraCount()
+    fetchUserProfile()
   }, [pathname])
 
   // Cerrar menú mobile al cambiar de página
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [pathname])
+
+  async function fetchUserProfile() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: perfil } = await supabase
+        .from('perfiles')
+        .select('nombre, rol')
+        .eq('id', user.id)
+        .single()
+      if (perfil) {
+        setUserName(perfil.nombre)
+        setUserRole(perfil.rol)
+      }
+    }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   async function fetchPapeleraCount() {
     // Nota: carta no se cuenta porque "Fuera de Carta" no es papelera, es temporal
@@ -114,6 +141,27 @@ export default function Sidebar() {
           )
         })}
       </nav>
+      {/* Usuario y logout */}
+      {userName && (
+        <div className="border-t border-gray-800 px-3 py-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{userName}</p>
+              <p className="text-xs text-gray-400 capitalize">{userRole}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="text-gray-400 hover:text-red-400 p-1.5 rounded-md hover:bg-gray-800 transition"
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 

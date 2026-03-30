@@ -509,6 +509,7 @@ export default function Home() {
       // Inicializar últimos 6 meses
       for (let i = 5; i >= 0; i--) {
         const fecha = new Date()
+        fecha.setDate(1) // Usar día 1 para evitar problemas con meses cortos (ej: 30 marzo - 1 mes = 2 marzo, no febrero)
         fecha.setMonth(fecha.getMonth() - i)
         const mesKey = `${mesesNombres[fecha.getMonth()]} ${fecha.getFullYear().toString().slice(-2)}`
         mesesMap.set(mesKey, 0)
@@ -571,6 +572,7 @@ export default function Home() {
       const mesesCategMap = new Map<string, ComprasPorCategoriaItem>()
       for (let i = 5; i >= 0; i--) {
         const fecha = new Date()
+        fecha.setDate(1) // Usar día 1 para evitar problemas con meses cortos
         fecha.setMonth(fecha.getMonth() - i)
         const mesKey = `${mesesNombres[fecha.getMonth()]}`
         mesesCategMap.set(mesKey, {

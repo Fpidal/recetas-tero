@@ -258,6 +258,7 @@ export default function EstadisticasPage() {
 
     // Calcular fecha de hace 6 meses para evolución
     const hace6Meses = new Date()
+    hace6Meses.setDate(1) // Usar día 1 para evitar problemas con meses cortos (ej: 30 marzo - 1 mes = 2 marzo, no febrero)
     hace6Meses.setMonth(hace6Meses.getMonth() - 6)
     const desde6Meses = hace6Meses.toISOString().split('T')[0]
 

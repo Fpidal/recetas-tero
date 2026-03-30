@@ -124,7 +124,7 @@ const CATEG_COLORES: Record<string, string> = {
   Salsas_Recetas: '#db2777',
 }
 
-type TabType = 'proveedores' | 'comparador' | 'variacion' | 'alertas' | 'compras_semanales'
+type TabType = 'proveedores' | 'comparador' | 'variacion' | 'alertas' | 'compras_semanales' | 'comparacion_mensual'
 
 interface FacturaResumenProveedor {
   proveedor_id: string
@@ -170,6 +170,18 @@ interface InsumoVariacion {
   precioFinal: number
   variacion: number
   cantidadRegistros: number
+}
+
+interface ComparacionMensualProveedor {
+  nombre: string
+  meses: { [mes: string]: number }
+  total: number
+}
+
+interface ComparacionMensualCategoria {
+  categoria: string
+  meses: { [mes: string]: number }
+  total: number
 }
 
 interface SemanaOption {
@@ -439,6 +451,79 @@ export default function EstadisticasPage() {
       return resultado
     })
   }, [facturas6Meses, datosProveedores])
+
+  // Comparación mensual por proveedor (últimos 6 meses)
+  const { comparacionMensualProveedores, comparacionMensualCategorias, mesesOrdenados } = useMemo(() => {
+    const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    const porProveedor = new Map<string, { [mes: string]: number }>()
+    const porCategoria = new Map<string, { [mes: string]: number }>()
+    const mesesSet = new Set<string>()
+
+    // Generar últimos 6 meses
+    for (let i = 5; i >= 0; i--) {
+      const fecha = new Date()
+      fecha.setDate(1)
+      fecha.setMonth(fecha.getMonth() - i)
+      const mesKey = `${mesesNombres[fecha.getMonth()]} ${fecha.getFullYear().toString().slice(-2)}`
+      mesesSet.add(mesKey)
+    }
+
+    facturas6Meses.forEach(f => {
+      const provNombre = f.proveedores?.nombre || 'Sin proveedor'
+      const esNC = f.tipo === 'nota_credito'
+      const fechaFactura = new Date(f.fecha)
+      const mesKey = `${mesesNombres[fechaFactura.getMonth()]} ${fechaFactura.getFullYear().toString().slice(-2)}`
+
+      if (!porProveedor.has(provNombre)) {
+        porProveedor.set(provNombre, {})
+      }
+
+      f.factura_items?.forEach(item => {
+        const subtotal = item.cantidad * item.precio_unitario
+        const iva = subtotal * ((item.insumos?.iva_porcentaje ?? 21) / 100)
+        const totalItem = esNC ? -(subtotal + iva) : (subtotal + iva)
+
+        // Por proveedor
+        const provData = porProveedor.get(provNombre)!
+        provData[mesKey] = (provData[mesKey] || 0) + totalItem
+
+        // Por categoría
+        const categoria = item.insumos?.categoria || 'Sin categoría'
+        if (!porCategoria.has(categoria)) {
+          porCategoria.set(categoria, {})
+        }
+        const catData = porCategoria.get(categoria)!
+        catData[mesKey] = (catData[mesKey] || 0) + totalItem
+      })
+    })
+
+    // Convertir a arrays ordenados por total
+    const mesesOrdenados = Array.from(mesesSet)
+
+    const comparacionProveedores: ComparacionMensualProveedor[] = Array.from(porProveedor.entries())
+      .map(([nombre, meses]) => ({
+        nombre,
+        meses,
+        total: Object.values(meses).reduce((s, v) => s + v, 0)
+      }))
+      .filter(p => p.total > 0)
+      .sort((a, b) => b.total - a.total)
+
+    const comparacionCategorias: ComparacionMensualCategoria[] = Array.from(porCategoria.entries())
+      .map(([categoria, meses]) => ({
+        categoria,
+        meses,
+        total: Object.values(meses).reduce((s, v) => s + v, 0)
+      }))
+      .filter(c => c.total > 0)
+      .sort((a, b) => b.total - a.total)
+
+    return {
+      comparacionMensualProveedores: comparacionProveedores,
+      comparacionMensualCategorias: comparacionCategorias,
+      mesesOrdenados
+    }
+  }, [facturas6Meses])
 
   const totalCompras = useMemo(() => datosProveedores.reduce((s, p) => s + p.total, 0), [datosProveedores])
 
@@ -956,6 +1041,7 @@ export default function EstadisticasPage() {
 
   const tabs = [
     { id: 'compras_semanales' as TabType, label: 'Compras Semanales', icon: Calendar },
+    { id: 'comparacion_mensual' as TabType, label: 'Comparación Mensual', icon: FileText },
     { id: 'proveedores' as TabType, label: 'Compras por Proveedor', icon: Users },
     { id: 'comparador' as TabType, label: 'Comparador de Precios', icon: Scale },
     { id: 'variacion' as TabType, label: 'Variación de Precios', icon: TrendingUp },
@@ -1004,7 +1090,7 @@ export default function EstadisticasPage() {
               >
                 <Icon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'proveedores' ? 'Compras' : tab.id === 'comparador' ? 'Comparar' : tab.id === 'variacion' ? 'Variación' : 'Alertas'}</span>
+                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'comparacion_mensual' ? 'Mensual' : tab.id === 'proveedores' ? 'Compras' : tab.id === 'comparador' ? 'Comparar' : tab.id === 'variacion' ? 'Variación' : 'Alertas'}</span>
               </button>
             )
           })}
@@ -1330,6 +1416,109 @@ export default function EstadisticasPage() {
               </div>
             </div>
           )}
+        </div>
+      ) : activeTab === 'comparacion_mensual' ? (
+        /* ============ TAB COMPARACIÓN MENSUAL ============ */
+        <div className="space-y-6">
+          {/* Compras por Proveedor - Mensual */}
+          <div className="bg-white rounded-lg border overflow-hidden">
+            <div className="px-4 py-3 bg-blue-50 border-b">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Compras por Proveedor (Últimos 6 meses)
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-2 font-medium text-gray-700 sticky left-0 bg-gray-50">Proveedor</th>
+                    {mesesOrdenados.map(mes => (
+                      <th key={mes} className="text-right px-4 py-2 font-medium text-gray-700 whitespace-nowrap">{mes}</th>
+                    ))}
+                    <th className="text-right px-4 py-2 font-medium text-gray-700 bg-gray-100">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {comparacionMensualProveedores.map((prov, idx) => (
+                    <tr key={prov.nombre} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                      <td className="px-4 py-2 font-medium text-gray-900 sticky left-0 bg-inherit">{prov.nombre}</td>
+                      {mesesOrdenados.map(mes => (
+                        <td key={mes} className="text-right px-4 py-2 text-gray-600 whitespace-nowrap">
+                          {prov.meses[mes] ? formatMoney(prov.meses[mes]) : '-'}
+                        </td>
+                      ))}
+                      <td className="text-right px-4 py-2 font-semibold text-gray-900 bg-gray-100">{formatMoney(prov.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-100 font-semibold">
+                  <tr>
+                    <td className="px-4 py-2 text-gray-900 sticky left-0 bg-gray-100">Total</td>
+                    {mesesOrdenados.map(mes => {
+                      const totalMes = comparacionMensualProveedores.reduce((s, p) => s + (p.meses[mes] || 0), 0)
+                      return (
+                        <td key={mes} className="text-right px-4 py-2 text-gray-900 whitespace-nowrap">{formatMoney(totalMes)}</td>
+                      )
+                    })}
+                    <td className="text-right px-4 py-2 text-gray-900 bg-gray-200">
+                      {formatMoney(comparacionMensualProveedores.reduce((s, p) => s + p.total, 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          {/* Compras por Categoría - Mensual */}
+          <div className="bg-white rounded-lg border overflow-hidden">
+            <div className="px-4 py-3 bg-green-50 border-b">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Compras por Categoría (Últimos 6 meses)
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-2 font-medium text-gray-700 sticky left-0 bg-gray-50">Categoría</th>
+                    {mesesOrdenados.map(mes => (
+                      <th key={mes} className="text-right px-4 py-2 font-medium text-gray-700 whitespace-nowrap">{mes}</th>
+                    ))}
+                    <th className="text-right px-4 py-2 font-medium text-gray-700 bg-gray-100">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {comparacionMensualCategorias.map((cat, idx) => (
+                    <tr key={cat.categoria} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                      <td className="px-4 py-2 font-medium text-gray-900 sticky left-0 bg-inherit">{cat.categoria}</td>
+                      {mesesOrdenados.map(mes => (
+                        <td key={mes} className="text-right px-4 py-2 text-gray-600 whitespace-nowrap">
+                          {cat.meses[mes] ? formatMoney(cat.meses[mes]) : '-'}
+                        </td>
+                      ))}
+                      <td className="text-right px-4 py-2 font-semibold text-gray-900 bg-gray-100">{formatMoney(cat.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-100 font-semibold">
+                  <tr>
+                    <td className="px-4 py-2 text-gray-900 sticky left-0 bg-gray-100">Total</td>
+                    {mesesOrdenados.map(mes => {
+                      const totalMes = comparacionMensualCategorias.reduce((s, c) => s + (c.meses[mes] || 0), 0)
+                      return (
+                        <td key={mes} className="text-right px-4 py-2 text-gray-900 whitespace-nowrap">{formatMoney(totalMes)}</td>
+                      )
+                    })}
+                    <td className="text-right px-4 py-2 text-gray-900 bg-gray-200">
+                      {formatMoney(comparacionMensualCategorias.reduce((s, c) => s + c.total, 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
         </div>
       ) : activeTab === 'proveedores' ? (
         /* ============ TAB PROVEEDORES ============ */

@@ -74,6 +74,9 @@ export default function NuevaOrdenCompraPage() {
     return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
   })
 
+  // Estado temporal para edición de inputs (permite escribir coma sin perderla)
+  const [editingField, setEditingField] = useState<{id: string, field: 'cantidad' | 'precio', valor: string} | null>(null)
+
   // Modal nuevo insumo
   const [showNuevoInsumo, setShowNuevoInsumo] = useState(false)
   const [nuevoInsumoNombre, setNuevoInsumoNombre] = useState('')
@@ -285,6 +288,35 @@ export default function NuevaOrdenCompraPage() {
       }
       return item
     }))
+  }
+
+  // Helpers para edición de campos con soporte de coma
+  function startEditing(id: string, field: 'cantidad' | 'precio', valorActual: number) {
+    setEditingField({ id, field, valor: String(valorActual).replace('.', ',') })
+  }
+
+  function updateEditingValue(valor: string) {
+    if (editingField) {
+      setEditingField({ ...editingField, valor: formatearInputNumero(valor) })
+    }
+  }
+
+  function finishEditing() {
+    if (editingField) {
+      if (editingField.field === 'cantidad') {
+        handleCantidadChange(editingField.id, editingField.valor)
+      } else {
+        handlePrecioChange(editingField.id, editingField.valor)
+      }
+      setEditingField(null)
+    }
+  }
+
+  function getFieldValue(id: string, field: 'cantidad' | 'precio', valorActual: number): string {
+    if (editingField?.id === id && editingField?.field === field) {
+      return editingField.valor
+    }
+    return String(valorActual).replace('.', ',')
   }
 
   async function handleGuardarNuevoInsumo() {
@@ -769,8 +801,10 @@ export default function NuevaOrdenCompraPage() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={String(item.cantidad).replace('.', ',')}
-                            onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                            value={getFieldValue(item.id, 'cantidad', item.cantidad)}
+                            onFocus={() => startEditing(item.id, 'cantidad', item.cantidad)}
+                            onChange={(e) => updateEditingValue(e.target.value)}
+                            onBlur={finishEditing}
                             className="w-14 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                           <select
@@ -790,8 +824,10 @@ export default function NuevaOrdenCompraPage() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={String(item.precio_unitario).replace('.', ',')}
-                            onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
+                            value={getFieldValue(item.id, 'precio', item.precio_unitario)}
+                            onFocus={() => startEditing(item.id, 'precio', item.precio_unitario)}
+                            onChange={(e) => updateEditingValue(e.target.value)}
+                            onBlur={finishEditing}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                         </div>
@@ -872,8 +908,10 @@ export default function NuevaOrdenCompraPage() {
                             <input
                               type="text"
                               inputMode="decimal"
-                              value={String(item.cantidad).replace('.', ',')}
-                              onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                              value={getFieldValue(item.id, 'cantidad', item.cantidad)}
+                              onFocus={() => startEditing(item.id, 'cantidad', item.cantidad)}
+                              onChange={(e) => updateEditingValue(e.target.value)}
+                              onBlur={finishEditing}
                               className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                             />
                             <select
@@ -892,8 +930,10 @@ export default function NuevaOrdenCompraPage() {
                             <input
                               type="text"
                               inputMode="decimal"
-                              value={String(item.precio_unitario).replace('.', ',')}
-                              onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
+                              value={getFieldValue(item.id, 'precio', item.precio_unitario)}
+                              onFocus={() => startEditing(item.id, 'precio', item.precio_unitario)}
+                              onChange={(e) => updateEditingValue(e.target.value)}
+                              onBlur={finishEditing}
                               className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
                             />
                           </div>

@@ -267,11 +267,16 @@ export async function generarPDFOrden(ordenId: string) {
 
   y += boxHeight + 4
 
-  // === TABLA ===
+  // === TABLA CON PAGINACIÓN ===
   const rowH = 7
   const esParcialORecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
 
-  // Columnas diferentes según si tiene factura o no
+  // Constantes de paginación
+  const ESPACIO_FOOTER = 55 // Totales + observaciones + condiciones + footer
+  const ESPACIO_HEADER_TABLA = 7
+  const MARGEN_INFERIOR = margin + 5
+
+  // Columnas diferentes según si tiene factura o no (definido antes de la función)
   const colX = esParcialORecibida ? {
     num: margin + 2,
     insumo: margin + 8,
@@ -291,33 +296,77 @@ export async function generarPDFOrden(ordenId: string) {
     subtotalRight: pageWidth - margin - 3,
   }
 
-  // Header tabla
-  doc.setFillColor(...TERRACOTA)
-  doc.rect(margin, y, contentWidth, rowH, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(6)
-  doc.setTextColor(255, 255, 255)
+  // Función para dibujar header de tabla
+  function dibujarHeaderTabla(yPos: number): number {
+    doc.setFillColor(...TERRACOTA)
+    doc.rect(margin, yPos, contentWidth, rowH, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(6)
+    doc.setTextColor(255, 255, 255)
 
-  const hTextY = y + 4.5
-  doc.text('#', colX.num, hTextY)
-  doc.text('INSUMO', colX.insumo, hTextY)
+    const hTextY = yPos + 4.5
+    doc.text('#', colX.num, hTextY)
+    doc.text('INSUMO', colX.insumo, hTextY)
 
-  if (esParcialORecibida) {
-    doc.text('PEDIDO', (colX as any).pedidoRight, hTextY, { align: 'right' })
-    doc.text('RECIB.', (colX as any).recibidoRight, hTextY, { align: 'right' })
-    doc.text('FALT.', (colX as any).faltanteRight, hTextY, { align: 'right' })
-  } else {
-    doc.text('IVA', (colX as any).ivaRight, hTextY, { align: 'right' })
-    doc.text('CANT', (colX as any).cantRight, hTextY, { align: 'right' })
+    if (esParcialORecibida) {
+      doc.text('PEDIDO', (colX as any).pedidoRight, hTextY, { align: 'right' })
+      doc.text('RECIB.', (colX as any).recibidoRight, hTextY, { align: 'right' })
+      doc.text('FALT.', (colX as any).faltanteRight, hTextY, { align: 'right' })
+    } else {
+      doc.text('IVA', (colX as any).ivaRight, hTextY, { align: 'right' })
+      doc.text('CANT', (colX as any).cantRight, hTextY, { align: 'right' })
+    }
+    doc.text('UN', colX.unidad, hTextY)
+    doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
+    doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
+
+    return yPos + rowH
   }
-  doc.text('UN', colX.unidad, hTextY)
-  doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
-  doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
 
-  y += rowH
+  // Header tabla (primera página)
+  y = dibujarHeaderTabla(y)
 
-  // Filas
+  // Variables para paginación
+  let paginaActual = 1
+  let totalPaginas = 1 // Se calculará después
+
+  // Calcular total de páginas necesarias
+  const calcularEspacioDisponible = (esPrimeraPagina: boolean, esUltimaPagina: boolean): number => {
+    if (esPrimeraPagina && esUltimaPagina) {
+      return pageHeight - y - ESPACIO_FOOTER
+    } else if (esPrimeraPagina) {
+      return pageHeight - y - MARGEN_INFERIOR
+    } else if (esUltimaPagina) {
+      return pageHeight - margin - ESPACIO_HEADER_TABLA - ESPACIO_FOOTER
+    } else {
+      return pageHeight - margin - ESPACIO_HEADER_TABLA - MARGEN_INFERIOR
+    }
+  }
+
+  // Estimar páginas (aproximado: 12 items primera página, 19 siguientes)
+  const itemsPrimeraPagina = Math.floor((pageHeight - y - ESPACIO_FOOTER) / rowH)
+  const itemsPorPaginaSiguiente = Math.floor((pageHeight - margin - ESPACIO_HEADER_TABLA - MARGEN_INFERIOR) / rowH)
+
+  if (orden.items.length <= itemsPrimeraPagina) {
+    totalPaginas = 1
+  } else {
+    const itemsRestantes = orden.items.length - itemsPrimeraPagina
+    totalPaginas = 1 + Math.ceil(itemsRestantes / itemsPorPaginaSiguiente)
+  }
+
+  // Filas con paginación
   orden.items.forEach((item, idx) => {
+    // Verificar si necesitamos nueva página
+    const esUltimoItem = idx === orden.items.length - 1
+    const espacioNecesario = esUltimoItem ? rowH + ESPACIO_FOOTER : rowH
+
+    if (y + espacioNecesario > pageHeight - MARGEN_INFERIOR) {
+      // Nueva página
+      doc.addPage()
+      paginaActual++
+      y = margin + 4
+      y = dibujarHeaderTabla(y)
+    }
     const cantidadRecibida = item.cantidad_recibida ?? 0
     const faltante = item.cantidad - cantidadRecibida
     const hayFaltante = esParcialORecibida && faltante > 0
@@ -496,7 +545,7 @@ export async function generarPDFOrden(ordenId: string) {
     doc.text(cond, margin + 2, y + 4 + (i * 3))
   })
 
-  // Footer
+  // Footer con número de página
   const footerY = pageHeight - margin - 8
   doc.setDrawColor(...TERRACOTA_LIGHT)
   doc.setLineWidth(0.2)
@@ -505,7 +554,9 @@ export async function generarPDFOrden(ordenId: string) {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(5)
   doc.setTextColor(150, 130, 120)
-  doc.text('Tero Restó  |  Orden de Compra', pageWidth / 2, footerY + 4, { align: 'center' })
+
+  const textoPagina = totalPaginas > 1 ? `  |  Página ${paginaActual} de ${totalPaginas}` : ''
+  doc.text(`Tero Restó  |  Orden de Compra${textoPagina}`, pageWidth / 2, footerY + 4, { align: 'center' })
 
   // Guardar - Proveedor primero, luego número de OC
   const proveedorNombre = orden.proveedor_nombre.replace(/\s+/g, '_')

@@ -6,6 +6,7 @@ import { Plus, Trash2, ArrowLeft, Save, RefreshCw, ClipboardList, FileDown, Imag
 import jsPDF from 'jspdf'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
+import { parsearNumero } from '@/lib/formato-numeros'
 import { Button } from '@/components/ui'
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -117,7 +118,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
       const mapped: Ingrediente[] = ingredientesData.map((ing: any) => {
         const insumoInfo = insumosData?.find(i => i.id === ing.insumo_id)
         const costoUnitario = insumoInfo?.costo_final || 0
-        const cantidadNum = parseFloat(ing.cantidad)
+        const cantidadNum = parsearNumero(String(ing.cantidad))
         return {
           id: ing.id,
           insumo_id: ing.insumo_id,
@@ -137,13 +138,13 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
   }
 
   function handleAgregarIngrediente() {
-    if (!selectedInsumo || !cantidad || parseFloat(cantidad) <= 0) return
+    if (!selectedInsumo || !cantidad || parsearNumero(cantidad) <= 0) return
 
     const insumo = insumos.find(i => i.id === selectedInsumo)
     if (!insumo || ingredientes.some(ing => ing.insumo_id === selectedInsumo)) return
 
     const costoUnitario = insumo.costo_final || 0
-    const cantidadNum = parseFloat(cantidad)
+    const cantidadNum = parsearNumero(cantidad)
 
     setIngredientes([...ingredientes, {
       id: crypto.randomUUID(),
@@ -166,7 +167,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
   }
 
   function handleCantidadChange(id: string, nuevaCantidad: string) {
-    const cantidadNum = parseFloat(nuevaCantidad) || 0
+    const cantidadNum = parsearNumero(nuevaCantidad)
     setIngredientes(ingredientes.map(ing =>
       ing.id === id ? { ...ing, cantidad: cantidadNum, costo_linea: ing.costo_unitario * cantidadNum } : ing
     ))
@@ -491,7 +492,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
   }
 
   const costoTotal = ingredientes.reduce((sum, ing) => sum + ing.costo_linea, 0)
-  const costoPorPorcion = parseFloat(rendimiento) > 0 ? costoTotal / parseFloat(rendimiento) : 0
+  const costoPorPorcion = parseInt(rendimiento) > 0 ? costoTotal / parseInt(rendimiento) : 0
 
   async function handleGuardar() {
     if (!nombre.trim() || ingredientes.length === 0) {
@@ -637,9 +638,8 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
                 <input
-                  type="number"
-                  step="0.001"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   value={cantidad}
                   onChange={(e) => setCantidad(e.target.value)}
                   className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -691,9 +691,8 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
             <div className="w-20">
               <label className="block text-xs font-medium text-gray-700 mb-1">Cant.</label>
               <input
-                type="number"
-                step="0.001"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={cantidad}
                 onChange={(e) => setCantidad(e.target.value)}
                 className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -743,9 +742,8 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
                         <p className="text-[10px] text-gray-500 mb-0.5">Cantidad</p>
                         <div className="flex items-center gap-1">
                           <input
-                            type="number"
-                            step="0.001"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             value={ing.cantidad}
                             onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
@@ -789,9 +787,8 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
                         <td className="px-2 py-1.5 text-xs text-gray-900">{ing.insumo_nombre}</td>
                         <td className="px-2 py-1.5">
                           <input
-                            type="number"
-                            step="0.001"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             value={ing.cantidad}
                             onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
                             className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"

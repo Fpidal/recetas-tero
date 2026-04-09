@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, Package, BookOpen, ChefHat } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
+import { parsearNumero } from '@/lib/formato-numeros'
 
 interface Insumo {
   id: string
@@ -70,6 +71,9 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
   const [nuevoReferenciaId, setNuevoReferenciaId] = useState('')
   const [nuevoCantidad, setNuevoCantidad] = useState('')
   const [nuevoEsBebida, setNuevoEsBebida] = useState(false)
+
+  // Estado para edición inline de cantidades
+  const [cantidadEdicion, setCantidadEdicion] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetchData()
@@ -236,7 +240,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
         costoUnitario = platoCostosMap.get(item.plato_id) || item.platos.costo_total
       }
 
-      const cantidad = parseFloat(item.cantidad)
+      const cantidad = parsearNumero(String(item.cantidad))
       return {
         id: item.id,
         tipo,
@@ -291,8 +295,8 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
   async function handleAgregarItem() {
     if (!nuevoReferenciaId || !nuevoCantidad) return
 
-    const cantidad = parseFloat(nuevoCantidad)
-    if (isNaN(cantidad) || cantidad <= 0) return
+    const cantidad = parsearNumero(nuevoCantidad)
+    if (cantidad <= 0) return
 
     let nombreItem = ''
     let unidad = ''
@@ -341,6 +345,36 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
 
   function handleEliminarItem(itemId: string) {
     setItems(items.filter(i => i.id !== itemId))
+  }
+
+  // Funciones para edición inline de cantidad
+  function handleCantidadChange(itemId: string, value: string) {
+    setCantidadEdicion(prev => ({ ...prev, [itemId]: value }))
+  }
+
+  function handleCantidadBlur(itemId: string) {
+    const valorStr = cantidadEdicion[itemId]
+    if (valorStr === undefined) return
+
+    const cantidad = parsearNumero(valorStr)
+    if (cantidad > 0) {
+      setItems(items.map(item => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            cantidad,
+            costo_linea: cantidad * item.costo_unitario
+          }
+        }
+        return item
+      }))
+    }
+    // Limpiar el estado de edición
+    setCantidadEdicion(prev => {
+      const nuevo = { ...prev }
+      delete nuevo[itemId]
+      return nuevo
+    })
   }
 
   const costoTotal = items.reduce((sum, item) => sum + item.costo_linea, 0)
@@ -540,8 +574,8 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
             <div className="w-24">
               <Input
                 label="Cantidad"
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={nuevoCantidad}
                 onChange={(e) => setNuevoCantidad(e.target.value)}
                 placeholder="1"
@@ -598,7 +632,20 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
                         )}
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-600">
-                        {item.cantidad} {item.unidad}
+                        <div className="flex items-center justify-end gap-1">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={cantidadEdicion[item.id] !== undefined
+                              ? cantidadEdicion[item.id]
+                              : item.cantidad.toString().replace('.', ',')}
+                            onChange={(e) => handleCantidadChange(item.id, e.target.value)}
+                            onBlur={() => handleCantidadBlur(item.id)}
+                            className="w-16 text-right rounded border border-gray-300 px-1.5 py-0.5 text-sm"
+                            disabled={isReadOnly}
+                          />
+                          <span>{item.unidad}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-600">
                         ${item.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}

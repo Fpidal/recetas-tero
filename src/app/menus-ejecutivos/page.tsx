@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, UtensilsCrossed, Save, X, CheckCircle, AlertCircle, AlertTriangle, LayoutGrid, Users, Calculator, Eye } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input } from '@/components/ui'
+import { parsearNumero } from '@/lib/formato-numeros'
 import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import Link from 'next/link'
 
@@ -125,8 +126,8 @@ export default function MenusPage() {
 
   async function handleSaveEdit(menu: MenuEjecutivo) {
     setIsSavingEjec(true)
-    const precio = parseFloat(editPrecio) || 0
-    const margen = parseFloat(editMargen) || 30
+    const precio = parsearNumero(editPrecio)
+    const margen = parsearNumero(editMargen) || 30
     const precioSugerido = calcularPrecioSugerido(menu.costo_total, margen)
     const foodCost = calcularFoodCost(menu.costo_total, precio)
 
@@ -322,8 +323,8 @@ export default function MenusPage() {
   async function handleSaveEsp(menuId: string, margenValue?: number, precioValue?: number) {
     setIsSavingEsp(menuId)
     const values = editValuesEsp[menuId]
-    const margen = margenValue ?? (values ? parseFloat(values.margen) : null)
-    const precio = precioValue ?? (values ? parseFloat(values.precio) : null)
+    const margen = margenValue ?? (values ? parsearNumero(values.margen) : null)
+    const precio = precioValue ?? (values ? parsearNumero(values.precio) : null)
 
     const updateData: any = {}
     if (margen !== null) updateData.margen_objetivo = margen
@@ -353,7 +354,7 @@ export default function MenusPage() {
   }
 
   function handleBlurSaveEsp(menuId: string, field: 'margen' | 'precio', value: string, originalValue: number) {
-    const numValue = parseFloat(value) || 0
+    const numValue = parsearNumero(value)
     if (numValue !== originalValue) {
       if (field === 'margen') {
         handleSaveEsp(menuId, numValue, undefined)
@@ -452,11 +453,11 @@ export default function MenusPage() {
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[10px] text-gray-500">P.Carta</label>
-                            <input type="number" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
+                            <input type="text" inputMode="decimal" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
                           </div>
                           <div>
                             <label className="text-[10px] text-gray-500">M.Obj %</label>
-                            <input type="number" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
+                            <input type="text" inputMode="decimal" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
                           </div>
                         </div>
                         <div className="flex justify-end gap-2">
@@ -539,18 +540,18 @@ export default function MenusPage() {
                         </td>
                         <td className="px-3 py-3 text-right"><span className="text-sm font-medium text-green-600">{fmt(menu.costo_total)}</span></td>
                         <td className="px-3 py-3 text-right">
-                          <span className="text-sm text-gray-500">{fmt(editingId === menu.id ? calcularPrecioSugerido(menu.costo_total, parseFloat(editMargen) || 30) : precioSugerido)}</span>
+                          <span className="text-sm text-gray-500">{fmt(editingId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMargen) || 30) : precioSugerido)}</span>
                         </td>
                         <td className="px-3 py-3 text-right">
                           {editingId === menu.id ? (
-                            <input type="number" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-right" />
+                            <input type="text" inputMode="decimal" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-right" />
                           ) : (
                             <span className="text-sm font-bold">{fmt(menu.precio_carta || 0)}</span>
                           )}
                         </td>
                         <td className="px-3 py-3 text-center">
                           {editingId === menu.id ? (
-                            <input type="number" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-16 rounded border border-gray-300 px-2 py-1 text-sm text-center" />
+                            <input type="text" inputMode="decimal" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-16 rounded border border-gray-300 px-2 py-1 text-sm text-center" />
                           ) : (
                             <span className="text-sm text-gray-600">{menu.margen_objetivo || 30}%</span>
                           )}
@@ -631,8 +632,8 @@ export default function MenusPage() {
 
                   {/* Análisis de Precios */}
                   {(() => {
-                    const currentMargen = parseFloat(getEditValueEsp(menu.id, 'margen', fcObjetivo)) || 25
-                    const currentPrecio = parseFloat(getEditValueEsp(menu.id, 'precio', precioVenta)) || 0
+                    const currentMargen = parsearNumero(getEditValueEsp(menu.id, 'margen', fcObjetivo)) || 25
+                    const currentPrecio = parsearNumero(getEditValueEsp(menu.id, 'precio', precioVenta))
                     const currentPrecioSugerido = currentMargen > 0 ? costoPorPersona / (currentMargen / 100) : 0
                     const currentFcReal = currentPrecio > 0 ? (costoPorPersona / currentPrecio * 100) : 0
                     const currentContrib = currentPrecio - costoPorPersona
@@ -665,7 +666,7 @@ export default function MenusPage() {
                               </td>
                               <td className="py-2 text-center">
                                 <div className="flex items-center justify-center gap-0.5">
-                                  <input type="number" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-xs" />
+                                  <input type="text" inputMode="decimal" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-xs" />
                                   <span className="text-[10px] text-gray-400">%</span>
                                 </div>
                               </td>

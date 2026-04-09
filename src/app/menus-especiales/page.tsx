@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Trash2, LayoutGrid, Users, Calculator, Eye, Save } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input } from '@/components/ui'
+import { parsearNumero } from '@/lib/formato-numeros'
 import { MenuEspecial } from '@/types/database'
 import Link from 'next/link'
 
@@ -256,8 +257,8 @@ export default function MenusEspecialesPage() {
 
     // Usar valores pasados o del estado
     const values = editValues[menuId]
-    const margen = margenValue ?? (values ? parseFloat(values.margen) : null)
-    const precio = precioValue ?? (values ? parseFloat(values.precio) : null)
+    const margen = margenValue ?? (values ? parsearNumero(values.margen) : null)
+    const precio = precioValue ?? (values ? parsearNumero(values.precio) : null)
 
     const updateData: any = {}
     if (margen !== null) updateData.margen_objetivo = margen
@@ -288,7 +289,7 @@ export default function MenusEspecialesPage() {
   }
 
   function handleBlurSave(menuId: string, field: 'margen' | 'precio', value: string, originalValue: number) {
-    const numValue = parseFloat(value) || 0
+    const numValue = parsearNumero(value)
     if (numValue !== originalValue) {
       if (field === 'margen') {
         handleSave(menuId, numValue, undefined)
@@ -380,8 +381,8 @@ export default function MenusEspecialesPage() {
 
                 {/* Análisis de Precios - igual que Carta */}
                 {(() => {
-                  const currentMargen = parseFloat(getEditValue(menu.id, 'margen', fcObjetivo)) || 25
-                  const currentPrecio = parseFloat(getEditValue(menu.id, 'precio', precioVenta)) || 0
+                  const currentMargen = parsearNumero(getEditValue(menu.id, 'margen', fcObjetivo)) || 25
+                  const currentPrecio = parsearNumero(getEditValue(menu.id, 'precio', precioVenta))
                   const currentPrecioSugerido = currentMargen > 0 ? costoPorPersona / (currentMargen / 100) : 0
                   const currentFcReal = currentPrecio > 0 ? (costoPorPersona / currentPrecio * 100) : 0
                   const currentContrib = currentPrecio - costoPorPersona
@@ -422,7 +423,8 @@ export default function MenusEspecialesPage() {
                             <td className="py-2 text-center">
                               <div className="flex items-center justify-center gap-0.5">
                                 <input
-                                  type="number"
+                                  type="text"
+                                  inputMode="decimal"
                                   value={getEditValue(menu.id, 'margen', fcObjetivo)}
                                   onChange={(e) => setEditValue(menu.id, 'margen', e.target.value)}
                                   onBlur={(e) => handleBlurSave(menu.id, 'margen', e.target.value, fcObjetivo)}

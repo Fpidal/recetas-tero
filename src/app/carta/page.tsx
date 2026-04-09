@@ -4,6 +4,7 @@ import { useState, useEffect, Fragment } from 'react'
 import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, FileDown, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
+import { parsearNumero } from '@/lib/formato-numeros'
 import { generarPDFCarta } from '@/lib/generar-pdf-carta'
 
 const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
@@ -263,8 +264,8 @@ export default function CartaPage() {
 
     setIsSaving(true)
 
-    const margen = parseFloat(margenObjetivoNew) || 30
-    const precio = parseFloat(precioCartaNew)
+    const margen = parsearNumero(margenObjetivoNew) || 30
+    const precio = parsearNumero(precioCartaNew)
     const precioSugerido = calcularPrecioSugerido(plato.costo_total, margen)
     const foodCost = calcularFoodCost(plato.costo_total, precio)
 
@@ -308,8 +309,8 @@ export default function CartaPage() {
   async function handleSaveEdit(item: CartaItem) {
     setIsSaving(true)
 
-    const precio = parseFloat(editPrecio) || 0
-    const margen = parseFloat(editMargen) || 30
+    const precio = parsearNumero(editPrecio)
+    const margen = parsearNumero(editMargen) || 30
     const precioSugerido = calcularPrecioSugerido(item.plato_costo, margen)
     const foodCost = calcularFoodCost(item.plato_costo, precio)
 
@@ -402,8 +403,8 @@ export default function CartaPage() {
 
   // Preview al agregar
   const platoPreview = platosDisponibles.find(p => p.id === selectedPlato)
-  const previewPrecio = parseFloat(precioCartaNew) || 0
-  const previewMargen = parseFloat(margenObjetivoNew) || 30
+  const previewPrecio = parsearNumero(precioCartaNew)
+  const previewMargen = parsearNumero(margenObjetivoNew) || 30
   const previewSugerido = platoPreview ? calcularPrecioSugerido(platoPreview.costo_total, previewMargen) : 0
   const previewFoodCost = platoPreview && previewPrecio > 0
     ? calcularFoodCost(platoPreview.costo_total, previewPrecio)
@@ -586,7 +587,8 @@ export default function CartaPage() {
                                 <div>
                                   <label className="text-[10px] text-gray-500">Precio Carta</label>
                                   <input
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
                                     value={editPrecio}
                                     onChange={(e) => setEditPrecio(e.target.value)}
                                     className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
@@ -595,7 +597,8 @@ export default function CartaPage() {
                                 <div>
                                   <label className="text-[10px] text-gray-500">Margen Obj %</label>
                                   <input
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
                                     value={editMargen}
                                     onChange={(e) => setEditMargen(e.target.value)}
                                     className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
@@ -746,7 +749,8 @@ export default function CartaPage() {
                     <td className="px-2 py-1.5 text-right">
                       {editingId === item.id ? (
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           value={editPrecio}
                           onChange={(e) => setEditPrecio(e.target.value)}
                           className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-[11px] text-right"
@@ -760,7 +764,8 @@ export default function CartaPage() {
                     <td className="px-2 py-1.5 text-center">
                       {editingId === item.id ? (
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           value={editMargen}
                           onChange={(e) => setEditMargen(e.target.value)}
                           className="w-12 rounded border border-gray-300 px-1 py-0.5 text-[11px] text-center"
@@ -845,14 +850,16 @@ export default function CartaPage() {
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Precio en Carta ($)"
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={precioCartaNew}
               onChange={(e) => setPrecioCartaNew(e.target.value)}
               placeholder="0"
             />
             <Input
               label="Margen Objetivo (%)"
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={margenObjetivoNew}
               onChange={(e) => setMargenObjetivoNew(e.target.value)}
               placeholder="30"

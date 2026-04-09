@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, Package, BookOpen, ChefHat } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
+import { parsearNumero } from '@/lib/formato-numeros'
 
 interface Insumo {
   id: string
@@ -200,8 +201,8 @@ export default function NuevoMenuEjecutivoPage() {
   async function handleAgregarItem() {
     if (!nuevoReferenciaId || !nuevoCantidad) return
 
-    const cantidad = parseFloat(nuevoCantidad)
-    if (isNaN(cantidad) || cantidad <= 0) return
+    const cantidad = parsearNumero(nuevoCantidad)
+    if (cantidad <= 0) return
 
     let nombreItem = ''
     let unidad = ''
@@ -432,8 +433,8 @@ export default function NuevoMenuEjecutivoPage() {
             <div className="w-24">
               <Input
                 label="Cantidad"
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={nuevoCantidad}
                 onChange={(e) => setNuevoCantidad(e.target.value)}
                 placeholder="1"

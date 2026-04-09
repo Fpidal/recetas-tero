@@ -171,7 +171,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
         if (ing.insumo_id) {
           const insumoInfo = insumosData?.find(i => i.id === ing.insumo_id)
           const costoUnitario = insumoInfo?.costo_final || 0
-          const cantidadNum = parseFloat(ing.cantidad)
+          const cantidadNum = parsearNumero(String(ing.cantidad))
           console.log(`[FORM] Insumo: ${ing.insumos?.nombre} | precio: ${insumoInfo?.precio_actual} | iva: ${insumoInfo?.iva_porcentaje}% | merma: ${insumoInfo?.merma_porcentaje}% | costo_final: ${costoUnitario} | cant: ${cantidadNum} | linea: ${cantidadNum * costoUnitario}`)
           return {
             id: ing.id,
@@ -187,7 +187,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
         } else {
           const recetaInfo = recetasConCostoReal?.find(r => r.id === ing.receta_base_id)
           const costoUnitario = recetaInfo?.costo_por_porcion || 0
-          const cantidadNum = parseFloat(ing.cantidad)
+          const cantidadNum = parsearNumero(String(ing.cantidad))
           console.log(`[FORM] RecetaBase: ${ing.recetas_base?.nombre} | costo_porcion: ${costoUnitario} | cant: ${cantidadNum} | linea: ${cantidadNum * costoUnitario}`)
           return {
             id: ing.id,

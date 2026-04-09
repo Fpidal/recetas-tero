@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen, FileText, Star } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Modal } from '@/components/ui'
+import { parsearNumero } from '@/lib/formato-numeros'
 import { Vino, CartaVino } from '@/types/database'
 import { generarPDFCartaVinos } from '@/lib/generar-pdf-carta-vinos'
 
@@ -156,13 +157,13 @@ export default function VinosPage() {
     }
 
     setIsSaving(true)
-    const descuentoValue = parseFloat(form.descuento_porcentaje)
+    const descuentoValue = parsearNumero(form.descuento_porcentaje)
     const vinoData = {
       bodega: form.bodega.trim(), nombre: form.nombre.trim(),
       categoria: form.categoria, cepa: form.cepa, zona: form.zona || null,
-      precio_caja: parseFloat(form.precio_caja.replace(/\./g, '').replace(',', '.')) || 0,
+      precio_caja: parsearNumero(form.precio_caja),
       unidades_caja: parseInt(form.unidades_caja) || 6,
-      descuento_porcentaje: !isNaN(descuentoValue) ? descuentoValue : 50
+      descuento_porcentaje: descuentoValue || 50
     }
 
     if (editingId) {
@@ -194,8 +195,8 @@ export default function VinosPage() {
   }
 
   async function handleSaveCarta(vino: VinoConCarta) {
-    const precioCarta = parseFloat(cartaForm.precio_carta.replace(/\./g, '').replace(',', '.')) || 0
-    const margenObjetivo = parseFloat(cartaForm.margen_objetivo) || 30
+    const precioCarta = parsearNumero(cartaForm.precio_carta)
+    const margenObjetivo = parsearNumero(cartaForm.margen_objetivo) || 30
 
     if (vino.carta) {
       await supabase.from('carta_vinos')
@@ -732,10 +733,10 @@ export default function VinosPage() {
           </div>
 
           {(() => {
-            const precioCaja = parseFloat(form.precio_caja.replace(/\./g, '').replace(',', '.')) || 0
+            const precioCaja = parsearNumero(form.precio_caja)
             const unidadesCaja = parseInt(form.unidades_caja) || 1
-            const descuentoValue = parseFloat(form.descuento_porcentaje)
-            const descuento = !isNaN(descuentoValue) ? descuentoValue : 50
+            const descuentoValue = parsearNumero(form.descuento_porcentaje)
+            const descuento = descuentoValue || 50
             const { precioUnidad } = calcularValores(precioCaja, unidadesCaja, descuento)
             return (
               <>

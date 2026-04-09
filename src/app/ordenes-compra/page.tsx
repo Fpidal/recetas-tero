@@ -194,7 +194,7 @@ export default function OrdenesCompraPage() {
       key: 'numero',
       header: 'N°',
       render: (o: OrdenConProveedor) => (
-        <span className="font-mono text-sm font-medium text-gray-700">
+        <span className="font-mono text-xs font-medium text-gray-700">
           {o.numero || '—'}
         </span>
       ),
@@ -203,10 +203,10 @@ export default function OrdenesCompraPage() {
       key: 'fecha',
       header: 'Fecha',
       render: (o: OrdenConProveedor) => (
-        <div>
+        <div className="text-xs">
           <span>{formatearFecha(o.fecha)}</span>
           {o.facturas_proveedor && o.facturas_proveedor.length > 0 && (
-            <span className="ml-2 text-xs text-gray-400">
+            <span className="ml-1.5 text-[10px] text-gray-400">
               Fact. {o.facturas_proveedor[0].numero_factura}
             </span>
           )}
@@ -217,10 +217,10 @@ export default function OrdenesCompraPage() {
       key: 'proveedor',
       header: 'Proveedor',
       render: (o: OrdenConProveedor) => (
-        <div>
+        <div className="text-xs">
           <span className="font-medium">{o.proveedores?.nombre}</span>
           {o.proveedores?.categoria && (
-            <span className="ml-2 text-xs text-gray-400">{o.proveedores.categoria}</span>
+            <span className="ml-1.5 text-[10px] text-gray-400">{o.proveedores.categoria}</span>
           )}
         </div>
       ),
@@ -230,7 +230,7 @@ export default function OrdenesCompraPage() {
       header: 'Estado',
       render: (o: OrdenConProveedor) => (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
             estadoColors[o.estado]
           }`}
         >
@@ -242,7 +242,7 @@ export default function OrdenesCompraPage() {
       key: 'total',
       header: 'Total',
       render: (o: OrdenConProveedor) => (
-        <span className="font-medium">
+        <span className="text-xs font-medium tabular-nums">
           {formatearMoneda(calcularTotalConIva(o))}
         </span>
       ),
@@ -252,10 +252,10 @@ export default function OrdenesCompraPage() {
       header: 'Acciones',
       className: 'text-right pr-4',
       render: (o: OrdenConProveedor) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1">
           {o.estado === 'parcialmente_recibida' && (
             <Button variant="ghost" size="sm" onClick={() => handleCerrarOCParcial(o.id)} title="Marcar como recibida">
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-3.5 h-3.5 text-green-500" />
             </Button>
           )}
           {o.estado === 'cancelada' && (
@@ -263,18 +263,18 @@ export default function OrdenesCompraPage() {
               await supabase.from('ordenes_compra').update({ activo: false } as any).eq('id', o.id)
               fetchOrdenes()
             }} title="Enviar a papelera">
-              <Trash2 className="w-4 h-4 text-red-400" />
+              <Trash2 className="w-3.5 h-3.5 text-red-400" />
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={async () => {
             const cambio = await generarPDFOrden(o.id)
             if (cambio) fetchOrdenes()
           }}>
-            <FileText className="w-4 h-4" />
+            <FileText className="w-3.5 h-3.5" />
           </Button>
           <Link href={`/ordenes-compra/${o.id}`}>
             <Button variant="ghost" size="sm">
-              <Pencil className="w-4 h-4" />
+              <Pencil className="w-3.5 h-3.5" />
             </Button>
           </Link>
         </div>
@@ -284,41 +284,41 @@ export default function OrdenesCompraPage() {
 
   // Mobile card component
   const OrdenCard = ({ orden }: { orden: OrdenConProveedor }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-bold text-gray-700">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-xs font-bold text-gray-700">
             #{orden.numero || '—'}
           </span>
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${estadoColors[orden.estado]}`}>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${estadoColors[orden.estado]}`}>
             {estadoLabels[orden.estado]}
           </span>
         </div>
-        <span className="text-sm text-gray-500">
+        <span className="text-xs text-gray-500">
           {formatearFecha(orden.fecha)}
         </span>
       </div>
 
-      <div className="mb-3">
-        <p className="font-medium text-gray-900">{orden.proveedores?.nombre}</p>
+      <div className="mb-2">
+        <p className="text-sm font-medium text-gray-900">{orden.proveedores?.nombre}</p>
         {orden.proveedores?.categoria && (
-          <p className="text-xs text-gray-400">{orden.proveedores.categoria}</p>
+          <p className="text-[10px] text-gray-400">{orden.proveedores.categoria}</p>
         )}
         {orden.facturas_proveedor && orden.facturas_proveedor.length > 0 && (
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-[10px] text-gray-400 mt-0.5">
             Fact. {orden.facturas_proveedor[0].numero_factura}
           </p>
         )}
       </div>
 
-      <div className="flex justify-between items-center pt-3 border-t">
-        <span className="text-lg font-bold text-gray-900">
+      <div className="flex justify-between items-center pt-2 border-t">
+        <span className="text-sm font-bold text-gray-900">
           {formatearMoneda(calcularTotalConIva(orden))}
         </span>
-        <div className="flex gap-2">
+        <div className="flex gap-1">
           {orden.estado === 'parcialmente_recibida' && (
             <Button variant="ghost" size="sm" onClick={() => handleCerrarOCParcial(orden.id)} title="Marcar como recibida">
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-3.5 h-3.5 text-green-500" />
             </Button>
           )}
           {orden.estado === 'cancelada' && (
@@ -326,18 +326,18 @@ export default function OrdenesCompraPage() {
               await supabase.from('ordenes_compra').update({ activo: false } as any).eq('id', orden.id)
               fetchOrdenes()
             }}>
-              <Trash2 className="w-4 h-4 text-red-400" />
+              <Trash2 className="w-3.5 h-3.5 text-red-400" />
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={async () => {
             const cambio = await generarPDFOrden(orden.id)
             if (cambio) fetchOrdenes()
           }}>
-            <FileText className="w-4 h-4" />
+            <FileText className="w-3.5 h-3.5" />
           </Button>
           <Link href={`/ordenes-compra/${orden.id}`}>
             <Button variant="ghost" size="sm">
-              <Pencil className="w-4 h-4" />
+              <Pencil className="w-3.5 h-3.5" />
             </Button>
           </Link>
         </div>
@@ -347,10 +347,10 @@ export default function OrdenesCompraPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Órdenes de Compra</h1>
-          <p className="text-sm text-gray-600">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Órdenes de Compra</h1>
+          <p className="text-xs text-gray-600">
             <span className="font-semibold text-gray-900">
               {formatearMoneda(totalPendientes)}
             </span>
@@ -359,24 +359,24 @@ export default function OrdenesCompraPage() {
         </div>
         <Link href="/ordenes-compra/nueva" className="w-full sm:w-auto">
           <Button className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
             Nueva Orden
           </Button>
         </Link>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-4">
+      <div className="flex border-b border-gray-200 mb-3">
         <button
           onClick={() => setTabActiva('pendientes')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
             tabActiva === 'pendientes'
               ? 'border-primary-500 text-primary-600'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
           }`}
         >
           Pendientes
-          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+          <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
             tabActiva === 'pendientes' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
           }`}>
             {ordenesPendientes.length}
@@ -384,14 +384,14 @@ export default function OrdenesCompraPage() {
         </button>
         <button
           onClick={() => setTabActiva('recibidas')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
             tabActiva === 'recibidas'
               ? 'border-primary-500 text-primary-600'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
           }`}
         >
           Recibidas
-          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+          <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
             tabActiva === 'recibidas' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
           }`}>
             {ordenesRecibidas.length}
@@ -400,27 +400,27 @@ export default function OrdenesCompraPage() {
       </div>
 
       {/* Barra de filtros */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 mb-4">
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-3">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2.5 sm:p-3 mb-3">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+            <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Desde</label>
             <input
               type="date"
               value={filtroFechaDesde}
               onChange={(e) => setFiltroFechaDesde(e.target.value)}
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+            <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Hasta</label>
             <input
               type="date"
               value={filtroFechaHasta}
               onChange={(e) => setFiltroFechaHasta(e.target.value)}
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-40">
             <Select
               label="Proveedor"
               id="filtroProveedor"
@@ -429,7 +429,7 @@ export default function OrdenesCompraPage() {
               options={proveedoresOptions}
             />
           </div>
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-40">
             <Select
               label="Categoría"
               id="filtroCategoria"
@@ -440,13 +440,13 @@ export default function OrdenesCompraPage() {
           </div>
           {hayFiltrosActivos && (
             <Button variant="ghost" size="sm" onClick={limpiarFiltros} className="text-gray-500 col-span-2 sm:col-span-1">
-              <X className="w-4 h-4 mr-1" />
+              <X className="w-3.5 h-3.5 mr-1" />
               Limpiar
             </Button>
           )}
         </div>
         {hayFiltrosActivos && (
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-[10px] text-gray-400 mt-1.5">
             Mostrando {ordenesFiltradas.length} de {ordenesDeTab.length} órdenes
           </p>
         )}
@@ -463,7 +463,7 @@ export default function OrdenesCompraPage() {
       ) : (
         <>
           {/* Mobile: Cards */}
-          <div className="md:hidden space-y-3">
+          <div className="md:hidden space-y-2">
             {ordenesFiltradas.map((orden) => (
               <OrdenCard key={orden.id} orden={orden} />
             ))}

@@ -153,9 +153,9 @@ export default function MenusPage() {
 
   function getEstadoIcon(estado: string) {
     switch (estado) {
-      case 'ok': return <CheckCircle className="w-4 h-4 text-green-500" />
-      case 'warning': return <AlertCircle className="w-4 h-4 text-yellow-500" />
-      case 'danger': return <AlertTriangle className="w-4 h-4 text-red-500" />
+      case 'ok': return <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+      case 'warning': return <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />
+      case 'danger': return <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
       default: return null
     }
   }
@@ -373,10 +373,10 @@ export default function MenusPage() {
 
   return (
     <div className="overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Menús</h1>
-          <p className="text-sm text-gray-600">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Menús</h1>
+          <p className="text-xs text-gray-600">
             {activeTab === 'ejecutivos' ? 'Menús del día con composición directa' : 'Menús con opciones para eventos'}
           </p>
         </div>
@@ -389,8 +389,8 @@ export default function MenusPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-6">
+      <div className="border-b border-gray-200 mb-4">
+        <nav className="-mb-px flex space-x-4">
           {tabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
@@ -398,13 +398,13 @@ export default function MenusPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 py-2 px-1 border-b-2 text-xs font-medium transition-colors ${
                   isActive
                     ? 'border-teal-500 text-teal-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3.5 h-3.5" />
                 {tab.label}
               </button>
             )
@@ -423,7 +423,7 @@ export default function MenusPage() {
         ) : (
           <>
             {/* Vista Móvil - Cards */}
-            <div className="lg:hidden space-y-3">
+            <div className="lg:hidden space-y-2">
               {menusEjecutivos.map((menu) => {
                 const precioSugerido = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || 30)
                 const foodCost = calcularFoodCost(menu.costo_total, menu.precio_carta || 0)
@@ -431,71 +431,71 @@ export default function MenusPage() {
                 const contribucion = (menu.precio_carta || 0) - menu.costo_total
 
                 return (
-                  <div key={menu.id} className={`bg-white rounded-lg border p-4 ${estado === 'danger' ? 'border-red-300 bg-red-50' : ''}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-teal-100 rounded-lg">
-                          <UtensilsCrossed className="w-5 h-5 text-teal-600" />
+                  <div key={menu.id} className={`bg-white rounded-lg border p-3 ${estado === 'danger' ? 'border-red-300 bg-red-50' : ''}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-teal-100 rounded-lg">
+                          <UtensilsCrossed className="w-4 h-4 text-teal-600" />
                         </div>
                         <div>
                           <Link href={`/menus-ejecutivos/${menu.id}`}>
-                            <p className="font-medium text-gray-900 hover:text-primary-600">{menu.nombre}</p>
+                            <p className="text-sm font-medium text-gray-900 hover:text-primary-600">{menu.nombre}</p>
                           </Link>
                           {menu.descripcion && (
-                            <p className="text-sm text-gray-500 truncate max-w-[200px]">{menu.descripcion}</p>
+                            <p className="text-xs text-gray-500 truncate max-w-[200px]">{menu.descripcion}</p>
                           )}
                         </div>
                       </div>
                     </div>
 
                     {editingId === menu.id ? (
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[10px] text-gray-500">P.Carta</label>
-                            <input type="text" inputMode="decimal" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
+                            <input type="text" inputMode="decimal" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-xs" />
                           </div>
                           <div>
                             <label className="text-[10px] text-gray-500">M.Obj %</label>
-                            <input type="text" inputMode="decimal" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
+                            <input type="text" inputMode="decimal" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-xs" />
                           </div>
                         </div>
                         <div className="flex justify-end gap-2">
                           <Button variant="secondary" size="sm" onClick={handleCancelEdit}>Cancelar</Button>
                           <Button size="sm" onClick={() => handleSaveEdit(menu)} disabled={isSavingEjec}>
-                            <Save className="w-3.5 h-3.5 mr-1" />Guardar
+                            <Save className="w-3 h-3 mr-1" />Guardar
                           </Button>
                         </div>
                       </div>
                     ) : (
                       <>
-                        <div className="grid grid-cols-4 gap-2 text-center mb-3">
+                        <div className="grid grid-cols-4 gap-1 text-center mb-2">
                           <div>
                             <p className="text-[10px] text-gray-500">Costo</p>
-                            <p className="text-xs font-medium tabular-nums">{fmt(menu.costo_total)}</p>
+                            <p className="text-[11px] font-medium tabular-nums">{fmt(menu.costo_total)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-gray-500">P.Sug.</p>
-                            <p className="text-xs text-gray-600 tabular-nums">{fmt(precioSugerido)}</p>
+                            <p className="text-[11px] text-gray-600 tabular-nums">{fmt(precioSugerido)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-gray-500">P.Carta</p>
-                            <p className="text-xs font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</p>
+                            <p className="text-[11px] font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-gray-500">Contrib.</p>
-                            <p className={`text-xs font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</p>
+                            <p className={`text-[11px] font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             {getEstadoIcon(estado)}
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEstadoClass(estado)}`}>FC: {foodCost.toFixed(1)}%</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(estado)}`}>FC: {foodCost.toFixed(1)}%</span>
                             <span className="text-[10px] text-gray-500">Obj: {menu.margen_objetivo || 30}%</span>
                           </div>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleStartEdit(menu)}><Pencil className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleStartEdit(menu)}><Pencil className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button>
                           </div>
                         </div>
                       </>
@@ -510,14 +510,14 @@ export default function MenusPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Menú</th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo</th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">P.Sug.</th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">P.Carta</th>
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">M.Obj</th>
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">FC</th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase bg-green-50">Contrib.</th>
-                    <th className="px-3 py-3"></th>
+                    <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Menú</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Sug.</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Carta</th>
+                    <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">M.Obj</th>
+                    <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">FC</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">Contrib.</th>
+                    <th className="px-2 py-2"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -528,54 +528,54 @@ export default function MenusPage() {
                     const contribucion = (menu.precio_carta || 0) - menu.costo_total
 
                     return (
-                      <tr key={menu.id} className={estado === 'danger' ? 'bg-red-50' : ''}>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-teal-100 rounded-lg"><UtensilsCrossed className="w-5 h-5 text-teal-600" /></div>
+                      <tr key={menu.id} className={`hover:bg-gray-50 ${estado === 'danger' ? 'bg-red-50' : ''}`}>
+                        <td className="px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-teal-100 rounded-lg"><UtensilsCrossed className="w-4 h-4 text-teal-600" /></div>
                             <div>
-                              <Link href={`/menus-ejecutivos/${menu.id}`}><p className="font-medium text-gray-900 hover:text-primary-600">{menu.nombre}</p></Link>
-                              {menu.descripcion && <p className="text-sm text-gray-500 truncate max-w-xs">{menu.descripcion}</p>}
+                              <Link href={`/menus-ejecutivos/${menu.id}`}><p className="text-sm font-medium text-gray-900 hover:text-primary-600">{menu.nombre}</p></Link>
+                              {menu.descripcion && <p className="text-xs text-gray-500 truncate max-w-xs">{menu.descripcion}</p>}
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-right"><span className="text-sm font-medium text-green-600">{fmt(menu.costo_total)}</span></td>
-                        <td className="px-3 py-3 text-right">
-                          <span className="text-sm text-gray-500">{fmt(editingId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMargen) || 30) : precioSugerido)}</span>
+                        <td className="px-2 py-2 text-right"><span className="text-xs font-medium text-green-600 tabular-nums">{fmt(menu.costo_total)}</span></td>
+                        <td className="px-2 py-2 text-right">
+                          <span className="text-xs text-gray-500 tabular-nums">{fmt(editingId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMargen) || 30) : precioSugerido)}</span>
                         </td>
-                        <td className="px-3 py-3 text-right">
+                        <td className="px-2 py-2 text-right">
                           {editingId === menu.id ? (
-                            <input type="text" inputMode="decimal" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-right" />
+                            <input type="text" inputMode="decimal" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs text-right" />
                           ) : (
-                            <span className="text-sm font-bold">{fmt(menu.precio_carta || 0)}</span>
+                            <span className="text-xs font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-2 py-2 text-center">
                           {editingId === menu.id ? (
-                            <input type="text" inputMode="decimal" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-16 rounded border border-gray-300 px-2 py-1 text-sm text-center" />
+                            <input type="text" inputMode="decimal" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-14 rounded border border-gray-300 px-1 py-0.5 text-xs text-center" />
                           ) : (
-                            <span className="text-sm text-gray-600">{menu.margen_objetivo || 30}%</span>
+                            <span className="text-xs text-gray-600">{menu.margen_objetivo || 30}%</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-2 py-2 text-center">
                           <div className="flex items-center justify-center gap-1">
                             {getEstadoIcon(estado)}
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEstadoClass(estado)}`}>{foodCost.toFixed(1)}%</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(estado)}`}>{foodCost.toFixed(1)}%</span>
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-right bg-green-50">
-                          <span className={`text-sm font-bold ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</span>
+                        <td className="px-2 py-2 text-right bg-green-50">
+                          <span className={`text-xs font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</span>
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-2 py-2">
                           <div className="flex justify-end gap-1">
                             {editingId === menu.id ? (
                               <>
-                                <Button variant="ghost" size="sm" onClick={handleCancelEdit}><X className="w-4 h-4" /></Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleSaveEdit(menu)} disabled={isSavingEjec}><Save className="w-4 h-4 text-green-600" /></Button>
+                                <Button variant="ghost" size="sm" onClick={handleCancelEdit}><X className="w-3.5 h-3.5" /></Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleSaveEdit(menu)} disabled={isSavingEjec}><Save className="w-3.5 h-3.5 text-green-600" /></Button>
                               </>
                             ) : (
                               <>
-                                <Button variant="ghost" size="sm" onClick={() => handleStartEdit(menu)}><Pencil className="w-4 h-4" /></Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleStartEdit(menu)}><Pencil className="w-3.5 h-3.5" /></Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button>
                               </>
                             )}
                           </div>
@@ -595,15 +595,15 @@ export default function MenusPage() {
         isLoadingEsp ? (
           <div className="flex items-center justify-center h-64"><p className="text-gray-500">Cargando...</p></div>
         ) : menusEspeciales.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-            <LayoutGrid className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No hay menús especiales registrados</p>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <LayoutGrid className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-500">No hay menús especiales registrados</p>
             <Link href="/menus-especiales/nuevo">
-              <Button className="mt-4"><Plus className="w-4 h-4 mr-2" />Crear primer menú</Button>
+              <Button className="mt-3"><Plus className="w-3.5 h-3.5 mr-1.5" />Crear primer menú</Button>
             </Link>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {menusEspeciales.map((menu) => {
               const costoPorPersona = menu.costo_calculado ?? menu.costo_promedio ?? 0
               const comensales = (menu as any).comensales || 2
@@ -615,18 +615,18 @@ export default function MenusPage() {
 
               return (
                 <div key={menu.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-pink-100 rounded-lg"><LayoutGrid className="w-6 h-6 text-pink-600" /></div>
+                  <div className="p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-pink-100 rounded-lg"><LayoutGrid className="w-4 h-4 text-pink-600" /></div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{menu.nombre}</h3>
-                        {menu.descripcion && <p className="text-sm text-gray-500">{menu.descripcion}</p>}
-                        <p className="text-xs text-gray-400 mt-1">{menu.menu_especial_opciones?.length || 0} opciones • {comensales} comensales</p>
+                        <h3 className="text-sm font-semibold text-gray-900">{menu.nombre}</h3>
+                        {menu.descripcion && <p className="text-xs text-gray-500">{menu.descripcion}</p>}
+                        <p className="text-[10px] text-gray-400 mt-0.5">{menu.menu_especial_opciones?.length || 0} opciones • {comensales} comensales</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Link href={`/menus-especiales/${menu.id}`}><Button variant="ghost" size="sm" title="Ver / Editar"><Eye className="w-4 h-4" /></Button></Link>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteEsp(menu.id)} title="Eliminar"><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                    <div className="flex items-center gap-1">
+                      <Link href={`/menus-especiales/${menu.id}`}><Button variant="ghost" size="sm" title="Ver / Editar"><Eye className="w-3.5 h-3.5" /></Button></Link>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteEsp(menu.id)} title="Eliminar"><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button>
                     </div>
                   </div>
 
@@ -641,10 +641,10 @@ export default function MenusPage() {
                     const hasChanges = editValuesEsp[menu.id] !== undefined
 
                     return (
-                      <div className="border-t bg-gray-50 px-4 py-3 overflow-x-auto">
-                        <table className="w-full min-w-[500px]">
+                      <div className="border-t bg-gray-50 px-3 py-2 overflow-x-auto">
+                        <table className="w-full min-w-[480px]">
                           <thead>
-                            <tr className="text-[10px] text-gray-500 uppercase">
+                            <tr className="text-[9px] text-gray-500 uppercase">
                               <th className="text-left font-medium">Costo Menú</th>
                               <th className="text-right font-medium">Costo x Pers.</th>
                               <th className="text-center font-medium">FC Obj.</th>
@@ -652,47 +652,47 @@ export default function MenusPage() {
                               <th className="text-right font-medium">P.Venta</th>
                               <th className="text-center font-medium">FC Real</th>
                               <th className="text-right font-medium bg-green-50">Contrib.</th>
-                              <th className="w-12"></th>
+                              <th className="w-10"></th>
                             </tr>
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="py-2 text-left">
-                                <span className="text-xs text-gray-600"><span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                                <span className="text-[10px] text-gray-400 ml-1">({comensales}p)</span>
+                              <td className="py-1.5 text-left">
+                                <span className="text-[11px] text-gray-600"><span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                <span className="text-[9px] text-gray-400 ml-1">({comensales}p)</span>
                               </td>
-                              <td className="py-2 text-right">
-                                <span className="text-sm font-bold text-green-600"><span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                              <td className="py-1.5 text-right">
+                                <span className="text-xs font-bold text-green-600"><span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                               </td>
-                              <td className="py-2 text-center">
+                              <td className="py-1.5 text-center">
                                 <div className="flex items-center justify-center gap-0.5">
-                                  <input type="text" inputMode="decimal" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-xs" />
-                                  <span className="text-[10px] text-gray-400">%</span>
+                                  <input type="text" inputMode="decimal" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-10 px-1 py-0.5 border border-gray-300 rounded text-center text-[11px]" />
+                                  <span className="text-[9px] text-gray-400">%</span>
                                 </div>
                               </td>
-                              <td className="py-2 text-right">
-                                <span className="text-xs text-blue-600 font-medium"><span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                              <td className="py-1.5 text-right">
+                                <span className="text-[11px] text-blue-600 font-medium"><span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                               </td>
-                              <td className="py-2 text-right">
+                              <td className="py-1.5 text-right">
                                 <div className="flex items-center justify-end gap-0.5">
-                                  <span className="text-[10px] text-gray-400">$</span>
-                                  <input type="text" value={Number(getEditValueEsp(menu.id, 'precio', precioVenta) || 0).toLocaleString('es-AR')} onChange={(e) => { const raw = e.target.value.replace(/\D/g, ''); setEditValueEsp(menu.id, 'precio', raw) }} onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); handleBlurSaveEsp(menu.id, 'precio', raw, precioVenta) }} className="w-20 px-1.5 py-0.5 border border-gray-300 rounded text-right text-xs" placeholder="0" />
+                                  <span className="text-[9px] text-gray-400">$</span>
+                                  <input type="text" value={Number(getEditValueEsp(menu.id, 'precio', precioVenta) || 0).toLocaleString('es-AR')} onChange={(e) => { const raw = e.target.value.replace(/\D/g, ''); setEditValueEsp(menu.id, 'precio', raw) }} onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); handleBlurSaveEsp(menu.id, 'precio', raw, precioVenta) }} className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-[11px]" placeholder="0" />
                                 </div>
                               </td>
-                              <td className="py-2 text-center">
+                              <td className="py-1.5 text-center">
                                 {currentPrecio > 0 ? (
-                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{currentFcReal.toFixed(1)}%</span>
-                                ) : <span className="text-gray-400 text-xs">—</span>}
+                                  <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-[9px] font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{currentFcReal.toFixed(1)}%</span>
+                                ) : <span className="text-gray-400 text-[11px]">—</span>}
                               </td>
-                              <td className="py-2 text-right bg-green-50">
+                              <td className="py-1.5 text-right bg-green-50">
                                 {currentPrecio > 0 ? (
-                                  <span className="text-xs font-bold text-green-700"><span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                                ) : <span className="text-gray-400 text-xs">—</span>}
+                                  <span className="text-[11px] font-bold text-green-700"><span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                ) : <span className="text-gray-400 text-[11px]">—</span>}
                               </td>
-                              <td className="py-2 text-right">
+                              <td className="py-1.5 text-right">
                                 {hasChanges && (
                                   <Button variant="ghost" size="sm" onClick={() => handleSaveEsp(menu.id)} disabled={isSavingEsp === menu.id} title="Guardar cambios">
-                                    <Save className="w-3.5 h-3.5 text-green-600" />
+                                    <Save className="w-3 h-3 text-green-600" />
                                   </Button>
                                 )}
                               </td>
@@ -704,22 +704,22 @@ export default function MenusPage() {
                   })()}
 
                   {/* Calculadora */}
-                  <div className="border-t bg-gradient-to-r from-pink-50 to-purple-50 p-3">
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <Calculator className="w-4 h-4 text-pink-500" />
-                        <Users className="w-4 h-4 text-gray-500" />
-                        <Input type="number" value={calculadora?.menuId === menu.id ? calculadora.personas : ''} onChange={(e) => setCalculadora({ menuId: menu.id, personas: e.target.value })} placeholder="Cant." className="w-20" />
-                        <span className="text-sm text-gray-600">personas</span>
+                  <div className="border-t bg-gradient-to-r from-pink-50 to-purple-50 px-3 py-2">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <Calculator className="w-3.5 h-3.5 text-pink-500" />
+                        <Users className="w-3.5 h-3.5 text-gray-500" />
+                        <Input type="number" value={calculadora?.menuId === menu.id ? calculadora.personas : ''} onChange={(e) => setCalculadora({ menuId: menu.id, personas: e.target.value })} placeholder="Cant." className="w-16 text-xs" />
+                        <span className="text-xs text-gray-600">personas</span>
                       </div>
                       {personas > 0 && (
-                        <div className="flex items-center gap-3">
-                          <span className="text-gray-400">→</span>
-                          <span className="text-sm text-gray-600">Costo: <span className="font-bold text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-xs">→</span>
+                          <span className="text-xs text-gray-600">Costo: <span className="font-bold text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
                           {precioVenta > 0 && (
                             <>
                               <span className="text-gray-400">|</span>
-                              <span className="text-sm text-gray-600">Ingreso: <span className="font-bold text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
+                              <span className="text-xs text-gray-600">Ingreso: <span className="font-bold text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
                             </>
                           )}
                         </div>

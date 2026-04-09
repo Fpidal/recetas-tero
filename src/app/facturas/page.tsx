@@ -235,25 +235,25 @@ function FacturasContent() {
       <div className="flex flex-col items-center gap-0.5">
         {faltantes > 0 && (
           <span
-            className="w-3 h-3 rounded-full bg-red-500 inline-block"
+            className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"
             title={`${faltantes} no entregado(s)`}
           />
         )}
         {parciales > 0 && (
           <span
-            className="w-3 h-3 rounded-full bg-orange-400 inline-block"
+            className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block"
             title={`${parciales} con cantidad menor`}
           />
         )}
         {precioDif > 0 && (
           <span
-            className="w-3 h-3 rounded-full bg-yellow-400 inline-block"
+            className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"
             title={`${precioDif} con precio diferente`}
           />
         )}
         {nuevos > 0 && (
           <span
-            className="w-3 h-3 rounded-full bg-green-500 inline-block"
+            className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"
             title={`${nuevos} agregado(s) fuera de OC`}
           />
         )}
@@ -266,22 +266,22 @@ function FacturasContent() {
       key: 'numero',
       header: 'Número',
       render: (f: FacturaConDetalle) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {renderSemaforo(f)}
           {f.tipo === 'nota_credito' ? (
-            <FileMinus className="w-4 h-4 text-red-500" />
+            <FileMinus className="w-3.5 h-3.5 text-red-500" />
           ) : (
-            <FileText className="w-4 h-4 text-gray-400" />
+            <FileText className="w-3.5 h-3.5 text-gray-400" />
           )}
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{f.numero_factura}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium">{f.numero_factura}</span>
               {f.tipo === 'nota_credito' && (
-                <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-medium">NC</span>
+                <span className="text-[9px] px-1 py-0.5 bg-red-100 text-red-700 rounded font-medium">NC</span>
               )}
             </div>
             {f.orden_compra_id && f.ordenes_compra && (
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-[10px] text-gray-400">
                 OC {f.ordenes_compra.numero || formatearFecha(f.ordenes_compra.fecha)}
               </p>
             )}
@@ -293,21 +293,21 @@ function FacturasContent() {
       key: 'fecha',
       header: 'Fecha',
       render: (f: FacturaConDetalle) => (
-        <span>{formatearFecha(f.fecha)}</span>
+        <span className="text-xs">{formatearFecha(f.fecha)}</span>
       ),
     },
     {
       key: 'proveedor',
       header: 'Proveedor',
       render: (f: FacturaConDetalle) => (
-        <span>{f.proveedores?.nombre}</span>
+        <span className="text-xs">{f.proveedores?.nombre}</span>
       ),
     },
     {
       key: 'total',
       header: 'Total',
       render: (f: FacturaConDetalle) => (
-        <span className={`font-medium ${f.tipo === 'nota_credito' ? 'text-red-600' : ''}`}>
+        <span className={`text-xs font-medium tabular-nums ${f.tipo === 'nota_credito' ? 'text-red-600' : ''}`}>
           {formatearMoneda(f.total)}
         </span>
       ),
@@ -317,22 +317,22 @@ function FacturasContent() {
       header: 'Acciones',
       className: 'text-right',
       render: (f: FacturaConDetalle) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1">
           {f.orden_compra_id && (
             <Link href={`/ordenes-compra/${f.orden_compra_id}`}>
               <Button variant="ghost" size="sm" title="Ver Orden de Compra">
-                <PackageSearch className="w-4 h-4" />
+                <PackageSearch className="w-3.5 h-3.5" />
               </Button>
             </Link>
           )}
           <Link href={`/facturas/${f.id}`}>
             <Button variant="ghost" size="sm">
-              <Eye className="w-4 h-4" />
+              <Eye className="w-3.5 h-3.5" />
             </Button>
           </Link>
           <Link href={`/facturas/${f.id}/editar`}>
             <Button variant="ghost" size="sm">
-              <Pencil className="w-4 h-4" />
+              <Pencil className="w-3.5 h-3.5" />
             </Button>
           </Link>
         </div>
@@ -342,21 +342,21 @@ function FacturasContent() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Facturas</h1>
-          <p className="text-gray-600">Registro de compras a proveedores</p>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Facturas</h1>
+          <p className="text-xs text-gray-600">Registro de compras a proveedores</p>
         </div>
-        <div className="flex items-center gap-5">
-          <div className="flex items-center gap-3 text-xs text-gray-400">
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> No entregado</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block" /> Cantidad menor</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" /> Precio diferente</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Agregado</span>
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-400">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> No entregado</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" /> Cant. menor</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> Precio dif.</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Agregado</span>
           </div>
           <Link href="/facturas/nueva">
             <Button>
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
               Nueva Factura
             </Button>
           </Link>
@@ -364,15 +364,15 @@ function FacturasContent() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Filter className="w-4 h-4" />
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2.5 sm:p-3 mb-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Filter className="w-3.5 h-3.5" />
             <span className="font-medium">Filtros:</span>
           </div>
 
           {/* Proveedor */}
-          <div className="w-48">
+          <div className="w-40">
             <Select
               value={filtroProveedor}
               onChange={(e) => setFiltro('proveedor', e.target.value)}
@@ -384,7 +384,7 @@ function FacturasContent() {
           </div>
 
           {/* Periodo */}
-          <div className="w-40">
+          <div className="w-32">
             <Select
               value={filtroPeriodo}
               onChange={(e) => setFiltro('periodo', e.target.value)}
@@ -393,41 +393,41 @@ function FacturasContent() {
           </div>
 
           {/* Fecha desde */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Desde:</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-500">Desde:</span>
             <input
               type="date"
               value={filtroFechaDesde}
               onChange={(e) => setFiltro('desde', e.target.value)}
-              className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+              className="px-1.5 py-1 border border-gray-300 rounded-md text-xs"
             />
           </div>
 
           {/* Fecha hasta */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Hasta:</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-500">Hasta:</span>
             <input
               type="date"
               value={filtroFechaHasta}
               onChange={(e) => setFiltro('hasta', e.target.value)}
-              className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+              className="px-1.5 py-1 border border-gray-300 rounded-md text-xs"
             />
           </div>
 
           {/* Limpiar filtros */}
           {hayFiltrosActivos && (
             <Button variant="ghost" size="sm" onClick={limpiarFiltros}>
-              <X className="w-4 h-4 mr-1" />
+              <X className="w-3.5 h-3.5 mr-1" />
               Limpiar
             </Button>
           )}
 
           {/* Contador y Total */}
-          <div className="ml-auto flex items-center gap-4">
-            <span className="text-xs text-gray-400">
-              {facturasFiltradas.length} de {facturas.length} facturas
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-[10px] text-gray-400">
+              {facturasFiltradas.length} de {facturas.length}
             </span>
-            <span className="text-sm font-semibold text-gray-700 bg-gray-100 px-3 py-1 rounded-lg">
+            <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-lg">
               Total: {formatearMoneda(facturasFiltradas.reduce((sum, f) => sum + f.total, 0))}
             </span>
           </div>

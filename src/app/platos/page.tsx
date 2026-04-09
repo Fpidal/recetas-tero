@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Eye, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, Package, BookOpen, type LucideIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, Package, BookOpen, X, ClipboardList, ImageIcon, Share2, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
 import Link from 'next/link'
@@ -23,6 +23,26 @@ interface InsumoEnRecetas {
   tipo: 'insumo' | 'elaboracion'
   cantidadRecetas: number
   recetas: { id: string; nombre: string; seccion: string }[]
+}
+
+interface PlatoDetalle {
+  id: string
+  nombre: string
+  descripcion: string | null
+  seccion: string
+  preparacion: string | null
+  observaciones: string | null
+  imagen_url: string | null
+  rendimiento_porciones: number
+  version_receta: string | null
+  ingredientes: {
+    nombre: string
+    cantidad: number
+    unidad_medida: string
+    tipo: 'insumo' | 'elaboracion'
+    costo_linea: number
+  }[]
+  costo_total: number
 }
 
 // Helper para obtener ícono según sección/nombre del plato
@@ -52,6 +72,11 @@ export default function PlatosPage() {
   const [isLoadingInsumos, setIsLoadingInsumos] = useState(false)
   const [insumoExpandido, setInsumoExpandido] = useState<string | null>(null)
   const [busquedaInsumos, setBusquedaInsumos] = useState('')
+
+  // Estados para modal de preview
+  const [modalOpen, setModalOpen] = useState(false)
+  const [platoDetalle, setPlatoDetalle] = useState<PlatoDetalle | null>(null)
+  const [loadingDetalle, setLoadingDetalle] = useState(false)
 
   useEffect(() => {
     fetchPlatos()
@@ -236,6 +261,77 @@ export default function PlatosPage() {
     }
   }
 
+  async function handleVerDetalle(id: string) {
+    setModalOpen(true)
+    setLoadingDetalle(true)
+    setPlatoDetalle(null)
+
+    try {
+      // Obtener plato
+      const { data: plato, error: platoError } = await supabase
+        .from('platos')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (platoError || !plato) {
+        console.error('Error cargando plato:', platoError)
+        setLoadingDetalle(false)
+        return
+      }
+
+      // Obtener ingredientes
+      const { data: ingredientesData } = await supabase
+        .from('plato_ingredientes')
+        .select(`
+          cantidad, costo_linea,
+          insumo_id, receta_base_id,
+          insumos (nombre, unidad_medida),
+          recetas_base (nombre)
+        `)
+        .eq('plato_id', id)
+
+      const ingredientes = (ingredientesData || []).map((ing: any) => {
+        if (ing.insumo_id && ing.insumos) {
+          return {
+            nombre: ing.insumos.nombre,
+            cantidad: ing.cantidad,
+            unidad_medida: ing.insumos.unidad_medida,
+            tipo: 'insumo' as const,
+            costo_linea: ing.costo_linea || 0,
+          }
+        } else {
+          return {
+            nombre: ing.recetas_base?.nombre || 'Desconocido',
+            cantidad: ing.cantidad,
+            unidad_medida: 'porción',
+            tipo: 'elaboracion' as const,
+            costo_linea: ing.costo_linea || 0,
+          }
+        }
+      })
+
+      const costoTotal = ingredientes.reduce((sum, ing) => sum + ing.costo_linea, 0)
+
+      setPlatoDetalle({
+        id: plato.id,
+        nombre: plato.nombre,
+        descripcion: plato.descripcion,
+        seccion: plato.seccion || 'Principales',
+        preparacion: plato.paso_a_paso || null,
+        observaciones: plato.observaciones || null,
+        imagen_url: plato.imagen_url || null,
+        rendimiento_porciones: plato.rendimiento_porciones || 1,
+        version_receta: plato.version_receta || null,
+        ingredientes,
+        costo_total: costoTotal,
+      })
+    } catch (err) {
+      console.error('Error:', err)
+    }
+    setLoadingDetalle(false)
+  }
+
   const platosFiltrados = busqueda
     ? platos.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()))
     : platos
@@ -291,12 +387,10 @@ export default function PlatosPage() {
       )}
 
       <div className="flex justify-end gap-2 pt-3 border-t">
-        <Link href={`/platos/${plato.id}?view=true`}>
-          <Button variant="ghost" size="sm">
-            <Eye className="w-4 h-4 mr-1" />
-            Ver
-          </Button>
-        </Link>
+        <Button variant="ghost" size="sm" onClick={() => handleVerDetalle(plato.id)}>
+          <Eye className="w-4 h-4 mr-1" />
+          Ver
+        </Button>
         <Link href={`/platos/${plato.id}`}>
           <Button variant="ghost" size="sm">
             <Pencil className="w-4 h-4 mr-1" />
@@ -469,11 +563,9 @@ export default function PlatosPage() {
                         </td>
                         <td className="px-4 py-2 text-right">
                           <div className="flex justify-end gap-1">
-                            <Link href={`/platos/${p.id}?view=true`}>
-                              <Button variant="ghost" size="sm" title="Ver receta">
-                                <Eye className="w-3.5 h-3.5 text-blue-500" />
-                              </Button>
-                            </Link>
+                            <Button variant="ghost" size="sm" title="Ver receta" onClick={() => handleVerDetalle(p.id)}>
+                              <Eye className="w-3.5 h-3.5 text-blue-500" />
+                            </Button>
                             <Link href={`/platos/${p.id}`}>
                               <Button variant="ghost" size="sm" title="Editar receta">
                                 <Pencil className="w-3.5 h-3.5" />
@@ -582,6 +674,191 @@ export default function PlatosPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Modal de Vista Previa */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setModalOpen(false)}>
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header del modal */}
+            <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-orange-100 rounded-lg">
+                  <UtensilsCrossed className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    {loadingDetalle ? 'Cargando...' : platoDetalle?.nombre}
+                  </h2>
+                  {platoDetalle?.seccion && (
+                    <span className="text-xs text-gray-500">{platoDetalle.seccion}</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Contenido del modal */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingDetalle ? (
+                <div className="flex items-center justify-center h-48">
+                  <p className="text-gray-500">Cargando detalles...</p>
+                </div>
+              ) : platoDetalle ? (
+                <div className="space-y-4">
+                  {/* Info básica y costos */}
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    {platoDetalle.descripcion && (
+                      <span className="text-gray-500 italic">{platoDetalle.descripcion}</span>
+                    )}
+                    <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                      Rinde: <strong>{platoDetalle.rendimiento_porciones}</strong> porc.
+                    </span>
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                      ${(platoDetalle.costo_total / platoDetalle.rendimiento_porciones).toLocaleString('es-AR', { maximumFractionDigits: 0 })} / porción
+                    </span>
+                    <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                      Total: ${platoDetalle.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+
+                  {/* Grid: Ingredientes + Foto */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Ingredientes */}
+                    <div className="border rounded-lg p-3">
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase">Ingredientes</h4>
+                      <div className="space-y-1">
+                        {platoDetalle.ingredientes.map((ing, idx) => {
+                          const cantStr = ing.cantidad < 1 && (ing.unidad_medida === 'kg' || ing.unidad_medida === 'lt')
+                            ? `${Math.round(ing.cantidad * 1000)} ${ing.unidad_medida === 'kg' ? 'g' : 'ml'}`
+                            : `${ing.cantidad % 1 === 0 ? ing.cantidad : ing.cantidad.toFixed(2)} ${ing.unidad_medida}`
+                          return (
+                            <div key={idx} className="flex justify-between text-xs">
+                              <span className="text-gray-700 flex items-center gap-1">
+                                {ing.tipo === 'elaboracion' && (
+                                  <BookOpen className="w-3 h-3 text-purple-500" />
+                                )}
+                                {ing.nombre}
+                              </span>
+                              <span className="text-gray-500">{cantStr}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Foto */}
+                    <div className="border rounded-lg p-3">
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase">Foto</h4>
+                      {platoDetalle.imagen_url ? (
+                        <img
+                          src={platoDetalle.imagen_url}
+                          alt={platoDetalle.nombre}
+                          className="w-full h-40 object-contain rounded-lg"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-40 bg-gray-50 rounded-lg">
+                          <ImageIcon className="w-10 h-10 text-gray-300" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Preparación */}
+                  {platoDetalle.preparacion && (
+                    <div className="border rounded-lg p-3">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <ClipboardList className="w-3.5 h-3.5 text-gray-400" />
+                        <h4 className="text-xs font-semibold text-gray-700 uppercase">Preparación</h4>
+                      </div>
+                      <div className="text-xs text-gray-600 whitespace-pre-line leading-relaxed">
+                        {platoDetalle.preparacion}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Observaciones */}
+                  {platoDetalle.observaciones && (
+                    <div className="border rounded-lg p-3 bg-amber-50">
+                      <h4 className="text-xs font-semibold text-amber-700 mb-2 uppercase">Observaciones y Tips</h4>
+                      <div className="text-xs text-amber-800 whitespace-pre-line leading-relaxed">
+                        {platoDetalle.observaciones}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Versión */}
+                  {platoDetalle.version_receta && (
+                    <div className="text-right text-[10px] text-gray-400">
+                      Versión {platoDetalle.version_receta}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-48">
+                  <p className="text-red-500">Error al cargar la receta</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer del modal */}
+            <div className="flex justify-between p-4 border-t bg-gray-50">
+              <div>
+                {platoDetalle && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      const r = platoDetalle
+                      const ingredientesText = r.ingredientes
+                        .map(ing => {
+                          const cant = ing.cantidad < 1 && (ing.unidad_medida === 'kg' || ing.unidad_medida === 'lt')
+                            ? `${Math.round(ing.cantidad * 1000)} ${ing.unidad_medida === 'kg' ? 'g' : 'ml'}`
+                            : `${ing.cantidad % 1 === 0 ? ing.cantidad : ing.cantidad.toFixed(2)} ${ing.unidad_medida}`
+                          return `• ${ing.nombre}: ${cant}`
+                        })
+                        .join('\n')
+
+                      let mensaje = `*${r.nombre}*\n`
+                      if (r.descripcion) mensaje += `_${r.descripcion}_\n`
+                      mensaje += `${r.seccion} | Rinde: ${r.rendimiento_porciones} porciones\n\n`
+                      mensaje += `*INGREDIENTES:*\n${ingredientesText}\n\n`
+                      if (r.preparacion) mensaje += `*PREPARACIÓN:*\n${r.preparacion}\n\n`
+                      if (r.observaciones) mensaje += `*TIPS:*\n${r.observaciones}\n`
+
+                      window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank')
+                    }}
+                    className="text-green-600 hover:text-green-700"
+                  >
+                    <Share2 className="w-4 h-4 mr-1" />
+                    WhatsApp
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {platoDetalle && (
+                  <Link href={`/platos/${platoDetalle.id}`}>
+                    <Button size="sm">
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Editar
+                    </Button>
+                  </Link>
+                )}
+                <Button variant="secondary" size="sm" onClick={() => setModalOpen(false)}>
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

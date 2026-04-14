@@ -240,7 +240,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
         costoUnitario = platoCostosMap.get(item.plato_id) || item.platos.costo_total
       }
 
-      const cantidad = parsearNumero(String(item.cantidad))
+      const cantidad = Number(item.cantidad) || 0  // NO usar parsearNumero para datos de DB
       return {
         id: item.id,
         tipo,

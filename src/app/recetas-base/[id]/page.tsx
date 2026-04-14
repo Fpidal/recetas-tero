@@ -6,7 +6,7 @@ import { Plus, Trash2, ArrowLeft, Save, RefreshCw, ClipboardList, FileDown, Imag
 import jsPDF from 'jspdf'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
-import { parsearNumero } from '@/lib/formato-numeros'
+import { parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
 import { Button } from '@/components/ui'
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -36,7 +36,7 @@ interface Ingrediente {
   insumo_nombre: string
   unidad_medida: string
   categoria: string
-  cantidad: number
+  cantidad: number | string  // string mientras edita, number para cálculos
   costo_unitario: number
   costo_linea: number
   isNew?: boolean
@@ -118,7 +118,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
       const mapped: Ingrediente[] = ingredientesData.map((ing: any) => {
         const insumoInfo = insumosData?.find(i => i.id === ing.insumo_id)
         const costoUnitario = insumoInfo?.costo_final || 0
-        const cantidadNum = parsearNumero(String(ing.cantidad))
+        const cantidadNum = Number(ing.cantidad) || 0  // NO usar parsearNumero para datos de DB
         return {
           id: ing.id,
           insumo_id: ing.insumo_id,
@@ -167,9 +167,11 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
   }
 
   function handleCantidadChange(id: string, nuevaCantidad: string) {
+    // Guardar el string tal cual para permitir escribir con coma
+    // Calcular costo con el valor numérico
     const cantidadNum = parsearNumero(nuevaCantidad)
     setIngredientes(ingredientes.map(ing =>
-      ing.id === id ? { ...ing, cantidad: cantidadNum, costo_linea: ing.costo_unitario * cantidadNum } : ing
+      ing.id === id ? { ...ing, cantidad: nuevaCantidad, costo_linea: ing.costo_unitario * cantidadNum } : ing
     ))
   }
 
@@ -177,7 +179,8 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     setIngredientes(ingredientes.map(ing => {
       const insumo = insumos.find(i => i.id === ing.insumo_id)
       const costoUnitario = insumo?.costo_final || 0
-      return { ...ing, costo_unitario: costoUnitario, costo_linea: costoUnitario * ing.cantidad }
+      const cantidadNum = typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad
+      return { ...ing, costo_unitario: costoUnitario, costo_linea: costoUnitario * cantidadNum }
     }))
   }
 
@@ -274,7 +277,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
 
     // Formatear cantidad legible
     function formatCantidad(ing: Ingrediente): string {
-      const cant = ing.cantidad
+      const cant = typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad
       if (cant <= 0) return 'c/n'
       const unidad = ing.unidad_medida
       if (unidad === 'kg' && cant < 1) {
@@ -532,14 +535,18 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     }
 
     for (const ing of ingredientes.filter(i => !i.isNew)) {
-      await supabase.from('receta_base_ingredientes').update({ cantidad: ing.cantidad, costo_linea: ing.costo_linea }).eq('id', ing.id)
+      const cantidadNum = typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad
+      await supabase.from('receta_base_ingredientes').update({ cantidad: cantidadNum, costo_linea: ing.costo_linea }).eq('id', ing.id)
     }
 
     const nuevos = ingredientes.filter(i => i.isNew)
     if (nuevos.length > 0) {
-      await supabase.from('receta_base_ingredientes').insert(nuevos.map(ing => ({
-        receta_base_id: id, insumo_id: ing.insumo_id, cantidad: ing.cantidad, costo_linea: ing.costo_linea,
-      })))
+      await supabase.from('receta_base_ingredientes').insert(nuevos.map(ing => {
+        const cantidadNum = typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad
+        return {
+          receta_base_id: id, insumo_id: ing.insumo_id, cantidad: cantidadNum, costo_linea: ing.costo_linea,
+        }
+      }))
     }
 
     router.push('/recetas-base')
@@ -744,8 +751,8 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad}
-                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            value={typeof ing.cantidad === 'string' ? ing.cantidad : ing.cantidad.toString().replace('.', ',')}
+                            onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                           <span className="text-xs text-gray-500">{ing.unidad_medida}</span>
@@ -789,8 +796,8 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad}
-                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            value={typeof ing.cantidad === 'string' ? ing.cantidad : ing.cantidad.toString().replace('.', ',')}
+                            onChange={(e) => handleCantidadChange(ing.id, formatearInputNumero(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
                           />
                           <span className="ml-1 text-xs text-gray-500">{ing.unidad_medida}</span>

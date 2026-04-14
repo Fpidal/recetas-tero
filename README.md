@@ -213,7 +213,10 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 - Control de inventario con hojas de control
 - Dashboard de estadísticas con gráficos
 - Papelera con soft delete
-- Formateo argentino (números y fechas)
+- Formateo argentino completo:
+  - Input decimal con coma (0,5 en lugar de 0.5)
+  - Separador de miles con punto (1.000)
+  - Fechas DD/MM/YYYY
 - PWA instalable
 - Diseño responsive (mobile-first)
 

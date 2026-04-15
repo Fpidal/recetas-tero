@@ -44,6 +44,7 @@ interface FacturaItem {
   vino_id: string | null
   cantidad: number
   precio_unitario: number
+  subtotal: number
 }
 
 const estadoColors: Record<string, string> = {
@@ -163,7 +164,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
     // Verificar si tiene factura ACTIVA asociada y cargar sus items
     const { data: facturaData } = await supabase
       .from('facturas_proveedor')
-      .select('id, factura_items (insumo_id, vino_id, cantidad, precio_unitario)')
+      .select('id, factura_items (insumo_id, vino_id, cantidad, precio_unitario, subtotal)')
       .eq('orden_compra_id', id)
       .eq('activo', true)
       .maybeSingle()
@@ -175,6 +176,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
         vino_id: fi.vino_id,
         cantidad: parseFloat(fi.cantidad),
         precio_unitario: parseFloat(fi.precio_unitario),
+        subtotal: parseFloat(fi.subtotal),
       })))
     }
 
@@ -343,11 +345,118 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
 
   const esParcial = orden?.estado === 'parcialmente_recibida' && facturaItems.length > 0
 
+  // Helper: badge de comparación con factura (estilo igual que facturas)
+  function getComparacionBadge(item: OrdenDetalle['items'][0]) {
+    if (facturaItems.length === 0) return null
+    const fi = facturaItems.find(f =>
+      item.vino_id ? f.vino_id === item.vino_id : f.insumo_id === item.insumo_id
+    )
+    if (!fi) {
+      return <span className="ml-2 text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded">No entregado</span>
+    }
+    if (fi.cantidad >= item.cantidad) {
+      return <span className="ml-2 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">Completo</span>
+    }
+    return (
+      <span className="ml-2 text-xs px-1.5 py-0.5 bg-yellow-200 text-yellow-800 rounded">
+        Parcial ({fi.cantidad} de {item.cantidad})
+      </span>
+    )
+  }
+
+  // Helper: mostrar precio con comparación vs factura (estilo igual que facturas)
+  function getPrecioConComparacion(item: OrdenDetalle['items'][0], mobile: boolean = false) {
+    const fi = facturaItems.find(f =>
+      item.vino_id ? f.vino_id === item.vino_id : f.insumo_id === item.insumo_id
+    )
+
+    if (!fi || fi.precio_unitario === item.precio_unitario) {
+      return <span>{formatearMoneda(item.precio_unitario)}</span>
+    }
+
+    const diferencia = fi.precio_unitario - item.precio_unitario
+    const porcentaje = ((diferencia / item.precio_unitario) * 100).toFixed(1)
+    const subio = diferencia > 0
+
+    if (mobile) {
+      return (
+        <div className="flex flex-col items-end">
+          <span className="font-medium">{formatearMoneda(fi.precio_unitario)}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-400 line-through">{formatearMoneda(item.precio_unitario)}</span>
+            <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${subio ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+              {subio ? '▲' : '▼'} {Math.abs(parseFloat(porcentaje))}%
+            </span>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex flex-col items-end">
+        <span>{formatearMoneda(fi.precio_unitario)}</span>
+        <div className="flex items-center gap-1 mt-0.5">
+          <span className="text-xs text-gray-400 line-through">{formatearMoneda(item.precio_unitario)}</span>
+          <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${subio ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            {subio ? '▲' : '▼'} {Math.abs(parseFloat(porcentaje))}%
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // Calcular diferencia total vs factura
+  function calcularDiferenciaTotalFactura() {
+    if (facturaItems.length === 0 || !orden) return null
+
+    let totalFactura = 0
+    let totalOC = 0
+
+    orden.items.forEach(item => {
+      const fi = facturaItems.find(f =>
+        item.vino_id ? f.vino_id === item.vino_id : f.insumo_id === item.insumo_id
+      )
+      totalOC += item.cantidad * item.precio_unitario
+      if (fi) {
+        totalFactura += fi.cantidad * fi.precio_unitario
+      }
+    })
+
+    const diferencia = totalFactura - totalOC
+    if (diferencia === 0) return null
+
+    const porcentaje = totalOC > 0 ? ((diferencia / totalOC) * 100).toFixed(1) : '0'
+    return { diferencia, porcentaje, subio: diferencia > 0 }
+  }
+
+  const diferenciaFactura = orden ? calcularDiferenciaTotalFactura() : null
+
   // Calcular totales con desglose de IVA
-  const subtotalNeto = orden?.items.reduce((sum, item) => sum + item.subtotal, 0) || 0
-  const totalIva21 = orden?.items.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0) || 0
-  const totalIva105 = orden?.items.filter(i => i.iva_porcentaje === 10.5).reduce((sum, item) => sum + item.iva_monto, 0) || 0
-  const totalIva = orden?.items.reduce((sum, item) => sum + item.iva_monto, 0) || 0
+  // Para OC Recibida: usar valores de factura
+  const esRecibidaConFactura = orden?.estado === 'recibida' && facturaItems.length > 0
+
+  const subtotalNeto = esRecibidaConFactura
+    ? facturaItems.reduce((sum, fi) => sum + fi.subtotal, 0)
+    : (orden?.items.reduce((sum, item) => sum + item.subtotal, 0) || 0)
+
+  // IVA calculado sobre los subtotales correspondientes
+  const calcularIvaTotal = (ivaPct: number) => {
+    if (esRecibidaConFactura) {
+      // Sumar subtotales de facturaItems que correspondan a items con ese IVA
+      return facturaItems.reduce((sum, fi) => {
+        const itemOC = orden?.items.find(i => i.vino_id ? i.vino_id === fi.vino_id : i.insumo_id === fi.insumo_id)
+        if (itemOC?.iva_porcentaje === ivaPct) {
+          return sum + (fi.subtotal * (ivaPct / 100))
+        }
+        return sum
+      }, 0)
+    }
+    return orden?.items.filter(i => i.iva_porcentaje === ivaPct).reduce((sum, item) => sum + item.iva_monto, 0) || 0
+  }
+
+  const totalIva21 = calcularIvaTotal(21)
+  const totalIva105 = calcularIvaTotal(10.5)
+  const totalIva = totalIva21 + totalIva105
   const totalConIva = subtotalNeto + totalIva
 
   if (isLoading) {
@@ -446,10 +555,18 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
               const estado = getItemEstado(item)
               const esCompleto = esParcial && estado === 'completo'
               const esModificado = esParcial && (estado === 'parcial' || estado === 'no_entregado')
-              const fi = facturaItems.find(f => f.insumo_id === item.insumo_id)
+              const fi = facturaItems.find(f => item.vino_id ? f.vino_id === item.vino_id : f.insumo_id === item.insumo_id)
+              const esRecibidaConFactura = orden.estado === 'recibida' && facturaItems.length > 0
+
+              // Para OC Recibida: usar datos de factura
+              const cantidadMostrar = esRecibidaConFactura && fi ? fi.cantidad : item.cantidad
+              const subtotalMostrar = esRecibidaConFactura && fi ? fi.subtotal : item.subtotal
 
               return (
-                <div key={item.id} className={`border rounded-lg p-3 ${esCompleto ? 'bg-gray-50 border-gray-200' : esModificado ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
+                <div key={item.id} className={`border rounded-lg p-3 ${
+                  esCompleto ? 'bg-gray-50 border-gray-200' :
+                  esModificado ? 'bg-orange-50 border-orange-200' : 'bg-white'
+                }`}>
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <Package className={`w-4 h-4 flex-shrink-0 ${
@@ -473,7 +590,11 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                       {item.iva_porcentaje}%
                     </span>
                   </div>
-                  {esModificado && estado === 'parcial' && fi && (
+                  {/* Badge de comparación estilo factura */}
+                  {esRecibidaConFactura && getComparacionBadge(item) && (
+                    <div className="mb-2">{getComparacionBadge(item)}</div>
+                  )}
+                  {esModificado && estado === 'parcial' && fi && !esRecibidaConFactura && (
                     <p className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded mb-2 inline-block">
                       Recibido {fi.cantidad % 1 === 0 ? fi.cantidad : fi.cantidad.toLocaleString('es-AR')} de {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')}
                     </p>
@@ -483,10 +604,15 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                   )}
                   <div className="flex justify-between items-center text-sm">
                     <span className={esCompleto ? 'text-gray-400' : 'text-gray-600'}>
-                      {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')} {item.unidad_display} × {formatearMoneda(item.precio_unitario)}
+                      {cantidadMostrar % 1 === 0 ? cantidadMostrar : cantidadMostrar.toLocaleString('es-AR')} {item.unidad_display} ×
                     </span>
+                    <div className="flex items-center gap-2">
+                      {esRecibidaConFactura ? getPrecioConComparacion(item, true) : <span>{formatearMoneda(item.precio_unitario)}</span>}
+                    </div>
+                  </div>
+                  <div className="flex justify-end mt-1">
                     <span className={`font-medium ${esCompleto ? 'text-gray-400' : ''}`}>
-                      {formatearMoneda(item.subtotal)}
+                      {formatearMoneda(subtotalMostrar)}
                     </span>
                   </div>
                 </div>
@@ -514,6 +640,16 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                 <span className="font-medium">Total:</span>
                 <span className="text-lg font-bold text-green-600">{formatearMoneda(totalConIva)}</span>
               </div>
+              {diferenciaFactura && (
+                <div className={`flex justify-between pt-2 mt-2 border-t ${diferenciaFactura.subio ? 'border-red-200' : 'border-green-200'}`}>
+                  <span className={`text-sm ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
+                    Dif. vs OC:
+                  </span>
+                  <span className={`text-sm font-bold ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
+                    {diferenciaFactura.subio ? '+' : ''}{formatearMoneda(diferenciaFactura.diferencia)} ({diferenciaFactura.subio ? '▲' : '▼'} {Math.abs(parseFloat(diferenciaFactura.porcentaje))}%)
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -534,12 +670,17 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                   const estado = getItemEstado(item)
                   const esCompleto = esParcial && estado === 'completo'
                   const esModificado = esParcial && (estado === 'parcial' || estado === 'no_entregado')
-                  const fi = facturaItems.find(f => f.insumo_id === item.insumo_id)
+                  const fi = facturaItems.find(f => item.vino_id ? f.vino_id === item.vino_id : f.insumo_id === item.insumo_id)
+                  const esRecibidaConFactura = orden.estado === 'recibida' && facturaItems.length > 0
+
+                  // Para OC Recibida: usar datos de factura
+                  const cantidadMostrar = esRecibidaConFactura && fi ? fi.cantidad : item.cantidad
+                  const subtotalMostrar = esRecibidaConFactura && fi ? fi.subtotal : item.subtotal
 
                   return (
                     <tr key={item.id} className={esCompleto ? 'bg-gray-50' : ''}>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Package className={`w-4 h-4 ${
                             esCompleto ? 'text-gray-300' :
                             esModificado ? 'text-orange-400' : 'text-gray-400'
@@ -551,7 +692,9 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                             {item.insumo_nombre}
                             {item.contenido > 1 && <span className="text-gray-500 font-normal"> [{item.contenido} {item.unidad_medida}]</span>}
                           </span>
-                          {esModificado && estado === 'parcial' && fi && (
+                          {/* Badge estilo factura para OC Recibida */}
+                          {esRecibidaConFactura && getComparacionBadge(item)}
+                          {esModificado && estado === 'parcial' && fi && !esRecibidaConFactura && (
                             <span className="text-xs px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">
                               Recibido {fi.cantidad % 1 === 0 ? fi.cantidad : fi.cantidad.toLocaleString('es-AR')} de {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')}
                             </span>
@@ -562,10 +705,10 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                         </div>
                       </td>
                       <td className={`px-4 py-3 text-sm ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
-                        {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')} {item.unidad_display}
+                        {cantidadMostrar % 1 === 0 ? cantidadMostrar : cantidadMostrar.toLocaleString('es-AR')} {item.unidad_display}
                       </td>
-                      <td className={`px-4 py-3 text-sm text-right ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
-                        {formatearMoneda(item.precio_unitario)}
+                      <td className="px-4 py-3 text-sm text-right text-gray-600">
+                        {esRecibidaConFactura ? getPrecioConComparacion(item) : <span>{formatearMoneda(item.precio_unitario)}</span>}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -578,7 +721,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                         </span>
                       </td>
                       <td className={`px-4 py-3 text-sm text-right ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'font-medium'}`}>
-                        {formatearMoneda(item.subtotal)}
+                        {formatearMoneda(subtotalMostrar)}
                       </td>
                     </tr>
                   )
@@ -621,6 +764,16 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                     {formatearMoneda(totalConIva)}
                   </td>
                 </tr>
+                {diferenciaFactura && (
+                  <tr className={diferenciaFactura.subio ? 'bg-red-50' : 'bg-green-50'}>
+                    <td colSpan={4} className={`px-4 py-2 text-right text-sm ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
+                      Diferencia vs OC:
+                    </td>
+                    <td className={`px-4 py-2 text-right text-sm font-bold ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
+                      {diferenciaFactura.subio ? '+' : ''}{formatearMoneda(diferenciaFactura.diferencia)} ({diferenciaFactura.subio ? '▲' : '▼'} {Math.abs(parseFloat(diferenciaFactura.porcentaje))}%)
+                    </td>
+                  </tr>
+                )}
               </tfoot>
             </table>
           </div>

@@ -18,10 +18,12 @@ interface OrdenPDF {
     insumo_nombre: string
     unidad_medida: string
     unidad_display: string // Unidad visual para el proveedor
-    cantidad: number
+    cantidad: number // Cantidad pedida (OC)
     cantidad_recibida?: number // Cantidad según factura
-    precio_unitario: number
-    subtotal: number
+    precio_unitario: number // Precio del pedido (OC)
+    precio_factura?: number // Precio según factura
+    subtotal: number // Subtotal del pedido
+    subtotal_factura?: number // Subtotal según factura
     iva_porcentaje: number
     iva_monto: number
   }[]
@@ -58,15 +60,15 @@ export async function generarPDFOrden(ordenId: string) {
     return
   }
 
-  // Buscar factura asociada para obtener cantidades recibidas
+  // Buscar factura asociada para obtener cantidades y precios recibidos
   const { data: facturaData } = await supabase
     .from('facturas_proveedor')
-    .select('id, factura_items (insumo_id, vino_id, cantidad)')
+    .select('id, factura_items (insumo_id, vino_id, cantidad, precio_unitario, subtotal)')
     .eq('orden_compra_id', ordenId)
     .eq('activo', true)
     .maybeSingle()
 
-  const facturaItems = facturaData?.factura_items as { insumo_id: string | null; vino_id: string | null; cantidad: number }[] | null
+  const facturaItems = facturaData?.factura_items as { insumo_id: string | null; vino_id: string | null; cantidad: number; precio_unitario: number; subtotal: number }[] | null
 
   const prov = data.proveedores as any
   const orden: OrdenPDF = {
@@ -91,11 +93,13 @@ export async function generarPDFOrden(ordenId: string) {
         ? `${item.vinos?.nombre || 'Vino desconocido'} (${item.vinos?.cepa || ''})`
         : (item.insumos?.nombre || 'Desconocido')
 
-      // Buscar cantidad recibida en la factura
+      // Buscar datos de factura
       const facturaItem = facturaItems?.find(fi =>
         esVino ? fi.vino_id === item.vino_id : fi.insumo_id === item.insumo_id
       )
       const cantidadRecibida = facturaItem ? parseFloat(String(facturaItem.cantidad)) : undefined
+      const precioFactura = facturaItem ? parseFloat(String(facturaItem.precio_unitario)) : undefined
+      const subtotalFactura = facturaItem ? parseFloat(String(facturaItem.subtotal)) : undefined
 
       return {
         insumo_id: item.insumo_id,
@@ -106,18 +110,36 @@ export async function generarPDFOrden(ordenId: string) {
         cantidad: parseFloat(item.cantidad),
         cantidad_recibida: cantidadRecibida,
         precio_unitario: parseFloat(item.precio_unitario),
+        precio_factura: precioFactura,
         subtotal,
+        subtotal_factura: subtotalFactura,
         iva_porcentaje: ivaPorcentaje,
         iva_monto: ivaMonto,
       }
     }),
   }
 
-  // Calcular totales
-  const subtotalNeto = orden.items.reduce((sum, item) => sum + item.subtotal, 0)
-  const totalIva21 = orden.items.filter(i => i.iva_porcentaje === 21).reduce((sum, item) => sum + item.iva_monto, 0)
-  const totalIva105 = orden.items.filter(i => i.iva_porcentaje === 10.5).reduce((sum, item) => sum + item.iva_monto, 0)
-  const totalIva = orden.items.reduce((sum, item) => sum + item.iva_monto, 0)
+  // Calcular totales - usar valores de factura si OC está recibida
+  const esRecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
+
+  // Si está recibida, usar subtotales de factura; sino, del pedido
+  const subtotalNeto = esRecibida
+    ? orden.items.reduce((sum, item) => sum + (item.subtotal_factura ?? 0), 0)
+    : orden.items.reduce((sum, item) => sum + item.subtotal, 0)
+
+  // IVA calculado sobre los subtotales correspondientes
+  const calcularIva = (items: typeof orden.items, ivaPct: number) => {
+    return items
+      .filter(i => i.iva_porcentaje === ivaPct)
+      .reduce((sum, item) => {
+        const base = esRecibida ? (item.subtotal_factura ?? 0) : item.subtotal
+        return sum + (base * (ivaPct / 100))
+      }, 0)
+  }
+
+  const totalIva21 = calcularIva(orden.items, 21)
+  const totalIva105 = calcularIva(orden.items, 10.5)
+  const totalIva = totalIva21 + totalIva105
   const totalConIva = subtotalNeto + totalIva
 
   // A5 vertical
@@ -270,14 +292,27 @@ export async function generarPDFOrden(ordenId: string) {
   // === TABLA CON PAGINACIÓN ===
   const rowH = 7
   const esParcialORecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
+  const esRecibidaCompleta = orden.tieneFactura && orden.estado === 'recibida'
 
   // Constantes de paginación
   const ESPACIO_FOOTER = 55 // Totales + observaciones + condiciones + footer
   const ESPACIO_HEADER_TABLA = 7
   const MARGEN_INFERIOR = margin + 5
 
-  // Columnas diferentes según si tiene factura o no (definido antes de la función)
-  const colX = esParcialORecibida ? {
+  // Columnas diferentes según estado
+  // OC Recibida: muestra datos de FACTURA con diferencias
+  // OC Parcial: muestra PEDIDO | RECIB. | FALT.
+  // OC Normal: muestra datos del pedido
+  const colX = esRecibidaCompleta ? {
+    // Para OC recibida: INSUMO | CANTIDAD | PRECIO | SUBTOTAL | DIFERENCIAS
+    num: margin + 2,
+    insumo: margin + 8,
+    cantRight: margin + contentWidth * 0.42,
+    unidad: margin + contentWidth * 0.44,
+    precioRight: margin + contentWidth * 0.62,
+    subtotalRight: margin + contentWidth * 0.80,
+    difRight: pageWidth - margin - 3,
+  } : esParcialORecibida ? {
     num: margin + 2,
     insumo: margin + 8,
     pedidoRight: margin + contentWidth * 0.45,
@@ -308,17 +343,28 @@ export async function generarPDFOrden(ordenId: string) {
     doc.text('#', colX.num, hTextY)
     doc.text('INSUMO', colX.insumo, hTextY)
 
-    if (esParcialORecibida) {
+    if (esRecibidaCompleta) {
+      // OC Recibida: mostrar datos de factura
+      doc.text('RECIBIDO', (colX as any).cantRight, hTextY, { align: 'right' })
+      doc.text('UN', colX.unidad, hTextY)
+      doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
+      doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
+      doc.setTextColor(255, 200, 200) // rojo claro para el header de diferencias
+      doc.text('DIF.', (colX as any).difRight, hTextY, { align: 'right' })
+    } else if (esParcialORecibida) {
       doc.text('PEDIDO', (colX as any).pedidoRight, hTextY, { align: 'right' })
       doc.text('RECIB.', (colX as any).recibidoRight, hTextY, { align: 'right' })
       doc.text('FALT.', (colX as any).faltanteRight, hTextY, { align: 'right' })
+      doc.text('UN', colX.unidad, hTextY)
+      doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
+      doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
     } else {
       doc.text('IVA', (colX as any).ivaRight, hTextY, { align: 'right' })
       doc.text('CANT', (colX as any).cantRight, hTextY, { align: 'right' })
+      doc.text('UN', colX.unidad, hTextY)
+      doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
+      doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
     }
-    doc.text('UN', colX.unidad, hTextY)
-    doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
-    doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
 
     return yPos + rowH
   }
@@ -368,11 +414,19 @@ export async function generarPDFOrden(ordenId: string) {
       y = dibujarHeaderTabla(y)
     }
     const cantidadRecibida = item.cantidad_recibida ?? 0
+    const precioFactura = item.precio_factura ?? item.precio_unitario
+    const subtotalFactura = item.subtotal_factura ?? item.subtotal
     const faltante = item.cantidad - cantidadRecibida
     const hayFaltante = esParcialORecibida && faltante > 0
+    const precioDiferente = item.precio_factura !== undefined && item.precio_factura !== item.precio_unitario
+    const cantidadDiferente = item.cantidad_recibida !== undefined && item.cantidad_recibida !== item.cantidad
 
-    // Fondo: naranja si hay faltante, gris alterno normal
-    if (hayFaltante) {
+    // Fondo: rojo claro si hay diferencias en OC recibida, naranja si hay faltante
+    const hayDiferencia = esRecibidaCompleta && (precioDiferente || cantidadDiferente)
+    if (hayDiferencia) {
+      doc.setFillColor(255, 235, 235) // rojo muy claro
+      doc.rect(margin, y, contentWidth, rowH, 'F')
+    } else if (hayFaltante) {
       doc.setFillColor(255, 240, 230) // naranja claro
       doc.rect(margin, y, contentWidth, rowH, 'F')
     } else if (idx % 2 === 0) {
@@ -391,13 +445,58 @@ export async function generarPDFOrden(ordenId: string) {
     doc.text(`${idx + 1}`, colX.num, textY)
 
     doc.setTextColor(30, 30, 30)
-    const maxNombreLen = esParcialORecibida ? 22 : 28
+    const maxNombreLen = esRecibidaCompleta ? 24 : (esParcialORecibida ? 22 : 28)
     const nombreTruncado = item.insumo_nombre.length > maxNombreLen
       ? item.insumo_nombre.substring(0, maxNombreLen) + '...'
       : item.insumo_nombre
     doc.text(nombreTruncado, colX.insumo, textY)
 
-    if (esParcialORecibida) {
+    if (esRecibidaCompleta) {
+      // OC Recibida: mostrar datos de FACTURA
+      // Cantidad recibida
+      doc.setTextColor(30, 30, 30)
+      const cantStr = cantidadRecibida % 1 === 0 ? cantidadRecibida.toFixed(0) : cantidadRecibida.toFixed(2).replace('.', ',')
+      doc.text(cantStr, (colX as any).cantRight, textY, { align: 'right' })
+
+      // Unidad
+      doc.setTextColor(120, 120, 120)
+      doc.setFontSize(6)
+      doc.text(item.unidad_display, colX.unidad, textY)
+      doc.setFontSize(6.5)
+
+      // Precio de factura
+      doc.setTextColor(30, 30, 30)
+      doc.text(fmtMoney(precioFactura), colX.precioRight, textY, { align: 'right' })
+
+      // Subtotal de factura
+      doc.setFont('helvetica', 'bold')
+      doc.text(fmtMoney(subtotalFactura), colX.subtotalRight, textY, { align: 'right' })
+
+      // Diferencias en rojo
+      const diferencias: string[] = []
+      if (cantidadDiferente) {
+        const diff = cantidadRecibida - item.cantidad
+        const signo = diff > 0 ? '+' : ''
+        diferencias.push(`${signo}${diff % 1 === 0 ? diff.toFixed(0) : diff.toFixed(2).replace('.', ',')} ${item.unidad_display}`)
+      }
+      if (precioDiferente) {
+        const diff = precioFactura - item.precio_unitario
+        const signo = diff > 0 ? '+' : ''
+        diferencias.push(`${signo}${fmtMoney(diff)}`)
+      }
+
+      if (diferencias.length > 0) {
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(200, 50, 50) // rojo
+        doc.setFontSize(5.5)
+        doc.text(diferencias.join(' | '), (colX as any).difRight, textY, { align: 'right' })
+        doc.setFontSize(6.5)
+      } else {
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(150, 150, 150)
+        doc.text('-', (colX as any).difRight, textY, { align: 'right' })
+      }
+    } else if (esParcialORecibida) {
       // Columnas: PEDIDO, RECIBIDO, FALTANTE
       doc.setTextColor(50, 50, 50)
       const pedidoStr = item.cantidad % 1 === 0 ? item.cantidad.toFixed(0) : item.cantidad.toFixed(2).replace('.', ',')
@@ -417,6 +516,18 @@ export async function generarPDFOrden(ordenId: string) {
         doc.setTextColor(150, 150, 150)
         doc.text('-', (colX as any).faltanteRight, textY, { align: 'right' })
       }
+
+      doc.setTextColor(120, 120, 120)
+      doc.setFontSize(6)
+      doc.text(item.unidad_display, colX.unidad, textY)
+      doc.setFontSize(6.5)
+
+      doc.setTextColor(50, 50, 50)
+      doc.text(fmtMoney(item.precio_unitario), colX.precioRight, textY, { align: 'right' })
+
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
+      doc.text(fmtMoney(item.subtotal), colX.subtotalRight, textY, { align: 'right' })
     } else {
       // IVA y CANT normales
       doc.setTextColor(100, 100, 100)
@@ -428,19 +539,19 @@ export async function generarPDFOrden(ordenId: string) {
       doc.setTextColor(50, 50, 50)
       const cantStr = item.cantidad % 1 === 0 ? item.cantidad.toFixed(0) : item.cantidad.toFixed(2).replace('.', ',')
       doc.text(cantStr, (colX as any).cantRight, textY, { align: 'right' })
+
+      doc.setTextColor(120, 120, 120)
+      doc.setFontSize(6)
+      doc.text(item.unidad_display, colX.unidad, textY)
+      doc.setFontSize(6.5)
+
+      doc.setTextColor(50, 50, 50)
+      doc.text(fmtMoney(item.precio_unitario), colX.precioRight, textY, { align: 'right' })
+
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
+      doc.text(fmtMoney(item.subtotal), colX.subtotalRight, textY, { align: 'right' })
     }
-
-    doc.setTextColor(120, 120, 120)
-    doc.setFontSize(6)
-    doc.text(item.unidad_display, colX.unidad, textY)
-    doc.setFontSize(6.5)
-
-    doc.setTextColor(50, 50, 50)
-    doc.text(fmtMoney(item.precio_unitario), colX.precioRight, textY, { align: 'right' })
-
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(30, 30, 30)
-    doc.text(fmtMoney(item.subtotal), colX.subtotalRight, textY, { align: 'right' })
 
     y += rowH
   })

@@ -7,7 +7,6 @@ import {
   Package,
   ShoppingCart,
   ChefHat,
-  UtensilsCrossed,
   ClipboardList,
   FileText,
   Users,
@@ -32,7 +31,6 @@ const navigation = [
   { name: 'Estadísticas', href: '/estadisticas', icon: BarChart3, color: '#8B5CF6' },
   { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen, color: '#EF4444' },
   { name: 'Recetas', href: '/platos', icon: ChefHat, color: '#A855F7' },
-  { name: 'Menús', href: '/menus-ejecutivos', icon: UtensilsCrossed, color: '#14B8A6' },
   { name: 'Carta', href: '/carta', icon: ClipboardList, color: '#EF4444' },
   { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart, color: '#6366F1' },
   { name: 'Facturas', href: '/facturas', icon: FileText, color: '#6B7280' },
@@ -114,8 +112,7 @@ export default function Sidebar() {
       <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = pathname === item.href ||
-            (item.href !== '/' && pathname.startsWith(item.href)) ||
-            (item.href === '/menus-ejecutivos' && pathname.startsWith('/menus-especiales'))
+            (item.href !== '/' && pathname.startsWith(item.href))
           const isPapelera = item.href === '/papelera'
           return (
             <Link

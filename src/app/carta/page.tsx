@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, FileDown, Eye, ExternalLink, type LucideIcon } from 'lucide-react'
+import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, FileDown, Eye, ExternalLink, LayoutGrid, Users, Calculator, type LucideIcon } from 'lucide-react'
+import Link from 'next/link'
+import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
 import { parsearNumero } from '@/lib/formato-numeros'
@@ -54,6 +56,36 @@ interface PlatoPreview {
   costo_porcion: number
 }
 
+// Tipos para Menús
+interface MenuConOpciones extends MenuEspecial {
+  menu_especial_opciones: {
+    id: string
+    tipo_opcion: string
+    platos: { costo_total: number } | null
+    insumos: { id: string } | null
+    insumo_id: string | null
+  }[]
+  costo_calculado?: number
+  comensales?: number
+  margen_objetivo?: number
+  precio_venta?: number
+}
+
+type TabType = 'en_carta' | 'fuera_carta' | 'ejecutivos' | 'especiales'
+
+// Normalizar tipo_opcion de valores viejos a nuevos
+function normalizarTipoOpcion(tipo: string): string {
+  const mapeo: Record<string, string> = {
+    'entrada': 'Entradas', 'Entrada': 'Entradas',
+    'principal': 'Principales', 'Principal': 'Principales',
+    'Parrilla': 'Principales', 'Pastas y Arroces': 'Principales', 'Ensaladas': 'Principales',
+    'postre': 'Postres', 'Postre': 'Postres',
+    'bebida': 'Bebidas', 'Bebida': 'Bebidas',
+    'guarnicion': 'Principales', 'Guarnición': 'Principales',
+  }
+  return mapeo[tipo] || tipo
+}
+
 // Helper para obtener ícono según sección/nombre del plato
 function getPlateIcon(seccion: string, nombrePlato?: string): LucideIcon {
   const s = seccion.toLowerCase()
@@ -78,8 +110,22 @@ export default function CartaPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [seccionesExpandidas, setSeccionesExpandidas] = useState<Set<string>>(new Set(SECCIONES_ORDEN))
-  const [tabActiva, setTabActiva] = useState<'en_carta' | 'fuera_carta'>('en_carta')
+  const [tabActiva, setTabActiva] = useState<TabType>('en_carta')
   const [busqueda, setBusqueda] = useState('')
+
+  // ============ ESTADOS MENÚS EJECUTIVOS ============
+  const [menusEjecutivos, setMenusEjecutivos] = useState<MenuEjecutivo[]>([])
+  const [isLoadingEjec, setIsLoadingEjec] = useState(true)
+  const [editingMenuId, setEditingMenuId] = useState<string | null>(null)
+  const [editMenuPrecio, setEditMenuPrecio] = useState('')
+  const [editMenuMargen, setEditMenuMargen] = useState('')
+  const [isSavingMenu, setIsSavingMenu] = useState(false)
+
+  // ============ ESTADOS MENÚS ESPECIALES ============
+  const [menusEspeciales, setMenusEspeciales] = useState<MenuConOpciones[]>([])
+  const [isLoadingEsp, setIsLoadingEsp] = useState(true)
+  const [calculadora, setCalculadora] = useState<{ menuId: string; personas: string } | null>(null)
+  const [editValuesEsp, setEditValuesEsp] = useState<Record<string, { margen: string; precio: string }>>({})
 
   // Form para agregar
   const [selectedPlato, setSelectedPlato] = useState('')
@@ -110,6 +156,8 @@ export default function CartaPage() {
 
   useEffect(() => {
     fetchData()
+    fetchMenusEjecutivos()
+    fetchMenusEspeciales()
   }, [])
 
   // Función para calcular costo final de un insumo
@@ -526,6 +574,152 @@ export default function CartaPage() {
     }
   }
 
+  // ============ FUNCIONES MENÚS EJECUTIVOS ============
+  async function fetchMenusEjecutivos() {
+    setIsLoadingEjec(true)
+    const { data, error } = await supabase
+      .from('menus_ejecutivos')
+      .select('*')
+      .eq('activo', true)
+      .order('nombre')
+    if (!error) setMenusEjecutivos(data || [])
+    setIsLoadingEjec(false)
+  }
+
+  async function handleDeleteEjec(id: string) {
+    if (!confirm('¿Eliminar este menú?')) return
+    const { error } = await supabase.from('menus_ejecutivos').update({ activo: false }).eq('id', id)
+    if (!error) fetchMenusEjecutivos()
+  }
+
+  function getEstadoMargen(foodCost: number, fcObjetivo: number): 'ok' | 'warning' | 'danger' {
+    if (foodCost <= fcObjetivo) return 'ok'
+    if (foodCost <= fcObjetivo + 5) return 'warning'
+    return 'danger'
+  }
+
+  function handleStartEditMenu(menu: MenuEjecutivo) {
+    setEditingMenuId(menu.id)
+    setEditMenuPrecio(menu.precio_carta?.toString() || '0')
+    setEditMenuMargen(menu.margen_objetivo?.toString() || '30')
+  }
+
+  function handleCancelEditMenu() {
+    setEditingMenuId(null)
+    setEditMenuPrecio('')
+    setEditMenuMargen('')
+  }
+
+  async function handleSaveEditMenu(menu: MenuEjecutivo) {
+    setIsSavingMenu(true)
+    const precio = parsearNumero(editMenuPrecio)
+    const margen = parsearNumero(editMenuMargen) || 30
+    const precioSugerido = calcularPrecioSugerido(menu.costo_total, margen)
+    const foodCost = calcularFoodCost(menu.costo_total, precio)
+    const { error } = await supabase
+      .from('menus_ejecutivos')
+      .update({ precio_carta: precio, margen_objetivo: margen, precio_sugerido: precioSugerido, food_cost_real: foodCost })
+      .eq('id', menu.id)
+    if (!error) { handleCancelEditMenu(); fetchMenusEjecutivos() }
+    setIsSavingMenu(false)
+  }
+
+  // ============ FUNCIONES MENÚS ESPECIALES ============
+  async function fetchMenusEspeciales() {
+    setIsLoadingEsp(true)
+    const { data: insumosData } = await supabase.from('v_insumos_con_precio').select('id, precio_actual, iva_porcentaje, merma_porcentaje')
+    const { data: recetasBaseData } = await supabase.from('recetas_base').select('id, rendimiento_porciones, receta_base_ingredientes (insumo_id, cantidad)').eq('activo', true)
+
+    function getCostoFinalInsumoEsp(insumoId: string): number {
+      const insumo = insumosData?.find(i => i.id === insumoId)
+      if (!insumo || !insumo.precio_actual) return 0
+      return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+    }
+    function getCostoPorcionReceta(recetaBaseId: string): number {
+      const receta = recetasBaseData?.find((r: any) => r.id === recetaBaseId)
+      if (!receta) return 0
+      let costoTotal = 0
+      for (const ing of (receta as any).receta_base_ingredientes || []) {
+        costoTotal += ing.cantidad * getCostoFinalInsumoEsp(ing.insumo_id)
+      }
+      return (receta as any).rendimiento_porciones > 0 ? costoTotal / (receta as any).rendimiento_porciones : 0
+    }
+
+    const { data: platosData } = await supabase.from('platos').select('id, rendimiento_porciones, plato_ingredientes (insumo_id, receta_base_id, cantidad)').eq('activo', true)
+    const platoCostosMap = new Map<string, number>()
+    for (const plato of (platosData || []) as any[]) {
+      let costoReceta = 0
+      for (const ing of plato.plato_ingredientes || []) {
+        if (ing.insumo_id) costoReceta += ing.cantidad * getCostoFinalInsumoEsp(ing.insumo_id)
+        else if (ing.receta_base_id) costoReceta += ing.cantidad * getCostoPorcionReceta(ing.receta_base_id)
+      }
+      platoCostosMap.set(plato.id, costoReceta / (plato.rendimiento_porciones > 0 ? plato.rendimiento_porciones : 1))
+    }
+
+    const { data: bebidasData } = await supabase.from('insumos').select('id').eq('activo', true).eq('categoria', 'Bebidas')
+    const bebidasPreciosMap = new Map<string, number>()
+    if (bebidasData) {
+      await Promise.all(bebidasData.map(async (b) => {
+        const { data: precioData } = await supabase.from('precios_insumo').select('precio').eq('insumo_id', b.id).order('fecha', { ascending: false }).limit(1).single()
+        bebidasPreciosMap.set(b.id, precioData?.precio || 0)
+      }))
+    }
+
+    const { data, error } = await supabase.from('menus_especiales').select('*, menu_especial_opciones (id, tipo_opcion, plato_id, insumo_id)').eq('activo', true).order('nombre')
+    if (!error) {
+      const menusConCosto = (data || []).map((menu: any) => {
+        const cantidades: Record<string, number> = { Entradas: menu.cantidad_entradas || 1, Principales: menu.cantidad_principales || 2, Postres: menu.cantidad_postres || 1, Bebidas: menu.cantidad_bebidas || 1 }
+        const comensales = menu.comensales || 2
+        const opcionesPorTipo: Record<string, { costo: number }[]> = { Entradas: [], Principales: [], Postres: [], Bebidas: [] }
+        for (const opcion of menu.menu_especial_opciones || []) {
+          const tipoNorm = normalizarTipoOpcion(opcion.tipo_opcion)
+          let costo = 0
+          if (opcion.plato_id) costo = platoCostosMap.get(opcion.plato_id) || 0
+          else if (opcion.insumo_id) costo = bebidasPreciosMap.get(opcion.insumo_id) || 0
+          if (!opcionesPorTipo[tipoNorm]) opcionesPorTipo[tipoNorm] = []
+          opcionesPorTipo[tipoNorm].push({ costo })
+        }
+        let costoMenu = 0
+        for (const seccion of ['Entradas', 'Principales', 'Postres', 'Bebidas']) {
+          const opts = opcionesPorTipo[seccion]
+          const cant = cantidades[seccion] || 0
+          if (opts.length > 0 && cant > 0) costoMenu += (opts.reduce((sum, o) => sum + o.costo, 0) / opts.length) * cant
+        }
+        return { ...menu, costo_calculado: comensales > 0 ? costoMenu / comensales : 0 }
+      })
+      setMenusEspeciales(menusConCosto as MenuConOpciones[])
+    }
+    setIsLoadingEsp(false)
+  }
+
+  async function handleDeleteEsp(id: string) {
+    if (!confirm('¿Eliminar este menú?')) return
+    const { error } = await supabase.from('menus_especiales').update({ activo: false }).eq('id', id)
+    if (!error) fetchMenusEspeciales()
+  }
+
+  function getEditValueEsp(menuId: string, field: 'margen' | 'precio', defaultValue: number) {
+    return editValuesEsp[menuId]?.[field] !== undefined ? editValuesEsp[menuId][field] : defaultValue.toString()
+  }
+  function setEditValueEsp(menuId: string, field: 'margen' | 'precio', value: string) {
+    setEditValuesEsp(prev => ({ ...prev, [menuId]: { ...prev[menuId], [field]: value } }))
+  }
+  async function handleSaveEsp(menuId: string, margenValue?: number, precioValue?: number) {
+    const values = editValuesEsp[menuId]
+    const margen = margenValue ?? (values ? parsearNumero(values.margen) : null)
+    const precio = precioValue ?? (values ? parsearNumero(values.precio) : null)
+    const updateData: any = {}
+    if (margen !== null) updateData.margen_objetivo = margen
+    if (precio !== null) updateData.precio_venta = precio
+    if (Object.keys(updateData).length === 0) return
+    const { error } = await supabase.from('menus_especiales').update(updateData).eq('id', menuId)
+    if (!error) { setEditValuesEsp(prev => { const n = { ...prev }; delete n[menuId]; return n }); fetchMenusEspeciales() }
+  }
+  function handleBlurSaveEsp(menuId: string, field: 'margen' | 'precio', value: string, originalValue: number) {
+    const numValue = parsearNumero(value)
+    if (numValue !== originalValue) handleSaveEsp(menuId, field === 'margen' ? numValue : undefined, field === 'precio' ? numValue : undefined)
+  }
+
   const fmt = (v: number) => `$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 
   // Agrupar items por sección según tab activa y búsqueda
@@ -552,23 +746,47 @@ export default function CartaPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-lg font-bold text-gray-900">Carta</h1>
-          <p className="text-xs text-gray-600">Precios y análisis de food cost</p>
+          <p className="text-xs text-gray-600">
+            {tabActiva === 'ejecutivos' ? 'Menús del día con composición directa' :
+             tabActiva === 'especiales' ? 'Menús con opciones para eventos' :
+             'Precios y análisis de food cost'}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => generarPDFCarta(items, 'TERO')}
-            disabled={items.length === 0}
-            title="Descargar PDF de la carta"
-          >
-            <FileDown className="w-3.5 h-3.5 mr-1" />
-            PDF
-          </Button>
-          <Button onClick={() => setIsModalOpen(true)} disabled={platosDisponibles.length === 0} size="sm">
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            Agregar
-          </Button>
+          {(tabActiva === 'en_carta' || tabActiva === 'fuera_carta') && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => generarPDFCarta(items, 'TERO')}
+                disabled={items.length === 0}
+                title="Descargar PDF de la carta"
+              >
+                <FileDown className="w-3.5 h-3.5 mr-1" />
+                PDF
+              </Button>
+              <Button onClick={() => setIsModalOpen(true)} disabled={platosDisponibles.length === 0} size="sm">
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Agregar
+              </Button>
+            </>
+          )}
+          {tabActiva === 'ejecutivos' && (
+            <Link href="/menus-ejecutivos/nuevo">
+              <Button size="sm">
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Nuevo Menú
+              </Button>
+            </Link>
+          )}
+          {tabActiva === 'especiales' && (
+            <Link href="/menus-especiales/nuevo">
+              <Button size="sm">
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Nuevo Menú
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -628,6 +846,28 @@ export default function CartaPage() {
           >
             Fuera de Carta ({itemsFueraCarta.length})
           </button>
+          <button
+            onClick={() => setTabActiva('ejecutivos')}
+            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
+              tabActiva === 'ejecutivos'
+                ? 'border-teal-500 text-teal-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <UtensilsCrossed className="w-3 h-3" />
+            Ejecutivos ({menusEjecutivos.length})
+          </button>
+          <button
+            onClick={() => setTabActiva('especiales')}
+            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
+              tabActiva === 'especiales'
+                ? 'border-pink-500 text-pink-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <LayoutGrid className="w-3 h-3" />
+            Especiales ({menusEspeciales.length})
+          </button>
         </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -641,21 +881,22 @@ export default function CartaPage() {
         </div>
       </div>
 
-      {/* Contenido */}
-      {isLoading ? (
-        <div className="text-center py-6 text-xs">Cargando...</div>
-      ) : itemsActuales.length === 0 ? (
-        <div className="text-center py-8 bg-white rounded-lg border">
-          <p className="text-xs text-gray-500">
-            {tabActiva === 'en_carta' ? 'No hay platos en la carta' : 'No hay platos fuera de carta'}
-          </p>
-          <p className="text-[10px] text-gray-400 mt-1">
-            {tabActiva === 'en_carta'
-              ? 'Agregá platos para ver el análisis de food cost'
-              : 'Los platos que saques de la carta aparecerán aquí'}
-          </p>
-        </div>
-      ) : (
+      {/* Contenido Carta */}
+      {(tabActiva === 'en_carta' || tabActiva === 'fuera_carta') && (
+        isLoading ? (
+          <div className="text-center py-6 text-xs">Cargando...</div>
+        ) : itemsActuales.length === 0 ? (
+          <div className="text-center py-8 bg-white rounded-lg border">
+            <p className="text-xs text-gray-500">
+              {tabActiva === 'en_carta' ? 'No hay platos en la carta' : 'No hay platos fuera de carta'}
+            </p>
+            <p className="text-[10px] text-gray-400 mt-1">
+              {tabActiva === 'en_carta'
+                ? 'Agregá platos para ver el análisis de food cost'
+                : 'Los platos que saques de la carta aparecerán aquí'}
+            </p>
+          </div>
+        ) : (
         <>
           {/* Vista Móvil - Tarjetas */}
           <div className="lg:hidden space-y-3">
@@ -965,6 +1206,235 @@ export default function CartaPage() {
             </table>
           </div>
         </>
+        )
+      )}
+
+      {/* ============ TAB EJECUTIVOS ============ */}
+      {tabActiva === 'ejecutivos' && (
+        isLoadingEjec ? (
+          <div className="text-center py-6">Cargando...</div>
+        ) : menusEjecutivos.length === 0 ? (
+          <div className="text-center py-8 bg-white rounded-lg border">
+            <UtensilsCrossed className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-500">No hay menús ejecutivos registrados</p>
+          </div>
+        ) : (
+          <>
+            {/* Vista Móvil - Cards */}
+            <div className="lg:hidden space-y-2">
+              {menusEjecutivos.map((menu) => {
+                const precioSugerido = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || 30)
+                const foodCost = calcularFoodCost(menu.costo_total, menu.precio_carta || 0)
+                const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
+                const contribucion = (menu.precio_carta || 0) - menu.costo_total
+                return (
+                  <div key={menu.id} className={`bg-white rounded-lg border p-3 ${estado === 'danger' ? 'border-red-300 bg-red-50' : ''}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-teal-100 rounded-lg"><UtensilsCrossed className="w-4 h-4 text-teal-600" /></div>
+                        <div>
+                          <Link href={`/menus-ejecutivos/${menu.id}`}><p className="text-sm font-medium text-gray-900 hover:text-primary-600">{menu.nombre}</p></Link>
+                          {menu.descripcion && <p className="text-xs text-gray-500 truncate max-w-[200px]">{menu.descripcion}</p>}
+                        </div>
+                      </div>
+                    </div>
+                    {editingMenuId === menu.id ? (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div><label className="text-[10px] text-gray-500">P.Carta</label><input type="text" inputMode="decimal" value={editMenuPrecio} onChange={(e) => setEditMenuPrecio(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-xs" /></div>
+                          <div><label className="text-[10px] text-gray-500">M.Obj %</label><input type="text" inputMode="decimal" value={editMenuMargen} onChange={(e) => setEditMenuMargen(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-xs" /></div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="secondary" size="sm" onClick={handleCancelEditMenu}>Cancelar</Button>
+                          <Button size="sm" onClick={() => handleSaveEditMenu(menu)} disabled={isSavingMenu}><Save className="w-3 h-3 mr-1" />Guardar</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-4 gap-1 text-center mb-2">
+                          <div><p className="text-[10px] text-gray-500">Costo</p><p className="text-[11px] font-medium tabular-nums">{fmt(menu.costo_total)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">P.Sug.</p><p className="text-[11px] text-gray-600 tabular-nums">{fmt(precioSugerido)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">P.Carta</p><p className="text-[11px] font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">Contrib.</p><p className={`text-[11px] font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</p></div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="flex items-center gap-1.5">
+                            {getEstadoIcon(estado)}
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(estado)}`}>FC: {foodCost.toFixed(1)}%</span>
+                            <span className="text-[10px] text-gray-500">Obj: {menu.margen_objetivo || 30}%</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleStartEditMenu(menu)}><Pencil className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {/* Vista Desktop - Tabla */}
+            <div className="hidden lg:block bg-white rounded-lg border overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Menú</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Sug.</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Carta</th>
+                    <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">M.Obj</th>
+                    <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">FC</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">Contrib.</th>
+                    <th className="px-2 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {menusEjecutivos.map((menu) => {
+                    const precioSugerido = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || 30)
+                    const foodCost = calcularFoodCost(menu.costo_total, menu.precio_carta || 0)
+                    const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
+                    const contribucion = (menu.precio_carta || 0) - menu.costo_total
+                    return (
+                      <tr key={menu.id} className={`hover:bg-gray-50 ${estado === 'danger' ? 'bg-red-50' : ''}`}>
+                        <td className="px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-teal-100 rounded-lg"><UtensilsCrossed className="w-4 h-4 text-teal-600" /></div>
+                            <div>
+                              <Link href={`/menus-ejecutivos/${menu.id}`}><p className="text-sm font-medium text-gray-900 hover:text-primary-600">{menu.nombre}</p></Link>
+                              {menu.descripcion && <p className="text-xs text-gray-500 truncate max-w-xs">{menu.descripcion}</p>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 text-right"><span className="text-xs font-medium text-green-600 tabular-nums">{fmt(menu.costo_total)}</span></td>
+                        <td className="px-2 py-2 text-right"><span className="text-xs text-gray-500 tabular-nums">{fmt(editingMenuId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMenuMargen) || 30) : precioSugerido)}</span></td>
+                        <td className="px-2 py-2 text-right">
+                          {editingMenuId === menu.id ? <input type="text" inputMode="decimal" value={editMenuPrecio} onChange={(e) => setEditMenuPrecio(e.target.value)} className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs text-right" /> : <span className="text-xs font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</span>}
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          {editingMenuId === menu.id ? <input type="text" inputMode="decimal" value={editMenuMargen} onChange={(e) => setEditMenuMargen(e.target.value)} className="w-14 rounded border border-gray-300 px-1 py-0.5 text-xs text-center" /> : <span className="text-xs text-gray-600">{menu.margen_objetivo || 30}%</span>}
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {getEstadoIcon(estado)}
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(estado)}`}>{foodCost.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 text-right bg-green-50"><span className={`text-xs font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</span></td>
+                        <td className="px-2 py-2">
+                          <div className="flex justify-end gap-1">
+                            {editingMenuId === menu.id ? (
+                              <><Button variant="ghost" size="sm" onClick={handleCancelEditMenu}><X className="w-3.5 h-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => handleSaveEditMenu(menu)} disabled={isSavingMenu}><Save className="w-3.5 h-3.5 text-green-600" /></Button></>
+                            ) : (
+                              <><Button variant="ghost" size="sm" onClick={() => handleStartEditMenu(menu)}><Pencil className="w-3.5 h-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button></>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )
+      )}
+
+      {/* ============ TAB ESPECIALES ============ */}
+      {tabActiva === 'especiales' && (
+        isLoadingEsp ? (
+          <div className="text-center py-6">Cargando...</div>
+        ) : menusEspeciales.length === 0 ? (
+          <div className="text-center py-8 bg-white rounded-lg border">
+            <LayoutGrid className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-500">No hay menús especiales registrados</p>
+            <Link href="/menus-especiales/nuevo"><Button className="mt-3"><Plus className="w-3.5 h-3.5 mr-1.5" />Crear primer menú</Button></Link>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {menusEspeciales.map((menu) => {
+              const costoPorPersona = menu.costo_calculado ?? menu.costo_promedio ?? 0
+              const comensales = (menu as any).comensales || 2
+              const costoMenu = costoPorPersona * comensales
+              const fcObjetivo = (menu as any).margen_objetivo || 25
+              const precioVenta = (menu as any).precio_venta || 0
+              const personas = calculadora?.menuId === menu.id ? parseInt(calculadora.personas) || 0 : 0
+              const costoTotalEvento = costoPorPersona * personas
+              return (
+                <div key={menu.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-pink-100 rounded-lg"><LayoutGrid className="w-4 h-4 text-pink-600" /></div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">{menu.nombre}</h3>
+                        {menu.descripcion && <p className="text-xs text-gray-500">{menu.descripcion}</p>}
+                        <p className="text-[10px] text-gray-400 mt-0.5">{menu.menu_especial_opciones?.length || 0} opciones • {comensales} comensales</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Link href={`/menus-especiales/${menu.id}`}><Button variant="ghost" size="sm" title="Ver / Editar"><Eye className="w-3.5 h-3.5" /></Button></Link>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteEsp(menu.id)} title="Eliminar"><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button>
+                    </div>
+                  </div>
+                  {/* Análisis de Precios */}
+                  {(() => {
+                    const currentMargen = parsearNumero(getEditValueEsp(menu.id, 'margen', fcObjetivo)) || 25
+                    const currentPrecio = parsearNumero(getEditValueEsp(menu.id, 'precio', precioVenta))
+                    const currentPrecioSugerido = currentMargen > 0 ? costoPorPersona / (currentMargen / 100) : 0
+                    const currentFcReal = currentPrecio > 0 ? (costoPorPersona / currentPrecio * 100) : 0
+                    const currentContrib = currentPrecio - costoPorPersona
+                    const isOk = currentFcReal <= currentMargen
+                    const hasChanges = editValuesEsp[menu.id] !== undefined
+                    return (
+                      <div className="border-t bg-gray-50 px-3 py-2 overflow-x-auto">
+                        <table className="w-full min-w-[480px]">
+                          <thead><tr className="text-[9px] text-gray-500 uppercase">
+                            <th className="text-left font-medium">Costo Menú</th>
+                            <th className="text-right font-medium">Costo x Pers.</th>
+                            <th className="text-center font-medium">FC Obj.</th>
+                            <th className="text-right font-medium">P.Sug.</th>
+                            <th className="text-right font-medium">P.Venta</th>
+                            <th className="text-center font-medium">FC Real</th>
+                            <th className="text-right font-medium bg-green-50">Contrib.</th>
+                            <th className="w-10"></th>
+                          </tr></thead>
+                          <tbody><tr>
+                            <td className="py-1.5 text-left"><span className="text-[11px] text-gray-600"><span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span><span className="text-[9px] text-gray-400 ml-1">({comensales}p)</span></td>
+                            <td className="py-1.5 text-right"><span className="text-xs font-bold text-green-600"><span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
+                            <td className="py-1.5 text-center"><div className="flex items-center justify-center gap-0.5"><input type="text" inputMode="decimal" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-10 px-1 py-0.5 border border-gray-300 rounded text-center text-[11px]" /><span className="text-[9px] text-gray-400">%</span></div></td>
+                            <td className="py-1.5 text-right"><span className="text-[11px] text-blue-600 font-medium"><span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
+                            <td className="py-1.5 text-right"><div className="flex items-center justify-end gap-0.5"><span className="text-[9px] text-gray-400">$</span><input type="text" value={Number(getEditValueEsp(menu.id, 'precio', precioVenta) || 0).toLocaleString('es-AR')} onChange={(e) => { const raw = e.target.value.replace(/\D/g, ''); setEditValueEsp(menu.id, 'precio', raw) }} onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); handleBlurSaveEsp(menu.id, 'precio', raw, precioVenta) }} className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-[11px]" placeholder="0" /></div></td>
+                            <td className="py-1.5 text-center">{currentPrecio > 0 ? <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-[9px] font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{currentFcReal.toFixed(1)}%</span> : <span className="text-gray-400 text-[11px]">—</span>}</td>
+                            <td className="py-1.5 text-right bg-green-50">{currentPrecio > 0 ? <span className="text-[11px] font-bold text-green-700"><span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span> : <span className="text-gray-400 text-[11px]">—</span>}</td>
+                            <td className="py-1.5 text-right">{hasChanges && <Button variant="ghost" size="sm" onClick={() => handleSaveEsp(menu.id)} title="Guardar cambios"><Save className="w-3 h-3 text-green-600" /></Button>}</td>
+                          </tr></tbody>
+                        </table>
+                      </div>
+                    )
+                  })()}
+                  {/* Calculadora */}
+                  <div className="border-t bg-gradient-to-r from-pink-50 to-purple-50 px-3 py-2">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <Calculator className="w-3.5 h-3.5 text-pink-500" />
+                        <Users className="w-3.5 h-3.5 text-gray-500" />
+                        <Input type="number" value={calculadora?.menuId === menu.id ? calculadora.personas : ''} onChange={(e) => setCalculadora({ menuId: menu.id, personas: e.target.value })} placeholder="Cant." className="w-16 text-xs" />
+                        <span className="text-xs text-gray-600">personas</span>
+                      </div>
+                      {personas > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-xs">→</span>
+                          <span className="text-xs text-gray-600">Costo: <span className="font-bold text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
+                          {precioVenta > 0 && (<><span className="text-gray-400">|</span><span className="text-xs text-gray-600">Ingreso: <span className="font-bold text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span></>)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
       )}
 
       {/* Modal Agregar */}

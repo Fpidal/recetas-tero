@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, FileDown, type LucideIcon } from 'lucide-react'
+import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, FileDown, Eye, ExternalLink, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
 import { parsearNumero } from '@/lib/formato-numeros'
@@ -31,6 +31,27 @@ interface CartaItem {
   margen_objetivo: number
   food_cost_real: number
   estado_margen: 'ok' | 'warning' | 'danger'
+}
+
+interface IngredientePreview {
+  nombre: string
+  cantidad: number
+  unidad: string
+  categoria: string
+  costo_unitario: number
+  costo_linea: number
+  tipo: 'insumo' | 'receta_base'
+}
+
+interface PlatoPreview {
+  id: string
+  nombre: string
+  seccion: string
+  descripcion: string
+  rendimiento: number
+  ingredientes: IngredientePreview[]
+  costo_total: number
+  costo_porcion: number
 }
 
 // Helper para obtener ícono según sección/nombre del plato
@@ -70,6 +91,10 @@ export default function CartaPage() {
   const [editMargen, setEditMargen] = useState('')
 
   const [isSaving, setIsSaving] = useState(false)
+
+  // Preview de receta
+  const [previewPlato, setPreviewPlato] = useState<PlatoPreview | null>(null)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
 
   function toggleSeccion(seccion: string) {
     setSeccionesExpandidas(prev => {
@@ -251,6 +276,118 @@ export default function CartaPage() {
 
   function calcularFoodCost(costo: number, precio: number): number {
     return precio > 0 ? (costo / precio) * 100 : 0
+  }
+
+  async function handleVerReceta(platoId: string) {
+    setIsLoadingPreview(true)
+
+    // Cargar insumos con precios
+    const { data: insumosData } = await supabase
+      .from('v_insumos_con_precio')
+      .select('id, nombre, unidad_medida, categoria, precio_actual, merma_porcentaje, iva_porcentaje')
+      .eq('activo', true)
+
+    // Calcular costo final para cada insumo
+    const insumosConCosto = (insumosData || []).map(insumo => ({
+      ...insumo,
+      costo_final: insumo.precio_actual !== null
+        ? insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+        : 0
+    }))
+
+    // Cargar recetas base con sus ingredientes para calcular costo real
+    const { data: recetasBaseData } = await supabase
+      .from('recetas_base')
+      .select(`
+        id, nombre, rendimiento_porciones,
+        receta_base_ingredientes (insumo_id, cantidad)
+      `)
+      .eq('activo', true)
+
+    // Calcular costo por porción de recetas base
+    const recetasConCosto = (recetasBaseData || []).map((r: any) => {
+      let costoTotal = 0
+      for (const ing of r.receta_base_ingredientes || []) {
+        const insumo = insumosConCosto.find(i => i.id === ing.insumo_id)
+        if (insumo?.costo_final) {
+          costoTotal += ing.cantidad * insumo.costo_final
+        }
+      }
+      const rendimiento = r.rendimiento_porciones > 0 ? r.rendimiento_porciones : 1
+      return {
+        id: r.id,
+        nombre: r.nombre,
+        costo_por_porcion: costoTotal / rendimiento,
+      }
+    })
+
+    // Cargar plato con ingredientes
+    const { data: plato } = await supabase
+      .from('platos')
+      .select(`
+        id, nombre, seccion, descripcion, rendimiento_porciones,
+        plato_ingredientes (
+          insumo_id,
+          receta_base_id,
+          cantidad,
+          insumos (nombre, unidad_medida, categoria),
+          recetas_base (nombre)
+        )
+      `)
+      .eq('id', platoId)
+      .single()
+
+    if (!plato) {
+      setIsLoadingPreview(false)
+      return
+    }
+
+    // Mapear ingredientes
+    const ingredientes: IngredientePreview[] = (plato.plato_ingredientes || []).map((ing: any) => {
+      if (ing.insumo_id) {
+        const insumo = insumosConCosto.find(i => i.id === ing.insumo_id)
+        const costoUnitario = insumo?.costo_final || 0
+        const cantidad = Number(ing.cantidad) || 0
+        return {
+          nombre: ing.insumos?.nombre || 'Desconocido',
+          cantidad,
+          unidad: ing.insumos?.unidad_medida || '',
+          categoria: insumo?.categoria || ing.insumos?.categoria || 'Almacen',
+          costo_unitario: costoUnitario,
+          costo_linea: cantidad * costoUnitario,
+          tipo: 'insumo' as const,
+        }
+      } else {
+        const receta = recetasConCosto.find(r => r.id === ing.receta_base_id)
+        const costoUnitario = receta?.costo_por_porcion || 0
+        const cantidad = Number(ing.cantidad) || 0
+        return {
+          nombre: ing.recetas_base?.nombre || 'Desconocido',
+          cantidad,
+          unidad: 'porción',
+          categoria: 'Elaboracion',
+          costo_unitario: costoUnitario,
+          costo_linea: cantidad * costoUnitario,
+          tipo: 'receta_base' as const,
+        }
+      }
+    })
+
+    const costoTotal = ingredientes.reduce((sum, ing) => sum + ing.costo_linea, 0)
+    const rendimiento = plato.rendimiento_porciones || 1
+
+    setPreviewPlato({
+      id: plato.id,
+      nombre: plato.nombre,
+      seccion: plato.seccion || 'Principales',
+      descripcion: plato.descripcion || '',
+      rendimiento,
+      ingredientes,
+      costo_total: costoTotal,
+      costo_porcion: costoTotal / rendimiento,
+    })
+
+    setIsLoadingPreview(false)
   }
 
   async function handleAgregar() {
@@ -554,7 +691,13 @@ export default function CartaPage() {
                                 <IconComponent className="w-4 h-4 text-orange-600" />
                               </div>
                               <div>
-                                <span className="text-sm font-medium text-gray-900">{item.plato_nombre}</span>
+                                <button
+                                  onClick={() => handleVerReceta(item.plato_id)}
+                                  className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline text-left flex items-center gap-1"
+                                >
+                                  {item.plato_nombre}
+                                  <Eye className="w-3 h-3 opacity-0 group-hover:opacity-50" />
+                                </button>
                                 <p className="text-[10px] text-gray-400">
                                   {item.plato_dias_actualizacion === 0
                                     ? 'Actualizado hoy'
@@ -710,7 +853,13 @@ export default function CartaPage() {
                           <IconComponent className="w-3 h-3 text-orange-600" />
                         </div>
                         <div>
-                          <span className="text-xs font-medium text-gray-900">{item.plato_nombre}</span>
+                          <button
+                            onClick={() => handleVerReceta(item.plato_id)}
+                            className="text-xs font-medium text-gray-900 hover:text-primary-600 hover:underline text-left flex items-center gap-1 group"
+                          >
+                            {item.plato_nombre}
+                            <Eye className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                          </button>
                           <p className="text-[9px] text-gray-400">
                             {item.plato_dias_actualizacion === 0
                               ? 'Hoy'
@@ -900,6 +1049,102 @@ export default function CartaPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal Preview Receta */}
+      <Modal
+        isOpen={previewPlato !== null}
+        onClose={() => setPreviewPlato(null)}
+        title={previewPlato?.nombre || 'Receta'}
+        size="lg"
+      >
+        {isLoadingPreview ? (
+          <div className="text-center py-8 text-gray-500">Cargando receta...</div>
+        ) : previewPlato ? (
+          <div className="space-y-4">
+            {/* Header con sección y rendimiento */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="px-2 py-1 bg-gray-100 rounded text-gray-600">{previewPlato.seccion}</span>
+              <span className="text-gray-500">Rinde: <strong>{previewPlato.rendimiento}</strong> {previewPlato.rendimiento === 1 ? 'porción' : 'porciones'}</span>
+            </div>
+
+            {previewPlato.descripcion && (
+              <p className="text-sm text-gray-600 italic">{previewPlato.descripcion}</p>
+            )}
+
+            {/* Tabla de ingredientes */}
+            <div className="border rounded-lg overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Ingrediente</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Cantidad</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo Unit.</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {previewPlato.ingredientes.map((ing, idx) => (
+                    <tr key={idx} className={ing.tipo === 'receta_base' ? 'bg-green-50' : ''}>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          {ing.tipo === 'receta_base' && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-green-200 text-green-800 rounded">ELAB</span>
+                          )}
+                          <span className="text-sm text-gray-900">{ing.nombre}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-right text-sm text-gray-600 tabular-nums">
+                        {ing.cantidad.toLocaleString('es-AR', { maximumFractionDigits: 3 })} {ing.unidad}
+                      </td>
+                      <td className="px-3 py-2 text-right text-sm text-gray-500 tabular-nums">
+                        ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                      </td>
+                      <td className="px-3 py-2 text-right text-sm font-medium text-gray-900 tabular-nums">
+                        ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50">
+                  <tr>
+                    <td colSpan={3} className="px-3 py-2 text-right text-sm font-medium text-gray-700">
+                      Costo Total Receta:
+                    </td>
+                    <td className="px-3 py-2 text-right text-sm font-bold text-gray-900 tabular-nums">
+                      ${previewPlato.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    </td>
+                  </tr>
+                  {previewPlato.rendimiento > 1 && (
+                    <tr>
+                      <td colSpan={3} className="px-3 py-2 text-right text-sm font-medium text-gray-700">
+                        Costo por Porción:
+                      </td>
+                      <td className="px-3 py-2 text-right text-sm font-bold text-primary-600 tabular-nums">
+                        ${previewPlato.costo_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                      </td>
+                    </tr>
+                  )}
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Acciones */}
+            <div className="flex justify-between items-center pt-4 border-t">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => window.open(`/platos/${previewPlato.id}`, '_blank')}
+              >
+                <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                Abrir en Recetas
+              </Button>
+              <Button variant="secondary" onClick={() => setPreviewPlato(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Modal>
     </div>
   )

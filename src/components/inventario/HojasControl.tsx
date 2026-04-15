@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileDown, Beef, Fish, Package, Carrot, Milk, Loader2 } from 'lucide-react'
+import { FileDown, Beef, Fish, Package, Carrot, Milk, Loader2, ChefHat } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { CategoriaStock, contarInsumosCategoria, generarPDFStock } from '@/lib/generar-pdf-stock'
+import { CategoriaStock, contarInsumosCategoria, generarPDFStock, contarInsumosMenus, generarPDFInsumosMenus } from '@/lib/generar-pdf-stock'
 
 interface CategoriaCard {
   categoria: CategoriaStock
@@ -59,7 +59,8 @@ const CATEGORIAS: CategoriaCard[] = [
 
 export default function HojasControl() {
   const [conteos, setConteos] = useState<Record<CategoriaStock, number>>({} as Record<CategoriaStock, number>)
-  const [loading, setLoading] = useState<CategoriaStock | null>(null)
+  const [conteoMenus, setConteoMenus] = useState<number>(0)
+  const [loading, setLoading] = useState<CategoriaStock | 'menus' | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   useEffect(() => {
@@ -79,12 +80,29 @@ export default function HojasControl() {
       results[cat.categoria] = await contarInsumosCategoria(cat.categoria)
     }
     setConteos(results as Record<CategoriaStock, number>)
+
+    // Contar insumos de menús
+    const menusCount = await contarInsumosMenus()
+    setConteoMenus(menusCount)
   }
 
   async function handleGenerarPDF(categoria: CategoriaStock) {
     setLoading(categoria)
     try {
       await generarPDFStock(categoria)
+      setToast({ message: 'PDF generado correctamente', type: 'success' })
+    } catch (error) {
+      console.error('Error generando PDF:', error)
+      setToast({ message: error instanceof Error ? error.message : 'Error al generar PDF', type: 'error' })
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  async function handleGenerarPDFMenus() {
+    setLoading('menus')
+    try {
+      await generarPDFInsumosMenus()
       setToast({ message: 'PDF generado correctamente', type: 'success' })
     } catch (error) {
       console.error('Error generando PDF:', error)
@@ -145,6 +163,39 @@ export default function HojasControl() {
             </div>
           )
         })}
+
+        {/* Tarjeta Insumos Menús */}
+        <div className="bg-white rounded-lg shadow-sm border-2 border-orange-300 p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 rounded-lg bg-orange-100">
+              <ChefHat className="w-6 h-6 text-orange-600" />
+            </div>
+            <span className="text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded-full">
+              {conteoMenus} insumo{conteoMenus !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <h3 className="font-semibold text-gray-900 mb-1">Insumos Menús</h3>
+          <p className="text-sm text-gray-500 mb-4">Los más usados (2 columnas)</p>
+
+          <Button
+            onClick={handleGenerarPDFMenus}
+            disabled={loading === 'menus' || conteoMenus === 0}
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-50"
+          >
+            {loading === 'menus' ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generando...
+              </>
+            ) : (
+              <>
+                <FileDown className="w-4 h-4 mr-2" />
+                Generar PDF
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Toast notification */}

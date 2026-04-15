@@ -324,3 +324,311 @@ function formatStock(value: number): string {
   if (Number.isInteger(value)) return value.toString()
   return value.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })
 }
+
+// === INSUMOS MENÚS ===
+// ID del proveedor "COCINA" que tiene las OC con insumos de menús
+const PROVEEDOR_COCINA_ID = '6205cb15-a690-4730-b359-4dd097243bbd'
+
+interface InsumoMenu {
+  id: string
+  nombre: string
+  unidad_medida: string
+  categoria: string
+}
+
+const CATEGORIA_ORDEN_MENUS = [
+  'Carnes',
+  'Pescados_Mariscos',
+  'Verduras_Frutas',
+  'Lacteos_Fiambres',
+  'Almacen',
+]
+
+const CATEGORIA_TITULOS: Record<string, string> = {
+  'Carnes': 'CARNES',
+  'Pescados_Mariscos': 'PESCADOS Y MARISCOS',
+  'Verduras_Frutas': 'VERDURAS Y FRUTAS',
+  'Lacteos_Fiambres': 'LÁCTEOS Y FIAMBRES',
+  'Almacen': 'ALMACÉN',
+}
+
+export async function fetchInsumosMenus(): Promise<InsumoMenu[]> {
+  // Buscar OC del proveedor COCINA (están en papelera)
+  const { data: ordenes } = await supabase
+    .from('ordenes_compra')
+    .select('id')
+    .eq('proveedor_id', PROVEEDOR_COCINA_ID)
+    .eq('activo', false)
+
+  if (!ordenes || ordenes.length === 0) {
+    return []
+  }
+
+  const ordenIds = ordenes.map(o => o.id)
+
+  // Obtener items de esas OC con info del insumo
+  const { data: items } = await supabase
+    .from('orden_compra_items')
+    .select('insumo_id, insumos(id, nombre, unidad_medida, categoria)')
+    .in('orden_compra_id', ordenIds)
+
+  if (!items) return []
+
+  // Extraer insumos únicos
+  const insumosMap = new Map<string, InsumoMenu>()
+  for (const item of items) {
+    if (item.insumo_id && item.insumos) {
+      const insumo = item.insumos as any
+      if (!insumosMap.has(insumo.id)) {
+        insumosMap.set(insumo.id, {
+          id: insumo.id,
+          nombre: insumo.nombre,
+          unidad_medida: insumo.unidad_medida,
+          categoria: insumo.categoria || 'Almacen',
+        })
+      }
+    }
+  }
+
+  // Ordenar por categoría y nombre
+  const insumos = Array.from(insumosMap.values())
+  insumos.sort((a, b) => {
+    const catA = CATEGORIA_ORDEN_MENUS.indexOf(a.categoria)
+    const catB = CATEGORIA_ORDEN_MENUS.indexOf(b.categoria)
+    if (catA !== catB) return catA - catB
+    return a.nombre.localeCompare(b.nombre)
+  })
+
+  return insumos
+}
+
+export async function contarInsumosMenus(): Promise<number> {
+  const insumos = await fetchInsumosMenus()
+  return insumos.length
+}
+
+export async function generarPDFInsumosMenus(): Promise<void> {
+  const insumos = await fetchInsumosMenus()
+
+  if (insumos.length === 0) {
+    throw new Error('No hay insumos de menús')
+  }
+
+  // Agregar "Pescado Blanco" si no existe en Pescados_Mariscos
+  const tienePescadoBlanco = insumos.some(i => i.nombre.toLowerCase().includes('pescado blanco'))
+  if (!tienePescadoBlanco) {
+    insumos.push({
+      id: 'manual-pescado-blanco',
+      nombre: 'Pescado Blanco',
+      unidad_medida: 'kg',
+      categoria: 'Pescados_Mariscos',
+    })
+  }
+
+  // Reordenar después de agregar
+  insumos.sort((a, b) => {
+    const catA = CATEGORIA_ORDEN_MENUS.indexOf(a.categoria)
+    const catB = CATEGORIA_ORDEN_MENUS.indexOf(b.categoria)
+    if (catA !== catB) return catA - catB
+    return a.nombre.localeCompare(b.nombre)
+  })
+
+  // A4 vertical
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+  const pageWidth = 210
+  const pageHeight = 297
+  const margin = 10
+  const columnGap = 8
+  const columnWidth = (pageWidth - margin * 2 - columnGap) / 2
+
+  // Colores
+  const GRIS_OSCURO = '#1a1a1a'
+  const GRIS_MEDIO = '#666666'
+
+  let y = margin
+
+  const now = new Date()
+
+  // === ENCABEZADO PROFESIONAL ===
+  // Línea superior decorativa
+  doc.setDrawColor(45, 45, 45)
+  doc.setLineWidth(0.8)
+  doc.line(margin, y, pageWidth - margin, y)
+  y += 4
+
+  // Título principal
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
+  doc.setTextColor(GRIS_OSCURO)
+  doc.text('CONTROL DE INSUMOS', margin, y + 6)
+
+  // Subtítulo
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(11)
+  doc.setTextColor(GRIS_MEDIO)
+  doc.text('Menús Ejecutivos', margin, y + 12)
+
+  // Logo/Marca a la derecha
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.setTextColor(GRIS_OSCURO)
+  doc.text('TERO', pageWidth - margin, y + 6, { align: 'right' })
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.setTextColor(GRIS_MEDIO)
+  doc.text('RESTÓ', pageWidth - margin, y + 11, { align: 'right' })
+
+  y += 18
+
+  // Línea separadora
+  doc.setDrawColor(200, 200, 200)
+  doc.setLineWidth(0.3)
+  doc.line(margin, y, pageWidth - margin, y)
+  y += 6
+
+  // Campos de fecha y responsable - estilo minimalista
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(GRIS_MEDIO)
+  doc.text('Fecha:', margin, y + 3)
+  doc.setTextColor(GRIS_OSCURO)
+  doc.text('____/____/________', margin + 14, y + 3)
+
+  doc.setTextColor(GRIS_MEDIO)
+  doc.text('Responsable:', pageWidth - margin - 60, y + 3)
+  doc.setDrawColor(180, 180, 180)
+  doc.line(pageWidth - margin - 40, y + 3, pageWidth - margin, y + 3)
+
+  y += 10
+
+  // Agrupar insumos por categoría
+  const insumosPorCategoria: Record<string, InsumoMenu[]> = {}
+  for (const cat of CATEGORIA_ORDEN_MENUS) {
+    insumosPorCategoria[cat] = insumos.filter(i => i.categoria === cat)
+  }
+
+  // Preparar items para las 2 columnas
+  interface ItemLinea {
+    tipo: 'categoria' | 'insumo' | 'vacio'
+    texto: string
+    unidad?: string
+  }
+
+  const items: ItemLinea[] = []
+  for (const cat of CATEGORIA_ORDEN_MENUS) {
+    const insumosCategoria = insumosPorCategoria[cat]
+    if (insumosCategoria.length > 0) {
+      items.push({ tipo: 'categoria', texto: CATEGORIA_TITULOS[cat] || cat })
+      for (const ins of insumosCategoria) {
+        items.push({ tipo: 'insumo', texto: ins.nombre, unidad: ins.unidad_medida })
+      }
+      // Agregar 2 filas vacías al final de cada categoría
+      items.push({ tipo: 'vacio', texto: '' })
+      items.push({ tipo: 'vacio', texto: '' })
+    }
+  }
+
+  // Configuración de filas
+  const rowHeight = 6
+  const headerRowHeight = 7
+  const startY = y
+  const maxY = pageHeight - 12 // Espacio para footer
+
+  // Calcular punto de división para balancear columnas
+  // Dividir aproximadamente por la mitad de items
+  const totalItems = items.length
+  const mitad = Math.ceil(totalItems / 2)
+
+  // Ajustar para no cortar una categoría a la mitad
+  let puntoCorte = mitad
+  // Buscar el inicio de una categoría cercano a la mitad
+  for (let i = mitad; i < totalItems; i++) {
+    if (items[i].tipo === 'categoria') {
+      puntoCorte = i
+      break
+    }
+  }
+
+  const itemsColumna1 = items.slice(0, puntoCorte)
+  const itemsColumna2 = items.slice(puntoCorte)
+
+  // Función para dibujar una columna
+  function dibujarColumna(itemsCol: ItemLinea[], columnIndex: number) {
+    let currentY = startY
+    const x = margin + columnIndex * (columnWidth + columnGap)
+
+    for (const item of itemsCol) {
+      if (currentY + rowHeight > maxY) break
+
+      if (item.tipo === 'categoria') {
+        // Encabezado de categoría - estilo profesional
+        doc.setFillColor(45, 45, 45)
+        doc.roundedRect(x, currentY, columnWidth, headerRowHeight, 1, 1, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(8)
+        doc.setTextColor(255, 255, 255)
+        doc.text(item.texto, x + 4, currentY + 5)
+        currentY += headerRowHeight + 1
+      } else if (item.tipo === 'vacio') {
+        // Fila vacía - solo línea inferior sutil
+        doc.setDrawColor(220, 220, 220)
+        doc.setLineWidth(0.2)
+        doc.line(x, currentY + rowHeight, x + columnWidth, currentY + rowHeight)
+        currentY += rowHeight
+      } else {
+        // Fila de insumo - diseño limpio sin bordes laterales
+        // Solo línea inferior
+        doc.setDrawColor(230, 230, 230)
+        doc.setLineWidth(0.2)
+        doc.line(x, currentY + rowHeight, x + columnWidth, currentY + rowHeight)
+
+        // Nombre del insumo
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(GRIS_OSCURO)
+        const maxNombreWidth = columnWidth * 0.65
+        let nombreTruncado = item.texto
+        while (doc.getTextWidth(nombreTruncado) > maxNombreWidth && nombreTruncado.length > 3) {
+          nombreTruncado = nombreTruncado.slice(0, -1)
+        }
+        if (nombreTruncado !== item.texto) nombreTruncado += '...'
+        doc.text(nombreTruncado, x + 2, currentY + 4.3)
+
+        // Unidad - alineada a la derecha
+        doc.setFontSize(8)
+        doc.setTextColor(150, 150, 150)
+        doc.text(item.unidad || '', x + columnWidth - 2, currentY + 4.3, { align: 'right' })
+
+        currentY += rowHeight
+      }
+    }
+  }
+
+  // Dibujar ambas columnas
+  dibujarColumna(itemsColumna1, 0)
+  dibujarColumna(itemsColumna2, 1)
+
+  // Footer profesional
+  const footerY = pageHeight - 10
+
+  // Línea separadora del footer
+  doc.setDrawColor(200, 200, 200)
+  doc.setLineWidth(0.2)
+  doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3)
+
+  doc.setFontSize(7)
+  doc.setTextColor(150, 150, 150)
+  doc.setFont('helvetica', 'normal')
+
+  const fechaGenerado = `Generado: ${now.toLocaleDateString('es-AR')} ${now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`
+  doc.text(fechaGenerado, margin, footerY)
+
+  doc.text('Firma: ______________________', pageWidth - margin, footerY, { align: 'right' })
+
+  // Guardar
+  const dd = String(now.getDate()).padStart(2, '0')
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const yyyy = now.getFullYear()
+  doc.save(`insumos-menus-${dd}-${mm}-${yyyy}.pdf`)
+}

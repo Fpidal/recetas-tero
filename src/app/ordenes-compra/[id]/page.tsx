@@ -432,21 +432,22 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
   const diferenciaFactura = orden ? calcularDiferenciaTotalFactura() : null
 
   // Calcular totales con desglose de IVA
-  // Para OC Recibida: usar valores de factura
+  // Para OC Recibida: usar valores de factura (calculados, no de DB)
   const esRecibidaConFactura = orden?.estado === 'recibida' && facturaItems.length > 0
 
   const subtotalNeto = esRecibidaConFactura
-    ? facturaItems.reduce((sum, fi) => sum + fi.subtotal, 0)
+    ? facturaItems.reduce((sum, fi) => sum + (fi.cantidad * fi.precio_unitario), 0)
     : (orden?.items.reduce((sum, item) => sum + item.subtotal, 0) || 0)
 
   // IVA calculado sobre los subtotales correspondientes
   const calcularIvaTotal = (ivaPct: number) => {
     if (esRecibidaConFactura) {
-      // Sumar subtotales de facturaItems que correspondan a items con ese IVA
+      // Sumar IVA de facturaItems que correspondan a items con ese IVA
       return facturaItems.reduce((sum, fi) => {
         const itemOC = orden?.items.find(i => i.vino_id ? i.vino_id === fi.vino_id : i.insumo_id === fi.insumo_id)
         if (itemOC?.iva_porcentaje === ivaPct) {
-          return sum + (fi.subtotal * (ivaPct / 100))
+          const subtotalFi = fi.cantidad * fi.precio_unitario
+          return sum + (subtotalFi * (ivaPct / 100))
         }
         return sum
       }, 0)
@@ -558,9 +559,9 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
               const fi = facturaItems.find(f => item.vino_id ? f.vino_id === item.vino_id : f.insumo_id === item.insumo_id)
               const esRecibidaConFactura = orden.estado === 'recibida' && facturaItems.length > 0
 
-              // Para OC Recibida: usar datos de factura
+              // Para OC Recibida: usar datos de factura (calculados)
               const cantidadMostrar = esRecibidaConFactura && fi ? fi.cantidad : item.cantidad
-              const subtotalMostrar = esRecibidaConFactura && fi ? fi.subtotal : item.subtotal
+              const subtotalMostrar = esRecibidaConFactura && fi ? (fi.cantidad * fi.precio_unitario) : item.subtotal
 
               return (
                 <div key={item.id} className={`border rounded-lg p-3 ${
@@ -675,7 +676,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
 
                   // Para OC Recibida: usar datos de factura
                   const cantidadMostrar = esRecibidaConFactura && fi ? fi.cantidad : item.cantidad
-                  const subtotalMostrar = esRecibidaConFactura && fi ? fi.subtotal : item.subtotal
+                  const subtotalMostrar = esRecibidaConFactura && fi ? (fi.cantidad * fi.precio_unitario) : item.subtotal
 
                   return (
                     <tr key={item.id} className={esCompleto ? 'bg-gray-50' : ''}>

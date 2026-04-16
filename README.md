@@ -97,6 +97,7 @@ Vista unificada con 4 tabs:
 - **Ejecutivos**: Menús del día con secciones (Parrilla, Entrada, Fondo, Postre, Jugo)
 - **Especiales**: Menús para eventos con presupuestación
 
+Navegación inteligente: al volver de editar un menú, se mantiene la tab activa.
 Generación de PDF de carta lista para imprimir.
 
 ### Órdenes de Compra (`/ordenes-compra`)
@@ -105,9 +106,9 @@ Creación de OC con numeración automática, estados (borrador, enviada, recibid
 **OC Recibida con comparación vs Factura:**
 - Muestra cantidades y precios reales de la factura
 - Badges de estado: Completo, Parcial (X de Y), No entregado
-- Diferencia de precio con porcentaje (▲ subió / ▼ bajó)
+- Diferencia de precio con porcentaje (+X% / -X%)
 - Total calculado desde valores de factura
-- PDF con diferencias marcadas en rojo para reclamos
+- PDF con badge "RECIBIDA", comparación de precios y diferencia total
 - Generación automática de OC de faltantes
 
 ### Facturas (`/facturas`)

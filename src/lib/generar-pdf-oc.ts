@@ -191,7 +191,7 @@ export async function generarPDFOrden(ordenId: string) {
   } catch {}
 
   function fmtMoney(n: number): string {
-    return `$${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `$${n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
   }
 
   // Formatear fecha: "Benavidez 04 de febrero de 2026"
@@ -518,16 +518,14 @@ export async function generarPDFOrden(ordenId: string) {
       if (precioDiferente) {
         // Precio factura (principal)
         doc.text(fmtMoney(precioFactura), colX.precioRight, textY, { align: 'right' })
-        // Segunda línea: precio OC tachado + flecha + %
+        // Segunda línea: precio OC + signo + %
         const diff = precioFactura - item.precio_unitario
-        const pct = ((diff / item.precio_unitario) * 100).toFixed(1)
-        const subio = diff > 0
+        const pct = Math.abs((diff / item.precio_unitario) * 100).toFixed(1)
+        const signo = diff > 0 ? '+' : '-'
         doc.setFontSize(4.5)
         doc.setTextColor(150, 150, 150)
         const precioOCStr = fmtMoney(item.precio_unitario)
-        const arrow = subio ? '▲' : '▼'
-        const pctStr = `${arrow} ${Math.abs(parseFloat(pct))}%`
-        doc.text(`${precioOCStr}  ${pctStr}`, colX.precioRight, textY + 3, { align: 'right' })
+        doc.text(`${precioOCStr} ${signo}${pct}%`, colX.precioRight, textY + 3, { align: 'right' })
         doc.setFontSize(6.5)
       } else {
         doc.text(fmtMoney(precioFactura), colX.precioRight, textY, { align: 'right' })
@@ -667,7 +665,6 @@ export async function generarPDFOrden(ordenId: string) {
   // Diferencia vs OC (solo si está recibida y hay diferencia)
   if (esRecibidaCalc && Math.abs(diferenciaVsOC) > 0.01) {
     const subio = diferenciaVsOC > 0
-    const arrow = subio ? '▲' : '▼'
     const colorDif: [number, number, number] = subio ? [200, 50, 50] : [34, 139, 34] // rojo si subió, verde si bajó
 
     doc.setFillColor(...colorDif)
@@ -680,7 +677,7 @@ export async function generarPDFOrden(ordenId: string) {
     doc.text('Diferencia vs OC:', totalBoxX + 3, y + 3)
 
     const signo = subio ? '+' : ''
-    const difText = `${signo}${fmtMoney(diferenciaVsOC)} (${arrow} ${Math.abs(parseFloat(diferenciaVsOCPct))}%)`
+    const difText = `${signo}${fmtMoney(diferenciaVsOC)} (${subio ? '+' : '-'}${Math.abs(parseFloat(diferenciaVsOCPct))}%)`
     doc.text(difText, pageWidth - margin - 3, y + 3, { align: 'right' })
     y += 10
   }

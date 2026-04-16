@@ -153,7 +153,7 @@ export default function CargaDiaria() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ====== FORM DE CARGA ====== */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 sticky top-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lg:sticky lg:top-4">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -258,90 +258,185 @@ export default function CargaDiaria() {
                 Todavía no cargaste ninguna venta. Empezá por el formulario de la izquierda.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase">
-                      <th className="text-left py-2 px-3 font-medium">Fecha</th>
-                      <th className="text-right py-2 px-3 font-medium">Mediodía</th>
-                      <th className="text-right py-2 px-3 font-medium">Noche</th>
-                      <th className="text-right py-2 px-3 font-medium">Eventos</th>
-                      <th className="text-right py-2 px-3 font-medium">Total</th>
-                      <th className="text-right py-2 px-3 font-medium w-16"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm divide-y divide-gray-100">
-                    {ultimosDias.map((v) => {
-                      const total =
-                        Number(v.venta_mediodia) + Number(v.venta_noche) + Number(v.venta_eventos)
-                      const cubTotal =
-                        Number(v.cubiertos_mediodia || 0) +
-                        Number(v.cubiertos_noche || 0) +
-                        Number(v.cubiertos_eventos || 0)
-                      const tieneEventos = Number(v.venta_eventos) > 0
-                      const dia = DIAS_SEMANA[new Date(v.fecha + 'T12:00:00').getDay()]
-                      const esEditando = editandoId === v.id
-                      return (
-                        <tr
-                          key={v.id}
-                          className={`hover:bg-gray-50 cursor-pointer ${
-                            tieneEventos ? 'bg-purple-50/50' : ''
-                          } ${esEditando ? 'ring-2 ring-primary-500 ring-inset' : ''}`}
-                          onClick={() => cargarParaEditar(v)}
-                        >
-                          <td className="py-3 px-3 text-gray-900">
-                            {formatearFecha(v.fecha)}{' '}
-                            <span className="text-xs text-gray-400">{dia}</span>
-                          </td>
-                          <td className="text-right py-3 px-3 text-gray-700">
-                            <CeldaServicio venta={v.venta_mediodia} cubiertos={v.cubiertos_mediodia} />
-                          </td>
-                          <td className="text-right py-3 px-3 text-gray-700">
-                            <CeldaServicio venta={v.venta_noche} cubiertos={v.cubiertos_noche} />
-                          </td>
-                          <td className="text-right py-3 px-3 text-purple-700 font-medium">
-                            <CeldaServicio venta={v.venta_eventos} cubiertos={v.cubiertos_eventos} />
-                          </td>
-                          <td className="text-right py-3 px-3 font-semibold text-gray-900">
-                            <div className="flex flex-col items-end leading-tight">
-                              <span>{formatearMonedaVentas(total)}</span>
-                              {cubTotal > 0 && (
-                                <span className="text-[10px] text-gray-400 uppercase font-normal">
-                                  {cubTotal} cub.
-                                </span>
-                              )}
+              <>
+                {/* ===== DESKTOP / TABLET: TABLA ===== */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase">
+                        <th className="text-left py-2 px-3 font-medium">Fecha</th>
+                        <th className="text-right py-2 px-3 font-medium">Mediodía</th>
+                        <th className="text-right py-2 px-3 font-medium">Noche</th>
+                        <th className="text-right py-2 px-3 font-medium">Eventos</th>
+                        <th className="text-right py-2 px-3 font-medium">Total</th>
+                        <th className="text-right py-2 px-3 font-medium w-16"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm divide-y divide-gray-100">
+                      {ultimosDias.map((v) => {
+                        const total =
+                          Number(v.venta_mediodia) + Number(v.venta_noche) + Number(v.venta_eventos)
+                        const cubTotal =
+                          Number(v.cubiertos_mediodia || 0) +
+                          Number(v.cubiertos_noche || 0) +
+                          Number(v.cubiertos_eventos || 0)
+                        const tieneEventos = Number(v.venta_eventos) > 0
+                        const dia = DIAS_SEMANA[new Date(v.fecha + 'T12:00:00').getDay()]
+                        const esEditando = editandoId === v.id
+                        return (
+                          <tr
+                            key={v.id}
+                            className={`hover:bg-gray-50 cursor-pointer ${
+                              tieneEventos ? 'bg-purple-50/50' : ''
+                            } ${esEditando ? 'ring-2 ring-primary-500 ring-inset' : ''}`}
+                            onClick={() => cargarParaEditar(v)}
+                          >
+                            <td className="py-3 px-3 text-gray-900">
+                              {formatearFecha(v.fecha)}{' '}
+                              <span className="text-xs text-gray-400">{dia}</span>
+                            </td>
+                            <td className="text-right py-3 px-3 text-gray-700">
+                              <CeldaServicio venta={v.venta_mediodia} cubiertos={v.cubiertos_mediodia} />
+                            </td>
+                            <td className="text-right py-3 px-3 text-gray-700">
+                              <CeldaServicio venta={v.venta_noche} cubiertos={v.cubiertos_noche} />
+                            </td>
+                            <td className="text-right py-3 px-3 text-purple-700 font-medium">
+                              <CeldaServicio venta={v.venta_eventos} cubiertos={v.cubiertos_eventos} />
+                            </td>
+                            <td className="text-right py-3 px-3 font-semibold text-gray-900">
+                              <div className="flex flex-col items-end leading-tight">
+                                <span>{formatearMonedaVentas(total)}</span>
+                                {cubTotal > 0 && (
+                                  <span className="text-[10px] text-gray-400 uppercase font-normal">
+                                    {cubTotal} cub.
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="text-right py-3 px-3">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    cargarParaEditar(v)
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded"
+                                  title="Editar"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setModalEliminar({ abierto: true, venta: v })
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ===== MOBILE: CARDS ===== */}
+                <div className="md:hidden divide-y divide-gray-100">
+                  {ultimosDias.map((v) => {
+                    const total =
+                      Number(v.venta_mediodia) + Number(v.venta_noche) + Number(v.venta_eventos)
+                    const cubTotal =
+                      Number(v.cubiertos_mediodia || 0) +
+                      Number(v.cubiertos_noche || 0) +
+                      Number(v.cubiertos_eventos || 0)
+                    const tieneEventos = Number(v.venta_eventos) > 0
+                    const dia = DIAS_SEMANA[new Date(v.fecha + 'T12:00:00').getDay()]
+                    const esEditando = editandoId === v.id
+
+                    return (
+                      <div
+                        key={v.id}
+                        className={`p-4 ${tieneEventos ? 'bg-purple-50/50' : ''} ${
+                          esEditando ? 'ring-2 ring-primary-500 ring-inset' : ''
+                        }`}
+                        onClick={() => cargarParaEditar(v)}
+                      >
+                        {/* Header card: fecha + total + acciones */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">
+                              {formatearFecha(v.fecha)}
                             </div>
-                          </td>
-                          <td className="text-right py-3 px-3">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  cargarParaEditar(v)
-                                }}
-                                className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded"
-                                title="Editar"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setModalEliminar({ abierto: true, venta: v })
-                                }}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded"
-                                title="Eliminar"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                            <div className="text-xs text-gray-400">{dia}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-gray-900">
+                              {formatearMonedaVentas(total)}
                             </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            {cubTotal > 0 && (
+                              <div className="text-[10px] text-gray-400 uppercase">
+                                {cubTotal} cubiertos
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Desglose por servicio */}
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <ServicioMobile
+                            label="Mediodía"
+                            icon="🌞"
+                            venta={v.venta_mediodia}
+                            cubiertos={v.cubiertos_mediodia}
+                          />
+                          <ServicioMobile
+                            label="Noche"
+                            icon="🌙"
+                            venta={v.venta_noche}
+                            cubiertos={v.cubiertos_noche}
+                          />
+                          <ServicioMobile
+                            label="Eventos"
+                            icon="🎉"
+                            venta={v.venta_eventos}
+                            cubiertos={v.cubiertos_eventos}
+                            destacar
+                          />
+                        </div>
+
+                        {/* Acciones */}
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              cargarParaEditar(v)
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-md font-medium"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Editar
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setModalEliminar({ abierto: true, venta: v })
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-md font-medium"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -423,6 +518,49 @@ export default function CargaDiaria() {
 // =====================================================
 // SUBCOMPONENTES
 // =====================================================
+
+function ServicioMobile({
+  label,
+  icon,
+  venta,
+  cubiertos,
+  destacar,
+}: {
+  label: string
+  icon: string
+  venta: number
+  cubiertos: number
+  destacar?: boolean
+}) {
+  const v = Number(venta)
+  const c = Number(cubiertos || 0)
+  const tieneValor = v > 0 || c > 0
+
+  return (
+    <div
+      className={`rounded-md border p-2 ${
+        destacar && tieneValor
+          ? 'bg-purple-100/50 border-purple-200'
+          : tieneValor
+          ? 'bg-gray-50 border-gray-200'
+          : 'bg-gray-50/30 border-gray-100'
+      }`}
+    >
+      <div className="flex items-center gap-1 text-[10px] uppercase font-medium text-gray-500 mb-0.5">
+        <span>{icon}</span>
+        {label}
+      </div>
+      <div
+        className={`text-sm font-semibold ${
+          tieneValor ? (destacar ? 'text-purple-700' : 'text-gray-900') : 'text-gray-300'
+        }`}
+      >
+        {v > 0 ? formatearMonedaVentas(v) : '—'}
+      </div>
+      {c > 0 && <div className="text-[10px] text-gray-400 mt-0.5">{c} cub.</div>}
+    </div>
+  )
+}
 
 function CeldaServicio({ venta, cubiertos }: { venta: number; cubiertos: number }) {
   const v = Number(venta)

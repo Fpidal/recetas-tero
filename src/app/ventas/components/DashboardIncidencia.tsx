@@ -129,34 +129,34 @@ export default function DashboardIncidencia() {
     <div className="space-y-6">
       {/* CONTROLES */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => navegar(-1)}
-            className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100"
+            className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100 flex-shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-base font-semibold text-gray-900 min-w-[200px] text-center">
+          <span className="text-sm sm:text-base font-semibold text-gray-900 text-center flex-1 sm:flex-initial sm:min-w-[200px] truncate">
             {resumen.label}
           </span>
           <button
             onClick={() => navegar(1)}
-            className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100"
+            className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100 flex-shrink-0"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
             onClick={irAHoy}
-            className="ml-2 px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md border border-gray-300"
+            className="ml-1 sm:ml-2 px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md border border-gray-300 flex-shrink-0"
           >
             Hoy
           </button>
         </div>
 
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 self-start sm:self-auto">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 self-stretch sm:self-auto">
           <button
             onClick={() => setTipo('mensual')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
               tipo === 'mensual'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -166,7 +166,7 @@ export default function DashboardIncidencia() {
           </button>
           <button
             onClick={() => setTipo('semanal')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
               tipo === 'semanal'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -200,21 +200,21 @@ export default function DashboardIncidencia() {
               variacion={varCompras}
               positivo={false}
             />
-            <div className={`rounded-lg border ${colorIncidencia.bg} ${colorIncidencia.border} shadow-sm p-4 sm:p-5`}>
-              <div className={`text-xs uppercase mb-1 font-semibold ${colorIncidencia.text}`}>
+            <div className={`rounded-lg border ${colorIncidencia.bg} ${colorIncidencia.border} shadow-sm p-3 sm:p-5`}>
+              <div className={`text-[10px] sm:text-xs uppercase mb-1 font-semibold ${colorIncidencia.text}`}>
                 % Incidencia
               </div>
-              <div className={`text-2xl font-bold ${colorIncidencia.text}`}>
+              <div className={`text-lg sm:text-2xl font-bold ${colorIncidencia.text}`}>
                 {resumen.incidencia.toFixed(1)}%
               </div>
-              <div className={`text-xs mt-1 ${colorIncidencia.text}`}>
+              <div className={`text-[10px] sm:text-xs mt-1 ${colorIncidencia.text}`}>
                 Objetivo: ≤ {OBJETIVO_INCIDENCIA}%
               </div>
             </div>
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-5">
-              <div className="text-xs text-gray-500 uppercase mb-1">Margen bruto</div>
-              <div className="text-2xl font-bold text-gray-900">{formatearMonedaVentas(resumen.margenBruto)}</div>
-              <div className="text-xs text-gray-500 mt-1">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-5">
+              <div className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Margen bruto</div>
+              <div className="text-lg sm:text-2xl font-bold text-gray-900 break-all">{formatearMonedaVentas(resumen.margenBruto)}</div>
+              <div className="text-[10px] sm:text-xs text-gray-500 mt-1">
                 {resumen.ventasTotal > 0
                   ? `${((resumen.margenBruto / resumen.ventasTotal) * 100).toFixed(1)}% del total`
                   : '—'}
@@ -447,15 +447,17 @@ function KPICard({
     : 'text-gray-400'
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-5">
-      <div className="text-xs text-gray-500 uppercase mb-1">{label}</div>
-      <div className="text-2xl font-bold text-gray-900">{valor}</div>
-      <div className={`flex items-center gap-1 text-xs mt-1 ${colorVar}`}>
-        {sube && <TrendingUp className="w-3 h-3" />}
-        {baja && <TrendingDown className="w-3 h-3" />}
-        {variacion === 0
-          ? 'Sin cambios vs anterior'
-          : `${sube ? '↑' : '↓'} ${Math.abs(variacion).toFixed(1)}% vs anterior`}
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-5">
+      <div className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">{label}</div>
+      <div className="text-lg sm:text-2xl font-bold text-gray-900 break-all">{valor}</div>
+      <div className={`flex items-center gap-1 text-[10px] sm:text-xs mt-1 ${colorVar}`}>
+        {sube && <TrendingUp className="w-3 h-3 flex-shrink-0" />}
+        {baja && <TrendingDown className="w-3 h-3 flex-shrink-0" />}
+        <span className="truncate">
+          {variacion === 0
+            ? 'Sin cambios'
+            : `${sube ? '↑' : '↓'} ${Math.abs(variacion).toFixed(1)}% vs anterior`}
+        </span>
       </div>
     </div>
   )

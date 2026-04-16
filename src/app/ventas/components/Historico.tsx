@@ -54,11 +54,11 @@ export default function Historico() {
   return (
     <div className="space-y-6">
       {/* Selector tipo período */}
-      <div className="flex justify-end">
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+      <div className="flex sm:justify-end">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-full sm:w-auto">
           <button
             onClick={() => setTipo('mensual')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
               tipo === 'mensual'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -68,7 +68,7 @@ export default function Historico() {
           </button>
           <button
             onClick={() => setTipo('semanal')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
               tipo === 'semanal'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -88,17 +88,25 @@ export default function Historico() {
       ) : (
         <>
           {/* Gráfico de barras: ventas vs compras */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-5">
             <h3 className="text-sm font-semibold text-gray-900 mb-4">
               Evolución {tipo === 'mensual' ? 'mensual' : 'semanal'}: Ventas vs Compras
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={datosGrafico}>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={datosGrafico} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="nombre" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatearMonedaVentas(v).replace('$', '$')} />
+                <XAxis dataKey="nombre" tick={{ fontSize: 10 }} />
+                <YAxis
+                  tick={{ fontSize: 10 }}
+                  width={70}
+                  tickFormatter={(v) => {
+                    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
+                    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`
+                    return `$${v}`
+                  }}
+                />
                 <Tooltip formatter={(v: any) => formatearMonedaVentas(v || 0)} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="Ventas" fill="#0f172a" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Compras" fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -107,7 +115,7 @@ export default function Historico() {
 
           {/* Tabla detallada */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-200">
+            <div className="px-3 sm:px-5 py-4 border-b border-gray-200">
               <h3 className="text-sm font-semibold text-gray-900">
                 Detalle por {tipo === 'mensual' ? 'mes' : 'semana'}
               </h3>
@@ -120,13 +128,13 @@ export default function Historico() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase">
-                    <th className="text-left py-2 px-4 font-medium">Período</th>
-                    <th className="text-right py-2 px-4 font-medium">Ventas</th>
-                    <th className="text-right py-2 px-4 font-medium">Compras</th>
-                    <th className="text-right py-2 px-4 font-medium">Incidencia</th>
-                    <th className="text-right py-2 px-4 font-medium hidden sm:table-cell">Cubiertos</th>
-                    <th className="text-right py-2 px-4 font-medium hidden sm:table-cell">Ticket prom.</th>
-                    <th className="text-right py-2 px-4 font-medium hidden md:table-cell">Margen</th>
+                    <th className="text-left py-2 px-3 sm:px-4 font-medium">Período</th>
+                    <th className="text-right py-2 px-3 sm:px-4 font-medium">Ventas</th>
+                    <th className="text-right py-2 px-3 sm:px-4 font-medium hidden xs:table-cell">Compras</th>
+                    <th className="text-right py-2 px-3 sm:px-4 font-medium">Incid.</th>
+                    <th className="text-right py-2 px-3 sm:px-4 font-medium hidden sm:table-cell">Cubiertos</th>
+                    <th className="text-right py-2 px-3 sm:px-4 font-medium hidden sm:table-cell">Ticket prom.</th>
+                    <th className="text-right py-2 px-3 sm:px-4 font-medium hidden md:table-cell">Margen</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-gray-100">
@@ -142,14 +150,14 @@ export default function Historico() {
                     const sinDatos = p.ventasTotal === 0 && p.compras === 0
                     return (
                       <tr key={p.label} className="hover:bg-gray-50">
-                        <td className="py-3 px-4 text-gray-900">{p.label}</td>
-                        <td className="text-right py-3 px-4 text-gray-700">
+                        <td className="py-3 px-3 sm:px-4 text-gray-900">{p.label}</td>
+                        <td className="text-right py-3 px-3 sm:px-4 text-gray-700">
                           {p.ventasTotal > 0 ? formatearMonedaVentas(p.ventasTotal) : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="text-right py-3 px-4 text-gray-700">
+                        <td className="text-right py-3 px-3 sm:px-4 text-gray-700 hidden xs:table-cell">
                           {p.compras > 0 ? formatearMonedaVentas(p.compras) : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="text-right py-3 px-4">
+                        <td className="text-right py-3 px-3 sm:px-4">
                           {sinDatos || p.ventasTotal === 0 ? (
                             <span className="text-gray-400">—</span>
                           ) : (
@@ -160,13 +168,13 @@ export default function Historico() {
                             </span>
                           )}
                         </td>
-                        <td className="text-right py-3 px-4 hidden sm:table-cell text-gray-700">
+                        <td className="text-right py-3 px-3 sm:px-4 hidden sm:table-cell text-gray-700">
                           {p.cubiertosTotal > 0 ? p.cubiertosTotal.toLocaleString('es-AR') : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="text-right py-3 px-4 hidden sm:table-cell text-gray-700">
+                        <td className="text-right py-3 px-3 sm:px-4 hidden sm:table-cell text-gray-700">
                           {p.ticketPromedioGeneral > 0 ? formatearMonedaVentas(p.ticketPromedioGeneral) : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="text-right py-3 px-4 hidden md:table-cell text-gray-700">
+                        <td className="text-right py-3 px-3 sm:px-4 hidden md:table-cell text-gray-700">
                           {p.ventasTotal > 0 ? formatearMonedaVentas(p.margenBruto) : <span className="text-gray-400">—</span>}
                         </td>
                       </tr>

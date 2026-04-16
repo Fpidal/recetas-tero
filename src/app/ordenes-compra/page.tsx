@@ -23,17 +23,43 @@ interface OrdenConProveedor {
   }
   facturas_proveedor: {
     numero_factura: string
+    activo: boolean
+    factura_items: {
+      insumo_id: string | null
+      vino_id: string | null
+      cantidad: number
+      precio_unitario: number
+    }[]
   }[] | null
   orden_compra_items: {
+    insumo_id: string | null
+    vino_id: string | null
     cantidad: number
     precio_unitario: number
     insumos: {
       iva_porcentaje: number
-    }
+    } | null
   }[]
 }
 
 function calcularTotalConIva(o: OrdenConProveedor): number {
+  // Si está recibida y tiene factura activa, usar valores de la factura
+  const facturaActiva = o.facturas_proveedor?.find(f => f.activo)
+  if ((o.estado === 'recibida' || o.estado === 'parcialmente_recibida') && facturaActiva?.factura_items?.length) {
+    // Calcular desde factura_items usando el IVA del item de OC correspondiente
+    return facturaActiva.factura_items.reduce((sum, fi) => {
+      const subtotal = fi.cantidad * fi.precio_unitario
+      // Buscar el item de OC para obtener el IVA
+      const ocItem = o.orden_compra_items?.find(oc =>
+        fi.vino_id ? oc.vino_id === fi.vino_id : oc.insumo_id === fi.insumo_id
+      )
+      const ivaPct = fi.vino_id ? 21 : (ocItem?.insumos?.iva_porcentaje ?? 21)
+      const iva = subtotal * (ivaPct / 100)
+      return sum + subtotal + iva
+    }, 0)
+  }
+
+  // Para OCs no recibidas, usar items de la OC
   if (!o.orden_compra_items || o.orden_compra_items.length === 0) return o.total
   return o.orden_compra_items.reduce((sum, item) => {
     const subtotal = item.cantidad * item.precio_unitario
@@ -102,8 +128,8 @@ export default function OrdenesCompraPage() {
       .select(`
         *,
         proveedores (nombre, categoria),
-        facturas_proveedor (numero_factura),
-        orden_compra_items (cantidad, precio_unitario, insumos (iva_porcentaje))
+        facturas_proveedor (numero_factura, activo, factura_items (insumo_id, vino_id, cantidad, precio_unitario)),
+        orden_compra_items (insumo_id, vino_id, cantidad, precio_unitario, insumos (iva_porcentaje))
       `)
       .neq('activo', false)
       .order('fecha', { ascending: false })

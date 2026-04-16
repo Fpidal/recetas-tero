@@ -27,10 +27,10 @@ src/
 │   │   └── [id]/editar/
 │   ├── insumos/                  # Gestión de insumos/ingredientes
 │   ├── inventario/               # Control de inventario
-│   ├── menus-ejecutivos/         # Menús ejecutivos (menú del día)
+│   ├── menus-ejecutivos/         # Menús ejecutivos (accesible desde Carta)
 │   │   ├── nuevo/
 │   │   └── [id]/
-│   ├── menus-especiales/         # Menús para eventos especiales
+│   ├── menus-especiales/         # Menús especiales (accesible desde Carta)
 │   │   ├── nuevo/
 │   │   └── [id]/
 │   ├── ordenes-compra/           # Órdenes de compra a proveedores
@@ -91,17 +91,24 @@ Sub-recetas reutilizables (salsas, guarniciones). Cálculo automático de costo 
 ### Platos (`/platos`)
 Recetas con ingredientes, cálculo automático de costo total, margen y precio de venta.
 
-### Menús Ejecutivos (`/menus-ejecutivos`)
-Menús del día con secciones: Parrilla, Entrada, Fondo, Postre, Jugo. Cálculo automático de costo.
-
-### Menús Especiales (`/menus-especiales`)
-Menús para eventos con presupuestación.
-
 ### Carta (`/carta`)
-Vista de carta para imprimir. Generación de PDF.
+Vista unificada con 4 tabs:
+- **En Carta / Fuera de Carta**: Platos activos e inactivos con modal de preview
+- **Ejecutivos**: Menús del día con secciones (Parrilla, Entrada, Fondo, Postre, Jugo)
+- **Especiales**: Menús para eventos con presupuestación
+
+Generación de PDF de carta lista para imprimir.
 
 ### Órdenes de Compra (`/ordenes-compra`)
-Creación de OC con numeración automática, estados (borrador, enviada, recibida, etc.) y generación de PDF.
+Creación de OC con numeración automática, estados (borrador, enviada, recibida, parcial, cancelada) y generación de PDF.
+
+**OC Recibida con comparación vs Factura:**
+- Muestra cantidades y precios reales de la factura
+- Badges de estado: Completo, Parcial (X de Y), No entregado
+- Diferencia de precio con porcentaje (▲ subió / ▼ bajó)
+- Total calculado desde valores de factura
+- PDF con diferencias marcadas en rojo para reclamos
+- Generación automática de OC de faltantes
 
 ### Facturas (`/facturas`)
 Registro de facturas de proveedores. Actualización automática de precios de insumos. Soporte para Notas de Crédito.
@@ -206,9 +213,16 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 - Historial de precios con seguimiento de cambios
 - Comparador de precios entre proveedores
 - Órdenes de compra con numeración automática y PDF
+- **OC Recibida con comparación vs Factura**:
+  - Visualización de diferencias (cantidad y precio)
+  - Badges de estado (Completo/Parcial/No entregado)
+  - PDF para reclamos con diferencias en rojo
+  - Generación automática de OC de faltantes
 - Facturas con actualización automática de precios
 - Notas de Crédito que restan stock y compras
 - Menús ejecutivos y especiales con costeo
+- **Carta unificada con 4 tabs** (En Carta, Fuera de Carta, Ejecutivos, Especiales)
+- Modal de preview de recetas
 - Carta/Menú en PDF lista para imprimir
 - Control de inventario con hojas de control
 - Dashboard de estadísticas con gráficos

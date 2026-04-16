@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, FileDown, Eye, ExternalLink, LayoutGrid, Users, Calculator, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { MenuEjecutivo, MenuEspecial } from '@/types/database'
@@ -106,11 +107,19 @@ export default function CartaPage() {
   const [items, setItems] = useState<CartaItem[]>([])
   const [itemsFueraCarta, setItemsFueraCarta] = useState<CartaItem[]>([])
   const [platosDisponibles, setPlatosDisponibles] = useState<PlatoConCosto[]>([])
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [seccionesExpandidas, setSeccionesExpandidas] = useState<Set<string>>(new Set(SECCIONES_ORDEN))
-  const [tabActiva, setTabActiva] = useState<TabType>('en_carta')
+  const [tabActiva, setTabActiva] = useState<TabType>(() => {
+    // Leer tab inicial desde query param
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'ejecutivos' || tabParam === 'especiales' || tabParam === 'fuera_carta') {
+      return tabParam
+    }
+    return 'en_carta'
+  })
   const [busqueda, setBusqueda] = useState('')
 
   // ============ ESTADOS MENÚS EJECUTIVOS ============

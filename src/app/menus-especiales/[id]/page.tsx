@@ -532,7 +532,7 @@ export default function EditarMenuEspecialPage({ params }: { params: { id: strin
   return (
     <div className="max-w-4xl">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" onClick={() => router.back()}>
+        <Button variant="ghost" onClick={() => router.push('/carta?tab=especiales')}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
@@ -797,7 +797,7 @@ export default function EditarMenuEspecialPage({ params }: { params: { id: strin
 
         {/* Acciones */}
         <div className="flex justify-end gap-3 border-t pt-6">
-          <Button variant="secondary" onClick={() => router.back()}>
+          <Button variant="secondary" onClick={() => router.push('/carta?tab=especiales')}>
             {isReadOnly ? 'Volver' : 'Cancelar'}
           </Button>
           {!isReadOnly && (

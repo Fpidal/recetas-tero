@@ -44,6 +44,8 @@ src/
 │   ├── recetas-base/             # Recetas base (sub-recetas)
 │   │   ├── nuevo/
 │   │   └── [id]/
+│   ├── ventas/                   # Ventas diarias e incidencia
+│   │   └── components/
 │   └── vinos/                    # Gestión de vinos
 │
 ├── components/
@@ -64,6 +66,7 @@ src/
 │   ├── supabase.ts               # Cliente Supabase
 │   ├── formato-numeros.ts        # Formateo de números/moneda (AR)
 │   ├── oc-numero.ts              # Numeración de órdenes de compra
+│   ├── ventas-queries.ts         # Queries y cálculos del módulo Ventas
 │   ├── generar-pdf-carta.ts      # Generador PDF de carta
 │   ├── generar-pdf-carta-vinos.ts
 │   ├── generar-pdf-oc.ts
@@ -71,7 +74,8 @@ src/
 │   └── generar-pdf-stock.ts
 │
 └── types/
-    └── database.ts               # Tipos TypeScript para la DB
+    ├── database.ts               # Tipos TypeScript para la DB
+    └── ventas.ts                 # Tipos del módulo Ventas
 ```
 
 ## Módulos Principales
@@ -123,6 +127,15 @@ Dashboard analítico con:
 - Comparador de precios histórico
 - Variación de precios
 - Alertas de aumentos
+
+### Ventas (`/ventas`)
+Carga diaria de ventas y cubiertos, con análisis de incidencia (food cost real). Vista en 3 solapas:
+
+- **Carga diaria**: Form con ventas y cubiertos por servicio (mediodía / noche / eventos). Confirmación de reemplazo cuando la fecha ya existe. Tabla con últimos 15 días editables.
+- **Incidencia**: KPIs del período (Ventas, Compras, **% Incidencia con semáforo**, Margen). Análisis de cubiertos con ticket promedio por servicio. Gráfico de torta por servicio y línea de tendencia con objetivo del 30%. Toggle Mensual / Semanal con navegación.
+- **Histórico**: Gráfico de barras Ventas vs Compras + tabla detallada con incidencia, cubiertos, ticket promedio y margen. Toggle Mensual / Semanal.
+
+**Cálculo de incidencia**: `(suma de facturas activas / ventas totales) × 100`. Objetivo: ≤ 30%. Semáforo: ✅ ≤30% / ⚠️ 31-35% / ❌ >35%.
 
 ### Papelera (`/papelera`)
 Recuperación de items eliminados (soft delete).
@@ -206,6 +219,7 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 | `menus_ejecutivos` | Menús del día |
 | `menus_especiales` | Menús para eventos |
 | `inventario_stock` | Stock actual |
+| `ventas_diarias` | Ventas y cubiertos por día (mediodía/noche/eventos) |
 
 ## Características
 
@@ -227,6 +241,12 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 - Carta/Menú en PDF lista para imprimir
 - Control de inventario con hojas de control
 - Dashboard de estadísticas con gráficos
+- **Módulo de Ventas e Incidencia**:
+  - Carga diaria por servicio (mediodía / noche / eventos)
+  - Cubiertos por servicio con ticket promedio
+  - % Incidencia (food cost real) con objetivo del 30% y semáforo
+  - Análisis Mensual y Semanal
+  - Gráficos de tendencia y comparativos
 - Papelera con soft delete
 - Formateo argentino completo:
   - Input decimal con coma (0,5 en lugar de 0.5)

@@ -21,15 +21,21 @@ export function formatearNumero(valor: number | string | null | undefined, decim
  * Formatea un valor monetario en formato argentino
  * @param valor - Número a formatear
  * @param conSigno - Si incluir el signo $ (default true)
+ * @param decimales - Cantidad de decimales (default 2). Pasar 0 para enteros
  */
-export function formatearMoneda(valor: number | string | null | undefined, conSigno: boolean = true): string {
-  if (valor === null || valor === undefined || valor === '') return conSigno ? '$0,00' : '0,00'
+export function formatearMoneda(
+  valor: number | string | null | undefined,
+  conSigno: boolean = true,
+  decimales: number = 2
+): string {
+  const cero = decimales === 0 ? '0' : `0,${'0'.repeat(decimales)}`
+  if (valor === null || valor === undefined || valor === '') return conSigno ? `$${cero}` : cero
   const num = typeof valor === 'string' ? parseFloat(valor) : valor
-  if (isNaN(num)) return conSigno ? '$0,00' : '0,00'
+  if (isNaN(num)) return conSigno ? `$${cero}` : cero
 
   const formatted = num.toLocaleString('es-AR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: decimales,
+    maximumFractionDigits: decimales,
   })
 
   return conSigno ? `$${formatted}` : formatted

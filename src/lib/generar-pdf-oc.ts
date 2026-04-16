@@ -120,19 +120,26 @@ export async function generarPDFOrden(ordenId: string) {
   }
 
   // Calcular totales - usar valores de factura si OC está recibida
-  const esRecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
+  const esRecibidaCalc = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
+
+  // Subtotales de factura y de OC original
+  const subtotalFacturaTotal = orden.items.reduce((sum, item) => {
+    const fi = item.cantidad_recibida !== undefined ? (item.cantidad_recibida * (item.precio_factura ?? item.precio_unitario)) : 0
+    return sum + fi
+  }, 0)
+  const subtotalOCOriginal = orden.items.reduce((sum, item) => sum + item.subtotal, 0)
 
   // Si está recibida, usar subtotales de factura; sino, del pedido
-  const subtotalNeto = esRecibida
-    ? orden.items.reduce((sum, item) => sum + (item.subtotal_factura ?? 0), 0)
-    : orden.items.reduce((sum, item) => sum + item.subtotal, 0)
+  const subtotalNeto = esRecibidaCalc ? subtotalFacturaTotal : subtotalOCOriginal
 
   // IVA calculado sobre los subtotales correspondientes
   const calcularIva = (items: typeof orden.items, ivaPct: number) => {
     return items
       .filter(i => i.iva_porcentaje === ivaPct)
       .reduce((sum, item) => {
-        const base = esRecibida ? (item.subtotal_factura ?? 0) : item.subtotal
+        const base = esRecibidaCalc
+          ? (item.cantidad_recibida !== undefined ? (item.cantidad_recibida * (item.precio_factura ?? item.precio_unitario)) : 0)
+          : item.subtotal
         return sum + (base * (ivaPct / 100))
       }, 0)
   }
@@ -141,6 +148,16 @@ export async function generarPDFOrden(ordenId: string) {
   const totalIva105 = calcularIva(orden.items, 10.5)
   const totalIva = totalIva21 + totalIva105
   const totalConIva = subtotalNeto + totalIva
+
+  // Calcular diferencia vs OC original (para mostrar al final)
+  const calcularIvaOC = (items: typeof orden.items, ivaPct: number) => {
+    return items
+      .filter(i => i.iva_porcentaje === ivaPct)
+      .reduce((sum, item) => sum + (item.subtotal * (ivaPct / 100)), 0)
+  }
+  const totalOCConIva = subtotalOCOriginal + calcularIvaOC(orden.items, 21) + calcularIvaOC(orden.items, 10.5)
+  const diferenciaVsOC = totalConIva - totalOCConIva
+  const diferenciaVsOCPct = totalOCConIva > 0 ? ((diferenciaVsOC / totalOCConIva) * 100).toFixed(1) : '0'
 
   // A5 vertical
   const doc = new jsPDF({ unit: 'mm', format: 'a5' })
@@ -232,6 +249,18 @@ export async function generarPDFOrden(ordenId: string) {
 
   y += headerHeight + 3
 
+  // === BADGE "RECIBIDA" si corresponde ===
+  const esRecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
+  if (esRecibida) {
+    doc.setFillColor(34, 139, 34) // verde
+    doc.roundedRect(margin, y, contentWidth, 8, 1.5, 1.5, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.setTextColor(255, 255, 255)
+    doc.text('RECIBIDA', pageWidth / 2, y + 5.5, { align: 'center' })
+    y += 11
+  }
+
   // === PROVEEDOR + ENTREGAR EN (dos columnas) ===
   const boxHeight = 28
   const halfWidth = (contentWidth - 3) / 2
@@ -290,9 +319,9 @@ export async function generarPDFOrden(ordenId: string) {
   y += boxHeight + 4
 
   // === TABLA CON PAGINACIÓN ===
-  const rowH = 7
   const esParcialORecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
   const esRecibidaCompleta = orden.tieneFactura && orden.estado === 'recibida'
+  const rowH = esRecibidaCompleta ? 9 : 7 // Más alto para OC Recibida (tiene 2 líneas de precio)
 
   // Constantes de paginación
   const ESPACIO_FOOTER = 55 // Totales + observaciones + condiciones + footer
@@ -300,18 +329,18 @@ export async function generarPDFOrden(ordenId: string) {
   const MARGEN_INFERIOR = margin + 5
 
   // Columnas diferentes según estado
-  // OC Recibida: muestra datos de FACTURA con diferencias
+  // OC Recibida: muestra INSUMO (con badge) | CANTIDAD | PRECIO (con comparación) | IVA | SUBTOTAL
   // OC Parcial: muestra PEDIDO | RECIB. | FALT.
   // OC Normal: muestra datos del pedido
   const colX = esRecibidaCompleta ? {
-    // Para OC recibida: INSUMO | CANTIDAD | PRECIO | SUBTOTAL | DIFERENCIAS
+    // Para OC recibida: estilo igual que la vista
     num: margin + 2,
     insumo: margin + 8,
-    cantRight: margin + contentWidth * 0.42,
-    unidad: margin + contentWidth * 0.44,
-    precioRight: margin + contentWidth * 0.62,
-    subtotalRight: margin + contentWidth * 0.80,
-    difRight: pageWidth - margin - 3,
+    cantRight: margin + contentWidth * 0.48,
+    unidad: margin + contentWidth * 0.50,
+    precioRight: margin + contentWidth * 0.70,
+    ivaRight: margin + contentWidth * 0.82,
+    subtotalRight: pageWidth - margin - 3,
   } : esParcialORecibida ? {
     num: margin + 2,
     insumo: margin + 8,
@@ -344,13 +373,12 @@ export async function generarPDFOrden(ordenId: string) {
     doc.text('INSUMO', colX.insumo, hTextY)
 
     if (esRecibidaCompleta) {
-      // OC Recibida: mostrar datos de factura
-      doc.text('RECIBIDO', (colX as any).cantRight, hTextY, { align: 'right' })
+      // OC Recibida: estilo igual que la vista
+      doc.text('CANTIDAD', (colX as any).cantRight, hTextY, { align: 'right' })
       doc.text('UN', colX.unidad, hTextY)
       doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
+      doc.text('IVA', (colX as any).ivaRight, hTextY, { align: 'right' })
       doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
-      doc.setTextColor(255, 200, 200) // rojo claro para el header de diferencias
-      doc.text('DIF.', (colX as any).difRight, hTextY, { align: 'right' })
     } else if (esParcialORecibida) {
       doc.text('PEDIDO', (colX as any).pedidoRight, hTextY, { align: 'right' })
       doc.text('RECIB.', (colX as any).recibidoRight, hTextY, { align: 'right' })
@@ -452,7 +480,28 @@ export async function generarPDFOrden(ordenId: string) {
     doc.text(nombreTruncado, colX.insumo, textY)
 
     if (esRecibidaCompleta) {
-      // OC Recibida: mostrar datos de FACTURA
+      // OC Recibida: estilo igual que la vista de edición
+
+      // Badge después del nombre
+      let badgeText = ''
+      let badgeColor: [number, number, number] = [34, 139, 34] // verde
+      if (cantidadRecibida === 0) {
+        badgeText = 'No entregado'
+        badgeColor = [200, 50, 50] // rojo
+      } else if (cantidadRecibida >= item.cantidad) {
+        badgeText = 'Completo'
+      } else {
+        badgeText = `Parcial (${cantidadRecibida % 1 === 0 ? cantidadRecibida.toFixed(0) : cantidadRecibida.toFixed(1).replace('.', ',')} de ${item.cantidad % 1 === 0 ? item.cantidad.toFixed(0) : item.cantidad.toFixed(1).replace('.', ',')})`
+        badgeColor = [200, 150, 0] // amarillo/naranja
+      }
+
+      // Dibujar badge
+      const nombreWidth = doc.getTextWidth(nombreTruncado)
+      doc.setFontSize(5)
+      doc.setTextColor(...badgeColor)
+      doc.text(badgeText, colX.insumo + nombreWidth + 2, textY)
+      doc.setFontSize(6.5)
+
       // Cantidad recibida
       doc.setTextColor(30, 30, 30)
       const cantStr = cantidadRecibida % 1 === 0 ? cantidadRecibida.toFixed(0) : cantidadRecibida.toFixed(2).replace('.', ',')
@@ -464,38 +513,37 @@ export async function generarPDFOrden(ordenId: string) {
       doc.text(item.unidad_display, colX.unidad, textY)
       doc.setFontSize(6.5)
 
-      // Precio de factura
+      // Precio con comparación
       doc.setTextColor(30, 30, 30)
-      doc.text(fmtMoney(precioFactura), colX.precioRight, textY, { align: 'right' })
+      if (precioDiferente) {
+        // Precio factura (principal)
+        doc.text(fmtMoney(precioFactura), colX.precioRight, textY, { align: 'right' })
+        // Segunda línea: precio OC tachado + flecha + %
+        const diff = precioFactura - item.precio_unitario
+        const pct = ((diff / item.precio_unitario) * 100).toFixed(1)
+        const subio = diff > 0
+        doc.setFontSize(4.5)
+        doc.setTextColor(150, 150, 150)
+        const precioOCStr = fmtMoney(item.precio_unitario)
+        const arrow = subio ? '▲' : '▼'
+        const pctStr = `${arrow} ${Math.abs(parseFloat(pct))}%`
+        doc.text(`${precioOCStr}  ${pctStr}`, colX.precioRight, textY + 3, { align: 'right' })
+        doc.setFontSize(6.5)
+      } else {
+        doc.text(fmtMoney(precioFactura), colX.precioRight, textY, { align: 'right' })
+      }
+
+      // IVA
+      doc.setTextColor(100, 100, 100)
+      doc.setFontSize(5.5)
+      const ivaStr = item.iva_porcentaje === 10.5 ? '10,5%' : item.iva_porcentaje === 0 ? '0%' : '21%'
+      doc.text(ivaStr, (colX as any).ivaRight, textY, { align: 'right' })
+      doc.setFontSize(6.5)
 
       // Subtotal de factura
       doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
       doc.text(fmtMoney(subtotalFactura), colX.subtotalRight, textY, { align: 'right' })
-
-      // Diferencias en rojo
-      const diferencias: string[] = []
-      if (cantidadDiferente) {
-        const diff = cantidadRecibida - item.cantidad
-        const signo = diff > 0 ? '+' : ''
-        diferencias.push(`${signo}${diff % 1 === 0 ? diff.toFixed(0) : diff.toFixed(2).replace('.', ',')} ${item.unidad_display}`)
-      }
-      if (precioDiferente) {
-        const diff = precioFactura - item.precio_unitario
-        const signo = diff > 0 ? '+' : ''
-        diferencias.push(`${signo}${fmtMoney(diff)}`)
-      }
-
-      if (diferencias.length > 0) {
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(200, 50, 50) // rojo
-        doc.setFontSize(5.5)
-        doc.text(diferencias.join(' | '), (colX as any).difRight, textY, { align: 'right' })
-        doc.setFontSize(6.5)
-      } else {
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(150, 150, 150)
-        doc.text('-', (colX as any).difRight, textY, { align: 'right' })
-      }
     } else if (esParcialORecibida) {
       // Columnas: PEDIDO, RECIBIDO, FALTANTE
       doc.setTextColor(50, 50, 50)
@@ -616,6 +664,27 @@ export async function generarPDFOrden(ordenId: string) {
   doc.text(fmtMoney(totalConIva), pageWidth - margin - 3, y + 3, { align: 'right' })
   y += 12
 
+  // Diferencia vs OC (solo si está recibida y hay diferencia)
+  if (esRecibidaCalc && Math.abs(diferenciaVsOC) > 0.01) {
+    const subio = diferenciaVsOC > 0
+    const arrow = subio ? '▲' : '▼'
+    const colorDif: [number, number, number] = subio ? [200, 50, 50] : [34, 139, 34] // rojo si subió, verde si bajó
+
+    doc.setFillColor(...colorDif)
+    doc.setDrawColor(...colorDif)
+    doc.roundedRect(totalBoxX, y - 2, totalBoxW, 8, 1.5, 1.5, 'S')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7)
+    doc.setTextColor(...colorDif)
+    doc.text('Diferencia vs OC:', totalBoxX + 3, y + 3)
+
+    const signo = subio ? '+' : ''
+    const difText = `${signo}${fmtMoney(diferenciaVsOC)} (${arrow} ${Math.abs(parseFloat(diferenciaVsOCPct))}%)`
+    doc.text(difText, pageWidth - margin - 3, y + 3, { align: 'right' })
+    y += 10
+  }
+
   // Observaciones (indicaciones especiales del usuario)
   if (orden.notas) {
     // Caja destacada para observaciones
@@ -669,10 +738,11 @@ export async function generarPDFOrden(ordenId: string) {
   const textoPagina = totalPaginas > 1 ? `  |  Página ${paginaActual} de ${totalPaginas}` : ''
   doc.text(`Tero Restó  |  Orden de Compra${textoPagina}`, pageWidth / 2, footerY + 4, { align: 'center' })
 
-  // Guardar - Proveedor primero, luego número de OC
+  // Guardar - Proveedor primero, luego número de OC, y RECIBIDA si corresponde
   const proveedorNombre = orden.proveedor_nombre.replace(/\s+/g, '_')
   const numPart = orden.numero ? `_${orden.numero}` : ''
-  const fileName = `OC_${proveedorNombre}${numPart}_${orden.fecha}.pdf`
+  const estadoPart = esRecibidaCalc ? '_RECIBIDA' : ''
+  const fileName = `OC_${proveedorNombre}${numPart}${estadoPart}_${orden.fecha}.pdf`
   doc.save(fileName)
 
   // Si es borrador, marcar como enviada

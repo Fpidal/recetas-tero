@@ -20,7 +20,8 @@ import {
   Wine,
   LogOut,
   User,
-  DollarSign
+  DollarSign,
+  TrendingUp
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Vinos', href: '/vinos', icon: Wine, color: '#7C3AED' },
   { name: 'Estadísticas', href: '/estadisticas', icon: BarChart3, color: '#8B5CF6' },
   { name: 'Ventas', href: '/ventas', icon: DollarSign, color: '#22C55E' },
+  { name: 'Análisis', href: '/analisis', icon: TrendingUp, color: '#F59E0B' },
   { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen, color: '#EF4444' },
   { name: 'Recetas', href: '/platos', icon: ChefHat, color: '#A855F7' },
   { name: 'Carta', href: '/carta', icon: ClipboardList, color: '#EF4444' },

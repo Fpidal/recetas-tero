@@ -46,6 +46,8 @@ src/
 │   │   └── [id]/
 │   ├── ventas/                   # Ventas diarias e incidencia
 │   │   └── components/
+│   ├── analisis/                 # Carga de consumo, food cost real
+│   │   └── components/
 │   └── vinos/                    # Gestión de vinos
 │
 ├── components/
@@ -67,6 +69,7 @@ src/
 │   ├── formato-numeros.ts        # Formateo de números/moneda (AR)
 │   ├── oc-numero.ts              # Numeración de órdenes de compra
 │   ├── ventas-queries.ts         # Queries y cálculos del módulo Ventas
+│   ├── consumo-queries.ts        # Queries y desglose del módulo Análisis
 │   ├── generar-pdf-carta.ts      # Generador PDF de carta
 │   ├── generar-pdf-carta-vinos.ts
 │   ├── generar-pdf-oc.ts
@@ -75,7 +78,8 @@ src/
 │
 └── types/
     ├── database.ts               # Tipos TypeScript para la DB
-    └── ventas.ts                 # Tipos del módulo Ventas
+    ├── ventas.ts                 # Tipos del módulo Ventas
+    └── analisis.ts               # Tipos del módulo Análisis
 ```
 
 ## Módulos Principales
@@ -136,6 +140,21 @@ Carga diaria de ventas y cubiertos, con análisis de incidencia (food cost real)
 - **Histórico**: Gráfico de barras Ventas vs Compras + tabla detallada con incidencia, cubiertos, ticket promedio y margen. Toggle Mensual / Semanal.
 
 **Cálculo de incidencia**: `(suma de facturas activas / ventas totales) × 100`. Objetivo: ≤ 30%. Semáforo: ✅ ≤30% / ⚠️ 31-35% / ❌ >35%.
+
+### Análisis (`/analisis`)
+Módulo de **food cost real** basado en lo realmente consumido por cocina al final de cada servicio (en vez de lo facturado por proveedores). Vista en 4 solapas:
+
+- **Carga diaria**: cocina carga el consumo real del servicio (mediodía/noche/eventos). Soporta tres tipos de items mezclados:
+  - **Insumos** (pesados sueltos: ej. pollo, papas)
+  - **Elaboraciones** (recetas base: ej. salsa criolla, puré)
+  - **Recetas** (platos: ej. milanesa, lomo a la parrilla)
+
+  Buscador con autocompletar tipo Recetas, atajos a más usados, todos los costos con IVA incluido.
+- **Consumo diario**: vista informativa que **desglosa recetas y elaboraciones a nivel insumo** (ej: "12 milanesas + 2,5 kg pollo" → "Bola de lomo: 1,8 kg, Pollo: 2,5 kg, ..."). Botón "Confirmar consumo" como paso previo al descuento de stock.
+- **Incidencia**: carga manual de venta + cubiertos por día/servicio. Cruza automático con el costo de cocina. KPIs: ventas, costo real, **% Incidencia REAL** con semáforo, margen bruto. Detalle día a día.
+- **Histórico**: evolución mensual de la incidencia real (últimos 6 meses) con gráfico de tendencia y línea de objetivo.
+
+**Diferencia con Ventas**: el módulo Ventas calcula incidencia *teórica* (facturas / ventas). Análisis calcula *real* (consumo cocina / ventas), que es el food cost efectivo del día.
 
 ### Papelera (`/papelera`)
 Recuperación de items eliminados (soft delete).
@@ -220,6 +239,8 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 | `menus_especiales` | Menús para eventos |
 | `inventario_stock` | Stock actual |
 | `ventas_diarias` | Ventas y cubiertos por día (mediodía/noche/eventos) |
+| `consumo_diario` | Cabecera de carga de consumo real por día/servicio |
+| `consumo_items` | Items consumidos (insumo/elaboración/receta) con costo IVA inc. |
 
 ## Características
 
@@ -244,9 +265,15 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 - **Módulo de Ventas e Incidencia**:
   - Carga diaria por servicio (mediodía / noche / eventos)
   - Cubiertos por servicio con ticket promedio
-  - % Incidencia (food cost real) con objetivo del 30% y semáforo
+  - % Incidencia (food cost teórico desde facturas) con objetivo del 30% y semáforo
   - Análisis Mensual y Semanal
   - Gráficos de tendencia y comparativos
+- **Módulo Análisis (food cost real)**:
+  - Carga de consumo diario por cocina (insumos + recetas + elaboraciones)
+  - Buscador unificado con autocompletar
+  - Desglose automático de recetas a nivel insumo
+  - Incidencia REAL = consumo cocina / ventas
+  - Vista de tendencia mensual
 - Papelera con soft delete
 - Formateo argentino completo:
   - Input decimal con coma (0,5 en lugar de 0.5)

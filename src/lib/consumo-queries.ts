@@ -409,21 +409,32 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
     }
   }
 
-  // Cargar nombres y unidades de los insumos
+  // Cargar nombre, unidad y precio con IVA de los insumos
   const insumoIds = Array.from(mapa.keys())
   if (insumoIds.length === 0) return []
 
   const { data: infoInsumos } = await supabase
-    .from('insumos')
-    .select('id, nombre, unidad_medida')
+    .from('v_insumos_con_precio')
+    .select('id, nombre, unidad_medida, precio_actual, iva_porcentaje')
     .in('id', insumoIds)
 
-  const infoMap = new Map<string, { nombre: string; unidad: string }>()
+  const infoMap = new Map<
+    string,
+    { nombre: string; unidad: string; costo_unit_iva: number }
+  >()
   for (const i of infoInsumos || []) {
-    infoMap.set(i.id, { nombre: i.nombre, unidad: i.unidad_medida })
+    const precio = Number((i as any).precio_actual || 0)
+    const iva = Number((i as any).iva_porcentaje || 0)
+    infoMap.set((i as any).id, {
+      nombre: (i as any).nombre,
+      unidad: (i as any).unidad_medida,
+      costo_unit_iva: precio * (1 + iva / 100), // sin merma, porque se pesa neto
+    })
   }
 
   // Construir resultado
+  // Para cada insumo: costo = cantidad_total × precio_con_iva_actual
+  // (suma de lo directo + lo aportado por recetas/elaboraciones a precios actuales)
   const resultado: ItemDesglosado[] = []
   Array.from(mapa.entries()).forEach(([id, acc]) => {
     const info = infoMap.get(id)
@@ -433,7 +444,7 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
       nombre: info.nombre,
       unidad: info.unidad,
       cantidad_total: acc.cantidad,
-      costo_total: acc.costo, // solo cuenta el costo de items directos por ahora
+      costo_total: acc.cantidad * info.costo_unit_iva,
       // Eliminar duplicados de orígenes
       origenes: Array.from(new Set(acc.origenes)),
     })

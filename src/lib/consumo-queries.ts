@@ -124,9 +124,9 @@ export async function obtenerConsumo(fecha: string, servicio: Servicio): Promise
 }
 
 /**
- * Obtiene los items de un consumo, enriquecidos con el nombre y RECALCULANDO
- * los costos con precios actuales (las recetas/elaboraciones siempre reflejan
- * el precio actual de los insumos como el resto del sistema).
+ * Obtiene los items de un consumo, enriquecidos con el nombre.
+ * El costo queda CONGELADO al valor guardado en el momento de la carga.
+ * Si cambia un precio después, los consumos viejos no se alteran.
  */
 export async function obtenerItemsConsumo(consumoId: string): Promise<ConsumoItem[]> {
   const { data, error } = await supabase
@@ -142,39 +142,14 @@ export async function obtenerItemsConsumo(consumoId: string): Promise<ConsumoIte
 
   if (error) throw error
 
-  // Cargar mapas de costos actuales (con IVA) para recalcular al vuelo
-  const [insumos, elab, rec] = await Promise.all([
-    obtenerInsumosBuscador(),
-    obtenerElaboracionesBuscador(),
-    obtenerRecetasBuscador(),
-  ])
-  const mapIns = new Map(insumos.map((i) => [i.id, i.costo_unitario]))
-  const mapElab = new Map(elab.map((e) => [e.id, e.costo_unitario]))
-  const mapRec = new Map(rec.map((r) => [r.id, r.costo_unitario]))
-
-  return (data || []).map((item: any) => {
-    // Buscar el costo actual según el tipo
-    let costoActual = Number(item.costo_unitario)
-    if (item.tipo === 'insumo' && item.insumo_id) {
-      costoActual = mapIns.get(item.insumo_id) ?? costoActual
-    } else if (item.tipo === 'elaboracion' && item.receta_base_id) {
-      costoActual = mapElab.get(item.receta_base_id) ?? costoActual
-    } else if (item.tipo === 'receta' && item.plato_id) {
-      costoActual = mapRec.get(item.plato_id) ?? costoActual
-    }
-
-    const cantidad = Number(item.cantidad)
-    return {
-      ...item,
-      costo_unitario: costoActual,
-      subtotal: cantidad * costoActual,
-      nombre:
-        item.insumos?.nombre ||
-        item.recetas_base?.nombre ||
-        item.platos?.nombre ||
-        '(sin nombre)',
-    }
-  })
+  return (data || []).map((item: any) => ({
+    ...item,
+    nombre:
+      item.insumos?.nombre ||
+      item.recetas_base?.nombre ||
+      item.platos?.nombre ||
+      '(sin nombre)',
+  }))
 }
 
 /**
@@ -393,57 +368,16 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
     }
   }
 
-  // Ahora consolidar todo a nivel insumo
-  type Acum = {
-    cantidad: number
-    costo: number
-    origenes: string[]
-  }
-  const mapa = new Map<string, Acum>()
-
-  // Insumos directos
-  for (const item of insumosDirectos) {
-    const acc = mapa.get(item.insumo_id!) || { cantidad: 0, costo: 0, origenes: [] }
-    acc.cantidad += Number(item.cantidad)
-    acc.costo += Number(item.subtotal)
-    acc.origenes.push('Carga directa')
-    mapa.set(item.insumo_id!, acc)
-  }
-
-  // De elaboraciones cargadas
-  for (const item of items) {
-    if (item.tipo !== 'elaboracion' || !item.receta_base_id) continue
-    const ings = ingredientesElab.filter((e) => e.receta_base_id === item.receta_base_id)
-    for (const ing of ings) {
-      const acc = mapa.get(ing.insumo_id) || { cantidad: 0, costo: 0, origenes: [] }
-      const cantidadInsumo = Number(item.cantidad) * ing.cantidad
-      acc.cantidad += cantidadInsumo
-      acc.origenes.push(`${item.cantidad} ${item.unidad} ${ing.nombre_receta}`)
-      mapa.set(ing.insumo_id, acc)
-    }
-  }
-
-  // De recetas (platos) cargadas
-  for (const item of items) {
-    if (item.tipo !== 'receta' || !item.plato_id) continue
-    const ings = ingredientesPlato.filter((p) => p.plato_id === item.plato_id)
-    for (const ing of ings) {
-      const acc = mapa.get(ing.insumo_id) || { cantidad: 0, costo: 0, origenes: [] }
-      const cantidadInsumo = Number(item.cantidad) * ing.cantidad
-      acc.cantidad += cantidadInsumo
-      acc.origenes.push(`${item.cantidad} ${item.unidad} ${ing.nombre_plato}`)
-      mapa.set(ing.insumo_id, acc)
-    }
-  }
-
-  // Cargar nombre, unidad y precio con IVA de los insumos
-  const insumoIds = Array.from(mapa.keys())
-  if (insumoIds.length === 0) return []
+  // Pre-cargar precios actuales de todos los insumos involucrados (para prorrateo)
+  const todosInsumoIds = new Set<string>()
+  for (const it of insumosDirectos) if (it.insumo_id) todosInsumoIds.add(it.insumo_id)
+  for (const e of ingredientesElab) todosInsumoIds.add(e.insumo_id)
+  for (const p of ingredientesPlato) todosInsumoIds.add(p.insumo_id)
 
   const { data: infoInsumos } = await supabase
     .from('v_insumos_con_precio')
     .select('id, nombre, unidad_medida, precio_actual, iva_porcentaje')
-    .in('id', insumoIds)
+    .in('id', Array.from(todosInsumoIds))
 
   const infoMap = new Map<
     string,
@@ -455,13 +389,95 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
     infoMap.set((i as any).id, {
       nombre: (i as any).nombre,
       unidad: (i as any).unidad_medida,
-      costo_unit_iva: precio * (1 + iva / 100), // sin merma, porque se pesa neto
+      costo_unit_iva: precio * (1 + iva / 100),
     })
   }
 
+  // Consolidar a nivel insumo.
+  // El costo se prorratea para que la suma = total del consumo (congelado).
+  type Acum = {
+    cantidad: number
+    costo: number
+    origenes: string[]
+  }
+  const mapa = new Map<string, Acum>()
+
+  // 1) Insumos directos: costo = subtotal cacheado directo
+  for (const item of insumosDirectos) {
+    const acc = mapa.get(item.insumo_id!) || { cantidad: 0, costo: 0, origenes: [] }
+    acc.cantidad += Number(item.cantidad)
+    acc.costo += Number(item.subtotal)
+    acc.origenes.push('Carga directa')
+    mapa.set(item.insumo_id!, acc)
+  }
+
+  // 2) Elaboraciones: prorratear subtotal cacheado entre sus insumos
+  for (const item of items) {
+    if (item.tipo !== 'elaboracion' || !item.receta_base_id) continue
+    const ings = ingredientesElab.filter((e) => e.receta_base_id === item.receta_base_id)
+    if (ings.length === 0) continue
+
+    // Calcular costo teórico de cada insumo con precios actuales (para obtener el peso)
+    const costosTeoricos = ings.map((ing) => {
+      const info = infoMap.get(ing.insumo_id)
+      const cantidadInsumo = Number(item.cantidad) * ing.cantidad
+      return {
+        ing,
+        cantidadInsumo,
+        costoTeorico: info ? cantidadInsumo * info.costo_unit_iva : 0,
+      }
+    })
+    const totalTeorico = costosTeoricos.reduce((a, c) => a + c.costoTeorico, 0)
+    const subtotalCacheado = Number(item.subtotal)
+
+    for (const { ing, cantidadInsumo, costoTeorico } of costosTeoricos) {
+      const acc = mapa.get(ing.insumo_id) || { cantidad: 0, costo: 0, origenes: [] }
+      acc.cantidad += cantidadInsumo
+      // Prorrateo: si hay total teórico, usar % ; si no, distribuir en partes iguales
+      if (totalTeorico > 0) {
+        acc.costo += subtotalCacheado * (costoTeorico / totalTeorico)
+      } else {
+        acc.costo += subtotalCacheado / costosTeoricos.length
+      }
+      acc.origenes.push(`${item.cantidad} ${item.unidad} ${ing.nombre_receta}`)
+      mapa.set(ing.insumo_id, acc)
+    }
+  }
+
+  // 3) Recetas (platos): idem prorrateo
+  for (const item of items) {
+    if (item.tipo !== 'receta' || !item.plato_id) continue
+    const ings = ingredientesPlato.filter((p) => p.plato_id === item.plato_id)
+    if (ings.length === 0) continue
+
+    const costosTeoricos = ings.map((ing) => {
+      const info = infoMap.get(ing.insumo_id)
+      const cantidadInsumo = Number(item.cantidad) * ing.cantidad
+      return {
+        ing,
+        cantidadInsumo,
+        costoTeorico: info ? cantidadInsumo * info.costo_unit_iva : 0,
+      }
+    })
+    const totalTeorico = costosTeoricos.reduce((a, c) => a + c.costoTeorico, 0)
+    const subtotalCacheado = Number(item.subtotal)
+
+    for (const { ing, cantidadInsumo, costoTeorico } of costosTeoricos) {
+      const acc = mapa.get(ing.insumo_id) || { cantidad: 0, costo: 0, origenes: [] }
+      acc.cantidad += cantidadInsumo
+      if (totalTeorico > 0) {
+        acc.costo += subtotalCacheado * (costoTeorico / totalTeorico)
+      } else {
+        acc.costo += subtotalCacheado / costosTeoricos.length
+      }
+      acc.origenes.push(`${item.cantidad} ${item.unidad} ${ing.nombre_plato}`)
+      mapa.set(ing.insumo_id, acc)
+    }
+  }
+
+  if (mapa.size === 0) return []
+
   // Construir resultado
-  // Para cada insumo: costo = cantidad_total × precio_con_iva_actual
-  // (suma de lo directo + lo aportado por recetas/elaboraciones a precios actuales)
   const resultado: ItemDesglosado[] = []
   Array.from(mapa.entries()).forEach(([id, acc]) => {
     const info = infoMap.get(id)
@@ -471,13 +487,11 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
       nombre: info.nombre,
       unidad: info.unidad,
       cantidad_total: acc.cantidad,
-      costo_total: acc.cantidad * info.costo_unit_iva,
-      // Eliminar duplicados de orígenes
+      costo_total: acc.costo,
       origenes: Array.from(new Set(acc.origenes)),
     })
   })
 
-  // Ordenar por nombre
   resultado.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es-AR'))
   return resultado
 }
@@ -500,7 +514,7 @@ const CUBIERTOS_FIELD: Record<Servicio, 'cubiertos_mediodia' | 'cubiertos_noche'
 
 /**
  * Obtiene la incidencia (venta + costo) de un día/servicio puntual.
- * El costo se recalcula al vuelo con precios actuales.
+ * El costo queda CONGELADO con el valor guardado al momento de la carga.
  */
 export async function obtenerIncidenciaDia(fecha: string, servicio: Servicio): Promise<IncidenciaDia> {
   const ventaField = VENTA_FIELD[servicio]
@@ -514,21 +528,15 @@ export async function obtenerIncidenciaDia(fecha: string, servicio: Servicio): P
       .maybeSingle(),
     supabase
       .from('consumo_diario')
-      .select('id')
+      .select('costo_total')
       .eq('fecha', fecha)
       .eq('servicio', servicio)
       .maybeSingle(),
   ])
 
-  // Recalcular costo con precios actuales (si hay consumo)
-  let costo = 0
-  if (cRes.data?.id) {
-    const items = await obtenerItemsConsumo(cRes.data.id)
-    costo = items.reduce((acc, it) => acc + Number(it.subtotal), 0)
-  }
-
   const venta = Number((vRes.data as any)?.[ventaField] || 0)
   const cubiertos = Number((vRes.data as any)?.[cubiertosField] || 0)
+  const costo = Number((cRes.data as any)?.costo_total || 0)
   const incidencia = venta > 0 ? (costo / venta) * 100 : 0
   const ticket_promedio = cubiertos > 0 ? venta / cubiertos : 0
 
@@ -590,7 +598,7 @@ export async function guardarVentaServicio(
 
 /**
  * Obtiene incidencias de un mes para un servicio.
- * El costo se recalcula al vuelo con precios actuales (batch).
+ * El costo queda CONGELADO con el valor guardado al momento de la carga.
  */
 export async function obtenerIncidenciasMes(
   año: number,
@@ -604,7 +612,7 @@ export async function obtenerIncidenciasMes(
   const ventaField = VENTA_FIELD[servicio]
   const cubiertosField = CUBIERTOS_FIELD[servicio]
 
-  const [vRes, cRes, insumos, elab, rec] = await Promise.all([
+  const [vRes, cRes] = await Promise.all([
     supabase
       .from('ventas_diarias')
       .select(`fecha, ${ventaField}, ${cubiertosField}`)
@@ -612,21 +620,12 @@ export async function obtenerIncidenciasMes(
       .lte('fecha', hasta),
     supabase
       .from('consumo_diario')
-      .select('id, fecha')
+      .select('fecha, costo_total')
       .eq('servicio', servicio)
       .gte('fecha', desde)
       .lte('fecha', hasta),
-    // Precios actuales
-    obtenerInsumosBuscador(),
-    obtenerElaboracionesBuscador(),
-    obtenerRecetasBuscador(),
   ])
 
-  const mapIns = new Map(insumos.map((i) => [i.id, i.costo_unitario]))
-  const mapElab = new Map(elab.map((e) => [e.id, e.costo_unitario]))
-  const mapRec = new Map(rec.map((r) => [r.id, r.costo_unitario]))
-
-  // Mapas por fecha
   const ventasMap = new Map<string, { venta: number; cubiertos: number }>()
   for (const v of vRes.data || []) {
     ventasMap.set((v as any).fecha, {
@@ -634,56 +633,22 @@ export async function obtenerIncidenciasMes(
       cubiertos: Number((v as any)[cubiertosField] || 0),
     })
   }
-
-  // Traer TODOS los items de esos consumos en un solo query
-  const consumoIds = (cRes.data || []).map((c: any) => c.id)
-  let costoMap = new Map<string, number>() // fecha → costo recalculado
-  if (consumoIds.length > 0) {
-    const { data: items } = await supabase
-      .from('consumo_items')
-      .select('consumo_id, tipo, insumo_id, receta_base_id, plato_id, cantidad, costo_unitario')
-      .in('consumo_id', consumoIds)
-
-    // id_consumo → fecha
-    const fechaPorConsumo = new Map<string, string>()
-    for (const c of cRes.data || []) {
-      fechaPorConsumo.set((c as any).id, (c as any).fecha)
-    }
-
-    for (const item of items || []) {
-      const it = item as any
-      let costoActual = Number(it.costo_unitario)
-      if (it.tipo === 'insumo' && it.insumo_id) {
-        costoActual = mapIns.get(it.insumo_id) ?? costoActual
-      } else if (it.tipo === 'elaboracion' && it.receta_base_id) {
-        costoActual = mapElab.get(it.receta_base_id) ?? costoActual
-      } else if (it.tipo === 'receta' && it.plato_id) {
-        costoActual = mapRec.get(it.plato_id) ?? costoActual
-      }
-      const subtotal = Number(it.cantidad) * costoActual
-      const fecha = fechaPorConsumo.get(it.consumo_id) || ''
-      if (!fecha) continue
-      costoMap.set(fecha, (costoMap.get(fecha) || 0) + subtotal)
-    }
-
-    // Asegurar que todas las fechas con consumo aparezcan (aunque sean 0)
-    for (const c of cRes.data || []) {
-      const f = (c as any).fecha
-      if (!costoMap.has(f)) costoMap.set(f, 0)
-    }
+  const consumoMap = new Map<string, number>()
+  for (const c of cRes.data || []) {
+    consumoMap.set((c as any).fecha, Number((c as any).costo_total || 0))
   }
 
   // Combinar fechas únicas
   const fechasSet = new Set<string>()
   Array.from(ventasMap.keys()).forEach((k) => fechasSet.add(k))
-  Array.from(costoMap.keys()).forEach((k) => fechasSet.add(k))
+  Array.from(consumoMap.keys()).forEach((k) => fechasSet.add(k))
   const fechas = Array.from(fechasSet).sort().reverse()
 
   return fechas.map((fecha) => {
     const v = ventasMap.get(fecha)
     const venta = v?.venta || 0
     const cubiertos = v?.cubiertos || 0
-    const costo = costoMap.get(fecha) || 0
+    const costo = consumoMap.get(fecha) || 0
     return {
       fecha,
       servicio,
@@ -692,7 +657,7 @@ export async function obtenerIncidenciasMes(
       costo,
       incidencia: venta > 0 ? (costo / venta) * 100 : 0,
       ticket_promedio: cubiertos > 0 ? venta / cubiertos : 0,
-      tiene_consumo: costoMap.has(fecha),
+      tiene_consumo: consumoMap.has(fecha),
       tiene_venta: venta > 0,
     }
   })

@@ -124,7 +124,9 @@ export async function obtenerConsumo(fecha: string, servicio: Servicio): Promise
 }
 
 /**
- * Obtiene los items de un consumo, enriquecidos con el nombre
+ * Obtiene los items de un consumo, enriquecidos con el nombre y RECALCULANDO
+ * los costos con precios actuales (las recetas/elaboraciones siempre reflejan
+ * el precio actual de los insumos como el resto del sistema).
  */
 export async function obtenerItemsConsumo(consumoId: string): Promise<ConsumoItem[]> {
   const { data, error } = await supabase
@@ -140,14 +142,39 @@ export async function obtenerItemsConsumo(consumoId: string): Promise<ConsumoIte
 
   if (error) throw error
 
-  return (data || []).map((item: any) => ({
-    ...item,
-    nombre:
-      item.insumos?.nombre ||
-      item.recetas_base?.nombre ||
-      item.platos?.nombre ||
-      '(sin nombre)',
-  }))
+  // Cargar mapas de costos actuales (con IVA) para recalcular al vuelo
+  const [insumos, elab, rec] = await Promise.all([
+    obtenerInsumosBuscador(),
+    obtenerElaboracionesBuscador(),
+    obtenerRecetasBuscador(),
+  ])
+  const mapIns = new Map(insumos.map((i) => [i.id, i.costo_unitario]))
+  const mapElab = new Map(elab.map((e) => [e.id, e.costo_unitario]))
+  const mapRec = new Map(rec.map((r) => [r.id, r.costo_unitario]))
+
+  return (data || []).map((item: any) => {
+    // Buscar el costo actual según el tipo
+    let costoActual = Number(item.costo_unitario)
+    if (item.tipo === 'insumo' && item.insumo_id) {
+      costoActual = mapIns.get(item.insumo_id) ?? costoActual
+    } else if (item.tipo === 'elaboracion' && item.receta_base_id) {
+      costoActual = mapElab.get(item.receta_base_id) ?? costoActual
+    } else if (item.tipo === 'receta' && item.plato_id) {
+      costoActual = mapRec.get(item.plato_id) ?? costoActual
+    }
+
+    const cantidad = Number(item.cantidad)
+    return {
+      ...item,
+      costo_unitario: costoActual,
+      subtotal: cantidad * costoActual,
+      nombre:
+        item.insumos?.nombre ||
+        item.recetas_base?.nombre ||
+        item.platos?.nombre ||
+        '(sin nombre)',
+    }
+  })
 }
 
 /**
@@ -472,7 +499,8 @@ const CUBIERTOS_FIELD: Record<Servicio, 'cubiertos_mediodia' | 'cubiertos_noche'
 }
 
 /**
- * Obtiene la incidencia (venta + costo) de un día/servicio puntual
+ * Obtiene la incidencia (venta + costo) de un día/servicio puntual.
+ * El costo se recalcula al vuelo con precios actuales.
  */
 export async function obtenerIncidenciaDia(fecha: string, servicio: Servicio): Promise<IncidenciaDia> {
   const ventaField = VENTA_FIELD[servicio]
@@ -486,15 +514,21 @@ export async function obtenerIncidenciaDia(fecha: string, servicio: Servicio): P
       .maybeSingle(),
     supabase
       .from('consumo_diario')
-      .select('costo_total')
+      .select('id')
       .eq('fecha', fecha)
       .eq('servicio', servicio)
       .maybeSingle(),
   ])
 
+  // Recalcular costo con precios actuales (si hay consumo)
+  let costo = 0
+  if (cRes.data?.id) {
+    const items = await obtenerItemsConsumo(cRes.data.id)
+    costo = items.reduce((acc, it) => acc + Number(it.subtotal), 0)
+  }
+
   const venta = Number((vRes.data as any)?.[ventaField] || 0)
   const cubiertos = Number((vRes.data as any)?.[cubiertosField] || 0)
-  const costo = Number((cRes.data as any)?.costo_total || 0)
   const incidencia = venta > 0 ? (costo / venta) * 100 : 0
   const ticket_promedio = cubiertos > 0 ? venta / cubiertos : 0
 
@@ -555,7 +589,8 @@ export async function guardarVentaServicio(
 }
 
 /**
- * Obtiene incidencias de un mes para un servicio
+ * Obtiene incidencias de un mes para un servicio.
+ * El costo se recalcula al vuelo con precios actuales (batch).
  */
 export async function obtenerIncidenciasMes(
   año: number,
@@ -569,7 +604,7 @@ export async function obtenerIncidenciasMes(
   const ventaField = VENTA_FIELD[servicio]
   const cubiertosField = CUBIERTOS_FIELD[servicio]
 
-  const [vRes, cRes] = await Promise.all([
+  const [vRes, cRes, insumos, elab, rec] = await Promise.all([
     supabase
       .from('ventas_diarias')
       .select(`fecha, ${ventaField}, ${cubiertosField}`)
@@ -577,11 +612,19 @@ export async function obtenerIncidenciasMes(
       .lte('fecha', hasta),
     supabase
       .from('consumo_diario')
-      .select('fecha, costo_total')
+      .select('id, fecha')
       .eq('servicio', servicio)
       .gte('fecha', desde)
       .lte('fecha', hasta),
+    // Precios actuales
+    obtenerInsumosBuscador(),
+    obtenerElaboracionesBuscador(),
+    obtenerRecetasBuscador(),
   ])
+
+  const mapIns = new Map(insumos.map((i) => [i.id, i.costo_unitario]))
+  const mapElab = new Map(elab.map((e) => [e.id, e.costo_unitario]))
+  const mapRec = new Map(rec.map((r) => [r.id, r.costo_unitario]))
 
   // Mapas por fecha
   const ventasMap = new Map<string, { venta: number; cubiertos: number }>()
@@ -591,22 +634,56 @@ export async function obtenerIncidenciasMes(
       cubiertos: Number((v as any)[cubiertosField] || 0),
     })
   }
-  const consumoMap = new Map<string, number>()
-  for (const c of cRes.data || []) {
-    consumoMap.set((c as any).fecha, Number((c as any).costo_total || 0))
+
+  // Traer TODOS los items de esos consumos en un solo query
+  const consumoIds = (cRes.data || []).map((c: any) => c.id)
+  let costoMap = new Map<string, number>() // fecha → costo recalculado
+  if (consumoIds.length > 0) {
+    const { data: items } = await supabase
+      .from('consumo_items')
+      .select('consumo_id, tipo, insumo_id, receta_base_id, plato_id, cantidad, costo_unitario')
+      .in('consumo_id', consumoIds)
+
+    // id_consumo → fecha
+    const fechaPorConsumo = new Map<string, string>()
+    for (const c of cRes.data || []) {
+      fechaPorConsumo.set((c as any).id, (c as any).fecha)
+    }
+
+    for (const item of items || []) {
+      const it = item as any
+      let costoActual = Number(it.costo_unitario)
+      if (it.tipo === 'insumo' && it.insumo_id) {
+        costoActual = mapIns.get(it.insumo_id) ?? costoActual
+      } else if (it.tipo === 'elaboracion' && it.receta_base_id) {
+        costoActual = mapElab.get(it.receta_base_id) ?? costoActual
+      } else if (it.tipo === 'receta' && it.plato_id) {
+        costoActual = mapRec.get(it.plato_id) ?? costoActual
+      }
+      const subtotal = Number(it.cantidad) * costoActual
+      const fecha = fechaPorConsumo.get(it.consumo_id) || ''
+      if (!fecha) continue
+      costoMap.set(fecha, (costoMap.get(fecha) || 0) + subtotal)
+    }
+
+    // Asegurar que todas las fechas con consumo aparezcan (aunque sean 0)
+    for (const c of cRes.data || []) {
+      const f = (c as any).fecha
+      if (!costoMap.has(f)) costoMap.set(f, 0)
+    }
   }
 
   // Combinar fechas únicas
   const fechasSet = new Set<string>()
   Array.from(ventasMap.keys()).forEach((k) => fechasSet.add(k))
-  Array.from(consumoMap.keys()).forEach((k) => fechasSet.add(k))
+  Array.from(costoMap.keys()).forEach((k) => fechasSet.add(k))
   const fechas = Array.from(fechasSet).sort().reverse()
 
   return fechas.map((fecha) => {
     const v = ventasMap.get(fecha)
     const venta = v?.venta || 0
     const cubiertos = v?.cubiertos || 0
-    const costo = consumoMap.get(fecha) || 0
+    const costo = costoMap.get(fecha) || 0
     return {
       fecha,
       servicio,
@@ -615,7 +692,7 @@ export async function obtenerIncidenciasMes(
       costo,
       incidencia: venta > 0 ? (costo / venta) * 100 : 0,
       ticket_promedio: cubiertos > 0 ? venta / cubiertos : 0,
-      tiene_consumo: consumoMap.has(fecha),
+      tiene_consumo: costoMap.has(fecha),
       tiene_venta: venta > 0,
     }
   })

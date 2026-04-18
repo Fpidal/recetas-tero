@@ -253,8 +253,14 @@ export async function eliminarConsumo(consumoId: string): Promise<void> {
  *   → "Bola de lomo: 1,8 kg + 2,5 kg = 4,3 kg" (con sus orígenes)
  */
 export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosado[]> {
-  // 1. Obtener todos los items del consumo
-  const items = await obtenerItemsConsumo(consumoId)
+  // 1. Obtener items del consumo (query directa, sin enrichment ni recálculo de costos)
+  const { data: itemsRaw } = await supabase
+    .from('consumo_items')
+    .select('id, tipo, insumo_id, receta_base_id, plato_id, cantidad, unidad, costo_unitario, subtotal')
+    .eq('consumo_id', consumoId)
+    .order('created_at', { ascending: true })
+
+  const items = (itemsRaw || []) as ConsumoItem[]
   if (items.length === 0) return []
 
   // 2. Obtener insumos referenciados directamente
@@ -279,28 +285,7 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
     nombre_receta: string
   }
 
-  let ingredientesElab: IngredienteElab[] = []
-  if (elabIds.length > 0) {
-    const { data } = await supabase
-      .from('recetas_base')
-      .select('id, nombre, rendimiento_porciones, receta_base_ingredientes(insumo_id, cantidad)')
-      .in('id', elabIds)
-
-    for (const r of data || []) {
-      const rendimiento = (r as any).rendimiento_porciones > 0 ? (r as any).rendimiento_porciones : 1
-      for (const ing of (r as any).receta_base_ingredientes || []) {
-        ingredientesElab.push({
-          receta_base_id: (r as any).id,
-          insumo_id: ing.insumo_id,
-          cantidad: ing.cantidad / rendimiento, // por porción
-          rendimiento_porciones: rendimiento,
-          nombre_receta: (r as any).nombre,
-        })
-      }
-    }
-  }
-
-  // Cargar ingredientes de platos (incluye recetas_base anidadas)
+  // Type para platos (lo declaramos antes de paralelizar)
   type IngredientePlato = {
     plato_id: string
     insumo_id: string
@@ -308,17 +293,44 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
     nombre_plato: string
   }
 
+  // Paralelizar: cargar recetas_base + platos al mismo tiempo
+  const [elabRes, platoRes] = await Promise.all([
+    elabIds.length > 0
+      ? supabase
+          .from('recetas_base')
+          .select('id, nombre, rendimiento_porciones, receta_base_ingredientes(insumo_id, cantidad)')
+          .in('id', elabIds)
+      : Promise.resolve({ data: [] as any[] }),
+    platoIds.length > 0
+      ? supabase
+          .from('platos')
+          .select(`
+            id, nombre, rendimiento_porciones,
+            plato_ingredientes (
+              insumo_id, receta_base_id, cantidad
+            )
+          `)
+          .in('id', platoIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ])
+
+  let ingredientesElab: IngredienteElab[] = []
+  for (const r of elabRes.data || []) {
+    const rendimiento = (r as any).rendimiento_porciones > 0 ? (r as any).rendimiento_porciones : 1
+    for (const ing of (r as any).receta_base_ingredientes || []) {
+      ingredientesElab.push({
+        receta_base_id: (r as any).id,
+        insumo_id: ing.insumo_id,
+        cantidad: ing.cantidad / rendimiento,
+        rendimiento_porciones: rendimiento,
+        nombre_receta: (r as any).nombre,
+      })
+    }
+  }
+
   let ingredientesPlato: IngredientePlato[] = []
   if (platoIds.length > 0) {
-    const { data } = await supabase
-      .from('platos')
-      .select(`
-        id, nombre, rendimiento_porciones,
-        plato_ingredientes (
-          insumo_id, receta_base_id, cantidad
-        )
-      `)
-      .in('id', platoIds)
+    const data = platoRes.data || []
 
     // Cargar receta_base_ingredientes para platos que tengan recetas anidadas
     const recetaBaseIdsAnidadas = new Set<string>()

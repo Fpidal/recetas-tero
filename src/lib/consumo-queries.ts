@@ -24,12 +24,12 @@ export function formatearMonedaAnalisis(valor: number | string | null | undefine
 // =====================================================
 
 /**
- * Insumos con precio actual + IVA (sin merma porque para consumo se pesa neto)
+ * Insumos con precio actual + IVA + merma (mismo C. Final que muestra Insumos)
  */
 export async function obtenerInsumosBuscador(): Promise<OpcionBuscador[]> {
   const { data, error } = await supabase
     .from('v_insumos_con_precio')
-    .select('id, nombre, unidad_medida, precio_actual, iva_porcentaje')
+    .select('id, nombre, unidad_medida, precio_actual, iva_porcentaje, merma_porcentaje')
     .eq('activo', true)
     .order('nombre')
 
@@ -42,8 +42,11 @@ export async function obtenerInsumosBuscador(): Promise<OpcionBuscador[]> {
       tipo: 'insumo' as const,
       nombre: i.nombre,
       unidad: i.unidad_medida,
-      // IVA incluido (sin merma)
-      costo_unitario: Number(i.precio_actual) * (1 + Number(i.iva_porcentaje || 0) / 100),
+      // Costo Final = precio × (1 + IVA) × (1 + merma)
+      costo_unitario:
+        Number(i.precio_actual) *
+        (1 + Number(i.iva_porcentaje || 0) / 100) *
+        (1 + Number(i.merma_porcentaje || 0) / 100),
     }))
 }
 
@@ -376,7 +379,7 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
 
   const { data: infoInsumos } = await supabase
     .from('v_insumos_con_precio')
-    .select('id, nombre, unidad_medida, precio_actual, iva_porcentaje')
+    .select('id, nombre, unidad_medida, precio_actual, iva_porcentaje, merma_porcentaje')
     .in('id', Array.from(todosInsumoIds))
 
   const infoMap = new Map<
@@ -386,10 +389,11 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
   for (const i of infoInsumos || []) {
     const precio = Number((i as any).precio_actual || 0)
     const iva = Number((i as any).iva_porcentaje || 0)
+    const merma = Number((i as any).merma_porcentaje || 0)
     infoMap.set((i as any).id, {
       nombre: (i as any).nombre,
       unidad: (i as any).unidad_medida,
-      costo_unit_iva: precio * (1 + iva / 100),
+      costo_unit_iva: precio * (1 + iva / 100) * (1 + merma / 100),
     })
   }
 

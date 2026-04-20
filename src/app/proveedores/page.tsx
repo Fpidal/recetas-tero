@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Phone, Mail, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Phone, Mail, Search, Package, BarChart2, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal, Table } from '@/components/ui'
 import { Proveedor } from '@/types/database'
@@ -90,7 +91,14 @@ const initialForm: ProveedorForm = {
   notas: '',
 }
 
+const tabs = [
+  { id: 'insumos', label: 'Insumos', icon: Package, href: '/insumos' },
+  { id: 'comparador', label: 'Comparador de Precios', icon: BarChart2, href: '/insumos?tab=comparador' },
+  { id: 'proveedores', label: 'Proveedores', icon: Users, href: '/proveedores' },
+]
+
 export default function ProveedoresPage() {
+  const router = useRouter()
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -346,44 +354,48 @@ export default function ProveedoresPage() {
     {
       key: 'nombre',
       header: 'Nombre',
+      className: 'max-w-[200px]',
       render: (p: Proveedor) => (
-        <div>
-          <p className="font-medium text-gray-900">{p.nombre}</p>
-          {p.contacto && <p className="text-sm text-gray-500">{p.contacto}</p>}
+        <div className="truncate">
+          <p className="font-medium text-gray-900 truncate">{p.nombre}</p>
+          {p.contacto && <p className="text-sm text-gray-500 truncate">{p.contacto}</p>}
         </div>
       ),
     },
     {
       key: 'codigo',
-      header: 'Código',
+      header: 'Cód',
       hideOnMobile: true,
+      className: 'w-20',
       render: (p: Proveedor) => (
-        <span className="text-sm text-gray-600 font-mono">{p.codigo || '-'}</span>
+        <span className="text-xs text-gray-600 font-mono">{p.codigo || '-'}</span>
       ),
     },
     {
       key: 'categoria',
-      header: 'Categoría',
+      header: 'Cat.',
+      className: 'w-24',
       render: (p: Proveedor) => (
-        <span className="text-sm text-gray-600">{p.categoria || '-'}</span>
+        <span className="text-xs text-gray-600 truncate">{p.categoria || '-'}</span>
       ),
     },
     {
       key: 'contacto',
       header: 'Contacto',
       hideOnMobile: true,
+      className: 'max-w-[180px]',
       render: (p: Proveedor) => (
-        <div className="space-y-1">
+        <div className="space-y-0.5 text-xs">
           {(p.celular || p.telefono) && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Phone className="w-4 h-4" />
-              {p.celular || p.telefono}
+            <div className="flex items-center gap-1 text-gray-600">
+              <Phone className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{p.celular || p.telefono}</span>
             </div>
           )}
           {p.email && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Mail className="w-4 h-4" />
-              {p.email}
+            <div className="flex items-center gap-1 text-gray-600">
+              <Mail className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{p.email}</span>
             </div>
           )}
         </div>
@@ -391,18 +403,19 @@ export default function ProveedoresPage() {
     },
     {
       key: 'condicion',
-      header: 'Cond. Pago',
+      header: 'Pago',
       hideOnMobile: true,
+      className: 'w-20',
       render: (p: Proveedor) => (
-        <span className="text-sm text-gray-600">{p.condicion_pago || '-'}</span>
+        <span className="text-xs text-gray-600">{p.condicion_pago || '-'}</span>
       ),
     },
     {
       key: 'acciones',
-      header: 'Acciones',
-      className: 'text-right',
+      header: '',
+      className: 'text-right w-20',
       render: (p: Proveedor) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1">
           <Button
             variant="ghost"
             size="sm"
@@ -474,7 +487,31 @@ export default function ProveedoresPage() {
   )
 
   return (
-    <div>
+    <div className="w-full overflow-x-hidden">
+      {/* Tabs de navegación */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-6">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = tab.id === 'proveedores'
+            return (
+              <button
+                key={tab.id}
+                onClick={() => router.push(tab.href)}
+                className={`flex items-center gap-2 py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Proveedores</h1>

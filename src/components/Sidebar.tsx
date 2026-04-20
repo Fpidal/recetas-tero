@@ -27,7 +27,6 @@ import { supabase } from '@/lib/supabase'
 
 const navigation = [
   { name: 'Inicio', href: '/', icon: Home, color: '#FFFFFF' },
-  { name: 'Proveedores', href: '/proveedores', icon: Users, color: '#4F8EF7' },
   { name: 'Insumos', href: '/insumos', icon: Package, color: '#10B981' },
   { name: 'Vinos', href: '/vinos', icon: Wine, color: '#7C3AED' },
   { name: 'Estadísticas', href: '/estadisticas', icon: BarChart3, color: '#8B5CF6' },

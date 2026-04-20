@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, LineChart as LineChartIcon, Search, Package, BarChart2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, LineChart as LineChartIcon, Search, Package, BarChart2, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Modal, Select } from '@/components/ui'
@@ -90,10 +92,16 @@ interface HistorialPrecio {
   cantidad: number | null
 }
 
-type TabType = 'insumos' | 'comparador'
+type TabType = 'insumos' | 'comparador' | 'proveedores'
 
 export default function InsumosPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('insumos')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    if (tabParam === 'comparador') return 'comparador'
+    return 'insumos'
+  })
   const [insumos, setInsumos] = useState<InsumoCompleto[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -410,6 +418,7 @@ export default function InsumosPage() {
   const tabs = [
     { id: 'insumos' as TabType, label: 'Insumos', icon: Package },
     { id: 'comparador' as TabType, label: 'Comparador de Precios', icon: BarChart2 },
+    { id: 'proveedores' as TabType, label: 'Proveedores', icon: Users },
   ]
 
   // Card para mobile
@@ -514,7 +523,13 @@ export default function InsumosPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  if (tab.id === 'proveedores') {
+                    router.push('/proveedores')
+                  } else {
+                    setActiveTab(tab.id)
+                  }
+                }}
                 className={`flex items-center gap-2 py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
                   isActive
                     ? 'border-red-500 text-red-600'

@@ -1,14 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { ClipboardEdit, Package, Star, History } from 'lucide-react'
+import { ClipboardEdit, Package, Star, History, CalendarRange } from 'lucide-react'
 import CargaDiaria from './components/CargaDiaria'
 import ConsumoDiario from './components/ConsumoDiario'
 import Incidencia from './components/Incidencia'
+import Resumen from './components/Resumen'
 import Historico from './components/Historico'
 import type { Servicio } from '@/types/analisis'
 
-type Tab = 'carga' | 'consumo' | 'incidencia' | 'historico'
+type Tab = 'carga' | 'consumo' | 'incidencia' | 'resumen' | 'historico'
 
 function dateToString(d: Date): string {
   const year = d.getFullYear()
@@ -56,6 +57,12 @@ export default function AnalisisPage() {
           label="Incidencia"
         />
         <TabButton
+          active={tab === 'resumen'}
+          onClick={() => setTab('resumen')}
+          icon={<CalendarRange className="w-4 h-4" />}
+          label="Resumen"
+        />
+        <TabButton
           active={tab === 'historico'}
           onClick={() => setTab('historico')}
           icon={<History className="w-4 h-4" />}
@@ -71,6 +78,9 @@ export default function AnalisisPage() {
       )}
       {tab === 'incidencia' && (
         <Incidencia fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
+      )}
+      {tab === 'resumen' && (
+        <Resumen fecha={fecha} servicio={servicio} setServicio={setServicio} />
       )}
       {tab === 'historico' && <Historico />}
     </div>

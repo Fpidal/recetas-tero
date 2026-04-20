@@ -513,6 +513,99 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
 }
 
 // =====================================================
+// DESGLOSE DE RANGO (para Resumen semanal/mensual)
+// =====================================================
+
+/**
+ * Desglosa a nivel insumo el consumo de un rango de fechas.
+ * Opcionalmente filtrado por servicio.
+ * Agrega cantidades y costos por insumo (igual que desglosarConsumo
+ * pero para varios consumos).
+ */
+export async function desglosarRango(
+  desde: string,
+  hasta: string,
+  servicio?: Servicio
+): Promise<{
+  desglose: ItemDesglosado[]
+  diasConCarga: number
+  costoTotal: number
+}> {
+  // Obtener consumo_ids en el rango
+  let q = supabase
+    .from('consumo_diario')
+    .select('id, fecha')
+    .gte('fecha', desde)
+    .lte('fecha', hasta)
+  if (servicio) q = q.eq('servicio', servicio)
+
+  const { data: consumos } = await q
+  if (!consumos || consumos.length === 0) {
+    return { desglose: [], diasConCarga: 0, costoTotal: 0 }
+  }
+
+  // Desglosar en paralelo
+  const desgloses = await Promise.all(
+    consumos.map((c: any) => desglosarConsumo(c.id))
+  )
+
+  // Consolidar por insumo
+  const mapa = new Map<string, ItemDesglosado>()
+  for (const desglose of desgloses) {
+    for (const d of desglose) {
+      const acc = mapa.get(d.insumo_id)
+      if (acc) {
+        acc.cantidad_total += d.cantidad_total
+        acc.costo_total += d.costo_total
+        // fusionar orígenes sin duplicar
+        const origenesSet = new Set([...acc.origenes, ...d.origenes])
+        acc.origenes = Array.from(origenesSet)
+      } else {
+        mapa.set(d.insumo_id, { ...d, origenes: [...d.origenes] })
+      }
+    }
+  }
+
+  const resultado = Array.from(mapa.values()).sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, 'es-AR')
+  )
+
+  const costoTotal = resultado.reduce((a, r) => a + r.costo_total, 0)
+  // Días únicos con carga
+  const fechasUnicas = new Set(consumos.map((c: any) => c.fecha))
+
+  return {
+    desglose: resultado,
+    diasConCarga: fechasUnicas.size,
+    costoTotal,
+  }
+}
+
+// Helpers de semana (lunes a domingo)
+export function getLunesDeSemana(fecha: Date): Date {
+  const d = new Date(fecha)
+  d.setHours(0, 0, 0, 0)
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  d.setDate(diff)
+  return d
+}
+
+export function getDomingoDeSemana(fecha: Date): Date {
+  const lunes = getLunesDeSemana(fecha)
+  const dom = new Date(lunes)
+  dom.setDate(lunes.getDate() + 6)
+  return dom
+}
+
+export function dateToISO(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+// =====================================================
 // INCIDENCIA: cruce ventas (de ventas_diarias) + costo (de consumo_diario)
 // =====================================================
 

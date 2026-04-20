@@ -18,16 +18,14 @@ import {
   SERVICIO_ICON,
 } from '@/types/analisis'
 
-function dateToString(d: Date): string {
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+interface Props {
+  fecha: string
+  setFecha: (f: string) => void
+  servicio: Servicio
+  setServicio: (s: Servicio) => void
 }
 
-export default function ConsumoDiario() {
-  const [fecha, setFecha] = useState(dateToString(new Date()))
-  const [servicio, setServicio] = useState<Servicio>('mediodia')
+export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }: Props) {
 
   const [consumo, setConsumo] = useState<ConsumoDiarioType | null>(null)
   const [desglose, setDesglose] = useState<ItemDesglosado[]>([])

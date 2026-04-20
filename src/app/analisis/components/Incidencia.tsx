@@ -22,30 +22,35 @@ import {
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
-function dateToString(d: Date): string {
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 
-export default function Incidencia() {
-  // Carga manual de venta del día
-  const [fechaCarga, setFechaCarga] = useState(dateToString(new Date()))
-  const [servicioCarga, setServicioCarga] = useState<Servicio>('mediodia')
+interface Props {
+  fecha: string // fecha compartida entre solapas (se usa para el form de carga de venta)
+  setFecha: (f: string) => void
+  servicio: Servicio
+  setServicio: (s: Servicio) => void
+}
+
+export default function Incidencia({ fecha, setFecha, servicio, setServicio }: Props) {
+  // Carga manual de venta del día: usa fecha + servicio compartidos
+  const fechaCarga = fecha
+  const setFechaCarga = setFecha
+  const servicioCarga = servicio
+  const setServicioCarga = setServicio
   const [ventaInput, setVentaInput] = useState('')
   const [cubiertosInput, setCubiertosInput] = useState('')
   const [datosCarga, setDatosCarga] = useState<IncidenciaDia | null>(null)
   const [guardando, setGuardando] = useState(false)
 
-  // Detalle del mes
-  const [fechaRef, setFechaRef] = useState(new Date())
-  const [servicioVista, setServicioVista] = useState<Servicio>('mediodia')
+  // Detalle del mes (independiente, usa el mes de la fecha compartida)
+  const [fechaRef, setFechaRef] = useState(() => {
+    const [y, m, d] = fecha.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  })
+  const [servicioVista, setServicioVista] = useState<Servicio>(servicio)
   const [incidencias, setIncidencias] = useState<IncidenciaDia[]>([])
   const [cargando, setCargando] = useState(false)
 

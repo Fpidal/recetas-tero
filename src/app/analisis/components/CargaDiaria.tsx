@@ -25,22 +25,20 @@ import {
   SERVICIO_ICON,
 } from '@/types/analisis'
 
-function dateToString(d: Date): string {
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 const TIPOS: { valor: TipoConsumoItem; label: string; icon: any; color: string }[] = [
   { valor: 'insumo', label: 'Insumo', icon: Package, color: 'text-blue-600' },
   { valor: 'elaboracion', label: 'Elaboración', icon: BookOpen, color: 'text-amber-600' },
   { valor: 'receta', label: 'Receta', icon: ChefHat, color: 'text-rose-600' },
 ]
 
-export default function CargaDiaria() {
-  const [fecha, setFecha] = useState(dateToString(new Date()))
-  const [servicio, setServicio] = useState<Servicio>('mediodia')
+interface Props {
+  fecha: string
+  setFecha: (f: string) => void
+  servicio: Servicio
+  setServicio: (s: Servicio) => void
+}
+
+export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: Props) {
 
   const [consumo, setConsumo] = useState<ConsumoDiario | null>(null)
   const [items, setItems] = useState<ConsumoItem[]>([])

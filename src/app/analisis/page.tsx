@@ -6,11 +6,24 @@ import CargaDiaria from './components/CargaDiaria'
 import ConsumoDiario from './components/ConsumoDiario'
 import Incidencia from './components/Incidencia'
 import Historico from './components/Historico'
+import type { Servicio } from '@/types/analisis'
 
 type Tab = 'carga' | 'consumo' | 'incidencia' | 'historico'
 
+function dateToString(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function AnalisisPage() {
   const [tab, setTab] = useState<Tab>('carga')
+
+  // Estado compartido entre solapas: fecha + servicio seleccionados
+  // Se mantiene al cambiar de solapa así el usuario no tiene que reseleccionar
+  const [fecha, setFecha] = useState(dateToString(new Date()))
+  const [servicio, setServicio] = useState<Servicio>('mediodia')
 
   return (
     <div className="p-4 lg:p-6 mobile-content-padding">
@@ -50,9 +63,15 @@ export default function AnalisisPage() {
         />
       </div>
 
-      {tab === 'carga' && <CargaDiaria />}
-      {tab === 'consumo' && <ConsumoDiario />}
-      {tab === 'incidencia' && <Incidencia />}
+      {tab === 'carga' && (
+        <CargaDiaria fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
+      )}
+      {tab === 'consumo' && (
+        <ConsumoDiario fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
+      )}
+      {tab === 'incidencia' && (
+        <Incidencia fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
+      )}
       {tab === 'historico' && <Historico />}
     </div>
   )

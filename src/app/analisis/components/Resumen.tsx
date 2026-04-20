@@ -15,6 +15,9 @@ import {
   type Servicio,
   SERVICIO_LABEL,
   SERVICIO_ICON,
+  CATEGORIAS_LABEL,
+  CATEGORIAS_COLOR,
+  CATEGORIAS_ORDEN,
 } from '@/types/analisis'
 
 interface Props {
@@ -168,98 +171,158 @@ export default function Resumen({ fecha, servicio, setServicio }: Props) {
         </div>
       </div>
 
-      {/* Tabla de desglose */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="px-4 py-3 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900">
-            Detalle por insumo - Semana del {formatearFecha(dateToISO(lunes))} al{' '}
-            {formatearFecha(dateToISO(domingo))}
-          </h3>
-          <p className="text-[11px] text-gray-500">
-            Totales acumulados: insumos directos + desglose de recetas y elaboraciones
-          </p>
+      {/* Desglose agrupado por categoría */}
+      {cargando ? (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center text-gray-400 text-sm">
+          Cargando...
         </div>
+      ) : desglose.length === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center text-gray-400 text-sm">
+          No hay consumos cargados en esta semana
+          {filtroServicio !== 'todos' && ` para ${SERVICIO_LABEL[filtroServicio]}`}.
+        </div>
+      ) : (
+        <>
+          {agruparPorCategoria(desglose).map(([categoria, items, subtotal]) => (
+            <SeccionCategoria
+              key={categoria}
+              categoria={categoria}
+              items={items}
+              subtotal={subtotal}
+              porcentajeDelTotal={costoTotal > 0 ? (subtotal / costoTotal) * 100 : 0}
+            />
+          ))}
 
-        {cargando ? (
-          <div className="py-12 text-center text-gray-400 text-sm">Cargando...</div>
-        ) : desglose.length === 0 ? (
-          <div className="py-12 text-center text-gray-400 text-sm">
-            No hay consumos cargados en esta semana
-            {filtroServicio !== 'todos' && ` para ${SERVICIO_LABEL[filtroServicio]}`}.
-          </div>
-        ) : (
-          <>
-            {/* Desktop */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-[10px] text-gray-500 uppercase">
-                    <th className="text-left py-2 px-3 font-medium">Insumo</th>
-                    <th className="text-left py-2 px-3 font-medium">Origen</th>
-                    <th className="text-right py-2 px-3 font-medium">Cantidad</th>
-                    <th className="text-right py-2 px-3 font-medium">Costo (IVA inc.)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {desglose.map((d) => (
-                    <tr key={d.insumo_id} className="hover:bg-gray-50">
-                      <td className="py-2.5 px-3 text-gray-900">{d.nombre}</td>
-                      <td className="px-3 text-[11px] text-gray-500">
-                        {d.origenes.slice(0, 2).join(' · ')}
-                        {d.origenes.length > 2 && ` · +${d.origenes.length - 2}`}
-                      </td>
-                      <td className="text-right px-3 font-medium">
-                        {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })}{' '}
-                        {d.unidad}
-                      </td>
-                      <td className="text-right px-3 text-gray-700">
-                        {d.costo_total > 0 ? formatearMonedaAnalisis(d.costo_total) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50 border-t-2 border-gray-200 font-semibold">
-                    <td colSpan={3} className="py-3 px-3 text-right text-gray-700">
-                      Total semana (IVA inc.):
-                    </td>
-                    <td className="text-right px-3 text-base text-gray-900">
-                      {formatearMonedaAnalisis(costoTotal)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-
-            {/* Mobile cards */}
-            <div className="md:hidden divide-y divide-gray-100">
-              {desglose.map((d) => (
-                <div key={d.insumo_id} className="p-3">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="text-sm font-medium text-gray-900">{d.nombre}</div>
-                    <div className="text-sm font-semibold text-gray-700 ml-2">
-                      {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })}{' '}
-                      {d.unidad}
-                    </div>
-                  </div>
-                  <div className="flex items-start justify-between">
-                    <div className="text-[11px] text-gray-500 flex-1 mr-2">
-                      {d.origenes.slice(0, 2).join(' · ')}
-                      {d.origenes.length > 2 && ` · +${d.origenes.length - 2}`}
-                    </div>
-                    <div className="text-xs text-gray-700 whitespace-nowrap">
-                      {d.costo_total > 0 ? formatearMonedaAnalisis(d.costo_total) : '—'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div className="p-3 bg-gray-50 flex justify-between font-semibold">
-                <span className="text-sm text-gray-700">Total semana</span>
-                <span className="text-base text-gray-900">{formatearMonedaAnalisis(costoTotal)}</span>
+          {/* Total general */}
+          <div className="bg-gray-900 text-white rounded-lg shadow-sm p-4 flex items-center justify-between">
+            <div>
+              <div className="text-xs uppercase opacity-70">Total semana</div>
+              <div className="text-[11px] opacity-60">
+                {formatearFecha(dateToISO(lunes))} → {formatearFecha(dateToISO(domingo))}
               </div>
             </div>
-          </>
-        )}
+            <div className="text-xl sm:text-2xl font-bold">{formatearMonedaAnalisis(costoTotal)}</div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// Agrupa desglose por categoría, respetando el orden fijo.
+// Devuelve array de [categoria, items, subtotal] ordenado.
+function agruparPorCategoria(
+  items: ItemDesglosado[]
+): Array<[string, ItemDesglosado[], number]> {
+  const map = new Map<string, ItemDesglosado[]>()
+  for (const it of items) {
+    const cat = it.categoria || 'Almacen'
+    if (!map.has(cat)) map.set(cat, [])
+    map.get(cat)!.push(it)
+  }
+  // Ordenar por CATEGORIAS_ORDEN y poner las no listadas al final
+  const orden = CATEGORIAS_ORDEN.filter((c) => map.has(c))
+  const extras = Array.from(map.keys()).filter((c) => !CATEGORIAS_ORDEN.includes(c))
+  const todas = [...orden, ...extras]
+
+  return todas.map((cat) => {
+    const its = map.get(cat) || []
+    const subtotal = its.reduce((a, i) => a + i.costo_total, 0)
+    return [cat, its, subtotal] as [string, ItemDesglosado[], number]
+  })
+}
+
+function SeccionCategoria({
+  categoria,
+  items,
+  subtotal,
+  porcentajeDelTotal,
+}: {
+  categoria: string
+  items: ItemDesglosado[]
+  subtotal: number
+  porcentajeDelTotal: number
+}) {
+  const label = CATEGORIAS_LABEL[categoria] || categoria
+  const color = CATEGORIAS_COLOR[categoria] || {
+    bg: 'bg-gray-50',
+    text: 'text-gray-800',
+    border: 'border-gray-200',
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div
+        className={`px-4 py-3 border-b ${color.bg} ${color.border} flex items-center justify-between`}
+      >
+        <div className="flex items-center gap-2">
+          <h3 className={`text-sm font-semibold ${color.text}`}>{label}</h3>
+          <span className={`text-xs ${color.text} opacity-70`}>({items.length})</span>
+        </div>
+        <div className="text-right">
+          <div className={`text-sm font-bold ${color.text}`}>
+            {formatearMonedaAnalisis(subtotal)}
+          </div>
+          <div className={`text-[10px] ${color.text} opacity-60`}>
+            {porcentajeDelTotal.toFixed(1)}% del total
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 text-[10px] text-gray-500 uppercase">
+              <th className="text-left py-2 px-3 font-medium">Insumo</th>
+              <th className="text-left py-2 px-3 font-medium">Origen</th>
+              <th className="text-right py-2 px-3 font-medium">Cantidad</th>
+              <th className="text-right py-2 px-3 font-medium">Costo (IVA inc.)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {items.map((d) => (
+              <tr key={d.insumo_id} className="hover:bg-gray-50">
+                <td className="py-2.5 px-3 text-gray-900">{d.nombre}</td>
+                <td className="px-3 text-[11px] text-gray-500">
+                  {d.origenes.slice(0, 2).join(' · ')}
+                  {d.origenes.length > 2 && ` · +${d.origenes.length - 2}`}
+                </td>
+                <td className="text-right px-3 font-medium">
+                  {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })}{' '}
+                  {d.unidad}
+                </td>
+                <td className="text-right px-3 text-gray-700">
+                  {d.costo_total > 0 ? formatearMonedaAnalisis(d.costo_total) : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden divide-y divide-gray-100">
+        {items.map((d) => (
+          <div key={d.insumo_id} className="p-3">
+            <div className="flex items-start justify-between mb-1">
+              <div className="text-sm font-medium text-gray-900">{d.nombre}</div>
+              <div className="text-sm font-semibold text-gray-700 ml-2">
+                {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })}{' '}
+                {d.unidad}
+              </div>
+            </div>
+            <div className="flex items-start justify-between">
+              <div className="text-[11px] text-gray-500 flex-1 mr-2">
+                {d.origenes.slice(0, 2).join(' · ')}
+                {d.origenes.length > 2 && ` · +${d.origenes.length - 2}`}
+              </div>
+              <div className="text-xs text-gray-700 whitespace-nowrap">
+                {d.costo_total > 0 ? formatearMonedaAnalisis(d.costo_total) : '—'}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

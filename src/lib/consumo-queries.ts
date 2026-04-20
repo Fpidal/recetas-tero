@@ -391,12 +391,12 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
 
   const { data: infoInsumos } = await supabase
     .from('v_insumos_con_precio')
-    .select('id, nombre, unidad_medida, precio_actual, iva_porcentaje, merma_porcentaje')
+    .select('id, nombre, unidad_medida, categoria, precio_actual, iva_porcentaje, merma_porcentaje')
     .in('id', Array.from(todosInsumoIds))
 
   const infoMap = new Map<
     string,
-    { nombre: string; unidad: string; costo_unit_iva: number }
+    { nombre: string; unidad: string; categoria: string; costo_unit_iva: number }
   >()
   for (const i of infoInsumos || []) {
     const precio = Number((i as any).precio_actual || 0)
@@ -405,6 +405,7 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
     infoMap.set((i as any).id, {
       nombre: (i as any).nombre,
       unidad: (i as any).unidad_medida,
+      categoria: (i as any).categoria || 'Almacen',
       costo_unit_iva: precio * (1 + iva / 100) * (1 + merma / 100),
     })
   }
@@ -502,6 +503,7 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
       insumo_id: id,
       nombre: info.nombre,
       unidad: info.unidad,
+      categoria: info.categoria,
       cantidad_total: acc.cantidad,
       costo_total: acc.costo,
       origenes: Array.from(new Set(acc.origenes)),

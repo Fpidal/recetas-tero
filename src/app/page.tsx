@@ -429,19 +429,9 @@ export default function Home() {
         .neq('activo', false)
         .order('fecha', { ascending: true })
 
-      // Función para calcular total con IVA
-      // Para NC, usar el total almacenado (que ya es negativo)
+      // El total almacenado en la DB ya incluye IVA, usarlo directamente
       const calcularTotalFactura = (factura: any): number => {
-        // Si es nota de crédito, usar el total almacenado directamente (negativo)
-        if (factura.tipo === 'nota_credito') {
-          return factura.total || 0
-        }
-        if (!factura.factura_items || factura.factura_items.length === 0) return factura.total || 0
-        return factura.factura_items.reduce((sum: number, item: any) => {
-          const subtotal = item.cantidad * item.precio_unitario
-          const iva = subtotal * ((item.insumos?.iva_porcentaje ?? 21) / 100)
-          return sum + subtotal + iva
-        }, 0)
+        return factura.total || 0
       }
 
       // Calcular semanas

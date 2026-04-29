@@ -160,6 +160,73 @@ export async function obtenerUltimosDias(limit: number = 10): Promise<VentaDiari
   return data || []
 }
 
+/**
+ * Tipo de filtro para la vista de días
+ */
+export type FiltroVentas = 'mes' | 'ultimos30'
+
+/**
+ * Representa un día del calendario (con o sin datos de venta)
+ */
+export interface DiaCalendario {
+  fecha: string
+  diaSemana: string
+  tieneDatos: boolean
+  venta?: VentaDiaria
+}
+
+/**
+ * Obtiene todos los días de un período con sus datos de venta (si existen)
+ * Para "mes": todos los días del mes actual
+ * Para "ultimos30": los últimos 30 días desde hoy
+ */
+export async function obtenerDiasConVentas(filtro: FiltroVentas): Promise<DiaCalendario[]> {
+  const hoy = new Date()
+  let desde: Date
+  let hasta: Date
+
+  if (filtro === 'mes') {
+    // Primer día del mes actual
+    desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    // Último día del mes actual
+    hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+  } else {
+    // Últimos 30 días
+    hasta = new Date(hoy)
+    desde = new Date(hoy)
+    desde.setDate(desde.getDate() - 29) // 30 días incluyendo hoy
+  }
+
+  const desdeStr = dateToString(desde)
+  const hastaStr = dateToString(hasta)
+
+  // Traer ventas del rango
+  const ventas = await obtenerVentasRango(desdeStr, hastaStr)
+  const ventasPorFecha = new Map(ventas.map(v => [v.fecha, v]))
+
+  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+  const resultado: DiaCalendario[] = []
+
+  // Generar todos los días del rango
+  const cursor = new Date(desde)
+  while (cursor <= hasta) {
+    const fechaStr = dateToString(cursor)
+    const venta = ventasPorFecha.get(fechaStr)
+
+    resultado.push({
+      fecha: fechaStr,
+      diaSemana: diasSemana[cursor.getDay()],
+      tieneDatos: !!venta,
+      venta: venta || undefined,
+    })
+
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  // Ordenar descendente (más reciente primero)
+  return resultado.sort((a, b) => b.fecha.localeCompare(a.fecha))
+}
+
 // =====================================================
 // QUERIES COMPRAS (FACTURAS)
 // =====================================================

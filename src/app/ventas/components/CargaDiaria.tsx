@@ -4,17 +4,17 @@ import { useEffect, useState } from 'react'
 import { Sun, Moon, PartyPopper, Save, AlertTriangle, Pencil, Trash2 } from 'lucide-react'
 import { Button, Input, Modal } from '@/components/ui'
 import {
-  obtenerUltimosDias,
+  obtenerDiasConVentas,
   obtenerVentaPorFecha,
   guardarVenta,
   eliminarVenta,
   dateToString,
   formatearMonedaVentas,
+  type FiltroVentas,
+  type DiaCalendario,
 } from '@/lib/ventas-queries'
 import { formatearFecha, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import type { VentaDiaria } from '@/types/ventas'
-
-const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
 export default function CargaDiaria() {
   // Form state
@@ -29,9 +29,10 @@ export default function CargaDiaria() {
 
   // UI state
   const [guardando, setGuardando] = useState(false)
-  const [ultimosDias, setUltimosDias] = useState<VentaDiaria[]>([])
+  const [diasLista, setDiasLista] = useState<DiaCalendario[]>([])
   const [cargandoLista, setCargandoLista] = useState(true)
   const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [filtro, setFiltro] = useState<FiltroVentas>('mes')
 
   // Modal de confirmación de reemplazo
   const [modalReemplazo, setModalReemplazo] = useState<{
@@ -46,16 +47,16 @@ export default function CargaDiaria() {
   }>({ abierto: false, venta: null })
 
   useEffect(() => {
-    cargarUltimosDias()
-  }, [])
+    cargarDias()
+  }, [filtro])
 
-  async function cargarUltimosDias() {
+  async function cargarDias() {
     try {
       setCargandoLista(true)
-      const data = await obtenerUltimosDias(15)
-      setUltimosDias(data)
+      const data = await obtenerDiasConVentas(filtro)
+      setDiasLista(data)
     } catch (e) {
-      console.error('Error cargando últimos días:', e)
+      console.error('Error cargando días:', e)
     } finally {
       setCargandoLista(false)
     }
@@ -125,7 +126,7 @@ export default function CargaDiaria() {
         notas: notas.trim() || null,
       })
       limpiarForm()
-      await cargarUltimosDias()
+      await cargarDias()
       setModalReemplazo({ abierto: false, existente: null })
     } catch (e) {
       console.error('Error guardando:', e)
@@ -141,7 +142,7 @@ export default function CargaDiaria() {
       await eliminarVenta(modalEliminar.venta.id)
       setModalEliminar({ abierto: false, venta: null })
       if (editandoId === modalEliminar.venta.id) limpiarForm()
-      await cargarUltimosDias()
+      await cargarDias()
     } catch (e) {
       console.error('Error eliminando:', e)
       alert('Error al eliminar la venta')
@@ -247,15 +248,42 @@ export default function CargaDiaria() {
         <div className="lg:col-span-2">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Últimos días cargados</h2>
-              <p className="text-xs text-gray-500">Click en un día para editarlo</p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Días del período</h2>
+                  <p className="text-xs text-gray-500">Click en un día para editarlo</p>
+                </div>
+                {/* Toggle filtro */}
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setFiltro('mes')}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      filtro === 'mes'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Este mes
+                  </button>
+                  <button
+                    onClick={() => setFiltro('ultimos30')}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      filtro === 'ultimos30'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Últimos 30 días
+                  </button>
+                </div>
+              </div>
             </div>
 
             {cargandoLista ? (
               <div className="py-12 text-center text-gray-400 text-sm">Cargando...</div>
-            ) : ultimosDias.length === 0 ? (
+            ) : diasLista.length === 0 ? (
               <div className="py-12 text-center text-gray-400 text-sm">
-                Todavía no cargaste ninguna venta. Empezá por el formulario de la izquierda.
+                No hay días en este período.
               </div>
             ) : (
               <>
@@ -273,7 +301,31 @@ export default function CargaDiaria() {
                       </tr>
                     </thead>
                     <tbody className="text-sm divide-y divide-gray-100">
-                      {ultimosDias.map((v) => {
+                      {diasLista.map((dia) => {
+                        const v = dia.venta
+                        if (!dia.tieneDatos || !v) {
+                          // Día sin datos
+                          return (
+                            <tr
+                              key={dia.fecha}
+                              className="bg-gray-50/50 hover:bg-gray-100 cursor-pointer"
+                              onClick={() => {
+                                setFecha(dia.fecha)
+                                window.scrollTo({ top: 0, behavior: 'smooth' })
+                              }}
+                            >
+                              <td className="py-3 px-3 text-gray-400">
+                                {formatearFecha(dia.fecha)}{' '}
+                                <span className="text-xs">{dia.diaSemana}</span>
+                              </td>
+                              <td colSpan={4} className="text-center py-3 px-3 text-gray-400 text-xs">
+                                Sin cargar
+                              </td>
+                              <td className="text-right py-3 px-3"></td>
+                            </tr>
+                          )
+                        }
+
                         const total =
                           Number(v.venta_mediodia) + Number(v.venta_noche) + Number(v.venta_eventos)
                         const cubTotal =
@@ -281,7 +333,6 @@ export default function CargaDiaria() {
                           Number(v.cubiertos_noche || 0) +
                           Number(v.cubiertos_eventos || 0)
                         const tieneEventos = Number(v.venta_eventos) > 0
-                        const dia = DIAS_SEMANA[new Date(v.fecha + 'T12:00:00').getDay()]
                         const esEditando = editandoId === v.id
                         return (
                           <tr
@@ -293,7 +344,7 @@ export default function CargaDiaria() {
                           >
                             <td className="py-3 px-3 text-gray-900">
                               {formatearFecha(v.fecha)}{' '}
-                              <span className="text-xs text-gray-400">{dia}</span>
+                              <span className="text-xs text-gray-400">{dia.diaSemana}</span>
                             </td>
                             <td className="text-right py-3 px-3 text-gray-700">
                               <CeldaServicio venta={v.venta_mediodia} cubiertos={v.cubiertos_mediodia} />
@@ -347,7 +398,35 @@ export default function CargaDiaria() {
 
                 {/* ===== MOBILE: CARDS ===== */}
                 <div className="md:hidden divide-y divide-gray-100">
-                  {ultimosDias.map((v) => {
+                  {diasLista.map((dia) => {
+                    const v = dia.venta
+
+                    if (!dia.tieneDatos || !v) {
+                      // Día sin datos - card simplificada
+                      return (
+                        <div
+                          key={dia.fecha}
+                          className="p-4 bg-gray-50/50"
+                          onClick={() => {
+                            setFecha(dia.fecha)
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm font-medium text-gray-400">
+                                {formatearFecha(dia.fecha)}
+                              </div>
+                              <div className="text-xs text-gray-400">{dia.diaSemana}</div>
+                            </div>
+                            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded">
+                              Sin cargar
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    }
+
                     const total =
                       Number(v.venta_mediodia) + Number(v.venta_noche) + Number(v.venta_eventos)
                     const cubTotal =
@@ -355,7 +434,6 @@ export default function CargaDiaria() {
                       Number(v.cubiertos_noche || 0) +
                       Number(v.cubiertos_eventos || 0)
                     const tieneEventos = Number(v.venta_eventos) > 0
-                    const dia = DIAS_SEMANA[new Date(v.fecha + 'T12:00:00').getDay()]
                     const esEditando = editandoId === v.id
 
                     return (
@@ -372,7 +450,7 @@ export default function CargaDiaria() {
                             <div className="text-sm font-semibold text-gray-900">
                               {formatearFecha(v.fecha)}
                             </div>
-                            <div className="text-xs text-gray-400">{dia}</div>
+                            <div className="text-xs text-gray-400">{dia.diaSemana}</div>
                           </div>
                           <div className="text-right">
                             <div className="text-lg font-bold text-gray-900">

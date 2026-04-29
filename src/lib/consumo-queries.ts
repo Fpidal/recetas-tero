@@ -568,9 +568,13 @@ export async function desglosarRango(
     }
   }
 
-  const resultado = Array.from(mapa.values()).sort((a, b) =>
-    a.nombre.localeCompare(b.nombre, 'es-AR')
-  )
+  // Agrupar orígenes antes de devolver
+  const resultado = Array.from(mapa.values())
+    .map((item) => ({
+      ...item,
+      origenes: agruparOrigenes(item.origenes),
+    }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es-AR'))
 
   const costoTotal = resultado.reduce((a, r) => a + r.costo_total, 0)
   // Días únicos con carga
@@ -581,6 +585,61 @@ export async function desglosarRango(
     diasConCarga: fechasUnicas.size,
     costoTotal,
   }
+}
+
+/**
+ * Agrupa orígenes del mismo tipo y suma las cantidades.
+ * Ej: ["6 porcion Milanesa", "14 porcion Milanesa", "Carga directa", "Carga directa"]
+ *   → ["20 porciones Milanesa", "Carga directa"]
+ */
+function agruparOrigenes(origenes: string[]): string[] {
+  const mapa = new Map<string, { cantidad: number; unidad: string }>()
+  let cargasDirectas = 0
+
+  for (const origen of origenes) {
+    if (origen === 'Carga directa') {
+      cargasDirectas++
+      continue
+    }
+
+    // Parsear "X unidad NombreReceta" (ej: "6 porcion Milanesa")
+    const match = origen.match(/^([\d.,]+)\s+(\S+)\s+(.+)$/)
+    if (match) {
+      const cantidad = parseFloat(match[1].replace(',', '.'))
+      const unidad = match[2]
+      const nombre = match[3]
+
+      const key = `${unidad}|${nombre}`
+      const acc = mapa.get(key) || { cantidad: 0, unidad }
+      acc.cantidad += cantidad
+      mapa.set(key, acc)
+    } else {
+      // Si no matchea el patrón, dejarlo como está
+      mapa.set(origen, { cantidad: 0, unidad: '' })
+    }
+  }
+
+  const resultado: string[] = []
+
+  // Agregar orígenes agrupados
+  mapa.forEach(({ cantidad, unidad }, key) => {
+    if (cantidad > 0) {
+      const nombre = key.split('|')[1]
+      // Pluralizar unidad si cantidad > 1
+      const unidadPlural = cantidad > 1 && unidad === 'porcion' ? 'porciones' : unidad
+      resultado.push(`${cantidad % 1 === 0 ? cantidad : cantidad.toFixed(1)} ${unidadPlural} ${nombre}`)
+    } else {
+      // Origen sin parsear (fallback)
+      resultado.push(key)
+    }
+  })
+
+  // Agregar carga directa al final si hubo
+  if (cargasDirectas > 0) {
+    resultado.push('Carga directa')
+  }
+
+  return resultado
 }
 
 // Helpers de semana (lunes a domingo)

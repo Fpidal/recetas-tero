@@ -9,13 +9,13 @@ import { parsearNumero } from '@/lib/formato-numeros'
 import { Button } from '@/components/ui'
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Carnes': '#d98a8a',
-  'Pescados_Mariscos': '#64b5f6',
-  'Verduras_Frutas': '#ffd54f',
-  'Lacteos_Fiambres': '#ffb74d',
-  'Bebidas': '#4fc3f7',
-  'Salsas_Recetas': '#81c784',
-  'Almacen': '#bdbdbd',
+  'Carnes': '#9B2C2C',
+  'Pescados_Mariscos': '#4A6572',
+  'Verduras_Frutas': '#3D8B5E',
+  'Lacteos_Fiambres': '#5C7A5E',
+  'Bebidas': '#C4704B',
+  'Salsas_Recetas': '#C4704B',
+  'Almacen': '#A67B3D',
 }
 
 interface Insumo {
@@ -339,13 +339,13 @@ export default function NuevaRecetaBasePage() {
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-gray-500 mb-0.5">Costo</p>
-                        <p className="text-sm font-bold text-green-700">
+                        <p className="text-sm font-bold text-green-700 font-mono">
                           ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-gray-500 mb-0.5">Incidencia</p>
-                        <p className="text-sm font-semibold text-blue-700">
+                        <p className="text-sm font-semibold text-blue-700 font-mono">
                           {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
                         </p>
                       </div>
@@ -381,13 +381,13 @@ export default function NuevaRecetaBasePage() {
                           />
                           <span className="ml-1 text-xs text-gray-500">{ing.unidad_medida}</span>
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums">
+                        <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums font-mono">
                           ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums">
+                        <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums font-mono">
                           ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
+                        <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50 font-mono">
                           {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
                         </td>
                         <td className="px-2 py-1.5">
@@ -456,7 +456,7 @@ export default function NuevaRecetaBasePage() {
                     const pct = costoTotal > 0 ? ((dominante.costo_linea / costoTotal) * 100).toFixed(0) : 0
                     return (
                       <p className="text-[11px] text-gray-500 text-center mt-1">
-                        Principal: <span className="font-medium text-gray-700">{dominante.insumo_nombre}</span> ({pct}%)
+                        Principal: <span className="font-medium text-gray-700">{dominante.insumo_nombre}</span> (<span className="font-mono">{pct}%</span>)
                       </p>
                     )
                   })()}
@@ -484,13 +484,13 @@ export default function NuevaRecetaBasePage() {
             <div className="mt-3 bg-gray-50 rounded-lg p-3">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs text-gray-600">Costo Total:</span>
-                <span className="text-base font-bold text-gray-900 tabular-nums">
+                <span className="text-base font-bold text-gray-900 tabular-nums font-mono">
                   ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-600">Costo por Porción ({rendimiento} porciones):</span>
-                <span className="text-base font-bold text-green-600 tabular-nums">
+                <span className="text-xs text-gray-600">Costo por Porción (<span className="font-mono">{rendimiento}</span> porciones):</span>
+                <span className="text-base font-bold text-green-600 tabular-nums font-mono">
                   ${costoPorPorcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </span>
               </div>

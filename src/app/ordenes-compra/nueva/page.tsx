@@ -783,7 +783,7 @@ export default function NuevaOrdenCompraPage() {
                       <select
                         value={item.iva_porcentaje}
                         onChange={(e) => handleIvaChange(item.id, parseFloat(e.target.value))}
-                        className={`px-2 py-0.5 rounded text-xs font-medium border-0 cursor-pointer flex-shrink-0 ${
+                        className={`px-2 py-0.5 rounded text-xs font-medium font-mono border-0 cursor-pointer flex-shrink-0 ${
                           item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
                           item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
                           'bg-green-100 text-green-800'
@@ -805,7 +805,7 @@ export default function NuevaOrdenCompraPage() {
                             onFocus={() => startEditing(item.id, 'cantidad', item.cantidad)}
                             onChange={(e) => updateEditingValue(e.target.value)}
                             onBlur={finishEditing}
-                            className="w-14 rounded border border-gray-300 px-2 py-1 text-sm"
+                            className="w-14 rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                           />
                           <select
                             value={item.unidad_display}
@@ -828,13 +828,13 @@ export default function NuevaOrdenCompraPage() {
                             onFocus={() => startEditing(item.id, 'precio', item.precio_unitario)}
                             onChange={(e) => updateEditingValue(e.target.value)}
                             onBlur={finishEditing}
-                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                            className="w-16 rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                           />
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-gray-500 mb-0.5">Subtotal</p>
-                        <p className="text-sm font-bold text-gray-900">
+                        <p className="text-sm font-bold text-gray-900 font-mono">
                           {formatearMoneda(item.subtotal)}
                         </p>
                       </div>
@@ -851,29 +851,29 @@ export default function NuevaOrdenCompraPage() {
                 <div className="bg-gray-50 rounded-lg p-3 border mt-3">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600">Subtotal Neto:</span>
-                    <span className="text-gray-900">{formatearMoneda(subtotalNeto)}</span>
+                    <span className="text-gray-900 font-mono">{formatearMoneda(subtotalNeto)}</span>
                   </div>
                   {totalIva21 > 0 && (
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-600">IVA 21%:</span>
-                      <span className="text-gray-900">{formatearMoneda(totalIva21)}</span>
+                      <span className="text-gray-900 font-mono">{formatearMoneda(totalIva21)}</span>
                     </div>
                   )}
                   {totalIva105 > 0 && (
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-600">IVA 10.5%:</span>
-                      <span className="text-gray-900">{formatearMoneda(totalIva105)}</span>
+                      <span className="text-gray-900 font-mono">{formatearMoneda(totalIva105)}</span>
                     </div>
                   )}
                   {totalIva0 > 0 && (
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-600">Exento (0%):</span>
-                      <span className="text-gray-900">{formatearMoneda(totalIva0)}</span>
+                      <span className="text-gray-900 font-mono">{formatearMoneda(totalIva0)}</span>
                     </div>
                   )}
                   <div className="flex justify-between pt-2 border-t mt-2">
                     <span className="font-medium text-gray-900">Total:</span>
-                    <span className="text-lg font-bold text-green-600">{formatearMoneda(total)}</span>
+                    <span className="text-lg font-bold text-green-600 font-mono">{formatearMoneda(total)}</span>
                   </div>
                 </div>
               </div>
@@ -912,7 +912,7 @@ export default function NuevaOrdenCompraPage() {
                               onFocus={() => startEditing(item.id, 'cantidad', item.cantidad)}
                               onChange={(e) => updateEditingValue(e.target.value)}
                               onBlur={finishEditing}
-                              className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                              className="w-16 rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                             />
                             <select
                               value={item.unidad_display}
@@ -934,7 +934,7 @@ export default function NuevaOrdenCompraPage() {
                               onFocus={() => startEditing(item.id, 'precio', item.precio_unitario)}
                               onChange={(e) => updateEditingValue(e.target.value)}
                               onBlur={finishEditing}
-                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                             />
                           </div>
                         </td>
@@ -942,7 +942,7 @@ export default function NuevaOrdenCompraPage() {
                           <select
                             value={item.iva_porcentaje}
                             onChange={(e) => handleIvaChange(item.id, parseFloat(e.target.value))}
-                            className={`px-2 py-0.5 rounded text-xs font-medium border-0 cursor-pointer ${
+                            className={`px-2 py-0.5 rounded text-xs font-medium font-mono border-0 cursor-pointer ${
                               item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
                               item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-green-100 text-green-800'
@@ -953,7 +953,7 @@ export default function NuevaOrdenCompraPage() {
                             <option value={0}>0%</option>
                           </select>
                         </td>
-                        <td className="px-4 py-3 text-right font-medium">
+                        <td className="px-4 py-3 text-right font-medium font-mono">
                           {formatearMoneda(item.subtotal)}
                         </td>
                         <td className="px-4 py-3">
@@ -973,7 +973,7 @@ export default function NuevaOrdenCompraPage() {
                       <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
                         Subtotal Neto:
                       </td>
-                      <td className="px-4 py-2 text-right text-sm text-gray-900">
+                      <td className="px-4 py-2 text-right text-sm text-gray-900 font-mono">
                         {formatearMoneda(subtotalNeto)}
                       </td>
                       <td></td>
@@ -983,7 +983,7 @@ export default function NuevaOrdenCompraPage() {
                         <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                           IVA 21%:
                         </td>
-                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                        <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                           {formatearMoneda(totalIva21)}
                         </td>
                         <td></td>
@@ -994,7 +994,7 @@ export default function NuevaOrdenCompraPage() {
                         <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                           IVA 10.5%:
                         </td>
-                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                        <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                           {formatearMoneda(totalIva105)}
                         </td>
                         <td></td>
@@ -1005,7 +1005,7 @@ export default function NuevaOrdenCompraPage() {
                         <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                           Exento (0%):
                         </td>
-                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                        <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                           {formatearMoneda(totalIva0)}
                         </td>
                         <td></td>
@@ -1015,7 +1015,7 @@ export default function NuevaOrdenCompraPage() {
                       <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
                         Total:
                       </td>
-                      <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
+                      <td className="px-4 py-3 text-right text-lg font-bold text-green-600 font-mono">
                         {formatearMoneda(total)}
                       </td>
                       <td></td>

@@ -148,21 +148,21 @@ export default function Resumen({ fecha, servicio, setServicio }: Props) {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4">
           <div className="text-[10px] sm:text-xs uppercase text-gray-500 font-semibold">Insumos únicos</div>
-          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1">{desglose.length}</div>
+          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 font-mono">{desglose.length}</div>
           <div className="text-[10px] text-gray-500 mt-1">
             consumidos en la semana
           </div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4">
           <div className="text-[10px] sm:text-xs uppercase text-gray-500 font-semibold">Días con carga</div>
-          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1">{diasConCarga} / 7</div>
+          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 font-mono">{diasConCarga} / 7</div>
           <div className="text-[10px] text-gray-500 mt-1">
             {filtroServicio === 'todos' ? 'de cualquier servicio' : SERVICIO_LABEL[filtroServicio]}
           </div>
         </div>
         <div className="bg-blue-50 rounded-lg border-2 border-blue-300 shadow-sm p-3 sm:p-4 col-span-2 lg:col-span-1">
           <div className="text-[10px] sm:text-xs uppercase text-blue-700 font-semibold">Costo total</div>
-          <div className="text-lg sm:text-2xl font-bold text-blue-700 mt-1 break-all">
+          <div className="text-lg sm:text-2xl font-bold text-blue-700 mt-1 break-all font-mono">
             {formatearMonedaAnalisis(costoTotal)}
           </div>
           <div className="text-[10px] text-blue-600 mt-1">
@@ -201,7 +201,7 @@ export default function Resumen({ fecha, servicio, setServicio }: Props) {
                 {formatearFecha(dateToISO(lunes))} → {formatearFecha(dateToISO(domingo))}
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-bold">{formatearMonedaAnalisis(costoTotal)}</div>
+            <div className="text-xl sm:text-2xl font-bold font-mono">{formatearMonedaAnalisis(costoTotal)}</div>
           </div>
         </>
       )}
@@ -257,13 +257,13 @@ function SeccionCategoria({
       >
         <div className="flex items-center gap-2">
           <h3 className={`text-sm font-semibold ${color.text}`}>{label}</h3>
-          <span className={`text-xs ${color.text} opacity-70`}>({items.length})</span>
+          <span className={`text-xs ${color.text} opacity-70 font-mono`}>({items.length})</span>
         </div>
         <div className="text-right">
-          <div className={`text-sm font-bold ${color.text}`}>
+          <div className={`text-sm font-bold font-mono ${color.text}`}>
             {formatearMonedaAnalisis(subtotal)}
           </div>
-          <div className={`text-[10px] ${color.text} opacity-60`}>
+          <div className={`text-[10px] font-mono ${color.text} opacity-60`}>
             {porcentajeDelTotal.toFixed(1)}% del total
           </div>
         </div>
@@ -288,11 +288,11 @@ function SeccionCategoria({
                   {d.origenes.slice(0, 2).join(' · ')}
                   {d.origenes.length > 2 && ` · +${d.origenes.length - 2}`}
                 </td>
-                <td className="text-right px-3 font-medium">
+                <td className="text-right px-3 font-medium font-mono">
                   {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })}{' '}
                   {d.unidad}
                 </td>
-                <td className="text-right px-3 text-gray-700">
+                <td className="text-right px-3 text-gray-700 font-mono">
                   {d.costo_total > 0 ? formatearMonedaAnalisis(d.costo_total) : '—'}
                 </td>
               </tr>
@@ -307,7 +307,7 @@ function SeccionCategoria({
           <div key={d.insumo_id} className="p-3">
             <div className="flex items-start justify-between mb-1">
               <div className="text-sm font-medium text-gray-900">{d.nombre}</div>
-              <div className="text-sm font-semibold text-gray-700 ml-2">
+              <div className="text-sm font-semibold text-gray-700 ml-2 font-mono">
                 {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })}{' '}
                 {d.unidad}
               </div>
@@ -317,7 +317,7 @@ function SeccionCategoria({
                 {d.origenes.slice(0, 2).join(' · ')}
                 {d.origenes.length > 2 && ` · +${d.origenes.length - 2}`}
               </div>
-              <div className="text-xs text-gray-700 whitespace-nowrap">
+              <div className="text-xs text-gray-700 whitespace-nowrap font-mono">
                 {d.costo_total > 0 ? formatearMonedaAnalisis(d.costo_total) : '—'}
               </div>
             </div>

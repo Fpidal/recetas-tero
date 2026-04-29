@@ -26,19 +26,19 @@ import {
 import { supabase } from '@/lib/supabase'
 
 const navigation = [
-  { name: 'Inicio', href: '/', icon: Home, color: '#FFFFFF' },
-  { name: 'Insumos', href: '/insumos', icon: Package, color: '#10B981' },
-  { name: 'Vinos', href: '/vinos', icon: Wine, color: '#7C3AED' },
-  { name: 'Estadísticas', href: '/estadisticas', icon: BarChart3, color: '#8B5CF6' },
-  { name: 'Ventas', href: '/ventas', icon: DollarSign, color: '#22C55E' },
-  { name: 'Análisis', href: '/analisis', icon: TrendingUp, color: '#F59E0B' },
-  { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen, color: '#EF4444' },
-  { name: 'Recetas', href: '/platos', icon: ChefHat, color: '#A855F7' },
-  { name: 'Carta', href: '/carta', icon: ClipboardList, color: '#EF4444' },
-  { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart, color: '#6366F1' },
-  { name: 'Facturas', href: '/facturas', icon: FileText, color: '#6B7280' },
-  { name: 'Inventario', href: '/inventario', icon: Warehouse, color: '#0EA5E9' },
-  { name: 'Papelera', href: '/papelera', icon: Trash2, color: '#DC2626' },
+  { name: 'Inicio', href: '/', icon: Home },
+  { name: 'Insumos', href: '/insumos', icon: Package },
+  { name: 'Vinos', href: '/vinos', icon: Wine },
+  { name: 'Estadísticas', href: '/estadisticas', icon: BarChart3 },
+  { name: 'Ventas', href: '/ventas', icon: DollarSign },
+  { name: 'Análisis', href: '/analisis', icon: TrendingUp },
+  { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen },
+  { name: 'Recetas', href: '/platos', icon: ChefHat },
+  { name: 'Carta', href: '/carta', icon: ClipboardList },
+  { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart },
+  { name: 'Facturas', href: '/facturas', icon: FileText },
+  { name: 'Inventario', href: '/inventario', icon: Warehouse },
+  { name: 'Papelera', href: '/papelera', icon: Trash2 },
 ]
 
 export default function Sidebar() {
@@ -102,17 +102,20 @@ export default function Sidebar() {
 
   const NavContent = () => (
     <>
-      <div className="flex h-16 items-center justify-between border-b border-gray-800 px-4">
-        <h1 className="text-xl font-bold text-white">Tero Restó</h1>
+      {/* Logo */}
+      <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
+        <h1 className="font-display text-xl font-bold text-white tracking-tight">Tero Restó</h1>
         {/* Botón cerrar en mobile */}
         <button
-          className="lg:hidden text-gray-400 hover:text-white p-2"
+          className="lg:hidden text-white/60 hover:text-white p-2 transition-colors"
           onClick={() => setMobileMenuOpen(false)}
         >
           <X className="h-6 w-6" />
         </button>
       </div>
-      <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
+
+      {/* Navegación */}
+      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href))
@@ -121,19 +124,20 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`group flex items-center rounded-md px-3 py-3 lg:py-2 text-base lg:text-sm font-medium transition-colors ${
+              className={`group flex items-center rounded-lg px-3 py-3 lg:py-2.5 text-base lg:text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-white/10 text-white border-l-4 border-l-terracotta -ml-px'
+                  : 'text-white/70 hover:bg-white/5 hover:text-white'
               }`}
             >
               <item.icon
-                className="mr-3 h-6 w-6 lg:h-5 lg:w-5 flex-shrink-0"
-                style={{ color: isActive ? '#FFFFFF' : item.color }}
+                className={`mr-3 h-5 w-5 flex-shrink-0 transition-colors ${
+                  isActive ? 'text-terracotta' : 'text-olive-light group-hover:text-white/90'
+                }`}
               />
               {item.name}
               {isPapelera && papeleraCount > 0 && (
-                <span className="ml-auto bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                <span className="ml-auto bg-terracotta text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                   {papeleraCount}
                 </span>
               )}
@@ -141,20 +145,21 @@ export default function Sidebar() {
           )
         })}
       </nav>
+
       {/* Usuario y logout */}
       {userName && (
-        <div className="border-t border-gray-800 px-3 py-3">
+        <div className="border-t border-white/10 px-3 py-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-terracotta rounded-full flex items-center justify-center flex-shrink-0">
               <User className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{userName}</p>
-              <p className="text-xs text-gray-400 capitalize">{userRole}</p>
+              <p className="text-xs text-white/50 capitalize">{userRole}</p>
             </div>
             <button
               onClick={handleLogout}
-              className="text-gray-400 hover:text-red-400 p-1.5 rounded-md hover:bg-gray-800 transition"
+              className="text-white/50 hover:text-terracotta p-1.5 rounded-md hover:bg-white/5 transition-colors"
               title="Cerrar sesión"
             >
               <LogOut className="w-4 h-4" />
@@ -169,7 +174,7 @@ export default function Sidebar() {
     <>
       {/* Header mobile con hamburger */}
       <div
-        className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 flex items-end px-4 pb-3 shadow-lg"
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-forest flex items-end px-4 pb-3 shadow-lg"
         style={{
           paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)',
           minHeight: 'calc(56px + env(safe-area-inset-top, 0px))'
@@ -177,24 +182,24 @@ export default function Sidebar() {
       >
         <button
           onClick={() => setMobileMenuOpen(true)}
-          className="text-white p-2 -ml-2 hover:bg-gray-800 rounded-md"
+          className="text-white p-2 -ml-2 hover:bg-white/10 rounded-md transition-colors"
         >
           <Menu className="h-6 w-6" />
         </button>
-        <h1 className="ml-3 text-lg font-bold text-white">Tero Restó</h1>
+        <h1 className="ml-3 font-display text-lg font-bold text-white tracking-tight">Tero Restó</h1>
       </div>
 
       {/* Overlay para mobile */}
       {mobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar mobile (drawer) */}
       <div
-        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-gray-900 transform transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-forest transform transition-transform duration-300 ease-in-out ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -204,7 +209,7 @@ export default function Sidebar() {
       </div>
 
       {/* Sidebar desktop (fijo) */}
-      <div className="hidden lg:flex h-full w-64 flex-col bg-gray-900 flex-shrink-0">
+      <div className="hidden lg:flex h-full w-64 flex-col bg-forest flex-shrink-0">
         <NavContent />
       </div>
     </>

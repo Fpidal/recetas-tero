@@ -199,7 +199,7 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
               {datosCarga.tiene_consumo ? (
                 <>
                   El costo de cocina del {formatearFecha(fechaCarga)} ({SERVICIO_LABEL[servicioCarga].toLowerCase()}) viene
-                  automático: <strong>{formatearMonedaAnalisis(datosCarga.costo)}</strong>
+                  automático: <strong className="font-mono">{formatearMonedaAnalisis(datosCarga.costo)}</strong>
                 </>
               ) : (
                 <>
@@ -253,17 +253,17 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4">
           <div className="text-[10px] sm:text-xs uppercase text-gray-500 font-semibold">Ventas</div>
-          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 break-all">
+          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 break-all font-mono">
             {formatearMonedaAnalisis(totales.venta)}
           </div>
-          <div className="text-[10px] text-gray-500 mt-1">{totales.cubiertos} cubiertos</div>
+          <div className="text-[10px] text-gray-500 mt-1 font-mono">{totales.cubiertos} cubiertos</div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4">
           <div className="text-[10px] sm:text-xs uppercase text-gray-500 font-semibold">Costo cocina</div>
-          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 break-all">
+          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 break-all font-mono">
             {formatearMonedaAnalisis(totales.costo)}
           </div>
-          <div className="text-[10px] text-gray-500 mt-1">
+          <div className="text-[10px] text-gray-500 mt-1 font-mono">
             {totales.diasConCarga} servicios cargados
           </div>
         </div>
@@ -271,19 +271,19 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
           <div className={`text-[10px] sm:text-xs uppercase font-semibold ${colorMes.text}`}>
             ⭐ Incidencia REAL
           </div>
-          <div className={`text-lg sm:text-2xl font-bold mt-1 ${colorMes.text}`}>
+          <div className={`text-lg sm:text-2xl font-bold mt-1 font-mono ${colorMes.text}`}>
             {incidenciaMes.toFixed(1)}%
           </div>
-          <div className={`text-[10px] mt-1 ${colorMes.text}`}>
+          <div className={`text-[10px] mt-1 font-mono ${colorMes.text}`}>
             Objetivo ≤ {OBJETIVO_INCIDENCIA_REAL}%
           </div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4">
           <div className="text-[10px] sm:text-xs uppercase text-gray-500 font-semibold">Margen bruto</div>
-          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 break-all">
+          <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 break-all font-mono">
             {formatearMonedaAnalisis(margenMes)}
           </div>
-          <div className="text-[10px] text-gray-500 mt-1">
+          <div className="text-[10px] text-gray-500 mt-1 font-mono">
             {totales.venta > 0 ? `${((margenMes / totales.venta) * 100).toFixed(1)}% del total` : '—'}
           </div>
         </div>
@@ -349,23 +349,23 @@ function FilaIncidencia({ d }: { d: IncidenciaDia }) {
       <td className="py-2.5 px-3 text-gray-900">
         {formatearFecha(d.fecha)} <span className="text-xs text-gray-400">{dia}</span>
       </td>
-      <td className="text-right px-3">
+      <td className="text-right px-3 font-mono">
         {d.tiene_venta ? formatearMonedaAnalisis(d.venta) : <span className="text-gray-400">— sin venta</span>}
       </td>
-      <td className="text-right px-3 text-gray-600">{d.cubiertos > 0 ? d.cubiertos : '—'}</td>
-      <td className="text-right px-3">
+      <td className="text-right px-3 text-gray-600 font-mono">{d.cubiertos > 0 ? d.cubiertos : '—'}</td>
+      <td className="text-right px-3 font-mono">
         {d.tiene_consumo ? formatearMonedaAnalisis(d.costo) : <span className="text-gray-400">— sin carga</span>}
       </td>
       <td className="text-right px-3">
         {d.incidencia > 0 ? (
-          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colorBadge}`}>
+          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium font-mono ${colorBadge}`}>
             {d.incidencia.toFixed(1)}%
           </span>
         ) : (
           <span className="text-gray-400">—</span>
         )}
       </td>
-      <td className="text-right px-3 text-gray-700">
+      <td className="text-right px-3 text-gray-700 font-mono">
         {d.ticket_promedio > 0 ? formatearMonedaAnalisis(d.ticket_promedio) : '—'}
       </td>
     </tr>
@@ -384,7 +384,7 @@ function CardIncidenciaMobile({ d }: { d: IncidenciaDia }) {
           <div className="text-xs text-gray-400">{dia}</div>
         </div>
         {d.incidencia > 0 && (
-          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colorBadge}`}>
+          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium font-mono ${colorBadge}`}>
             {d.incidencia.toFixed(1)}%
           </span>
         )}
@@ -392,23 +392,23 @@ function CardIncidenciaMobile({ d }: { d: IncidenciaDia }) {
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
           <div className="text-gray-500">Venta</div>
-          <div className="font-medium text-gray-900">
+          <div className="font-medium text-gray-900 font-mono">
             {d.tiene_venta ? formatearMonedaAnalisis(d.venta) : <span className="text-gray-400">—</span>}
           </div>
         </div>
         <div>
           <div className="text-gray-500">Costo</div>
-          <div className="font-medium text-gray-900">
+          <div className="font-medium text-gray-900 font-mono">
             {d.tiene_consumo ? formatearMonedaAnalisis(d.costo) : <span className="text-gray-400">—</span>}
           </div>
         </div>
         <div>
           <div className="text-gray-500">Cubiertos</div>
-          <div className="font-medium text-gray-900">{d.cubiertos > 0 ? d.cubiertos : '—'}</div>
+          <div className="font-medium text-gray-900 font-mono">{d.cubiertos > 0 ? d.cubiertos : '—'}</div>
         </div>
         <div>
           <div className="text-gray-500">Ticket prom.</div>
-          <div className="font-medium text-gray-900">
+          <div className="font-medium text-gray-900 font-mono">
             {d.ticket_promedio > 0 ? formatearMonedaAnalisis(d.ticket_promedio) : '—'}
           </div>
         </div>

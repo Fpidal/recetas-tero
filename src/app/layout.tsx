@@ -1,10 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Playfair_Display, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { headers } from "next/headers";
 
-const inter = Inter({ subsets: ["latin"] });
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -12,17 +28,17 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#DC2626',
+  themeColor: '#1B3A2D',
 };
 
 export const metadata: Metadata = {
-  title: "Tero Resto",
-  description: "Sistema de gestión gastronómica y recetas",
+  title: "Tero Restó",
+  description: "Sistema de gestión gastronómica y control de costos",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Tero Resto",
+    title: "Tero Restó",
   },
   formatDetection: {
     telephone: false,
@@ -51,7 +67,7 @@ export default function RootLayout({
   const isLoginPage = pathname === '/login'
 
   return (
-    <html lang="es">
+    <html lang="es" className={`${playfair.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <head>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
@@ -59,16 +75,16 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Tero Resto" />
+        <meta name="apple-mobile-web-app-title" content="Tero Restó" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
       </head>
-      <body className={inter.className}>
+      <body className="font-body antialiased">
         {isLoginPage ? (
           children
         ) : (
-          <div className="flex h-screen bg-gray-100">
+          <div className="flex h-screen bg-cream">
             <Sidebar />
-            <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 mobile-content-padding">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden mobile-content-padding">
               {children}
             </main>
           </div>

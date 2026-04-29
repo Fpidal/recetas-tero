@@ -194,10 +194,10 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
                         {d.origenes.slice(0, 2).join(' · ')}
                         {d.origenes.length > 2 && ` · +${d.origenes.length - 2} más`}
                       </td>
-                      <td className="text-right px-3 font-medium">
+                      <td className="text-right px-3 font-medium font-mono">
                         {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })} {d.unidad}
                       </td>
-                      <td className="text-right px-3 text-gray-600">
+                      <td className="text-right px-3 text-gray-600 font-mono">
                         {d.costo_total > 0 ? formatearMonedaAnalisis(d.costo_total) : '—'}
                       </td>
                     </tr>
@@ -208,7 +208,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
                     <td colSpan={3} className="py-3 px-3 text-right text-gray-700">
                       Total cargas directas (IVA inc.):
                     </td>
-                    <td className="text-right px-3 text-base text-gray-900">
+                    <td className="text-right px-3 text-base text-gray-900 font-mono">
                       {formatearMonedaAnalisis(totalCosto)}
                     </td>
                   </tr>
@@ -222,7 +222,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
                 <div key={d.insumo_id} className="p-3">
                   <div className="flex items-start justify-between mb-1">
                     <div className="text-sm font-medium text-gray-900">{d.nombre}</div>
-                    <div className="text-sm font-semibold text-gray-700 ml-2">
+                    <div className="text-sm font-semibold text-gray-700 ml-2 font-mono">
                       {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })} {d.unidad}
                     </div>
                   </div>

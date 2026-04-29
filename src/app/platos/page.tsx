@@ -374,7 +374,7 @@ export default function PlatosPage() {
         </div>
         <div className="text-right flex-shrink-0">
           <p className="text-xs text-gray-500">Costo</p>
-          <p className="font-bold text-green-700">
+          <p className="font-bold text-green-700 font-mono">
             ${plato.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </p>
         </div>
@@ -558,7 +558,7 @@ export default function PlatosPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums">
+                        <td className="px-4 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums font-mono">
                           <span className="text-green-500 font-normal">$</span><span className="ml-1">{p.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                         </td>
                         <td className="px-4 py-2 text-right">
@@ -639,7 +639,7 @@ export default function PlatosPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-blue-600">
+                        <span className="text-sm font-semibold text-blue-600 font-mono">
                           {item.cantidadRecetas} {item.cantidadRecetas === 1 ? 'receta' : 'recetas'}
                         </span>
                         {insumoExpandido === item.id ? (
@@ -720,12 +720,12 @@ export default function PlatosPage() {
                       <span className="text-gray-500 italic">{platoDetalle.descripcion}</span>
                     )}
                     <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                      Rinde: <strong>{platoDetalle.rendimiento_porciones}</strong> porc.
+                      Rinde: <strong className="font-mono">{platoDetalle.rendimiento_porciones}</strong> porc.
                     </span>
-                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold font-mono">
                       ${(platoDetalle.costo_total / platoDetalle.rendimiento_porciones).toLocaleString('es-AR', { maximumFractionDigits: 0 })} / porción
                     </span>
-                    <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                    <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
                       Total: ${platoDetalle.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </span>
                   </div>
@@ -748,7 +748,7 @@ export default function PlatosPage() {
                                 )}
                                 {ing.nombre}
                               </span>
-                              <span className="text-gray-500">{cantStr}</span>
+                              <span className="text-gray-500 font-mono">{cantStr}</span>
                             </div>
                           )
                         })}

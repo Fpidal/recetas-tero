@@ -9,13 +9,13 @@ import { Button, Input, Select } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Carnes': '#d98a8a',
-  'Pescados_Mariscos': '#64b5f6',
-  'Verduras_Frutas': '#ffd54f',
-  'Lacteos_Fiambres': '#ffb74d',
-  'Bebidas': '#4fc3f7',
-  'Almacen': '#bdbdbd',
-  'Elaboracion': '#81c784',
+  'Carnes': '#9B2C2C',
+  'Pescados_Mariscos': '#4A6572',
+  'Verduras_Frutas': '#3D8B5E',
+  'Lacteos_Fiambres': '#5C7A5E',
+  'Bebidas': '#C4704B',
+  'Almacen': '#A67B3D',
+  'Elaboracion': '#C4704B',
 }
 
 interface Insumo {
@@ -495,13 +495,13 @@ export default function NuevoPlatoPage() {
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-gray-500 mb-0.5">Costo</p>
-                        <p className="text-sm font-bold text-green-700">
+                        <p className="text-sm font-bold text-green-700 font-mono">
                           ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-gray-500 mb-0.5">Incidencia</p>
-                        <p className="text-sm font-semibold text-blue-700">
+                        <p className="text-sm font-semibold text-blue-700 font-mono">
                           {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
                         </p>
                       </div>
@@ -545,13 +545,13 @@ export default function NuevoPlatoPage() {
                           />
                           <span className="ml-1 text-xs text-gray-500">{ing.unidad}</span>
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums">
+                        <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums font-mono">
                           ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums">
+                        <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums font-mono">
                           ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
+                        <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50 font-mono">
                           {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
                         </td>
                         <td className="px-2 py-1.5">
@@ -623,15 +623,15 @@ export default function NuevoPlatoPage() {
           <div className="bg-gray-50 rounded-lg px-4 py-2 space-y-1">
             {rendimiento > 1 && (
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">Costo Receta (rinde {rendimiento}):</span>
-                <span className="text-sm font-medium text-gray-600 tabular-nums">
+                <span className="text-xs text-gray-500">Costo Receta (rinde <span className="font-mono">{rendimiento}</span>):</span>
+                <span className="text-sm font-medium text-gray-600 tabular-nums font-mono">
                   ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </span>
               </div>
             )}
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Costo por Porción:</span>
-              <span className="text-lg font-bold text-green-600 tabular-nums">
+              <span className="text-lg font-bold text-green-600 tabular-nums font-mono">
                 <span className="text-green-400 font-normal">$</span> {costoPorPorcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
               </span>
             </div>

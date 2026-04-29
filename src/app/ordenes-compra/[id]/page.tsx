@@ -371,7 +371,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
     )
 
     if (!fi || fi.precio_unitario === item.precio_unitario) {
-      return <span>{formatearMoneda(item.precio_unitario)}</span>
+      return <span className="font-mono">{formatearMoneda(item.precio_unitario)}</span>
     }
 
     const diferencia = fi.precio_unitario - item.precio_unitario
@@ -381,10 +381,10 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
     if (mobile) {
       return (
         <div className="flex flex-col items-end">
-          <span className="font-medium">{formatearMoneda(fi.precio_unitario)}</span>
+          <span className="font-medium font-mono">{formatearMoneda(fi.precio_unitario)}</span>
           <div className="flex items-center gap-1">
-            <span className="text-xs text-gray-400 line-through">{formatearMoneda(item.precio_unitario)}</span>
-            <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${subio ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            <span className="text-xs text-gray-400 line-through font-mono">{formatearMoneda(item.precio_unitario)}</span>
+            <span className={`text-[10px] px-1 py-0.5 rounded font-medium font-mono ${subio ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
               {subio ? '▲' : '▼'} {Math.abs(parseFloat(porcentaje))}%
             </span>
           </div>
@@ -394,10 +394,10 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
 
     return (
       <div className="flex flex-col items-end">
-        <span>{formatearMoneda(fi.precio_unitario)}</span>
+        <span className="font-mono">{formatearMoneda(fi.precio_unitario)}</span>
         <div className="flex items-center gap-1 mt-0.5">
-          <span className="text-xs text-gray-400 line-through">{formatearMoneda(item.precio_unitario)}</span>
-          <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${subio ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+          <span className="text-xs text-gray-400 line-through font-mono">{formatearMoneda(item.precio_unitario)}</span>
+          <span className={`text-[10px] px-1 py-0.5 rounded font-medium font-mono ${subio ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
             {subio ? '▲' : '▼'} {Math.abs(parseFloat(porcentaje))}%
           </span>
         </div>
@@ -582,7 +582,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                         {item.contenido > 1 && <span className="text-gray-500 font-normal"> [{item.contenido} {item.unidad_medida}]</span>}
                       </span>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ml-2 ${
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ml-2 ${
                       esCompleto ? 'bg-gray-100 text-gray-400' :
                       item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
                       item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
@@ -596,7 +596,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                     <div className="mb-2">{getComparacionBadge(item)}</div>
                   )}
                   {esModificado && estado === 'parcial' && fi && !esRecibidaConFactura && (
-                    <p className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded mb-2 inline-block">
+                    <p className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded mb-2 inline-block font-mono">
                       Recibido {fi.cantidad % 1 === 0 ? fi.cantidad : fi.cantidad.toLocaleString('es-AR')} de {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')}
                     </p>
                   )}
@@ -604,15 +604,15 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                     <p className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded mb-2 inline-block">No entregado</p>
                   )}
                   <div className="flex justify-between items-center text-sm">
-                    <span className={esCompleto ? 'text-gray-400' : 'text-gray-600'}>
+                    <span className={`font-mono ${esCompleto ? 'text-gray-400' : 'text-gray-600'}`}>
                       {cantidadMostrar % 1 === 0 ? cantidadMostrar : cantidadMostrar.toLocaleString('es-AR')} {item.unidad_display} ×
                     </span>
                     <div className="flex items-center gap-2">
-                      {esRecibidaConFactura ? getPrecioConComparacion(item, true) : <span>{formatearMoneda(item.precio_unitario)}</span>}
+                      {esRecibidaConFactura ? getPrecioConComparacion(item, true) : <span className="font-mono">{formatearMoneda(item.precio_unitario)}</span>}
                     </div>
                   </div>
                   <div className="flex justify-end mt-1">
-                    <span className={`font-medium ${esCompleto ? 'text-gray-400' : ''}`}>
+                    <span className={`font-medium font-mono ${esCompleto ? 'text-gray-400' : ''}`}>
                       {formatearMoneda(subtotalMostrar)}
                     </span>
                   </div>
@@ -623,30 +623,30 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
             <div className="bg-gray-50 rounded-lg p-3 space-y-1 mt-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Subtotal Neto:</span>
-                <span>{formatearMoneda(subtotalNeto)}</span>
+                <span className="font-mono">{formatearMoneda(subtotalNeto)}</span>
               </div>
               {totalIva21 > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">IVA 21%:</span>
-                  <span>{formatearMoneda(totalIva21)}</span>
+                  <span className="font-mono">{formatearMoneda(totalIva21)}</span>
                 </div>
               )}
               {totalIva105 > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">IVA 10.5%:</span>
-                  <span>{formatearMoneda(totalIva105)}</span>
+                  <span className="font-mono">{formatearMoneda(totalIva105)}</span>
                 </div>
               )}
               <div className="flex justify-between pt-2 border-t border-gray-300">
                 <span className="font-medium">Total:</span>
-                <span className="text-lg font-bold text-green-600">{formatearMoneda(totalConIva)}</span>
+                <span className="text-lg font-bold text-green-600 font-mono">{formatearMoneda(totalConIva)}</span>
               </div>
               {diferenciaFactura && (
                 <div className={`flex justify-between pt-2 mt-2 border-t ${diferenciaFactura.subio ? 'border-red-200' : 'border-green-200'}`}>
                   <span className={`text-sm ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
                     Dif. vs OC:
                   </span>
-                  <span className={`text-sm font-bold ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
+                  <span className={`text-sm font-bold font-mono ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
                     {diferenciaFactura.subio ? '+' : ''}{formatearMoneda(diferenciaFactura.diferencia)} ({diferenciaFactura.subio ? '▲' : '▼'} {Math.abs(parseFloat(diferenciaFactura.porcentaje))}%)
                   </span>
                 </div>
@@ -696,7 +696,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                           {/* Badge estilo factura para OC Recibida */}
                           {esRecibidaConFactura && getComparacionBadge(item)}
                           {esModificado && estado === 'parcial' && fi && !esRecibidaConFactura && (
-                            <span className="text-xs px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">
+                            <span className="text-xs px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-mono">
                               Recibido {fi.cantidad % 1 === 0 ? fi.cantidad : fi.cantidad.toLocaleString('es-AR')} de {item.cantidad % 1 === 0 ? item.cantidad : item.cantidad.toLocaleString('es-AR')}
                             </span>
                           )}
@@ -705,14 +705,14 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                           )}
                         </div>
                       </td>
-                      <td className={`px-4 py-3 text-sm ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+                      <td className={`px-4 py-3 text-sm font-mono ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
                         {cantidadMostrar % 1 === 0 ? cantidadMostrar : cantidadMostrar.toLocaleString('es-AR')} {item.unidad_display}
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-600">
-                        {esRecibidaConFactura ? getPrecioConComparacion(item) : <span>{formatearMoneda(item.precio_unitario)}</span>}
+                        {esRecibidaConFactura ? getPrecioConComparacion(item) : <span className="font-mono">{formatearMoneda(item.precio_unitario)}</span>}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${
                           esCompleto ? 'bg-gray-100 text-gray-400' :
                           item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
                           item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
@@ -721,7 +721,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                           {item.iva_porcentaje}%
                         </span>
                       </td>
-                      <td className={`px-4 py-3 text-sm text-right ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'font-medium'}`}>
+                      <td className={`px-4 py-3 text-sm text-right font-mono ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'font-medium'}`}>
                         {formatearMoneda(subtotalMostrar)}
                       </td>
                     </tr>
@@ -733,7 +733,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                   <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
                     Subtotal Neto:
                   </td>
-                  <td className="px-4 py-2 text-right text-sm text-gray-900">
+                  <td className="px-4 py-2 text-right text-sm text-gray-900 font-mono">
                     {formatearMoneda(subtotalNeto)}
                   </td>
                 </tr>
@@ -742,7 +742,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                     <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                       IVA 21%:
                     </td>
-                    <td className="px-4 py-1 text-right text-sm text-gray-900">
+                    <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                       {formatearMoneda(totalIva21)}
                     </td>
                   </tr>
@@ -752,7 +752,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                     <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                       IVA 10.5%:
                     </td>
-                    <td className="px-4 py-1 text-right text-sm text-gray-900">
+                    <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                       {formatearMoneda(totalIva105)}
                     </td>
                   </tr>
@@ -761,7 +761,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                   <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
                     Total:
                   </td>
-                  <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
+                  <td className="px-4 py-3 text-right text-lg font-bold text-green-600 font-mono">
                     {formatearMoneda(totalConIva)}
                   </td>
                 </tr>
@@ -770,7 +770,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                     <td colSpan={4} className={`px-4 py-2 text-right text-sm ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
                       Diferencia vs OC:
                     </td>
-                    <td className={`px-4 py-2 text-right text-sm font-bold ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
+                    <td className={`px-4 py-2 text-right text-sm font-bold font-mono ${diferenciaFactura.subio ? 'text-red-600' : 'text-green-600'}`}>
                       {diferenciaFactura.subio ? '+' : ''}{formatearMoneda(diferenciaFactura.diferencia)} ({diferenciaFactura.subio ? '▲' : '▼'} {Math.abs(parseFloat(diferenciaFactura.porcentaje))}%)
                     </td>
                   </tr>

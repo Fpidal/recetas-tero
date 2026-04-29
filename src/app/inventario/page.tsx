@@ -217,7 +217,7 @@ export default function InventarioPage() {
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <div className={`text-lg font-bold ${item.stock_total > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
+                        <div className={`text-lg font-bold font-mono ${item.stock_total > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
                           {formatearCantidad(item.stock_total)}
                         </div>
                         <p className="text-[10px] text-gray-400">{item.unidad_medida}</p>
@@ -266,7 +266,7 @@ export default function InventarioPage() {
                           <span className="text-xs text-gray-500">{item.unidad_medida}</span>
                         </td>
                         <td className="px-3 py-1.5 text-right bg-blue-50">
-                          <span className={`text-xs font-bold ${item.stock_total > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
+                          <span className={`text-xs font-bold font-mono ${item.stock_total > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
                             {formatearCantidad(item.stock_total)}
                           </span>
                         </td>
@@ -307,7 +307,7 @@ export default function InventarioPage() {
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-800">
                     <span className="font-medium">Stock total:</span>{' '}
-                    <span className="text-lg font-bold">
+                    <span className="text-lg font-bold font-mono">
                       {formatearCantidad(modalDetalle?.stock_total || 0)} {modalDetalle?.unidad_medida}
                     </span>
                   </p>
@@ -329,10 +329,10 @@ export default function InventarioPage() {
                           <p className="text-xs text-gray-500">{mov.proveedor_nombre}</p>
                         </div>
                         <div className="text-right">
-                          <p className={`text-lg font-bold ${mov.cantidad < 0 ? 'text-red-600' : 'text-blue-700'}`}>
+                          <p className={`text-lg font-bold font-mono ${mov.cantidad < 0 ? 'text-red-600' : 'text-blue-700'}`}>
                             {mov.cantidad >= 0 ? '+' : ''}{formatearCantidad(mov.cantidad)}
                           </p>
-                          <p className="text-xs text-gray-500">{formatearMoneda(mov.precio_unitario)}</p>
+                          <p className="text-xs text-gray-500 font-mono">{formatearMoneda(mov.precio_unitario)}</p>
                         </div>
                       </div>
                     </div>
@@ -364,10 +364,10 @@ export default function InventarioPage() {
                           <td className="px-3 py-2 text-gray-600">
                             {mov.proveedor_nombre}
                           </td>
-                          <td className={`px-3 py-2 text-right font-medium ${mov.cantidad < 0 ? 'text-red-600' : 'text-blue-700'}`}>
+                          <td className={`px-3 py-2 text-right font-medium font-mono ${mov.cantidad < 0 ? 'text-red-600' : 'text-blue-700'}`}>
                             {mov.cantidad >= 0 ? '+' : ''}{formatearCantidad(mov.cantidad)}
                           </td>
-                          <td className="px-3 py-2 text-right text-gray-600">
+                          <td className="px-3 py-2 text-right text-gray-600 font-mono">
                             {formatearMoneda(mov.precio_unitario)}
                           </td>
                         </tr>

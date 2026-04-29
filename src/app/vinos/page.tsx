@@ -411,15 +411,15 @@ export default function VinosPage() {
                     <div className="grid grid-cols-3 gap-1.5 text-center bg-gray-50 rounded p-1.5">
                       <div>
                         <p className="text-[9px] text-gray-500">x Unidad</p>
-                        <p className="text-[10px] font-medium">{fmt(precioUnidad)}</p>
+                        <p className="text-[10px] font-medium font-mono">{fmt(precioUnidad)}</p>
                       </div>
                       <div>
                         <p className="text-[9px] text-gray-500">Desc</p>
-                        <p className="text-[10px] font-medium">{vino.descuento_porcentaje}%</p>
+                        <p className="text-[10px] font-medium font-mono">{vino.descuento_porcentaje}%</p>
                       </div>
                       <div className="bg-green-100 rounded -m-1.5 p-1.5">
                         <p className="text-[9px] text-green-700">Final</p>
-                        <p className="text-[10px] font-bold text-green-700">{fmt(precioUnidad * (1 - vino.descuento_porcentaje / 100) * 1.21)}</p>
+                        <p className="text-[10px] font-bold text-green-700 font-mono">{fmt(precioUnidad * (1 - vino.descuento_porcentaje / 100) * 1.21)}</p>
                       </div>
                     </div>
                   </div>
@@ -452,11 +452,11 @@ export default function VinosPage() {
                         <td className="px-2 py-1.5"><span className="text-xs font-medium text-purple-700">{vino.bodega}</span></td>
                         <td className="px-2 py-1.5"><span className="text-xs font-medium text-gray-900">{vino.nombre}</span></td>
                         <td className="px-2 py-1.5 text-xs text-gray-600">{vino.cepa}</td>
-                        <td className="px-2 py-1.5 text-xs text-right text-gray-900">{fmt(vino.precio_caja)}</td>
-                        <td className="px-2 py-1.5 text-xs text-center text-gray-600">{vino.unidades_caja}</td>
-                        <td className="px-2 py-1.5 text-xs text-center text-gray-600">{vino.descuento_porcentaje}%</td>
-                        <td className="px-2 py-1.5 text-right"><span className="text-xs font-medium text-gray-900">{fmt(totalConDescuento)}</span></td>
-                        <td className="px-2 py-1.5 text-right bg-green-50"><span className="text-xs font-bold text-green-700">{fmt(finalBotella)}</span></td>
+                        <td className="px-2 py-1.5 text-xs text-right text-gray-900 font-mono">{fmt(vino.precio_caja)}</td>
+                        <td className="px-2 py-1.5 text-xs text-center text-gray-600 font-mono">{vino.unidades_caja}</td>
+                        <td className="px-2 py-1.5 text-xs text-center text-gray-600 font-mono">{vino.descuento_porcentaje}%</td>
+                        <td className="px-2 py-1.5 text-right"><span className="text-xs font-medium text-gray-900 font-mono">{fmt(totalConDescuento)}</span></td>
+                        <td className="px-2 py-1.5 text-right bg-green-50"><span className="text-xs font-bold text-green-700 font-mono">{fmt(finalBotella)}</span></td>
                         <td className="px-1 py-1.5">
                           <div className="flex justify-end gap-0.5">
                             <button onClick={() => handleOpenModal(vino)} className="p-1 hover:bg-gray-100 rounded">
@@ -549,10 +549,10 @@ export default function VinosPage() {
                             </button>
                           </td>
                           <td className="px-3 py-2 text-right">
-                            <span className="text-xs font-medium text-gray-900">{fmtDec(vino.costo)}</span>
+                            <span className="text-xs font-medium text-gray-900 font-mono">{fmtDec(vino.costo)}</span>
                           </td>
                           <td className="px-3 py-2 text-right">
-                            <span className="text-xs text-gray-500">{fmt(precioSugerido)}</span>
+                            <span className="text-xs text-gray-500 font-mono">{fmt(precioSugerido)}</span>
                           </td>
                           <td className="px-3 py-2 text-right">
                             {isEditing ? (
@@ -567,7 +567,7 @@ export default function VinosPage() {
                                 autoFocus
                               />
                             ) : (
-                              <span className={`text-xs font-semibold ${precioCarta > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                              <span className={`text-xs font-semibold font-mono ${precioCarta > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
                                 {precioCarta > 0 ? fmt(precioCarta) : '-'}
                               </span>
                             )}
@@ -582,16 +582,16 @@ export default function VinosPage() {
                                 min="0" max="100"
                               />
                             ) : (
-                              <span className="text-xs text-gray-600">{margenObj}%</span>
+                              <span className="text-xs text-gray-600 font-mono">{margenObj}%</span>
                             )}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            <span className={`text-xs font-medium ${Math.round(foodCost) >= 40 ? 'text-red-600' : Math.round(foodCost) > margenObj ? 'text-yellow-600' : 'text-green-600'}`}>
+                            <span className={`text-xs font-medium font-mono ${Math.round(foodCost) >= 40 ? 'text-red-600' : Math.round(foodCost) > margenObj ? 'text-yellow-600' : 'text-green-600'}`}>
                               {precioCarta > 0 ? pct(foodCost) : '-'}
                             </span>
                           </td>
                           <td className="px-3 py-2 text-right">
-                            <span className={`text-xs font-semibold ${contribucion > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                            <span className={`text-xs font-semibold font-mono ${contribucion > 0 ? 'text-green-600' : 'text-gray-400'}`}>
                               {precioCarta > 0 ? fmt(contribucion) : '-'}
                             </span>
                           </td>
@@ -660,21 +660,21 @@ export default function VinosPage() {
                       <div className="grid grid-cols-4 gap-1 text-center bg-gray-50 rounded p-1.5 text-[10px]">
                         <div>
                           <p className="text-gray-500">Costo</p>
-                          <p className="font-medium">{fmt(vino.costo)}</p>
+                          <p className="font-medium font-mono">{fmt(vino.costo)}</p>
                         </div>
                         <div>
                           <p className="text-gray-500">P.Carta</p>
-                          <p className="font-semibold">{precioCarta > 0 ? fmt(precioCarta) : '-'}</p>
+                          <p className="font-semibold font-mono">{precioCarta > 0 ? fmt(precioCarta) : '-'}</p>
                         </div>
                         <div>
                           <p className="text-gray-500">FC</p>
-                          <p className={`font-medium ${Math.round(foodCost) >= 40 ? 'text-red-600' : Math.round(foodCost) > margenObj ? 'text-yellow-600' : 'text-green-600'}`}>
+                          <p className={`font-medium font-mono ${Math.round(foodCost) >= 40 ? 'text-red-600' : Math.round(foodCost) > margenObj ? 'text-yellow-600' : 'text-green-600'}`}>
                             {precioCarta > 0 ? pct(foodCost) : '-'}
                           </p>
                         </div>
                         <div className="bg-green-100 rounded -m-1.5 p-1.5">
                           <p className="text-green-700">Contrib.</p>
-                          <p className="font-bold text-green-700">{precioCarta > 0 ? fmt(contribucion) : '-'}</p>
+                          <p className="font-bold text-green-700 font-mono">{precioCarta > 0 ? fmt(contribucion) : '-'}</p>
                         </div>
                       </div>
                     </div>
@@ -760,7 +760,7 @@ export default function VinosPage() {
                   </div>
                   <div className="text-center bg-gray-50 rounded-md p-2 border border-gray-200">
                     <p className="text-xs text-gray-500">Precio x Unidad</p>
-                    <p className="text-sm font-semibold text-gray-900">{form.precio_caja ? fmt(precioUnidad) : '-'}</p>
+                    <p className="text-sm font-semibold text-gray-900 font-mono">{form.precio_caja ? fmt(precioUnidad) : '-'}</p>
                   </div>
                 </div>
 
@@ -772,11 +772,11 @@ export default function VinosPage() {
                   </div>
                   <div className="text-center bg-gray-50 rounded-md p-2 border border-gray-200">
                     <p className="text-xs text-gray-500">Botella c/Desc</p>
-                    <p className="text-sm font-semibold text-gray-900">{form.precio_caja ? fmt(precioUnidad * (1 - descuento / 100)) : '-'}</p>
+                    <p className="text-sm font-semibold text-gray-900 font-mono">{form.precio_caja ? fmt(precioUnidad * (1 - descuento / 100)) : '-'}</p>
                   </div>
                   <div className="text-center bg-green-100 rounded-md p-2 border border-green-200">
                     <p className="text-xs text-green-700">Botella Final</p>
-                    <p className="text-sm font-bold text-green-700">{form.precio_caja ? fmt(precioUnidad * (1 - descuento / 100) * 1.21) : '-'}</p>
+                    <p className="text-sm font-bold text-green-700 font-mono">{form.precio_caja ? fmt(precioUnidad * (1 - descuento / 100) * 1.21) : '-'}</p>
                   </div>
                 </div>
 
@@ -784,11 +784,11 @@ export default function VinosPage() {
                   <div></div>
                   <div className="text-center bg-gray-50 rounded-md p-2 border border-gray-200">
                     <p className="text-xs text-gray-500">Caja c/Desc</p>
-                    <p className="text-sm font-semibold text-gray-900">{form.precio_caja ? fmt(precioCaja * (1 - descuento / 100)) : '-'}</p>
+                    <p className="text-sm font-semibold text-gray-900 font-mono">{form.precio_caja ? fmt(precioCaja * (1 - descuento / 100)) : '-'}</p>
                   </div>
                   <div className="text-center bg-green-100 rounded-md p-2 border border-green-200">
                     <p className="text-xs text-green-700">Caja Final</p>
-                    <p className="text-sm font-bold text-green-700">{form.precio_caja ? fmt(precioCaja * (1 - descuento / 100) * 1.21) : '-'}</p>
+                    <p className="text-sm font-bold text-green-700 font-mono">{form.precio_caja ? fmt(precioCaja * (1 - descuento / 100) * 1.21) : '-'}</p>
                   </div>
                 </div>
               </>

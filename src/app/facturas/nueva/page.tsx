@@ -664,7 +664,7 @@ export default function NuevaFacturaPage() {
                 Importado desde orden del {formatearFecha(selectedOrden.fecha)}
               </p>
               <p className="text-sm text-green-600">
-                {selectedOrden.proveedor_nombre} - Total original: {formatearMoneda(selectedOrden.total)}
+                {selectedOrden.proveedor_nombre} - Total original: <span className="font-mono">{formatearMoneda(selectedOrden.total)}</span>
               </p>
             </div>
             <Button
@@ -895,7 +895,7 @@ export default function NuevaFacturaPage() {
                         <select
                           value={item.iva_porcentaje}
                           onChange={(e) => handleIvaChange(item.id, parseFloat(e.target.value))}
-                          className={`px-2 py-0.5 rounded text-xs font-medium border-0 cursor-pointer ${
+                          className={`px-2 py-0.5 rounded text-xs font-medium font-mono border-0 cursor-pointer ${
                             item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
                             item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
                             'bg-green-100 text-green-800'
@@ -906,7 +906,7 @@ export default function NuevaFacturaPage() {
                           <option value={0}>0%</option>
                         </select>
                       </td>
-                      <td className="px-4 py-3 text-right font-medium">
+                      <td className="px-4 py-3 text-right font-medium font-mono">
                         {formatearMoneda(item.subtotal)}
                       </td>
                       <td className="px-4 py-3">
@@ -926,7 +926,7 @@ export default function NuevaFacturaPage() {
                     <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
                       Subtotal Neto:
                     </td>
-                    <td className="px-4 py-2 text-right text-sm text-gray-900">
+                    <td className="px-4 py-2 text-right text-sm text-gray-900 font-mono">
                       {formatearMoneda(subtotalNeto)}
                     </td>
                     <td></td>
@@ -936,7 +936,7 @@ export default function NuevaFacturaPage() {
                       <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                         IVA 21%:
                       </td>
-                      <td className="px-4 py-1 text-right text-sm text-gray-900">
+                      <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                         {formatearMoneda(totalIva21)}
                       </td>
                       <td></td>
@@ -947,7 +947,7 @@ export default function NuevaFacturaPage() {
                       <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                         IVA 10.5%:
                       </td>
-                      <td className="px-4 py-1 text-right text-sm text-gray-900">
+                      <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                         {formatearMoneda(totalIva105)}
                       </td>
                       <td></td>
@@ -958,7 +958,7 @@ export default function NuevaFacturaPage() {
                       <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                         Exento (0%):
                       </td>
-                      <td className="px-4 py-1 text-right text-sm text-gray-900">
+                      <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                         {formatearMoneda(totalIva0)}
                       </td>
                       <td></td>
@@ -968,7 +968,7 @@ export default function NuevaFacturaPage() {
                     <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
                       Total:
                     </td>
-                    <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
+                    <td className="px-4 py-3 text-right text-lg font-bold text-green-600 font-mono">
                       {formatearMoneda(total)}
                     </td>
                     <td></td>
@@ -1033,12 +1033,12 @@ export default function NuevaFacturaPage() {
               {totalPercepciones > 0 && (
                 <div className="flex justify-between pt-1 text-xs">
                   <span className="text-gray-600">Total Percepciones:</span>
-                  <span className="font-medium">{formatearMoneda(totalPercepciones)}</span>
+                  <span className="font-medium font-mono">{formatearMoneda(totalPercepciones)}</span>
                 </div>
               )}
               <div className="flex justify-between pt-1 border-t">
                 <span className="font-medium text-gray-900 text-sm">Total Final:</span>
-                <span className="text-base font-bold text-green-600">{formatearMoneda(total)}</span>
+                <span className="text-base font-bold text-green-600 font-mono">{formatearMoneda(total)}</span>
               </div>
             </div>
           </div>
@@ -1096,10 +1096,10 @@ export default function NuevaFacturaPage() {
                     <div>
                       <p className="font-medium text-gray-900">{orden.proveedor_nombre}</p>
                       <p className="text-sm text-gray-500">
-                        {formatearFecha(orden.fecha)} - {orden.items.length} items
+                        {formatearFecha(orden.fecha)} - <span className="font-mono">{orden.items.length}</span> items
                       </p>
                     </div>
-                    <p className="font-medium text-green-600">
+                    <p className="font-medium text-green-600 font-mono">
                       {formatearMoneda(orden.total)}
                     </p>
                   </div>

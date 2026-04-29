@@ -197,17 +197,17 @@ export default function RecetasBasePage() {
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div>
           <p className="text-[10px] text-gray-500">Rinde</p>
-          <p className="text-sm font-medium">{receta.rendimiento_porciones} porc.</p>
+          <p className="text-sm font-medium font-mono">{receta.rendimiento_porciones} porc.</p>
         </div>
         <div>
           <p className="text-[10px] text-gray-500">Costo Total</p>
-          <p className="text-sm font-medium">
+          <p className="text-sm font-medium font-mono">
             ${receta.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </p>
         </div>
         <div className="text-right">
           <p className="text-[10px] text-gray-500">$/Porción</p>
-          <p className="text-sm font-bold text-green-700">
+          <p className="text-sm font-bold text-green-700 font-mono">
             ${receta.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </p>
         </div>
@@ -303,13 +303,13 @@ export default function RecetasBasePage() {
                         </p>
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-center text-xs text-gray-600">
+                    <td className="px-4 py-2 text-center text-xs text-gray-600 font-mono">
                       {r.rendimiento_porciones}
                     </td>
-                    <td className="px-4 py-2 text-right text-xs font-medium tabular-nums">
+                    <td className="px-4 py-2 text-right text-xs font-medium tabular-nums font-mono">
                       <span className="text-gray-400">$</span><span className="ml-1">{r.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                     </td>
-                    <td className="px-4 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums">
+                    <td className="px-4 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums font-mono">
                       <span className="text-green-500 font-normal">$</span><span className="ml-1">{r.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                     </td>
                     <td className="px-4 py-2 text-right">
@@ -374,12 +374,12 @@ export default function RecetasBasePage() {
                       <span className="text-gray-500 italic">{recetaDetalle.descripcion}</span>
                     )}
                     <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                      Rinde: <strong>{recetaDetalle.rendimiento_porciones}</strong> porc.
+                      Rinde: <strong className="font-mono">{recetaDetalle.rendimiento_porciones}</strong> porc.
                     </span>
-                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold font-mono">
                       ${recetaDetalle.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })} / porción
                     </span>
-                    <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                    <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
                       Total: ${recetaDetalle.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </span>
                   </div>
@@ -397,7 +397,7 @@ export default function RecetasBasePage() {
                           return (
                             <div key={idx} className="flex justify-between text-xs">
                               <span className="text-gray-700">{ing.nombre}</span>
-                              <span className="text-gray-500">{cantStr}</span>
+                              <span className="text-gray-500 font-mono">{cantStr}</span>
                             </div>
                           )
                         })}

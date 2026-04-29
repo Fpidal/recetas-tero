@@ -408,14 +408,14 @@ export default function MenusEspecialesPage() {
                           <tr>
                             {/* Costo Menú */}
                             <td className="py-2 text-left">
-                              <span className="text-xs text-gray-600">
+                              <span className="text-xs text-gray-600 font-mono">
                                 <span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                               </span>
-                              <span className="text-[10px] text-gray-400 ml-1">({comensales}p)</span>
+                              <span className="text-[10px] text-gray-400 ml-1 font-mono">({comensales}p)</span>
                             </td>
                             {/* Costo x Persona */}
                             <td className="py-2 text-right">
-                              <span className="text-sm font-bold text-green-600">
+                              <span className="text-sm font-bold font-mono text-green-600">
                                 <span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                               </span>
                             </td>
@@ -428,14 +428,14 @@ export default function MenusEspecialesPage() {
                                   value={getEditValue(menu.id, 'margen', fcObjetivo)}
                                   onChange={(e) => setEditValue(menu.id, 'margen', e.target.value)}
                                   onBlur={(e) => handleBlurSave(menu.id, 'margen', e.target.value, fcObjetivo)}
-                                  className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-xs"
+                                  className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-xs font-mono"
                                 />
                                 <span className="text-[10px] text-gray-400">%</span>
                               </div>
                             </td>
                             {/* Precio Sugerido */}
                             <td className="py-2 text-right">
-                              <span className="text-xs text-blue-600 font-medium">
+                              <span className="text-xs text-blue-600 font-medium font-mono">
                                 <span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                               </span>
                             </td>
@@ -454,7 +454,7 @@ export default function MenusEspecialesPage() {
                                     const raw = e.target.value.replace(/\D/g, '')
                                     handleBlurSave(menu.id, 'precio', raw, precioVenta)
                                   }}
-                                  className="w-20 px-1.5 py-0.5 border border-gray-300 rounded text-right text-xs"
+                                  className="w-20 px-1.5 py-0.5 border border-gray-300 rounded text-right text-xs font-mono"
                                   placeholder="0"
                                 />
                               </div>
@@ -462,7 +462,7 @@ export default function MenusEspecialesPage() {
                             {/* FC Real */}
                             <td className="py-2 text-center">
                               {currentPrecio > 0 ? (
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium font-mono ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                   {currentFcReal.toFixed(1)}%
                                 </span>
                               ) : (
@@ -472,7 +472,7 @@ export default function MenusEspecialesPage() {
                             {/* Contribución */}
                             <td className="py-2 text-right bg-green-50">
                               {currentPrecio > 0 ? (
-                                <span className="text-xs font-bold text-green-700">
+                                <span className="text-xs font-bold font-mono text-green-700">
                                   <span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                                 </span>
                               ) : (
@@ -519,13 +519,13 @@ export default function MenusEspecialesPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-gray-400">→</span>
                         <span className="text-sm text-gray-600">
-                          Costo: <span className="font-bold text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                          Costo: <span className="font-bold font-mono text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                         </span>
                         {precioVenta > 0 && (
                           <>
                             <span className="text-gray-400">|</span>
                             <span className="text-sm text-gray-600">
-                              Ingreso: <span className="font-bold text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                              Ingreso: <span className="font-bold font-mono text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                             </span>
                           </>
                         )}

@@ -226,7 +226,7 @@ export default function CargaDiaria() {
               <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
                 <div className="flex justify-between items-baseline">
                   <span className="text-sm text-gray-600">Total del día</span>
-                  <span className="text-lg font-bold text-gray-900">
+                  <span className="text-lg font-bold text-gray-900 font-mono">
                     {formatearMonedaVentas(totalDia)}
                   </span>
                 </div>
@@ -357,9 +357,9 @@ export default function CargaDiaria() {
                             </td>
                             <td className="text-right py-3 px-3 font-semibold text-gray-900">
                               <div className="flex flex-col items-end leading-tight">
-                                <span>{formatearMonedaVentas(total)}</span>
+                                <span className="font-mono">{formatearMonedaVentas(total)}</span>
                                 {cubTotal > 0 && (
-                                  <span className="text-[10px] text-gray-400 uppercase font-normal">
+                                  <span className="text-[10px] text-gray-400 uppercase font-normal font-mono">
                                     {cubTotal} cub.
                                   </span>
                                 )}
@@ -453,11 +453,11 @@ export default function CargaDiaria() {
                             <div className="text-xs text-gray-400">{dia.diaSemana}</div>
                           </div>
                           <div className="text-right">
-                            <div className="text-lg font-bold text-gray-900">
+                            <div className="text-lg font-bold text-gray-900 font-mono">
                               {formatearMonedaVentas(total)}
                             </div>
                             {cubTotal > 0 && (
-                              <div className="text-[10px] text-gray-400 uppercase">
+                              <div className="text-[10px] text-gray-400 uppercase font-mono">
                                 {cubTotal} cubiertos
                               </div>
                             )}
@@ -629,13 +629,13 @@ function ServicioMobile({
         {label}
       </div>
       <div
-        className={`text-sm font-semibold ${
+        className={`text-sm font-semibold font-mono ${
           tieneValor ? (destacar ? 'text-purple-700' : 'text-gray-900') : 'text-gray-300'
         }`}
       >
         {v > 0 ? formatearMonedaVentas(v) : '—'}
       </div>
-      {c > 0 && <div className="text-[10px] text-gray-400 mt-0.5">{c} cub.</div>}
+      {c > 0 && <div className="text-[10px] text-gray-400 mt-0.5 font-mono">{c} cub.</div>}
     </div>
   )
 }
@@ -646,8 +646,8 @@ function CeldaServicio({ venta, cubiertos }: { venta: number; cubiertos: number 
   if (v === 0 && c === 0) return <span className="text-gray-400 font-normal">—</span>
   return (
     <div className="flex flex-col items-end leading-tight">
-      <span>{v > 0 ? formatearMonedaVentas(v) : '—'}</span>
-      {c > 0 && <span className="text-[10px] text-gray-400 uppercase">{c} cub.</span>}
+      <span className="font-mono">{v > 0 ? formatearMonedaVentas(v) : '—'}</span>
+      {c > 0 && <span className="text-[10px] text-gray-400 uppercase font-mono">{c} cub.</span>}
     </div>
   )
 }
@@ -721,10 +721,10 @@ function Comparacion({
     <div className="flex justify-between items-baseline">
       <span className="text-gray-600">{label}:</span>
       <div className="flex items-baseline gap-2">
-        <span className={cambia ? 'line-through text-gray-400 text-xs' : 'text-gray-900'}>
+        <span className={cambia ? 'line-through text-gray-400 text-xs font-mono' : 'text-gray-900 font-mono'}>
           {fmt(Number(actual))}
         </span>
-        {cambia && <span className="font-medium text-gray-900">{fmt(nuevo)}</span>}
+        {cambia && <span className="font-medium text-gray-900 font-mono">{fmt(nuevo)}</span>}
       </div>
     </div>
   )

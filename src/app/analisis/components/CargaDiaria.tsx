@@ -279,7 +279,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                     }`}
                   >
                     <div className="text-gray-900 truncate">{o.nombre}</div>
-                    <div className="text-[11px] text-gray-500">
+                    <div className="text-[11px] text-gray-500 font-mono">
                       {formatearMonedaAnalisis(o.costo_unitario)}/{o.unidad}{' '}
                       <span className="text-gray-400">(IVA inc.)</span>
                     </div>
@@ -312,7 +312,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                 </div>
 
                 {subtotalPreview > 0 && (
-                  <div className="text-xs text-gray-600 bg-white border border-gray-200 rounded px-2 py-1.5">
+                  <div className="text-xs text-gray-600 bg-white border border-gray-200 rounded px-2 py-1.5 font-mono">
                     Subtotal: <strong className="text-gray-900">{formatearMonedaAnalisis(subtotalPreview)}</strong>
                   </div>
                 )}
@@ -390,13 +390,13 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                           <td className="text-center px-1">
                             <BadgeTipo tipo={it.tipo} />
                           </td>
-                          <td className="text-right px-2 text-gray-700">
+                          <td className="text-right px-2 text-gray-700 font-mono">
                             {Number(it.cantidad).toLocaleString('es-AR')} {it.unidad}
                           </td>
-                          <td className="text-right px-2 text-gray-500">
+                          <td className="text-right px-2 text-gray-500 font-mono">
                             {formatearMonedaAnalisis(it.costo_unitario)}/{it.unidad}
                           </td>
-                          <td className="text-right px-3 font-medium">
+                          <td className="text-right px-3 font-medium font-mono">
                             {formatearMonedaAnalisis(it.subtotal)}
                           </td>
                           <td className="px-1">
@@ -415,7 +415,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                         <td colSpan={4} className="py-3 px-3 text-right text-gray-700">
                           Total consumo (IVA inc.):
                         </td>
-                        <td className="text-right px-3 text-base text-gray-900">
+                        <td className="text-right px-3 text-base text-gray-900 font-mono">
                           {formatearMonedaAnalisis(totalCosto)}
                         </td>
                         <td></td>
@@ -433,13 +433,13 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                           <BadgeTipo tipo={it.tipo} />
                           <span className="text-sm text-gray-900 truncate">{it.nombre}</span>
                         </div>
-                        <div className="text-[11px] text-gray-500">
+                        <div className="text-[11px] text-gray-500 font-mono">
                           {Number(it.cantidad).toLocaleString('es-AR')} {it.unidad} ×{' '}
                           {formatearMonedaAnalisis(it.costo_unitario)}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-3">
-                        <span className="text-sm font-semibold">
+                        <span className="text-sm font-semibold font-mono">
                           {formatearMonedaAnalisis(it.subtotal)}
                         </span>
                         <button
@@ -453,7 +453,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                   ))}
                   <div className="p-3 bg-gray-50 flex justify-between font-semibold">
                     <span className="text-sm text-gray-700">Total (IVA inc.)</span>
-                    <span className="text-base text-gray-900">{formatearMonedaAnalisis(totalCosto)}</span>
+                    <span className="text-base text-gray-900 font-mono">{formatearMonedaAnalisis(totalCosto)}</span>
                   </div>
                 </div>
               </>
@@ -464,14 +464,14 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
               <div className="text-[10px] uppercase text-gray-500 font-semibold">Items cargados</div>
-              <div className="text-lg font-bold text-gray-900 mt-1">{totalItems}</div>
-              <div className="text-[11px] text-gray-500">
+              <div className="text-lg font-bold text-gray-900 mt-1 font-mono">{totalItems}</div>
+              <div className="text-[11px] text-gray-500 font-mono">
                 {tipoConteo.insumo} ins · {tipoConteo.elaboracion} elab · {tipoConteo.receta} rec
               </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
               <div className="text-[10px] uppercase text-gray-500 font-semibold">Costo total</div>
-              <div className="text-lg font-bold text-gray-900 mt-1">{formatearMonedaAnalisis(totalCosto)}</div>
+              <div className="text-lg font-bold text-gray-900 mt-1 font-mono">{formatearMonedaAnalisis(totalCosto)}</div>
               <div className="text-[11px] text-gray-500">IVA incluido</div>
             </div>
             <div className="bg-blue-50 rounded-lg border-2 border-blue-300 shadow-sm p-3">

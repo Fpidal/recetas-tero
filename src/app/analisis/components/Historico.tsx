@@ -147,12 +147,12 @@ export default function Historico() {
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <ReferenceLine
                   y={OBJETIVO_INCIDENCIA_REAL}
-                  stroke="#22c55e"
+                  stroke="#3D8B5E"
                   strokeDasharray="5 5"
                   label={{
                     value: `Objetivo ${OBJETIVO_INCIDENCIA_REAL}%`,
                     fontSize: 10,
-                    fill: '#22c55e',
+                    fill: '#3D8B5E',
                     position: 'right',
                   }}
                 />
@@ -160,7 +160,7 @@ export default function Historico() {
                   type="monotone"
                   dataKey="incidencia"
                   name="Inc. real %"
-                  stroke="#0f172a"
+                  stroke="#1B3A2D"
                   strokeWidth={2}
                   dot={{ r: 4 }}
                   activeDot={{ r: 6 }}
@@ -199,25 +199,25 @@ export default function Historico() {
                     return (
                       <tr key={`${r.año}-${r.mes}`} className="hover:bg-gray-50">
                         <td className="py-2.5 px-3 text-gray-900">{r.label}</td>
-                        <td className="text-right px-3 text-gray-700">
+                        <td className="text-right px-3 text-gray-700 font-mono">
                           {r.ventas > 0 ? formatearMonedaAnalisis(r.ventas) : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="text-right px-3 text-gray-700 hidden xs:table-cell">
+                        <td className="text-right px-3 text-gray-700 hidden xs:table-cell font-mono">
                           {r.costo > 0 ? formatearMonedaAnalisis(r.costo) : <span className="text-gray-400">—</span>}
                         </td>
                         <td className="text-right px-3">
                           {sinDatos || r.incidencia === 0 ? (
                             <span className="text-gray-400">—</span>
                           ) : (
-                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colorBadge}`}>
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium font-mono ${colorBadge}`}>
                               {r.incidencia.toFixed(1)}%
                             </span>
                           )}
                         </td>
-                        <td className="text-right px-3 text-gray-700 hidden sm:table-cell">
+                        <td className="text-right px-3 text-gray-700 hidden sm:table-cell font-mono">
                           {r.cubiertos > 0 ? r.cubiertos.toLocaleString('es-AR') : '—'}
                         </td>
-                        <td className="text-right px-3 text-gray-500 hidden md:table-cell">
+                        <td className="text-right px-3 text-gray-500 hidden md:table-cell font-mono">
                           {r.diasConCarga > 0 ? r.diasConCarga : '—'}
                         </td>
                       </tr>

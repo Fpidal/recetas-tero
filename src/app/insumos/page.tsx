@@ -442,7 +442,7 @@ export default function InsumosPage() {
             </p>
           </div>
           {variacion !== null && (
-            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium ${
+            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-mono font-medium ${
               variacion > 0 ? 'bg-red-100 text-red-700' :
               variacion < 0 ? 'bg-green-100 text-green-700' :
               'bg-gray-100 text-gray-600'
@@ -458,19 +458,19 @@ export default function InsumosPage() {
         <div className="grid grid-cols-2 gap-2 text-sm mb-3">
           <div>
             <p className="text-xs text-gray-500">Precio</p>
-            <p className="font-medium">{formatCurrency(precioPaquete)}</p>
+            <p className="font-mono font-medium">{formatCurrency(precioPaquete)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Costo Final</p>
-            <p className="font-bold text-green-700">{formatCurrency(costoFinal)}</p>
+            <p className="font-mono font-bold text-green-700">{formatCurrency(costoFinal)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Unidad</p>
-            <p>{insumo.unidad_medida} {cantPaq !== 1 && <span className="text-purple-600">x{formatearCantidad(cantPaq, cantPaq % 1 === 0 ? 0 : 1)}</span>}</p>
+            <p>{insumo.unidad_medida} {cantPaq !== 1 && <span className="font-mono text-purple-600">x{formatearCantidad(cantPaq, cantPaq % 1 === 0 ? 0 : 1)}</span>}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">IVA / Merma</p>
-            <p>{insumo.iva_porcentaje}% / {insumo.merma_porcentaje}%</p>
+            <p className="font-mono">{insumo.iva_porcentaje}% / {insumo.merma_porcentaje}%</p>
           </div>
         </div>
 
@@ -662,15 +662,15 @@ export default function InsumosPage() {
                           <td className="px-2 py-1.5 text-gray-600">
                             {categorias.find((c) => c.value === insumo.categoria)?.label?.split(' ')[0]}
                           </td>
-                          <td className="px-2 py-1.5 text-center text-gray-500">
+                          <td className="px-2 py-1.5 text-center font-mono text-gray-500">
                             {formatDate(insumo.fecha_actualizacion)}
                           </td>
-                          <td className="px-2 py-1.5 text-right text-gray-500">
+                          <td className="px-2 py-1.5 text-right font-mono text-gray-500">
                             {formatCurrency(anteriorPaquete)}
                           </td>
                           <td className="px-1 py-1.5 text-center">
                             {variacion !== null ? (
-                              <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-medium ${
+                              <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-mono font-medium ${
                                 variacion > 0 ? 'bg-red-100 text-red-700' :
                                 variacion < 0 ? 'bg-green-100 text-green-700' :
                                 'bg-gray-100 text-gray-600'
@@ -684,7 +684,7 @@ export default function InsumosPage() {
                               <span className="text-gray-400">-</span>
                             )}
                           </td>
-                          <td className="px-2 py-1.5 text-right font-medium text-gray-900">
+                          <td className="px-2 py-1.5 text-right font-mono font-medium text-gray-900">
                             {formatCurrency(precioPaquete)}
                           </td>
                           <td className="px-1 py-1.5 text-center">
@@ -692,16 +692,16 @@ export default function InsumosPage() {
                           </td>
                           <td className="px-1 py-1.5 text-center">
                             {cantPaq !== 1 ? (
-                              <span className="text-purple-600 font-medium">{formatearCantidad(cantPaq, cantPaq % 1 === 0 ? 0 : 1)}</span>
+                              <span className="font-mono text-purple-600 font-medium">{formatearCantidad(cantPaq, cantPaq % 1 === 0 ? 0 : 1)}</span>
                             ) : (
-                              <span className="text-gray-400">1</span>
+                              <span className="font-mono text-gray-400">1</span>
                             )}
                           </td>
-                          <td className="px-2 py-1.5 text-right font-medium text-gray-700">
+                          <td className="px-2 py-1.5 text-right font-mono font-medium text-gray-700">
                             {formatCurrency(precioUnitario)}
                           </td>
                           <td className="px-1 py-1.5 text-center">
-                            <span className={`inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium ${
+                            <span className={`inline-flex items-center px-1 py-0.5 rounded text-[10px] font-mono font-medium ${
                               insumo.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
                               insumo.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-green-100 text-green-800'
@@ -709,17 +709,17 @@ export default function InsumosPage() {
                               {insumo.iva_porcentaje}%
                             </span>
                           </td>
-                          <td className="px-2 py-1.5 text-right text-gray-600">
+                          <td className="px-2 py-1.5 text-right font-mono text-gray-600">
                             {formatCurrency(costoConIva)}
                           </td>
                           <td className="px-1 py-1.5 text-center">
                             {insumo.merma_porcentaje > 0 ? (
-                              <span className="text-orange-600 font-medium">{insumo.merma_porcentaje}%</span>
+                              <span className="font-mono text-orange-600 font-medium">{insumo.merma_porcentaje}%</span>
                             ) : (
-                              <span className="text-gray-400">0</span>
+                              <span className="font-mono text-gray-400">0</span>
                             )}
                           </td>
-                          <td className="px-2 py-1.5 text-right font-bold text-green-700 bg-green-50">
+                          <td className="px-2 py-1.5 text-right font-mono font-bold text-green-700 bg-green-50">
                             {formatCurrency(costoFinal)}
                           </td>
                           <td className="px-2 py-1.5 text-gray-600 max-w-[100px] truncate" title={insumo.proveedor_nombre || ''}>
@@ -900,19 +900,19 @@ export default function InsumosPage() {
                       <p className="text-gray-500 text-xs">
                         Presentación
                       </p>
-                      <p className="font-medium text-purple-600">{formatoPresentacion}</p>
+                      <p className="font-mono font-medium text-purple-600">{formatoPresentacion}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Precio unit.</p>
-                      <p className="font-medium">{formatCurrencyDecimal(precioUnitario)}</p>
+                      <p className="font-mono font-medium">{formatCurrencyDecimal(precioUnitario)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">+ IVA ({iva}%)</p>
-                      <p className="font-medium">{formatCurrencyDecimal(costoConIva)}</p>
+                      <p className="text-gray-500 text-xs">+ IVA (<span className="font-mono">{iva}%</span>)</p>
+                      <p className="font-mono font-medium">{formatCurrencyDecimal(costoConIva)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">+ Merma ({merma}%)</p>
-                      <p className="font-bold text-green-700">{formatCurrencyDecimal(costoFinal)}</p>
+                      <p className="text-gray-500 text-xs">+ Merma (<span className="font-mono">{merma}%</span>)</p>
+                      <p className="font-mono font-bold text-green-700">{formatCurrencyDecimal(costoFinal)}</p>
                     </div>
                   </div>
                 )
@@ -949,18 +949,19 @@ export default function InsumosPage() {
             <div className="h-48 sm:h-64 mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={historialData}>
-                  <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} />
+                  <XAxis dataKey="fecha" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
+                  <YAxis tick={{ fontSize: 10, fontFamily: 'monospace' }} tickFormatter={(v) => `$${v}`} />
                   <Tooltip
                     formatter={(value: any) => [`$${Number(value).toLocaleString('es-AR')}`, 'Precio']}
                     labelFormatter={(label) => `Fecha: ${label}`}
+                    contentStyle={{ fontFamily: 'monospace' }}
                   />
                   <Line
                     type="monotone"
                     dataKey="precio"
-                    stroke="#2563eb"
+                    stroke="#C4704B"
                     strokeWidth={2}
-                    dot={{ fill: '#2563eb', r: 3 }}
+                    dot={{ fill: '#C4704B', r: 3 }}
                     activeDot={{ r: 5 }}
                   />
                 </LineChart>
@@ -980,9 +981,9 @@ export default function InsumosPage() {
                 <tbody className="divide-y divide-gray-100">
                   {[...historialData].reverse().map((item, idx) => (
                     <tr key={idx} className={idx === 0 ? 'bg-blue-50' : ''}>
-                      <td className="px-3 py-1">{item.fecha}</td>
-                      <td className="px-3 py-1 text-right">{item.cantidad ? formatearCantidad(item.cantidad) : '-'}</td>
-                      <td className="px-3 py-1 text-right font-medium">${item.precio.toLocaleString('es-AR')}</td>
+                      <td className="px-3 py-1 font-mono">{item.fecha}</td>
+                      <td className="px-3 py-1 text-right font-mono">{item.cantidad ? formatearCantidad(item.cantidad) : '-'}</td>
+                      <td className="px-3 py-1 text-right font-mono font-medium">${item.precio.toLocaleString('es-AR')}</td>
                       <td className="px-3 py-1 text-gray-600">{item.proveedor}</td>
                     </tr>
                   ))}

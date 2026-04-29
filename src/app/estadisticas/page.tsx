@@ -41,7 +41,7 @@ interface FacturaConDetalle {
 }
 
 // ============ CONSTANTES ============
-const COLORES = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#ec4899', '#14b8a6', '#f59e0b']
+const COLORES = ['#C4704B', '#5C7A5E', '#4A6572', '#A67B3D', '#9B2C2C', '#3D8B5E', '#8CA88F', '#B5613E']
 
 const PERIODOS = [
   { value: 'esta_semana', label: 'Esta semana' },
@@ -115,13 +115,13 @@ const CATEG_LABELS: Record<string, string> = {
 }
 
 const CATEG_COLORES: Record<string, string> = {
-  Carnes: '#dc2626',
-  Almacen: '#d97706',
-  Verduras_Frutas: '#16a34a',
-  Pescados_Mariscos: '#0891b2',
-  Lacteos_Fiambres: '#7c3aed',
-  Bebidas: '#2563eb',
-  Salsas_Recetas: '#db2777',
+  Carnes: '#9B2C2C',
+  Almacen: '#A67B3D',
+  Verduras_Frutas: '#3D8B5E',
+  Pescados_Mariscos: '#4A6572',
+  Lacteos_Fiambres: '#5C7A5E',
+  Bebidas: '#C4704B',
+  Salsas_Recetas: '#C4704B',
 }
 
 type TabType = 'proveedores' | 'comparador' | 'variacion' | 'alertas' | 'compras_semanales' | 'comparacion_mensual'
@@ -1111,28 +1111,28 @@ export default function EstadisticasPage() {
                 <Package className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="text-[10px] sm:text-xs">Insumos distintos</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{comprasPorInsumoSemana.resumen.insumosDistintos}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{comprasPorInsumoSemana.resumen.insumosDistintos}</p>
             </div>
             <div className="bg-white rounded-lg border p-2.5 sm:p-4">
               <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
                 <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="text-[10px] sm:text-xs">Proveedores</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{comprasPorInsumoSemana.resumen.proveedores}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{comprasPorInsumoSemana.resumen.proveedores}</p>
             </div>
             <div className="bg-white rounded-lg border p-2.5 sm:p-4">
               <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
                 <FileText className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="text-[10px] sm:text-xs">Líneas de compra</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{comprasPorInsumoSemana.resumen.lineasCompra}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{comprasPorInsumoSemana.resumen.lineasCompra}</p>
             </div>
             <div className="bg-white rounded-lg border p-2.5 sm:p-4">
               <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
                 <TrendingUp className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="text-[10px] sm:text-xs">Recurrentes (4+)</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{comprasPorInsumoSemana.resumen.recurrentes}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{comprasPorInsumoSemana.resumen.recurrentes}</p>
             </div>
           </div>
 
@@ -1192,7 +1192,7 @@ export default function EstadisticasPage() {
                       <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
                       <h3 className="text-sm sm:text-base font-semibold text-gray-800">{cat.label}</h3>
                     </div>
-                    <span className="text-[10px] sm:text-xs text-gray-500">{cat.totalInsumos} insumos · {cat.totalCompras} compras</span>
+                    <span className="text-[10px] sm:text-xs text-gray-500 font-mono">{cat.totalInsumos} insumos · {cat.totalCompras} compras</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -1218,7 +1218,7 @@ export default function EstadisticasPage() {
                               {item.nombre}
                             </td>
                             {item.semanas.map((sem, idx) => (
-                              <td key={idx} className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs ${sem.cantidad > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                              <td key={idx} className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono ${sem.cantidad > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
                                 {sem.cantidad > 0 ? (
                                   <span>
                                     {sem.cantidad % 1 === 0 ? sem.cantidad : sem.cantidad.toFixed(1)}
@@ -1227,10 +1227,10 @@ export default function EstadisticasPage() {
                                 ) : '-'}
                               </td>
                             ))}
-                            <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-bold text-gray-900">
+                            <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-bold text-gray-900 font-mono">
                               {item.total % 1 === 0 ? item.total : item.total.toFixed(1)}
                             </td>
-                            <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-semibold ${
+                            <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-semibold font-mono ${
                               item.frecuencia >= 4 ? 'text-green-600' : item.frecuencia >= 2 ? 'text-orange-500' : 'text-red-500'
                             }`}>
                               {item.frecuenciaLabel}
@@ -1277,14 +1277,14 @@ export default function EstadisticasPage() {
                           <td key={semIdx} className={`px-2 sm:px-3 py-2 sm:py-3 text-center ${sem.total > 0 ? '' : 'text-gray-300'}`}>
                             {sem.total > 0 ? (
                               <div>
-                                <div className="text-xs sm:text-sm font-medium text-gray-900">{formatMoney(sem.total)}</div>
-                                <div className="text-[9px] sm:text-[10px] text-gray-500">{sem.facturas} fact.</div>
+                                <div className="text-xs sm:text-sm font-medium text-gray-900 font-mono">{formatMoney(sem.total)}</div>
+                                <div className="text-[9px] sm:text-[10px] text-gray-500 font-mono">{sem.facturas} fact.</div>
                               </div>
                             ) : '-'}
                           </td>
                         ))}
                         <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
-                          <span className="text-xs sm:text-sm font-bold text-gray-900">{formatMoney(prov.totalGeneral)}</span>
+                          <span className="text-xs sm:text-sm font-bold text-gray-900 font-mono">{formatMoney(prov.totalGeneral)}</span>
                         </td>
                       </tr>
                     ))}
@@ -1326,11 +1326,11 @@ export default function EstadisticasPage() {
                                 {CATEG_LABELS[item.categoria] || item.categoria}
                               </span>
                             </td>
-                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm font-semibold text-green-600">{item.frecuenciaLabel}</td>
-                            <td className="px-3 sm:px-4 py-2 text-right text-xs sm:text-sm font-bold text-gray-900">
+                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm font-semibold text-green-600 font-mono">{item.frecuenciaLabel}</td>
+                            <td className="px-3 sm:px-4 py-2 text-right text-xs sm:text-sm font-bold text-gray-900 font-mono">
                               {item.total % 1 === 0 ? item.total : item.total.toFixed(1)}
                             </td>
-                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm text-gray-600">{item.vecesTotal}</td>
+                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm text-gray-600 font-mono">{item.vecesTotal}</td>
                             <td className="px-3 sm:px-4 py-2 text-xs text-gray-500 hidden sm:table-cell">{item.proveedoresList.join(', ')}</td>
                           </tr>
                         ))}
@@ -1370,11 +1370,11 @@ export default function EstadisticasPage() {
                                 {CATEG_LABELS[item.categoria] || item.categoria}
                               </span>
                             </td>
-                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm font-semibold text-red-500">{item.frecuenciaLabel}</td>
-                            <td className="px-3 sm:px-4 py-2 text-right text-xs sm:text-sm font-bold text-gray-900">
+                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm font-semibold text-red-500 font-mono">{item.frecuenciaLabel}</td>
+                            <td className="px-3 sm:px-4 py-2 text-right text-xs sm:text-sm font-bold text-gray-900 font-mono">
                               {item.total % 1 === 0 ? item.total : item.total.toFixed(1)}
                             </td>
-                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm text-gray-600">{item.vecesTotal}</td>
+                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm text-gray-600 font-mono">{item.vecesTotal}</td>
                             <td className="px-3 sm:px-4 py-2 text-xs text-gray-500 hidden sm:table-cell">{item.proveedoresList.join(', ')}</td>
                           </tr>
                         ))}
@@ -1407,8 +1407,8 @@ export default function EstadisticasPage() {
                               <span className="text-xs sm:text-sm font-medium text-gray-900">{cat.label}</span>
                             </span>
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600">{cat.totalInsumos}</td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold text-gray-900">{cat.totalCompras}</td>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600 font-mono">{cat.totalInsumos}</td>
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold text-gray-900 font-mono">{cat.totalCompras}</td>
                         </tr>
                       ))}
                   </tbody>
@@ -1444,11 +1444,11 @@ export default function EstadisticasPage() {
                     <tr key={prov.nombre} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                       <td className="px-4 py-2 font-medium text-gray-900 sticky left-0 bg-inherit">{prov.nombre}</td>
                       {mesesOrdenados.map(mes => (
-                        <td key={mes} className="text-right px-4 py-2 text-gray-600 whitespace-nowrap">
+                        <td key={mes} className="text-right px-4 py-2 text-gray-600 whitespace-nowrap font-mono">
                           {prov.meses[mes] ? formatMoney(prov.meses[mes]) : '-'}
                         </td>
                       ))}
-                      <td className="text-right px-4 py-2 font-semibold text-gray-900 bg-gray-100">{formatMoney(prov.total)}</td>
+                      <td className="text-right px-4 py-2 font-semibold text-gray-900 bg-gray-100 font-mono">{formatMoney(prov.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1458,10 +1458,10 @@ export default function EstadisticasPage() {
                     {mesesOrdenados.map(mes => {
                       const totalMes = comparacionMensualProveedores.reduce((s, p) => s + (p.meses[mes] || 0), 0)
                       return (
-                        <td key={mes} className="text-right px-4 py-2 text-gray-900 whitespace-nowrap">{formatMoney(totalMes)}</td>
+                        <td key={mes} className="text-right px-4 py-2 text-gray-900 whitespace-nowrap font-mono">{formatMoney(totalMes)}</td>
                       )
                     })}
-                    <td className="text-right px-4 py-2 text-gray-900 bg-gray-200">
+                    <td className="text-right px-4 py-2 text-gray-900 bg-gray-200 font-mono">
                       {formatMoney(comparacionMensualProveedores.reduce((s, p) => s + p.total, 0))}
                     </td>
                   </tr>
@@ -1494,11 +1494,11 @@ export default function EstadisticasPage() {
                     <tr key={cat.categoria} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                       <td className="px-4 py-2 font-medium text-gray-900 sticky left-0 bg-inherit">{cat.categoria}</td>
                       {mesesOrdenados.map(mes => (
-                        <td key={mes} className="text-right px-4 py-2 text-gray-600 whitespace-nowrap">
+                        <td key={mes} className="text-right px-4 py-2 text-gray-600 whitespace-nowrap font-mono">
                           {cat.meses[mes] ? formatMoney(cat.meses[mes]) : '-'}
                         </td>
                       ))}
-                      <td className="text-right px-4 py-2 font-semibold text-gray-900 bg-gray-100">{formatMoney(cat.total)}</td>
+                      <td className="text-right px-4 py-2 font-semibold text-gray-900 bg-gray-100 font-mono">{formatMoney(cat.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1508,10 +1508,10 @@ export default function EstadisticasPage() {
                     {mesesOrdenados.map(mes => {
                       const totalMes = comparacionMensualCategorias.reduce((s, c) => s + (c.meses[mes] || 0), 0)
                       return (
-                        <td key={mes} className="text-right px-4 py-2 text-gray-900 whitespace-nowrap">{formatMoney(totalMes)}</td>
+                        <td key={mes} className="text-right px-4 py-2 text-gray-900 whitespace-nowrap font-mono">{formatMoney(totalMes)}</td>
                       )
                     })}
-                    <td className="text-right px-4 py-2 text-gray-900 bg-gray-200">
+                    <td className="text-right px-4 py-2 text-gray-900 bg-gray-200 font-mono">
                       {formatMoney(comparacionMensualCategorias.reduce((s, c) => s + c.total, 0))}
                     </td>
                   </tr>
@@ -1530,21 +1530,21 @@ export default function EstadisticasPage() {
                 <DollarSign className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="text-[10px] sm:text-xs">Total Compras</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{formatMoney(totalCompras)}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{formatMoney(totalCompras)}</p>
             </div>
             <div className="bg-white rounded-lg border p-2.5 sm:p-4">
               <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
                 <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="text-[10px] sm:text-xs">Proveedores</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{datosProveedores.length}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{datosProveedores.length}</p>
             </div>
             <div className="bg-white rounded-lg border p-2.5 sm:p-4">
               <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
                 <Package className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="text-[10px] sm:text-xs">Categorías</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{datosPorCategoria.length}</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{datosPorCategoria.length}</p>
             </div>
             <div className="bg-white rounded-lg border p-2.5 sm:p-4">
               <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
@@ -1591,17 +1591,17 @@ export default function EstadisticasPage() {
               <div className="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto">
                 {datosProveedores.map((prov, idx) => (
                   <div key={prov.nombre} className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded hover:bg-gray-50">
-                    <span className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] sm:text-xs font-bold text-gray-500">
+                    <span className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] sm:text-xs font-bold text-gray-500 font-mono">
                       {idx + 1}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{prov.nombre}</p>
                       <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
-                        <span className="text-[9px] sm:text-[10px] text-gray-500 flex items-center gap-0.5">
+                        <span className="text-[9px] sm:text-[10px] text-gray-500 flex items-center gap-0.5 font-mono">
                           <FileText className="w-2.5 sm:w-3 h-2.5 sm:h-3" />
                           {prov.cantidadFacturas}
                         </span>
-                        <span className="text-[9px] sm:text-[10px] text-gray-500 hidden sm:inline">
+                        <span className="text-[9px] sm:text-[10px] text-gray-500 hidden sm:inline font-mono">
                           Ticket: {formatMoney(prov.ticketPromedio)}
                         </span>
                       </div>
@@ -1616,8 +1616,8 @@ export default function EstadisticasPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs sm:text-sm font-bold text-gray-900">{formatMoney(prov.total)}</p>
-                      <p className="text-[9px] sm:text-[10px] text-gray-500">{((prov.total / totalCompras) * 100).toFixed(0)}%</p>
+                      <p className="text-xs sm:text-sm font-bold text-gray-900 font-mono">{formatMoney(prov.total)}</p>
+                      <p className="text-[9px] sm:text-[10px] text-gray-500 font-mono">{((prov.total / totalCompras) * 100).toFixed(0)}%</p>
                     </div>
                   </div>
                 ))}
@@ -1667,11 +1667,11 @@ export default function EstadisticasPage() {
                         {CATEG_LABELS[cat.categoria] || cat.categoria}
                       </span>
                     </div>
-                    <span className="text-xs sm:text-sm font-bold text-gray-900">{formatMoney(cat.total)}</span>
+                    <span className="text-xs sm:text-sm font-bold text-gray-900 font-mono">{formatMoney(cat.total)}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {cat.proveedoresList.slice(0, 3).map(p => (
-                      <span key={p.nombre} className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 bg-gray-100 rounded text-gray-600">
+                      <span key={p.nombre} className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 bg-gray-100 rounded text-gray-600 font-mono">
                         {p.nombre}: {formatMoney(p.total)}
                       </span>
                     ))}
@@ -1796,14 +1796,14 @@ export default function EstadisticasPage() {
                             </span>
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
-                            <span className={`text-xs sm:text-sm font-bold ${idx === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                            <span className={`text-xs sm:text-sm font-bold font-mono ${idx === 0 ? 'text-green-600' : 'text-gray-900'}`}>
                               {formatMoney(p.ultimoPrecio)}
                             </span>
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-600 hidden sm:table-cell font-mono">
                             {formatMoney(p.precioPromedio)}
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-600 hidden sm:table-cell font-mono">
                             {formatMoney(p.precioMin)} / {formatMoney(p.precioMax)}
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
@@ -1815,14 +1815,14 @@ export default function EstadisticasPage() {
                               ) : (
                                 <Minus className="w-3 h-3 text-gray-400" />
                               )}
-                              <span className={`text-[10px] sm:text-xs font-semibold ${
+                              <span className={`text-[10px] sm:text-xs font-semibold font-mono ${
                                 p.variacionPrimeraUltima > 0 ? 'text-red-600' : p.variacionPrimeraUltima < 0 ? 'text-green-600' : 'text-gray-500'
                               }`}>
                                 {p.variacionPrimeraUltima > 0 ? '+' : ''}{p.variacionPrimeraUltima.toFixed(1)}%
                               </span>
                             </div>
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600 hidden sm:table-cell font-mono">
                             {p.cantidadCompras}
                           </td>
                         </tr>
@@ -1878,7 +1878,7 @@ export default function EstadisticasPage() {
                   <h3 className="text-xs sm:text-sm font-semibold text-gray-700">
                     Matriz: {CATEG_LABELS[categoriaComparador] || categoriaComparador}
                   </h3>
-                  <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
+                  <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 font-mono">
                     {matrizPreciosCategoria.insumos.length} insumos · {matrizPreciosCategoria.proveedores.length} proveedores
                   </p>
                 </div>
@@ -1913,7 +1913,7 @@ export default function EstadisticasPage() {
                               return (
                                 <td key={proveedor} className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs ${esMejor ? 'bg-green-50' : ''}`}>
                                   {precio !== undefined ? (
-                                    <span className={`font-medium ${esMejor ? 'text-green-700' : 'text-gray-900'}`}>
+                                    <span className={`font-medium font-mono ${esMejor ? 'text-green-700' : 'text-gray-900'}`}>
                                       {formatMoney(precio)}
                                     </span>
                                   ) : (
@@ -1987,7 +1987,7 @@ export default function EstadisticasPage() {
                               <span className="text-xs sm:text-sm font-medium text-gray-900">{cat.label}</span>
                             </div>
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600">
+                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600 font-mono">
                             {cat.insumosDetalle.length}
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
@@ -1999,7 +1999,7 @@ export default function EstadisticasPage() {
                               ) : (
                                 <Minus className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-gray-400" />
                               )}
-                              <span className={`text-xs sm:text-sm font-bold ${
+                              <span className={`text-xs sm:text-sm font-bold font-mono ${
                                 cat.variacion > 0 ? 'text-red-600' : cat.variacion < 0 ? 'text-green-600' : 'text-gray-500'
                               }`}>
                                 {cat.variacion > 0 ? '+' : ''}{cat.variacion.toFixed(1)}%
@@ -2024,10 +2024,10 @@ export default function EstadisticasPage() {
                                     {cat.insumosDetalle.map((ins) => (
                                       <tr key={ins.id} className="bg-white hover:bg-gray-50">
                                         <td className="px-4 sm:px-6 py-2 text-xs sm:text-sm text-gray-900">{ins.nombre}</td>
-                                        <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 text-right hidden sm:table-cell">
+                                        <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 text-right hidden sm:table-cell font-mono">
                                           {formatMoney(ins.precioInicial)}
                                         </td>
-                                        <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 text-right">
+                                        <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 text-right font-mono">
                                           {formatMoney(ins.precioFinal)}
                                         </td>
                                         <td className="px-2 sm:px-4 py-2 text-right">
@@ -2040,7 +2040,7 @@ export default function EstadisticasPage() {
                                               ) : (
                                                 <Minus className="w-3 h-3 text-gray-400" />
                                               )}
-                                              <span className={`text-[10px] sm:text-xs font-semibold ${
+                                              <span className={`text-[10px] sm:text-xs font-semibold font-mono ${
                                                 ins.variacion > 0 ? 'text-red-600' : ins.variacion < 0 ? 'text-green-600' : 'text-gray-500'
                                               }`}>
                                                 {ins.variacion > 0 ? '+' : ''}{ins.variacion.toFixed(1)}%
@@ -2069,7 +2069,7 @@ export default function EstadisticasPage() {
               <div className="bg-gray-50 px-3 sm:px-4 py-2 sm:py-3 border-t flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
                 <span className="text-[10px] sm:text-xs text-gray-500">
                   Variación promedio: {' '}
-                  <span className={`font-bold ${
+                  <span className={`font-bold font-mono ${
                     (allCategResumen.reduce((s, r) => s + r.variacion, 0) / allCategResumen.length) > 0
                       ? 'text-red-600' : 'text-green-600'
                   }`}>
@@ -2094,7 +2094,7 @@ export default function EstadisticasPage() {
                 <AlertTriangle className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="text-[10px] sm:text-xs font-medium">Aumentos &gt;10%</span>
               </div>
-              <p className="text-xl sm:text-2xl font-bold text-red-700">
+              <p className="text-xl sm:text-2xl font-bold text-red-700 font-mono">
                 {alertas.filter(a => a.tipo === 'aumento').length}
               </p>
             </div>
@@ -2103,7 +2103,7 @@ export default function EstadisticasPage() {
                 <Lightbulb className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="text-[10px] sm:text-xs font-medium">Oportunidades</span>
               </div>
-              <p className="text-xl sm:text-2xl font-bold text-green-700">
+              <p className="text-xl sm:text-2xl font-bold text-green-700 font-mono">
                 {alertas.filter(a => a.tipo === 'oportunidad').length}
               </p>
             </div>
@@ -2135,7 +2135,7 @@ export default function EstadisticasPage() {
                           }`}>
                             {alerta.tipo === 'aumento' ? 'Aumento' : 'Oportunidad'}
                           </span>
-                          <span className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded font-medium ${
+                          <span className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded font-medium font-mono ${
                             alerta.tipo === 'aumento'
                               ? 'bg-red-100 text-red-700'
                               : 'bg-green-100 text-green-700'

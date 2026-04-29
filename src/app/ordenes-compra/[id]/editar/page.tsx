@@ -758,7 +758,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                             inputMode="decimal"
                             value={String(item.cantidad).replace('.', ',')}
                             onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
-                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                           />
                           <select
                             value={item.unidad_display}
@@ -779,7 +779,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                             inputMode="decimal"
                             value={String(item.precio_unitario).replace('.', ',')}
                             onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
-                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                           />
                         </div>
                       </div>
@@ -801,7 +801,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                       </div>
                     </div>
                     <div className="flex justify-end mt-2 pt-2 border-t">
-                      <span className="text-sm font-medium">{formatearMoneda(item.subtotal)}</span>
+                      <span className="text-sm font-medium font-mono">{formatearMoneda(item.subtotal)}</span>
                     </div>
                   </div>
                 ))}
@@ -809,29 +809,29 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                 <div className="bg-gray-50 rounded-lg p-3 space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal Neto:</span>
-                    <span>{formatearMoneda(subtotalNeto)}</span>
+                    <span className="font-mono">{formatearMoneda(subtotalNeto)}</span>
                   </div>
                   {totalIva21 > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">IVA 21%:</span>
-                      <span>{formatearMoneda(totalIva21)}</span>
+                      <span className="font-mono">{formatearMoneda(totalIva21)}</span>
                     </div>
                   )}
                   {totalIva105 > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">IVA 10.5%:</span>
-                      <span>{formatearMoneda(totalIva105)}</span>
+                      <span className="font-mono">{formatearMoneda(totalIva105)}</span>
                     </div>
                   )}
                   {totalIva0 > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Exento (0%):</span>
-                      <span>{formatearMoneda(totalIva0)}</span>
+                      <span className="font-mono">{formatearMoneda(totalIva0)}</span>
                     </div>
                   )}
                   <div className="flex justify-between pt-2 border-t border-gray-300">
                     <span className="font-medium">Total:</span>
-                    <span className="text-lg font-bold text-green-600">{formatearMoneda(total)}</span>
+                    <span className="text-lg font-bold text-green-600 font-mono">{formatearMoneda(total)}</span>
                   </div>
                 </div>
               </div>
@@ -871,7 +871,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                               inputMode="decimal"
                               value={String(item.cantidad).replace('.', ',')}
                               onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
-                              className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                              className="w-20 rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                             />
                             <select
                               value={item.unidad_display}
@@ -891,7 +891,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                               inputMode="decimal"
                               value={String(item.precio_unitario).replace('.', ',')}
                               onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
-                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                             />
                           </div>
                         </td>
@@ -899,7 +899,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                           <select
                             value={item.iva_porcentaje}
                             onChange={(e) => handleIvaChange(item.id, parseFloat(e.target.value))}
-                            className={`px-2 py-0.5 rounded text-xs font-medium border-0 cursor-pointer ${
+                            className={`px-2 py-0.5 rounded text-xs font-medium font-mono border-0 cursor-pointer ${
                               item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
                               item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-green-100 text-green-800'
@@ -910,7 +910,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                             <option value={0}>0%</option>
                           </select>
                         </td>
-                        <td className="px-4 py-3 text-right font-medium">
+                        <td className="px-4 py-3 text-right font-medium font-mono">
                           {formatearMoneda(item.subtotal)}
                         </td>
                         <td className="px-4 py-3">
@@ -930,7 +930,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                       <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
                         Subtotal Neto:
                       </td>
-                      <td className="px-4 py-2 text-right text-sm text-gray-900">
+                      <td className="px-4 py-2 text-right text-sm text-gray-900 font-mono">
                         {formatearMoneda(subtotalNeto)}
                       </td>
                       <td></td>
@@ -940,7 +940,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                           IVA 21%:
                         </td>
-                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                        <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                           {formatearMoneda(totalIva21)}
                         </td>
                         <td></td>
@@ -951,7 +951,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                           IVA 10.5%:
                         </td>
-                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                        <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                           {formatearMoneda(totalIva105)}
                         </td>
                         <td></td>
@@ -962,7 +962,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
                           Exento (0%):
                         </td>
-                        <td className="px-4 py-1 text-right text-sm text-gray-900">
+                        <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
                           {formatearMoneda(totalIva0)}
                         </td>
                         <td></td>
@@ -972,7 +972,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                       <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
                         Total:
                       </td>
-                      <td className="px-4 py-3 text-right text-lg font-bold text-green-600">
+                      <td className="px-4 py-3 text-right text-lg font-bold text-green-600 font-mono">
                         {formatearMoneda(total)}
                       </td>
                       <td></td>

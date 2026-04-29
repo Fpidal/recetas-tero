@@ -268,7 +268,7 @@ export default function OrdenesCompraPage() {
       key: 'total',
       header: 'Total',
       render: (o: OrdenConProveedor) => (
-        <span className="text-xs font-medium tabular-nums">
+        <span className="text-xs font-medium tabular-nums font-mono">
           {formatearMoneda(calcularTotalConIva(o))}
         </span>
       ),
@@ -338,7 +338,7 @@ export default function OrdenesCompraPage() {
       </div>
 
       <div className="flex justify-between items-center pt-2 border-t">
-        <span className="text-sm font-bold text-gray-900">
+        <span className="text-sm font-bold text-gray-900 font-mono">
           {formatearMoneda(calcularTotalConIva(orden))}
         </span>
         <div className="flex gap-1">
@@ -377,7 +377,7 @@ export default function OrdenesCompraPage() {
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-gray-900">Órdenes de Compra</h1>
           <p className="text-xs text-gray-600">
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-gray-900 font-mono">
               {formatearMoneda(totalPendientes)}
             </span>
             {' '}pendiente de recibir
@@ -402,7 +402,7 @@ export default function OrdenesCompraPage() {
           }`}
         >
           Pendientes
-          <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
+          <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
             tabActiva === 'pendientes' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
           }`}>
             {ordenesPendientes.length}
@@ -417,7 +417,7 @@ export default function OrdenesCompraPage() {
           }`}
         >
           Recibidas
-          <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
+          <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
             tabActiva === 'recibidas' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
           }`}>
             {ordenesRecibidas.length}
@@ -473,7 +473,7 @@ export default function OrdenesCompraPage() {
         </div>
         {hayFiltrosActivos && (
           <p className="text-[10px] text-gray-400 mt-1.5">
-            Mostrando {ordenesFiltradas.length} de {ordenesDeTab.length} órdenes
+            Mostrando <span className="font-mono">{ordenesFiltradas.length}</span> de <span className="font-mono">{ordenesDeTab.length}</span> órdenes
           </p>
         )}
       </div>

@@ -30,38 +30,39 @@ import {
   LabelList,
 } from 'recharts'
 
-// Colores del sistema
+// Colores del sistema editorial
 const COLORS = {
-  verde: '#10B981',
-  verdeBg: '#DCFCE7',
-  naranja: '#F97316',
-  naranjaBg: '#FFEDD5',
-  indigo: '#6366F1',
-  indigoBg: '#E0E7FF',
-  morado: '#A855F7',
-  moradoBg: '#F3E8FF',
-  rojo: '#EF4444',
-  rojoBg: '#FEE2E2',
-  turquesa: '#14B8A6',
-  rosa: '#EC4899',
-  gris: '#6B7280',
-  grisBg: '#F3F4F6',
+  terracotta: '#C4704B',
+  terracottaBg: '#FDF0E6',
+  olive: '#5C7A5E',
+  oliveBg: '#E8F5EC',
+  forest: '#1B3A2D',
+  success: '#3D8B5E',
+  successBg: '#E8F5EC',
+  warning: '#A67B3D',
+  warningBg: '#FDF6E6',
+  danger: '#9B2C2C',
+  dangerBg: '#FDE8E8',
+  info: '#4A6572',
+  infoBg: '#EDF2F4',
+  ink: '#1A1A1A',
+  inkMuted: '#6B6560',
 }
 
 // Colores para el gráfico de torta
-const PIE_COLORS = ['#4F8EF7', '#14B8A6', '#10B981', '#6B7280', '#EC4899', '#F97316']
+const PIE_COLORS = ['#C4704B', '#5C7A5E', '#4A6572', '#A67B3D', '#8CA88F', '#B5553A']
 
 // Las 5 categorías principales para los gráficos
 const CATEGORIAS_GRAFICOS = ['Carnes', 'Pescados_Mariscos', 'Verduras_Frutas', 'Almacen', 'Lacteos_Fiambres']
 
 // Colores por categoría para el gráfico de barras (por key interna)
 const CATEG_COLORES: Record<string, string> = {
-  Carnes: '#dc2626',
-  Almacen: '#d97706',
-  Verduras_Frutas: '#16a34a',
-  Pescados_Mariscos: '#0891b2',
-  Lacteos_Fiambres: '#7c3aed',
-  Salsas_Recetas: '#db2777',
+  Carnes: '#9B2C2C',
+  Almacen: '#A67B3D',
+  Verduras_Frutas: '#3D8B5E',
+  Pescados_Mariscos: '#4A6572',
+  Lacteos_Fiambres: '#5C7A5E',
+  Salsas_Recetas: '#C4704B',
 }
 
 const CATEG_LABELS: Record<string, string> = {
@@ -75,12 +76,12 @@ const CATEG_LABELS: Record<string, string> = {
 
 // Colores por label visible (para el gráfico de barras - más robusto)
 const LABEL_COLORES: Record<string, string> = {
-  'Carnes': '#dc2626',
-  'Almacén': '#d97706',
-  'Verduras': '#16a34a',
-  'Pescados': '#0891b2',
-  'Lácteos': '#7c3aed',
-  'Salsas': '#db2777',
+  'Carnes': '#9B2C2C',
+  'Almacén': '#A67B3D',
+  'Verduras': '#3D8B5E',
+  'Pescados': '#4A6572',
+  'Lácteos': '#5C7A5E',
+  'Salsas': '#C4704B',
 }
 
 interface DistribucionItem {
@@ -659,7 +660,7 @@ export default function Home() {
             categoria: CATEG_LABELS[cat] || cat,
             variacion: parseFloat(variacionPromedio.toFixed(1)),
             monto: 0,
-            color: CATEG_COLORES[cat] || '#6B7280',
+            color: CATEG_COLORES[cat] || '#6B6560',
           })
         })
       }
@@ -765,7 +766,7 @@ export default function Home() {
         nombre: CATEG_LABELS[cat] || cat,
         valor,
         porcentaje: totalCat > 0 ? parseFloat(((valor / totalCat) * 100).toFixed(1)) : 0,
-        color: CATEG_COLORES[cat] || '#6B7280',
+        color: CATEG_COLORES[cat] || '#6B6560',
       }))
 
       setData({
@@ -813,104 +814,108 @@ export default function Home() {
   const totalCompras6Meses = data.comprasMensualesData.reduce((s, d) => s + d.valor, 0)
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
-        <p className="text-xs text-gray-500">Resumen del sistema</p>
+        <div>
+          <h1 className="text-2xl font-bold text-ink tracking-tight">Dashboard</h1>
+          <p className="text-sm text-ink-muted mt-0.5">Resumen del sistema</p>
+        </div>
       </div>
 
       {/* 4 KPIs Superiores */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* KPI 1 - Food Cost Promedio */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 rounded-md" style={{ backgroundColor: COLORS.verdeBg }}>
-              <ChefHat className="w-4 h-4" style={{ color: COLORS.verde }} />
+        <div className="card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: COLORS.oliveBg }}>
+              <ChefHat className="w-4 h-4" style={{ color: COLORS.olive }} />
             </div>
-            <p className="text-xs text-gray-500">Food Cost Promedio Carta</p>
+            <p className="text-xs text-ink-muted font-medium uppercase tracking-wide">Food Cost</p>
           </div>
-          <p className="text-lg font-bold text-gray-900">
+          <p className="font-mono text-2xl font-semibold text-ink">
             {isLoading ? '...' : `${data.foodCostPromedio.toFixed(1)}%`}
           </p>
+          <p className="text-xs text-ink-muted mt-1">Promedio carta</p>
         </div>
 
         {/* KPI 2 - OC Pendientes de Facturar */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 rounded-md" style={{ backgroundColor: COLORS.indigoBg }}>
-              <ShoppingCart className="w-4 h-4" style={{ color: COLORS.indigo }} />
+        <div className="card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: COLORS.warningBg }}>
+              <ShoppingCart className="w-4 h-4" style={{ color: COLORS.warning }} />
             </div>
-            <p className="text-xs text-gray-500">OC Pendientes de Facturar</p>
+            <p className="text-xs text-ink-muted font-medium uppercase tracking-wide">OC Pendientes</p>
           </div>
-          <p className="text-lg font-bold text-gray-900">
+          <p className="font-mono text-2xl font-semibold text-ink">
             {isLoading ? '...' : formatMoney(data.totalOrdenesSinFacturar)}
           </p>
-          <p className="text-[10px] text-gray-400">{data.ordenesSinFactura} órdenes</p>
+          <p className="text-xs text-ink-muted mt-1">{data.ordenesSinFactura} órdenes</p>
         </div>
 
         {/* KPI 3 - Mayor Variación de Insumo */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 rounded-md" style={{ backgroundColor: COLORS.moradoBg }}>
-              <TrendingUp className="w-4 h-4" style={{ color: COLORS.morado }} />
+        <div className="card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: COLORS.terracottaBg }}>
+              <TrendingUp className="w-4 h-4" style={{ color: COLORS.terracotta }} />
             </div>
-            <p className="text-xs text-gray-500">Mayor Variación Insumo</p>
+            <p className="text-xs text-ink-muted font-medium uppercase tracking-wide">Mayor Variación</p>
           </div>
           {isLoading ? (
-            <p className="text-base font-bold text-gray-900">...</p>
+            <p className="text-xl font-semibold text-ink">...</p>
           ) : data.mayorVariacion ? (
-            <p className="text-base font-bold text-gray-900 truncate" title={data.mayorVariacion.nombre}>
-              {data.mayorVariacion.nombre.substring(0, 15)}{data.mayorVariacion.nombre.length > 15 ? '...' : ''} {data.mayorVariacion.variacion > 0 ? '+' : ''}{data.mayorVariacion.variacion.toFixed(0)}%
+            <p className="text-lg font-semibold text-ink truncate" title={data.mayorVariacion.nombre}>
+              {data.mayorVariacion.nombre.substring(0, 12)}{data.mayorVariacion.nombre.length > 12 ? '...' : ''} <span className="font-mono">{data.mayorVariacion.variacion > 0 ? '+' : ''}{data.mayorVariacion.variacion.toFixed(0)}%</span>
             </p>
           ) : (
-            <p className="text-base font-bold text-gray-400">Sin datos</p>
+            <p className="text-lg font-semibold text-ink-muted">Sin datos</p>
           )}
+          <p className="text-xs text-ink-muted mt-1">{data.mayorVariacion?.categoria || '-'}</p>
         </div>
 
         {/* KPI 4 - Compras Semana Actual */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
-          <div className="flex items-center justify-between mb-1">
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-md" style={{ backgroundColor: COLORS.moradoBg }}>
-                <DollarSign className="w-4 h-4" style={{ color: COLORS.morado }} />
+              <div className="p-2 rounded-lg" style={{ backgroundColor: COLORS.infoBg }}>
+                <DollarSign className="w-4 h-4" style={{ color: COLORS.info }} />
               </div>
-              <p className="text-xs text-gray-500">Compras Semana Actual</p>
+              <p className="text-xs text-ink-muted font-medium uppercase tracking-wide">Compras</p>
             </div>
             {data.comprasSemanaPasada > 0 && (
-              <span className="flex items-center text-[10px] font-medium" style={{ color: variacionSemanal < 0 ? COLORS.verde : COLORS.rojo }}>
+              <span className="flex items-center text-xs font-medium" style={{ color: variacionSemanal < 0 ? COLORS.success : COLORS.danger }}>
                 {variacionSemanal < 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
                 {variacionSemanal > 0 ? '+' : ''}{variacionSemanal.toFixed(0)}%
               </span>
             )}
           </div>
-          <p className="text-lg font-bold text-gray-900">
+          <p className="font-mono text-2xl font-semibold text-ink">
             {isLoading ? '...' : formatMoney(data.comprasSemanaActual)}
           </p>
-          <p className="text-[10px] text-gray-400">vs sem. ant: {formatMoney(data.comprasSemanaPasada)}</p>
+          <p className="text-xs text-ink-muted mt-1">vs sem. ant: {formatMoney(data.comprasSemanaPasada)}</p>
         </div>
       </div>
 
       {/* Segunda fila: Alertas + Variación por Categoría */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Panel de Alertas */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
-          <h2 className="text-sm font-semibold text-gray-900 mb-2">Alertas</h2>
-          <div className="space-y-1.5">
+        <div className="card p-4">
+          <h2 className="text-lg font-semibold text-ink mb-3">Alertas</h2>
+          <div className="space-y-2">
             {/* Alerta 1 - Ítems con aumento >7% */}
             <button
               onClick={() => data.itemsConAumento > 0 && setAlertaModal('itemsAumento')}
-              className={`w-full flex items-center justify-between p-2 bg-gray-50 rounded-md transition-colors ${data.itemsConAumento > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
+              className={`w-full flex items-center justify-between p-3 bg-cream-dark rounded-lg transition-colors ${data.itemsConAumento > 0 ? 'hover:bg-sand cursor-pointer' : ''}`}
             >
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.rojoBg }}>
-                  <TrendingUp className="w-3 h-3" style={{ color: COLORS.rojo }} />
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-full" style={{ backgroundColor: COLORS.dangerBg }}>
+                  <TrendingUp className="w-3.5 h-3.5" style={{ color: COLORS.danger }} />
                 </div>
-                <span className="text-xs text-gray-700">Ítems con aumento &gt;7%</span>
+                <span className="text-sm text-ink">Ítems con aumento &gt;7%</span>
               </div>
               <span
-                className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
-                style={{ backgroundColor: data.itemsConAumento > 0 ? COLORS.rojo : COLORS.verde }}
+                className="px-2.5 py-1 rounded-full text-xs font-semibold text-white"
+                style={{ backgroundColor: data.itemsConAumento > 0 ? COLORS.danger : COLORS.success }}
               >
                 {data.itemsConAumento}
               </span>
@@ -919,17 +924,17 @@ export default function Home() {
             {/* Alerta 2 - Ítems con baja de precio */}
             <button
               onClick={() => data.itemsConBaja > 0 && setAlertaModal('itemsBaja')}
-              className={`w-full flex items-center justify-between p-2 bg-gray-50 rounded-md transition-colors ${data.itemsConBaja > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
+              className={`w-full flex items-center justify-between p-3 bg-cream-dark rounded-lg transition-colors ${data.itemsConBaja > 0 ? 'hover:bg-sand cursor-pointer' : ''}`}
             >
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.verdeBg }}>
-                  <TrendingDown className="w-3 h-3" style={{ color: COLORS.verde }} />
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-full" style={{ backgroundColor: COLORS.successBg }}>
+                  <TrendingDown className="w-3.5 h-3.5" style={{ color: COLORS.success }} />
                 </div>
-                <span className="text-xs text-gray-700">Ítems con baja &gt;5%</span>
+                <span className="text-sm text-ink">Ítems con baja &gt;5%</span>
               </div>
               <span
-                className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
-                style={{ backgroundColor: data.itemsConBaja > 0 ? COLORS.verde : COLORS.gris }}
+                className="px-2.5 py-1 rounded-full text-xs font-semibold text-white"
+                style={{ backgroundColor: data.itemsConBaja > 0 ? COLORS.success : COLORS.inkMuted }}
               >
                 {data.itemsConBaja}
               </span>
@@ -938,17 +943,17 @@ export default function Home() {
             {/* Alerta 3 - Órdenes sin factura */}
             <button
               onClick={() => data.ordenesSinFactura > 0 && setAlertaModal('ordenesSinFactura')}
-              className={`w-full flex items-center justify-between p-2 bg-gray-50 rounded-md transition-colors ${data.ordenesSinFactura > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
+              className={`w-full flex items-center justify-between p-3 bg-cream-dark rounded-lg transition-colors ${data.ordenesSinFactura > 0 ? 'hover:bg-sand cursor-pointer' : ''}`}
             >
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.naranjaBg }}>
-                  <XCircle className="w-3 h-3" style={{ color: COLORS.naranja }} />
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-full" style={{ backgroundColor: COLORS.warningBg }}>
+                  <XCircle className="w-3.5 h-3.5" style={{ color: COLORS.warning }} />
                 </div>
-                <span className="text-xs text-gray-700">Órdenes sin factura</span>
+                <span className="text-sm text-ink">Órdenes sin factura</span>
               </div>
               <span
-                className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
-                style={{ backgroundColor: data.ordenesSinFactura > 0 ? COLORS.naranja : COLORS.verde }}
+                className="px-2.5 py-1 rounded-full text-xs font-semibold text-white"
+                style={{ backgroundColor: data.ordenesSinFactura > 0 ? COLORS.warning : COLORS.success }}
               >
                 {data.ordenesSinFactura}
               </span>
@@ -957,17 +962,17 @@ export default function Home() {
             {/* Alerta 4 - Platos fuera de rango */}
             <button
               onClick={() => data.platosFueraRango > 0 && setAlertaModal('platosFuera')}
-              className={`w-full flex items-center justify-between p-2 bg-gray-50 rounded-md transition-colors ${data.platosFueraRango > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
+              className={`w-full flex items-center justify-between p-3 bg-cream-dark rounded-lg transition-colors ${data.platosFueraRango > 0 ? 'hover:bg-sand cursor-pointer' : ''}`}
             >
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full" style={{ backgroundColor: COLORS.moradoBg }}>
-                  <ChefHat className="w-3 h-3" style={{ color: COLORS.morado }} />
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-full" style={{ backgroundColor: COLORS.terracottaBg }}>
+                  <ChefHat className="w-3.5 h-3.5" style={{ color: COLORS.terracotta }} />
                 </div>
-                <span className="text-xs text-gray-700">Platos fuera de rango</span>
+                <span className="text-sm text-ink">Platos fuera de rango</span>
               </div>
               <span
-                className="px-2 py-0.5 rounded text-[10px] font-semibold text-white"
-                style={{ backgroundColor: data.platosFueraRango > 0 ? COLORS.morado : COLORS.verde }}
+                className="px-2.5 py-1 rounded-full text-xs font-semibold text-white"
+                style={{ backgroundColor: data.platosFueraRango > 0 ? COLORS.terracotta : COLORS.success }}
               >
                 {data.platosFueraRango}
               </span>
@@ -976,32 +981,32 @@ export default function Home() {
         </div>
 
         {/* Variación de Precios por Categoría */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
-          <h2 className="text-sm font-semibold text-gray-900 mb-2">Variación Precios por Categoría</h2>
+        <div className="card p-4">
+          <h2 className="text-lg font-semibold text-ink mb-3">Variación Precios por Categoría</h2>
           {data.variacionCategoriasData.length === 0 ? (
-            <div className="flex items-center justify-center h-32">
-              <p className="text-xs text-gray-400">Sin datos</p>
+            <div className="flex items-center justify-center h-40">
+              <p className="text-sm text-ink-muted">Sin datos</p>
             </div>
           ) : (
-            <div className="h-40">
+            <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.variacionCategoriasData} margin={{ top: 20, right: 10, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="categoria" tick={{ fontSize: 9 }} />
-                  <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 9 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E8E2DA" />
+                  <XAxis dataKey="categoria" tick={{ fontSize: 10, fill: '#6B6560' }} />
+                  <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10, fill: '#6B6560' }} />
                   <Tooltip
                     formatter={(value) => [`${Number(value).toFixed(1)}%`, 'Variación']}
-                    contentStyle={{ borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11 }}
+                    contentStyle={{ borderRadius: 8, border: '1px solid #E8E2DA', fontSize: 12, backgroundColor: '#FEFCF9' }}
                   />
-                  <Bar dataKey="variacion" radius={[3, 3, 0, 0]}>
+                  <Bar dataKey="variacion" radius={[4, 4, 0, 0]}>
                     {data.variacionCategoriasData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={LABEL_COLORES[entry.categoria] || entry.color || '#6B7280'} />
+                      <Cell key={`cell-${index}`} fill={LABEL_COLORES[entry.categoria] || entry.color || '#6B6560'} />
                     ))}
                     <LabelList
                       dataKey="variacion"
                       position="top"
                       formatter={(v) => `${Number(v).toFixed(1)}%`}
-                      style={{ fontSize: 9, fill: '#374151' }}
+                      style={{ fontSize: 10, fill: '#1A1A1A' }}
                     />
                   </Bar>
                 </BarChart>
@@ -1012,19 +1017,19 @@ export default function Home() {
       </div>
 
       {/* Tercera fila: Evolución Compras + Distribución */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Evolución Compras */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-gray-900">Compras</h2>
-            <div className="flex items-center gap-2">
-              <span style={{ color: COLORS.turquesa }} className="text-xs font-semibold">
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-ink">Compras</h2>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-sm font-semibold" style={{ color: COLORS.olive }}>
                 {formatMoney(modoCompras === 'semanal' ? totalCompras4Semanas : totalCompras6Meses)}
               </span>
               <select
                 value={modoCompras}
                 onChange={(e) => setModoCompras(e.target.value as 'semanal' | 'mensual')}
-                className="text-xs border border-gray-200 rounded px-1.5 py-0.5 text-gray-600 focus:outline-none"
+                className="text-xs border border-sand-dark rounded-lg px-2 py-1 text-ink-muted bg-white focus:outline-none focus:border-terracotta"
               >
                 <option value="semanal">Semanal</option>
                 <option value="mensual">Mensual</option>
@@ -1037,30 +1042,30 @@ export default function Home() {
 
             if (comprasData.length === 0) {
               return (
-                <div className="flex items-center justify-center h-44">
-                  <p className="text-xs text-gray-400">Sin datos</p>
+                <div className="flex items-center justify-center h-48">
+                  <p className="text-sm text-ink-muted">Sin datos</p>
                 </div>
               )
             }
 
             return (
-              <div className="h-44">
+              <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={comprasData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey={dataKey} tick={{ fontSize: 9 }} />
-                    <YAxis tickFormatter={formatMoney} tick={{ fontSize: 9 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8E2DA" />
+                    <XAxis dataKey={dataKey} tick={{ fontSize: 10, fill: '#6B6560' }} />
+                    <YAxis tickFormatter={formatMoney} tick={{ fontSize: 10, fill: '#6B6560' }} />
                     <Tooltip
                       formatter={(value) => [formatMoney(Number(value)), 'Compras']}
-                      contentStyle={{ borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11 }}
+                      contentStyle={{ borderRadius: 8, border: '1px solid #E8E2DA', fontSize: 12, backgroundColor: '#FEFCF9' }}
                     />
                     <Line
                       type="monotone"
                       dataKey="valor"
-                      stroke={COLORS.turquesa}
+                      stroke={COLORS.olive}
                       strokeWidth={2}
-                      dot={{ fill: COLORS.turquesa, strokeWidth: 1, r: 3 }}
-                      activeDot={{ r: 5 }}
+                      dot={{ fill: COLORS.olive, strokeWidth: 1, r: 4 }}
+                      activeDot={{ r: 6 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -1070,13 +1075,13 @@ export default function Home() {
         </div>
 
         {/* Distribución de Compras */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-gray-900">Distribución Compras</h2>
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-ink">Distribución Compras</h2>
             <select
               value={modoDistribucion}
               onChange={(e) => setModoDistribucion(e.target.value as 'proveedor' | 'categoria')}
-              className="text-xs border border-gray-200 rounded px-1.5 py-0.5 text-gray-600 focus:outline-none"
+              className="text-xs border border-sand-dark rounded-lg px-2 py-1 text-ink-muted bg-white focus:outline-none focus:border-terracotta"
             >
               <option value="proveedor">Proveedor</option>
               <option value="categoria">Categoría</option>
@@ -1089,23 +1094,23 @@ export default function Home() {
 
             if (distribucionData.length === 0) {
               return (
-                <div className="flex items-center justify-center h-44">
-                  <p className="text-xs text-gray-400">Sin datos</p>
+                <div className="flex items-center justify-center h-48">
+                  <p className="text-sm text-ink-muted">Sin datos</p>
                 </div>
               )
             }
 
             return (
               <div className="flex items-center gap-6">
-                <div className="h-44 w-44 flex-shrink-0 flex items-center justify-center">
+                <div className="h-48 w-48 flex-shrink-0 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={distribucionData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={32}
-                        outerRadius={65}
+                        innerRadius={35}
+                        outerRadius={70}
                         paddingAngle={2}
                         dataKey="valor"
                       >
@@ -1120,14 +1125,14 @@ export default function Home() {
                       </Pie>
                       <Tooltip
                         formatter={(value) => [formatMoney(Number(value)), 'Monto']}
-                        contentStyle={{ borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11 }}
+                        contentStyle={{ borderRadius: 8, border: '1px solid #E8E2DA', fontSize: 12, backgroundColor: '#FEFCF9' }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex-1 space-y-2 min-w-0">
+                <div className="flex-1 space-y-2.5 min-w-0">
                   {distribucionData.slice(0, 5).map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs gap-2">
+                    <div key={i} className="flex items-center justify-between text-sm gap-2">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div
                           className="w-3 h-3 rounded-full flex-shrink-0"
@@ -1137,9 +1142,9 @@ export default function Home() {
                               : PIE_COLORS[i % PIE_COLORS.length]
                           }}
                         />
-                        <span className="text-gray-700 truncate" title={item.nombre}>{item.nombre}</span>
+                        <span className="text-ink truncate" title={item.nombre}>{item.nombre}</span>
                       </div>
-                      <span className="text-gray-500 font-medium flex-shrink-0">{item.porcentaje}%</span>
+                      <span className="text-ink-muted font-mono text-xs flex-shrink-0">{item.porcentaje}%</span>
                     </div>
                   ))}
                 </div>
@@ -1150,13 +1155,13 @@ export default function Home() {
       </div>
 
       {/* Cuarta fila: Compras por Categoría en el Tiempo */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-gray-900">Compras por Categoría</h2>
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-ink">Compras por Categoría</h2>
           <select
             value={modoComprasCat}
             onChange={(e) => setModoComprasCat(e.target.value as 'semanal' | 'mensual')}
-            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 text-gray-600 focus:outline-none"
+            className="text-xs border border-sand-dark rounded-lg px-2 py-1 text-ink-muted bg-white focus:outline-none focus:border-terracotta"
           >
             <option value="semanal">Semanal</option>
             <option value="mensual">Mensual</option>
@@ -1169,8 +1174,8 @@ export default function Home() {
 
           if (comprasData.length === 0) {
             return (
-              <div className="flex items-center justify-center h-52">
-                <p className="text-xs text-gray-400">Sin datos</p>
+              <div className="flex items-center justify-center h-56">
+                <p className="text-sm text-ink-muted">Sin datos</p>
               </div>
             )
           }
@@ -1189,15 +1194,15 @@ export default function Home() {
 
           return (
             <>
-              <div className="h-52">
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={comprasData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="periodo" tick={{ fontSize: 10 }} />
-                    <YAxis tickFormatter={formatMoney} tick={{ fontSize: 9 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8E2DA" />
+                    <XAxis dataKey="periodo" tick={{ fontSize: 10, fill: '#6B6560' }} />
+                    <YAxis tickFormatter={formatMoney} tick={{ fontSize: 10, fill: '#6B6560' }} />
                     <Tooltip
                       formatter={(value, name) => [formatMoney(Number(value)), name]}
-                      contentStyle={{ borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11 }}
+                      contentStyle={{ borderRadius: 8, border: '1px solid #E8E2DA', fontSize: 12, backgroundColor: '#FEFCF9' }}
                     />
                     <Line type="monotone" dataKey="Carnes" stroke={CATEG_COLORES.Carnes} strokeWidth={2} dot={{ r: 3 }} />
                     <Line type="monotone" dataKey="Pescados" stroke={CATEG_COLORES.Pescados_Mariscos} strokeWidth={2} dot={{ r: 3 }} />
@@ -1208,20 +1213,20 @@ export default function Home() {
                 </ResponsiveContainer>
               </div>
               {/* Leyenda con porcentajes */}
-              <div className="flex justify-center gap-4 mt-2">
-                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
+                <span className="flex items-center gap-1.5 text-xs text-ink-muted">
                   <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Carnes }} /> Carnes ({pct(totales.Carnes)}%)
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                <span className="flex items-center gap-1.5 text-xs text-ink-muted">
                   <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Pescados_Mariscos }} /> Pescados ({pct(totales.Pescados)}%)
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                <span className="flex items-center gap-1.5 text-xs text-ink-muted">
                   <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Verduras_Frutas }} /> Verduras ({pct(totales.Verduras)}%)
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                <span className="flex items-center gap-1.5 text-xs text-ink-muted">
                   <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Almacen }} /> Almacén ({pct(totales.Almacen)}%)
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                <span className="flex items-center gap-1.5 text-xs text-ink-muted">
                   <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Lacteos_Fiambres }} /> Lácteos ({pct(totales.Lacteos)}%)
                 </span>
               </div>
@@ -1232,11 +1237,11 @@ export default function Home() {
 
       {/* Modal de Alertas */}
       {alertaModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-cream-light rounded-card border border-sand shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden">
             {/* Header del modal */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <div className="flex items-center justify-between p-4 border-b border-sand">
+              <h3 className="text-lg font-semibold text-ink">
                 {alertaModal === 'itemsAumento' && 'Ítems con aumento >7%'}
                 {alertaModal === 'itemsBaja' && 'Ítems con baja >5%'}
                 {alertaModal === 'ordenesSinFactura' && 'Órdenes sin factura'}
@@ -1244,9 +1249,9 @@ export default function Home() {
               </h3>
               <button
                 onClick={() => setAlertaModal(null)}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-1.5 hover:bg-cream-dark rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-ink-muted" />
               </button>
             </div>
 
@@ -1256,18 +1261,18 @@ export default function Home() {
               {alertaModal === 'itemsAumento' && (
                 <div className="space-y-2">
                   {data.itemsConAumentoDetalle.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={i} className="flex items-center justify-between p-3 bg-cream-dark rounded-lg">
                       <div>
-                        <p className="font-medium text-gray-900">{item.nombre}</p>
-                        <p className="text-xs text-gray-500">{item.categoria}</p>
+                        <p className="font-medium text-ink">{item.nombre}</p>
+                        <p className="text-xs text-ink-muted">{item.categoria}</p>
                       </div>
-                      <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-sm font-semibold">
+                      <span className="px-2.5 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: COLORS.dangerBg, color: COLORS.danger }}>
                         +{item.variacion.toFixed(0)}%
                       </span>
                     </div>
                   ))}
-                  <div className="pt-3 border-t mt-3">
-                    <Link href="/insumos" className="text-sm text-primary-600 hover:underline">
+                  <div className="pt-3 border-t border-sand mt-3">
+                    <Link href="/insumos" className="text-sm text-terracotta hover:text-terracotta-dark font-medium">
                       Ver todos los insumos →
                     </Link>
                   </div>
@@ -1281,21 +1286,21 @@ export default function Home() {
                     <Link
                       key={i}
                       href={`/ordenes-compra/${orden.id}`}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex items-center justify-between p-3 bg-cream-dark rounded-lg hover:bg-sand transition-colors"
                     >
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-ink">
                           {orden.numero ? `OC #${orden.numero}` : 'Sin número'}
                         </p>
-                        <p className="text-xs text-gray-500">{orden.proveedor}</p>
+                        <p className="text-xs text-ink-muted">{orden.proveedor}</p>
                       </div>
-                      <span className="text-sm font-semibold text-gray-700">
+                      <span className="text-sm font-mono font-semibold text-ink">
                         {formatMoney(orden.total)}
                       </span>
                     </Link>
                   ))}
-                  <div className="pt-3 border-t mt-3">
-                    <Link href="/ordenes-compra" className="text-sm text-primary-600 hover:underline">
+                  <div className="pt-3 border-t border-sand mt-3">
+                    <Link href="/ordenes-compra" className="text-sm text-terracotta hover:text-terracotta-dark font-medium">
                       Ver todas las órdenes →
                     </Link>
                   </div>
@@ -1306,18 +1311,18 @@ export default function Home() {
               {alertaModal === 'platosFuera' && (
                 <div className="space-y-2">
                   {data.platosFueraRangoDetalle.map((plato, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={i} className="flex items-center justify-between p-3 bg-cream-dark rounded-lg">
                       <div>
-                        <p className="font-medium text-gray-900">{plato.nombre}</p>
-                        <p className="text-xs text-gray-500">Margen objetivo: {plato.margenObjetivo}%</p>
+                        <p className="font-medium text-ink">{plato.nombre}</p>
+                        <p className="text-xs text-ink-muted">Margen objetivo: {plato.margenObjetivo}%</p>
                       </div>
-                      <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-sm font-semibold">
+                      <span className="px-2.5 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: COLORS.dangerBg, color: COLORS.danger }}>
                         {plato.foodCost.toFixed(1)}%
                       </span>
                     </div>
                   ))}
-                  <div className="pt-3 border-t mt-3">
-                    <Link href="/carta" className="text-sm text-primary-600 hover:underline">
+                  <div className="pt-3 border-t border-sand mt-3">
+                    <Link href="/carta" className="text-sm text-terracotta hover:text-terracotta-dark font-medium">
                       Ver carta completa →
                     </Link>
                   </div>
@@ -1328,18 +1333,18 @@ export default function Home() {
               {alertaModal === 'itemsBaja' && (
                 <div className="space-y-2">
                   {data.itemsConBajaDetalle.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={i} className="flex items-center justify-between p-3 bg-cream-dark rounded-lg">
                       <div>
-                        <p className="font-medium text-gray-900">{item.nombre}</p>
-                        <p className="text-xs text-gray-500">{item.categoria}</p>
+                        <p className="font-medium text-ink">{item.nombre}</p>
+                        <p className="text-xs text-ink-muted">{item.categoria}</p>
                       </div>
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-semibold">
+                      <span className="px-2.5 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: COLORS.successBg, color: COLORS.success }}>
                         {item.variacion.toFixed(0)}%
                       </span>
                     </div>
                   ))}
-                  <div className="pt-3 border-t mt-3">
-                    <Link href="/precios" className="text-sm text-primary-600 hover:underline">
+                  <div className="pt-3 border-t border-sand mt-3">
+                    <Link href="/insumos" className="text-sm text-terracotta hover:text-terracotta-dark font-medium">
                       Ver comparador de precios →
                     </Link>
                   </div>

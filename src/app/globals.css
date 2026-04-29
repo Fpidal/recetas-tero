@@ -2,57 +2,347 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =====================================================
+   VARIABLES CSS - Paleta Editorial
+   ===================================================== */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-rgb: 249, 250, 251;
+  /* Backgrounds */
+  --color-cream: #FAF7F2;
+  --color-cream-light: #FEFCF9;
+  --color-cream-dark: #F5F0E8;
+
+  /* Sidebar */
+  --color-forest: #1B3A2D;
+  --color-forest-light: #2A4D3D;
+
+  /* Textos */
+  --color-ink: #1A1A1A;
+  --color-ink-muted: #6B6560;
+  --color-ink-light: #A69E96;
+
+  /* Bordes */
+  --color-sand: #E8E2DA;
+  --color-sand-dark: #E0D9D0;
+
+  /* Acentos */
+  --color-terracotta: #C4704B;
+  --color-terracotta-dark: #B5613E;
+  --color-olive: #5C7A5E;
+  --color-olive-light: #8CA88F;
+
+  /* Funcionales */
+  --color-success: #3D8B5E;
+  --color-warning: #A67B3D;
+  --color-danger: #9B2C2C;
+  --color-info: #4A6572;
+
+  /* Tipografía */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
+/* =====================================================
+   BASE STYLES
+   ===================================================== */
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
+  color: var(--color-ink);
+  background: var(--color-cream);
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/* =====================================================
+   TIPOGRAFÍA EDITORIAL
+   ===================================================== */
+@layer base {
+  h1 {
+    @apply font-bold text-3xl tracking-tight text-ink;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    @apply font-semibold text-2xl tracking-tight text-ink;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    @apply font-semibold text-lg text-ink;
+  }
+
+  /* Overline / labels pequeños */
+  .overline {
+    @apply font-semibold text-xs uppercase tracking-widest text-ink-muted;
+    letter-spacing: 0.08em;
+  }
+
+  /* Números y montos */
+  .font-amount {
+    @apply font-mono font-medium tracking-tight;
+    letter-spacing: -0.01em;
+  }
+
+  /* Itálica editorial para énfasis */
+  .editorial-emphasis {
+    @apply italic;
   }
 }
 
-/* Estilos para tablas */
-.table-container {
-  @apply overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm;
+/* =====================================================
+   COMPONENTES - Cards
+   ===================================================== */
+@layer components {
+  .card {
+    @apply bg-cream-light border border-sand rounded-card shadow-card;
+  }
+
+  .card:hover {
+    @apply shadow-card-hover;
+  }
+
+  .card-header {
+    @apply px-4 py-4 border-b border-sand;
+  }
+
+  .card-body {
+    @apply p-4;
+  }
 }
 
-.table-header {
-  @apply bg-gray-50 text-left text-xs font-medium uppercase tracking-wider text-gray-500;
+/* =====================================================
+   COMPONENTES - KPI Cards
+   ===================================================== */
+@layer components {
+  .kpi-card {
+    @apply bg-cream-light border border-sand rounded-card p-4 shadow-card;
+  }
+
+  .kpi-label {
+    @apply overline mb-1;
+  }
+
+  .kpi-value {
+    @apply font-bold text-2xl text-ink tracking-tight;
+  }
+
+  .kpi-value-mono {
+    @apply font-mono font-semibold text-2xl text-ink tracking-tight;
+  }
+
+  /* Borde izquierdo de acento */
+  .kpi-card-terracotta {
+    @apply border-l-4 border-l-terracotta;
+  }
+
+  .kpi-card-success {
+    @apply border-l-4 border-l-success;
+  }
+
+  .kpi-card-olive {
+    @apply border-l-4 border-l-olive;
+  }
 }
 
-.table-cell {
-  @apply px-3 py-3 text-sm text-gray-900;
+/* =====================================================
+   COMPONENTES - Badges
+   ===================================================== */
+@layer components {
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-success-bg text-success;
+  }
+
+  .badge-warning {
+    @apply bg-warning-bg text-warning;
+  }
+
+  .badge-danger {
+    @apply bg-danger-bg text-danger;
+  }
+
+  .badge-info {
+    @apply bg-info-bg text-info;
+  }
+
+  .badge-excellent {
+    @apply bg-forest text-white;
+  }
+
+  .badge-terracotta {
+    @apply bg-terracotta-bg text-terracotta;
+  }
 }
 
-/* Indicadores de food cost */
+/* =====================================================
+   COMPONENTES - Botones
+   ===================================================== */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply bg-terracotta text-white hover:bg-terracotta-dark focus:ring-terracotta;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-ink border border-sand-dark hover:bg-cream-dark focus:ring-sand;
+  }
+
+  .btn-destructive {
+    @apply bg-danger text-white hover:bg-danger-dark focus:ring-danger;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-ink-muted hover:bg-cream-dark hover:text-ink focus:ring-sand;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+}
+
+/* =====================================================
+   COMPONENTES - Tablas
+   ===================================================== */
+@layer components {
+  .table-container {
+    @apply overflow-x-auto rounded-card border border-sand bg-cream-light shadow-card;
+  }
+
+  .table-header {
+    @apply bg-cream-dark text-left text-xs font-semibold uppercase tracking-wider text-ink-muted;
+    letter-spacing: 0.05em;
+  }
+
+  .table-header th {
+    @apply px-4 py-3;
+  }
+
+  .table-row {
+    @apply border-b border-sand hover:bg-cream transition-colors;
+  }
+
+  .table-row:last-child {
+    @apply border-b-0;
+  }
+
+  .table-cell {
+    @apply px-4 py-3 text-sm text-ink;
+  }
+
+  .table-cell-muted {
+    @apply px-4 py-3 text-sm text-ink-muted;
+  }
+
+  .table-cell-mono {
+    @apply px-4 py-3 text-sm font-mono text-ink tabular-nums text-right;
+  }
+}
+
+/* =====================================================
+   COMPONENTES - Inputs
+   ===================================================== */
+@layer components {
+  .input {
+    @apply w-full px-3 py-2 text-sm bg-white border border-sand-dark rounded-lg placeholder:text-ink-light focus:outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 transition-colors;
+  }
+
+  .input-label {
+    @apply block text-sm font-medium text-ink mb-1.5;
+  }
+
+  .input-error {
+    @apply border-danger focus:border-danger focus:ring-danger/15;
+  }
+
+  .select {
+    @apply w-full px-3 py-2 text-sm bg-white border border-sand-dark rounded-lg focus:outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 transition-colors appearance-none cursor-pointer;
+  }
+}
+
+/* =====================================================
+   COMPONENTES - Tabs
+   ===================================================== */
+@layer components {
+  .tab {
+    @apply px-1 pb-3 text-sm font-medium border-b-2 border-transparent text-ink-muted hover:text-ink transition-colors;
+  }
+
+  .tab-active {
+    @apply text-ink border-b-terracotta;
+  }
+}
+
+/* =====================================================
+   INDICADORES DE FOOD COST (legacy, mantener compatibilidad)
+   ===================================================== */
 .food-cost-ok {
-  @apply bg-green-100 text-green-800;
+  @apply bg-success-bg text-success;
 }
 
 .food-cost-warning {
-  @apply bg-yellow-100 text-yellow-800;
+  @apply bg-warning-bg text-warning;
 }
 
 .food-cost-danger {
-  @apply bg-red-100 text-red-800;
+  @apply bg-danger-bg text-danger;
 }
 
-/* Mobile header safe area padding */
+/* =====================================================
+   MOBILE SAFE AREA
+   ===================================================== */
 @media (max-width: 1023px) {
   .mobile-content-padding {
     padding-top: calc(56px + env(safe-area-inset-top, 0px) + 1rem) !important;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 1rem;
   }
 }
 
 @media (min-width: 1024px) {
   .mobile-content-padding {
-    padding-top: 2rem;
+    padding: 2rem;
+  }
+}
+
+/* =====================================================
+   SCROLLBAR STYLING
+   ===================================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-sand-dark);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-light);
+}
+
+/* =====================================================
+   UTILITIES
+   ===================================================== */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Números tabulares para alineación */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }

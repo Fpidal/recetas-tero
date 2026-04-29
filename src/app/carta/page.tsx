@@ -807,7 +807,7 @@ export default function CartaPage() {
               <CheckCircle className="w-3.5 h-3.5 text-green-500" />
               <span className="text-[10px] font-medium text-green-800">OK</span>
             </div>
-            <p className="text-lg font-bold text-green-600 mt-0.5">
+            <p className="text-lg font-mono font-bold text-green-600 mt-0.5">
               {items.filter(i => i.estado_margen === 'ok').length}
             </p>
           </div>
@@ -816,7 +816,7 @@ export default function CartaPage() {
               <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />
               <span className="text-[10px] font-medium text-yellow-800">Atención</span>
             </div>
-            <p className="text-lg font-bold text-yellow-600 mt-0.5">
+            <p className="text-lg font-mono font-bold text-yellow-600 mt-0.5">
               {items.filter(i => i.estado_margen === 'warning').length}
             </p>
           </div>
@@ -825,7 +825,7 @@ export default function CartaPage() {
               <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
               <span className="text-[10px] font-medium text-red-800">Fuera</span>
             </div>
-            <p className="text-lg font-bold text-red-600 mt-0.5">
+            <p className="text-lg font-mono font-bold text-red-600 mt-0.5">
               {items.filter(i => i.estado_margen === 'danger').length}
             </p>
           </div>
@@ -843,7 +843,7 @@ export default function CartaPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            En Carta ({items.length})
+            En Carta (<span className="font-mono">{items.length}</span>)
           </button>
           <button
             onClick={() => setTabActiva('fuera_carta')}
@@ -853,7 +853,7 @@ export default function CartaPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            Fuera de Carta ({itemsFueraCarta.length})
+            Fuera de Carta (<span className="font-mono">{itemsFueraCarta.length}</span>)
           </button>
           <button
             onClick={() => setTabActiva('ejecutivos')}
@@ -864,7 +864,7 @@ export default function CartaPage() {
             }`}
           >
             <UtensilsCrossed className="w-3 h-3" />
-            Ejecutivos ({menusEjecutivos.length})
+            Ejecutivos (<span className="font-mono">{menusEjecutivos.length}</span>)
           </button>
           <button
             onClick={() => setTabActiva('especiales')}
@@ -875,7 +875,7 @@ export default function CartaPage() {
             }`}
           >
             <LayoutGrid className="w-3 h-3" />
-            Especiales ({menusEspeciales.length})
+            Especiales (<span className="font-mono">{menusEspeciales.length}</span>)
           </button>
         </div>
         <div className="relative">
@@ -923,7 +923,7 @@ export default function CartaPage() {
                   <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
                     {grupo.seccion}
                   </span>
-                  <span className="text-[10px] text-gray-400">({grupo.items.length})</span>
+                  <span className="text-[10px] font-mono text-gray-400">({grupo.items.length})</span>
                 </button>
                 {seccionesExpandidas.has(grupo.seccion) && (
                   <div className="space-y-2">
@@ -954,7 +954,7 @@ export default function CartaPage() {
                                     : item.plato_dias_actualizacion === 1
                                     ? 'Hace 1 día'
                                     : item.plato_dias_actualizacion > 0
-                                    ? `Hace ${item.plato_dias_actualizacion} días`
+                                    ? <>Hace <span className="font-mono">{item.plato_dias_actualizacion}</span> días</>
                                     : ''}
                                 </p>
                               </div>
@@ -984,7 +984,7 @@ export default function CartaPage() {
                                     inputMode="decimal"
                                     value={editPrecio}
                                     onChange={(e) => setEditPrecio(e.target.value)}
-                                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                                   />
                                 </div>
                                 <div>
@@ -994,7 +994,7 @@ export default function CartaPage() {
                                     inputMode="decimal"
                                     value={editMargen}
                                     onChange={(e) => setEditMargen(e.target.value)}
-                                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm font-mono"
                                   />
                                 </div>
                               </div>
@@ -1013,28 +1013,28 @@ export default function CartaPage() {
                               <div className="grid grid-cols-4 gap-2 text-center mb-2">
                                 <div>
                                   <p className="text-[10px] text-gray-500">Costo</p>
-                                  <p className="text-xs font-medium tabular-nums">${item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                  <p className="text-xs font-mono font-medium tabular-nums">${item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                                 </div>
                                 <div>
                                   <p className="text-[10px] text-gray-500">Sugerido</p>
-                                  <p className="text-xs text-gray-600 tabular-nums">${item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                  <p className="text-xs font-mono text-gray-600 tabular-nums">${item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                                 </div>
                                 <div>
                                   <p className="text-[10px] text-gray-500">Carta</p>
-                                  <p className="text-xs font-bold tabular-nums">${item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                  <p className="text-xs font-mono font-semibold tabular-nums">${item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                                 </div>
                                 <div>
                                   <p className="text-[10px] text-gray-500">Contrib.</p>
-                                  <p className="text-xs font-bold text-green-600 tabular-nums">${(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                  <p className="text-xs font-mono font-semibold text-success tabular-nums">${(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                                 </div>
                               </div>
                               <div className="flex items-center justify-between pt-2 border-t">
                                 <div className="flex items-center gap-2">
                                   {getEstadoIcon(item.estado_margen)}
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEstadoClass(item.estado_margen)}`}>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium ${getEstadoClass(item.estado_margen)}`}>
                                     FC: {item.food_cost_real.toFixed(1)}%
                                   </span>
-                                  <span className="text-[10px] text-gray-500">Obj: {item.margen_objetivo}%</span>
+                                  <span className="text-[10px] font-mono text-gray-500">Obj: {item.margen_objetivo}%</span>
                                 </div>
                                 <div className="flex gap-1">
                                   <Button variant="ghost" size="sm" onClick={() => handleStartEdit(item)}>
@@ -1089,7 +1089,7 @@ export default function CartaPage() {
                           <span className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide">
                             {grupo.seccion}
                           </span>
-                          <span className="text-[10px] text-gray-400">({grupo.items.length})</span>
+                          <span className="text-[10px] font-mono text-gray-400">({grupo.items.length})</span>
                         </div>
                       </td>
                     </tr>
@@ -1116,7 +1116,7 @@ export default function CartaPage() {
                               : item.plato_dias_actualizacion === 1
                               ? 'Hace 1 día'
                               : item.plato_dias_actualizacion > 0
-                              ? `Hace ${item.plato_dias_actualizacion}d`
+                              ? <>Hace <span className="font-mono">{item.plato_dias_actualizacion}</span>d</>
                               : ''}
                           </p>
                         </div>
@@ -1139,10 +1139,10 @@ export default function CartaPage() {
                         />
                       </button>
                     </td>
-                    <td className="px-2 py-1.5 text-right text-[11px] text-gray-600 tabular-nums">
+                    <td className="px-2 py-1.5 text-right text-[11px] font-mono text-gray-600 tabular-nums">
                       <span className="text-gray-400">$</span>{item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
-                    <td className="px-2 py-1.5 text-right text-[11px] text-gray-500 tabular-nums">
+                    <td className="px-2 py-1.5 text-right text-[11px] font-mono text-gray-500 tabular-nums">
                       <span className="text-gray-400">$</span>{item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
                     <td className="px-2 py-1.5 text-right">
@@ -1152,10 +1152,10 @@ export default function CartaPage() {
                           inputMode="decimal"
                           value={editPrecio}
                           onChange={(e) => setEditPrecio(e.target.value)}
-                          className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-[11px] text-right"
+                          className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-[11px] font-mono text-right"
                         />
                       ) : (
-                        <span className="text-xs font-medium tabular-nums">
+                        <span className="text-xs font-mono font-medium tabular-nums">
                           <span className="text-gray-400 font-normal">$</span>{item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </span>
                       )}
@@ -1167,21 +1167,21 @@ export default function CartaPage() {
                           inputMode="decimal"
                           value={editMargen}
                           onChange={(e) => setEditMargen(e.target.value)}
-                          className="w-12 rounded border border-gray-300 px-1 py-0.5 text-[11px] text-center"
+                          className="w-12 rounded border border-gray-300 px-1 py-0.5 text-[11px] font-mono text-center"
                         />
                       ) : (
-                        <span className="text-[11px] text-gray-600">{item.margen_objetivo}%</span>
+                        <span className="text-[11px] font-mono text-gray-600">{item.margen_objetivo}%</span>
                       )}
                     </td>
                     <td className="px-2 py-1.5 text-center">
                       <div className="flex items-center justify-center gap-1">
                         {getEstadoIcon(item.estado_margen)}
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(item.estado_margen)}`}>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${getEstadoClass(item.estado_margen)}`}>
                           {item.food_cost_real.toFixed(1)}%
                         </span>
                       </div>
                     </td>
-                    <td className="px-2 py-1.5 text-right text-[11px] font-bold text-green-700 bg-green-50 tabular-nums">
+                    <td className="px-2 py-1.5 text-right text-[11px] font-mono font-bold text-green-700 bg-green-50 tabular-nums">
                       <span className="text-green-500 font-normal">$</span>{(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
                     <td className="px-2 py-1.5">
@@ -1250,8 +1250,8 @@ export default function CartaPage() {
                     {editingMenuId === menu.id ? (
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
-                          <div><label className="text-[10px] text-gray-500">P.Carta</label><input type="text" inputMode="decimal" value={editMenuPrecio} onChange={(e) => setEditMenuPrecio(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-xs" /></div>
-                          <div><label className="text-[10px] text-gray-500">M.Obj %</label><input type="text" inputMode="decimal" value={editMenuMargen} onChange={(e) => setEditMenuMargen(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-xs" /></div>
+                          <div><label className="text-[10px] text-gray-500">P.Carta</label><input type="text" inputMode="decimal" value={editMenuPrecio} onChange={(e) => setEditMenuPrecio(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-xs font-mono" /></div>
+                          <div><label className="text-[10px] text-gray-500">M.Obj %</label><input type="text" inputMode="decimal" value={editMenuMargen} onChange={(e) => setEditMenuMargen(e.target.value)} className="w-full rounded border border-gray-300 px-2 py-1 text-xs font-mono" /></div>
                         </div>
                         <div className="flex justify-end gap-2">
                           <Button variant="secondary" size="sm" onClick={handleCancelEditMenu}>Cancelar</Button>
@@ -1261,16 +1261,16 @@ export default function CartaPage() {
                     ) : (
                       <>
                         <div className="grid grid-cols-4 gap-1 text-center mb-2">
-                          <div><p className="text-[10px] text-gray-500">Costo</p><p className="text-[11px] font-medium tabular-nums">{fmt(menu.costo_total)}</p></div>
-                          <div><p className="text-[10px] text-gray-500">P.Sug.</p><p className="text-[11px] text-gray-600 tabular-nums">{fmt(precioSugerido)}</p></div>
-                          <div><p className="text-[10px] text-gray-500">P.Carta</p><p className="text-[11px] font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</p></div>
-                          <div><p className="text-[10px] text-gray-500">Contrib.</p><p className={`text-[11px] font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">Costo</p><p className="text-[11px] font-mono font-medium tabular-nums">{fmt(menu.costo_total)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">P.Sug.</p><p className="text-[11px] font-mono text-gray-600 tabular-nums">{fmt(precioSugerido)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">P.Carta</p><p className="text-[11px] font-mono font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">Contrib.</p><p className={`text-[11px] font-mono font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</p></div>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t">
                           <div className="flex items-center gap-1.5">
                             {getEstadoIcon(estado)}
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(estado)}`}>FC: {foodCost.toFixed(1)}%</span>
-                            <span className="text-[10px] text-gray-500">Obj: {menu.margen_objetivo || 30}%</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${getEstadoClass(estado)}`}>FC: {foodCost.toFixed(1)}%</span>
+                            <span className="text-[10px] font-mono text-gray-500">Obj: {menu.margen_objetivo || 30}%</span>
                           </div>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => handleStartEditMenu(menu)}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -1315,21 +1315,21 @@ export default function CartaPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-2 text-right"><span className="text-xs font-medium text-green-600 tabular-nums">{fmt(menu.costo_total)}</span></td>
-                        <td className="px-2 py-2 text-right"><span className="text-xs text-gray-500 tabular-nums">{fmt(editingMenuId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMenuMargen) || 30) : precioSugerido)}</span></td>
+                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono font-medium text-green-600 tabular-nums">{fmt(menu.costo_total)}</span></td>
+                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono text-gray-500 tabular-nums">{fmt(editingMenuId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMenuMargen) || 30) : precioSugerido)}</span></td>
                         <td className="px-2 py-2 text-right">
-                          {editingMenuId === menu.id ? <input type="text" inputMode="decimal" value={editMenuPrecio} onChange={(e) => setEditMenuPrecio(e.target.value)} className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs text-right" /> : <span className="text-xs font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</span>}
+                          {editingMenuId === menu.id ? <input type="text" inputMode="decimal" value={editMenuPrecio} onChange={(e) => setEditMenuPrecio(e.target.value)} className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs font-mono text-right" /> : <span className="text-xs font-mono font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</span>}
                         </td>
                         <td className="px-2 py-2 text-center">
-                          {editingMenuId === menu.id ? <input type="text" inputMode="decimal" value={editMenuMargen} onChange={(e) => setEditMenuMargen(e.target.value)} className="w-14 rounded border border-gray-300 px-1 py-0.5 text-xs text-center" /> : <span className="text-xs text-gray-600">{menu.margen_objetivo || 30}%</span>}
+                          {editingMenuId === menu.id ? <input type="text" inputMode="decimal" value={editMenuMargen} onChange={(e) => setEditMenuMargen(e.target.value)} className="w-14 rounded border border-gray-300 px-1 py-0.5 text-xs font-mono text-center" /> : <span className="text-xs font-mono text-gray-600">{menu.margen_objetivo || 30}%</span>}
                         </td>
                         <td className="px-2 py-2 text-center">
                           <div className="flex items-center justify-center gap-1">
                             {getEstadoIcon(estado)}
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(estado)}`}>{foodCost.toFixed(1)}%</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${getEstadoClass(estado)}`}>{foodCost.toFixed(1)}%</span>
                           </div>
                         </td>
-                        <td className="px-2 py-2 text-right bg-green-50"><span className={`text-xs font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</span></td>
+                        <td className="px-2 py-2 text-right bg-green-50"><span className={`text-xs font-mono font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</span></td>
                         <td className="px-2 py-2">
                           <div className="flex justify-end gap-1">
                             {editingMenuId === menu.id ? (
@@ -1377,7 +1377,7 @@ export default function CartaPage() {
                       <div>
                         <h3 className="text-sm font-semibold text-gray-900">{menu.nombre}</h3>
                         {menu.descripcion && <p className="text-xs text-gray-500">{menu.descripcion}</p>}
-                        <p className="text-[10px] text-gray-400 mt-0.5">{menu.menu_especial_opciones?.length || 0} opciones • {comensales} comensales</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5"><span className="font-mono">{menu.menu_especial_opciones?.length || 0}</span> opciones • <span className="font-mono">{comensales}</span> comensales</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1408,13 +1408,13 @@ export default function CartaPage() {
                             <th className="w-10"></th>
                           </tr></thead>
                           <tbody><tr>
-                            <td className="py-1.5 text-left"><span className="text-[11px] text-gray-600"><span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span><span className="text-[9px] text-gray-400 ml-1">({comensales}p)</span></td>
-                            <td className="py-1.5 text-right"><span className="text-xs font-bold text-green-600"><span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
-                            <td className="py-1.5 text-center"><div className="flex items-center justify-center gap-0.5"><input type="text" inputMode="decimal" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-10 px-1 py-0.5 border border-gray-300 rounded text-center text-[11px]" /><span className="text-[9px] text-gray-400">%</span></div></td>
-                            <td className="py-1.5 text-right"><span className="text-[11px] text-blue-600 font-medium"><span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
-                            <td className="py-1.5 text-right"><div className="flex items-center justify-end gap-0.5"><span className="text-[9px] text-gray-400">$</span><input type="text" value={Number(getEditValueEsp(menu.id, 'precio', precioVenta) || 0).toLocaleString('es-AR')} onChange={(e) => { const raw = e.target.value.replace(/\D/g, ''); setEditValueEsp(menu.id, 'precio', raw) }} onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); handleBlurSaveEsp(menu.id, 'precio', raw, precioVenta) }} className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-[11px]" placeholder="0" /></div></td>
-                            <td className="py-1.5 text-center">{currentPrecio > 0 ? <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-[9px] font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{currentFcReal.toFixed(1)}%</span> : <span className="text-gray-400 text-[11px]">—</span>}</td>
-                            <td className="py-1.5 text-right bg-green-50">{currentPrecio > 0 ? <span className="text-[11px] font-bold text-green-700"><span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span> : <span className="text-gray-400 text-[11px]">—</span>}</td>
+                            <td className="py-1.5 text-left"><span className="text-[11px] font-mono text-gray-600"><span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span><span className="text-[9px] font-mono text-gray-400 ml-1">({comensales}p)</span></td>
+                            <td className="py-1.5 text-right"><span className="text-xs font-mono font-bold text-green-600"><span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
+                            <td className="py-1.5 text-center"><div className="flex items-center justify-center gap-0.5"><input type="text" inputMode="decimal" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-10 px-1 py-0.5 border border-gray-300 rounded text-center text-[11px] font-mono" /><span className="text-[9px] font-mono text-gray-400">%</span></div></td>
+                            <td className="py-1.5 text-right"><span className="text-[11px] font-mono text-blue-600 font-medium"><span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
+                            <td className="py-1.5 text-right"><div className="flex items-center justify-end gap-0.5"><span className="text-[9px] font-mono text-gray-400">$</span><input type="text" value={Number(getEditValueEsp(menu.id, 'precio', precioVenta) || 0).toLocaleString('es-AR')} onChange={(e) => { const raw = e.target.value.replace(/\D/g, ''); setEditValueEsp(menu.id, 'precio', raw) }} onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); handleBlurSaveEsp(menu.id, 'precio', raw, precioVenta) }} className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-[11px] font-mono" placeholder="0" /></div></td>
+                            <td className="py-1.5 text-center">{currentPrecio > 0 ? <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-[9px] font-mono font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{currentFcReal.toFixed(1)}%</span> : <span className="text-gray-400 text-[11px]">—</span>}</td>
+                            <td className="py-1.5 text-right bg-green-50">{currentPrecio > 0 ? <span className="text-[11px] font-mono font-bold text-green-700"><span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span> : <span className="text-gray-400 text-[11px]">—</span>}</td>
                             <td className="py-1.5 text-right">{hasChanges && <Button variant="ghost" size="sm" onClick={() => handleSaveEsp(menu.id)} title="Guardar cambios"><Save className="w-3 h-3 text-green-600" /></Button>}</td>
                           </tr></tbody>
                         </table>
@@ -1427,14 +1427,14 @@ export default function CartaPage() {
                       <div className="flex items-center gap-1.5">
                         <Calculator className="w-3.5 h-3.5 text-pink-500" />
                         <Users className="w-3.5 h-3.5 text-gray-500" />
-                        <Input type="number" value={calculadora?.menuId === menu.id ? calculadora.personas : ''} onChange={(e) => setCalculadora({ menuId: menu.id, personas: e.target.value })} placeholder="Cant." className="w-16 text-xs" />
+                        <Input type="number" value={calculadora?.menuId === menu.id ? calculadora.personas : ''} onChange={(e) => setCalculadora({ menuId: menu.id, personas: e.target.value })} placeholder="Cant." className="w-16 text-xs font-mono" />
                         <span className="text-xs text-gray-600">personas</span>
                       </div>
                       {personas > 0 && (
                         <div className="flex items-center gap-2">
                           <span className="text-gray-400 text-xs">→</span>
-                          <span className="text-xs text-gray-600">Costo: <span className="font-bold text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
-                          {precioVenta > 0 && (<><span className="text-gray-400">|</span><span className="text-xs text-gray-600">Ingreso: <span className="font-bold text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span></>)}
+                          <span className="text-xs text-gray-600">Costo: <span className="font-mono font-bold text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
+                          {precioVenta > 0 && (<><span className="text-gray-400">|</span><span className="text-xs text-gray-600">Ingreso: <span className="font-mono font-bold text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span></>)}
                         </div>
                       )}
                     </div>
@@ -1499,16 +1499,16 @@ export default function CartaPage() {
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Costo del plato:</span>
-                <span className="font-medium tabular-nums"><span className="text-gray-400 font-normal">$</span> {platoPreview.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                <span className="font-mono font-medium tabular-nums"><span className="text-gray-400 font-normal">$</span> {platoPreview.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Precio sugerido (para {previewMargen}% FC):</span>
-                <span className="font-medium text-blue-600 tabular-nums"><span className="text-blue-400 font-normal">$</span> {previewSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                <span className="text-gray-600">Precio sugerido (para <span className="font-mono">{previewMargen}</span>% FC):</span>
+                <span className="font-mono font-medium text-blue-600 tabular-nums"><span className="text-blue-400 font-normal">$</span> {previewSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
               </div>
               {previewPrecio > 0 && (
                 <div className="flex justify-between text-sm border-t pt-2">
                   <span className="text-gray-600">Food Cost resultante:</span>
-                  <span className={`font-bold ${
+                  <span className={`font-mono font-bold ${
                     previewFoodCost <= previewMargen ? 'text-green-600' :
                     previewFoodCost <= previewMargen * 1.1 ? 'text-yellow-600' : 'text-red-600'
                   }`}>
@@ -1544,7 +1544,7 @@ export default function CartaPage() {
             {/* Header con sección y rendimiento */}
             <div className="flex items-center justify-between text-sm">
               <span className="px-2 py-1 bg-gray-100 rounded text-gray-600">{previewPlato.seccion}</span>
-              <span className="text-gray-500">Rinde: <strong>{previewPlato.rendimiento}</strong> {previewPlato.rendimiento === 1 ? 'porción' : 'porciones'}</span>
+              <span className="text-gray-500">Rinde: <strong className="font-mono">{previewPlato.rendimiento}</strong> {previewPlato.rendimiento === 1 ? 'porción' : 'porciones'}</span>
             </div>
 
             {previewPlato.descripcion && (
@@ -1573,13 +1573,13 @@ export default function CartaPage() {
                           <span className="text-sm text-gray-900">{ing.nombre}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-right text-sm text-gray-600 tabular-nums">
+                      <td className="px-3 py-2 text-right text-sm font-mono text-gray-600 tabular-nums">
                         {ing.cantidad.toLocaleString('es-AR', { maximumFractionDigits: 3 })} {ing.unidad}
                       </td>
-                      <td className="px-3 py-2 text-right text-sm text-gray-500 tabular-nums">
+                      <td className="px-3 py-2 text-right text-sm font-mono text-gray-500 tabular-nums">
                         ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </td>
-                      <td className="px-3 py-2 text-right text-sm font-medium text-gray-900 tabular-nums">
+                      <td className="px-3 py-2 text-right text-sm font-mono font-medium text-gray-900 tabular-nums">
                         ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </td>
                     </tr>
@@ -1590,7 +1590,7 @@ export default function CartaPage() {
                     <td colSpan={3} className="px-3 py-2 text-right text-sm font-medium text-gray-700">
                       Costo Total Receta:
                     </td>
-                    <td className="px-3 py-2 text-right text-sm font-bold text-gray-900 tabular-nums">
+                    <td className="px-3 py-2 text-right text-sm font-mono font-bold text-gray-900 tabular-nums">
                       ${previewPlato.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
                   </tr>
@@ -1599,7 +1599,7 @@ export default function CartaPage() {
                       <td colSpan={3} className="px-3 py-2 text-right text-sm font-medium text-gray-700">
                         Costo por Porción:
                       </td>
-                      <td className="px-3 py-2 text-right text-sm font-bold text-primary-600 tabular-nums">
+                      <td className="px-3 py-2 text-right text-sm font-mono font-bold text-primary-600 tabular-nums">
                         ${previewPlato.costo_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </td>
                     </tr>

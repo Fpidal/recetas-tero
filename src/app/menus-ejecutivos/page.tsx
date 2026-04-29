@@ -472,26 +472,26 @@ export default function MenusPage() {
                         <div className="grid grid-cols-4 gap-1 text-center mb-2">
                           <div>
                             <p className="text-[10px] text-gray-500">Costo</p>
-                            <p className="text-[11px] font-medium tabular-nums">{fmt(menu.costo_total)}</p>
+                            <p className="text-[11px] font-medium font-mono tabular-nums">{fmt(menu.costo_total)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-gray-500">P.Sug.</p>
-                            <p className="text-[11px] text-gray-600 tabular-nums">{fmt(precioSugerido)}</p>
+                            <p className="text-[11px] text-gray-600 font-mono tabular-nums">{fmt(precioSugerido)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-gray-500">P.Carta</p>
-                            <p className="text-[11px] font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</p>
+                            <p className="text-[11px] font-bold font-mono tabular-nums">{fmt(menu.precio_carta || 0)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-gray-500">Contrib.</p>
-                            <p className={`text-[11px] font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</p>
+                            <p className={`text-[11px] font-bold font-mono tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t">
                           <div className="flex items-center gap-1.5">
                             {getEstadoIcon(estado)}
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(estado)}`}>FC: {foodCost.toFixed(1)}%</span>
-                            <span className="text-[10px] text-gray-500">Obj: {menu.margen_objetivo || 30}%</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium font-mono ${getEstadoClass(estado)}`}>FC: {foodCost.toFixed(1)}%</span>
+                            <span className="text-[10px] text-gray-500 font-mono">Obj: {menu.margen_objetivo || 30}%</span>
                           </div>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => handleStartEdit(menu)}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -538,32 +538,32 @@ export default function MenusPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-2 text-right"><span className="text-xs font-medium text-green-600 tabular-nums">{fmt(menu.costo_total)}</span></td>
+                        <td className="px-2 py-2 text-right"><span className="text-xs font-medium font-mono text-green-600 tabular-nums">{fmt(menu.costo_total)}</span></td>
                         <td className="px-2 py-2 text-right">
-                          <span className="text-xs text-gray-500 tabular-nums">{fmt(editingId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMargen) || 30) : precioSugerido)}</span>
+                          <span className="text-xs text-gray-500 font-mono tabular-nums">{fmt(editingId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMargen) || 30) : precioSugerido)}</span>
                         </td>
                         <td className="px-2 py-2 text-right">
                           {editingId === menu.id ? (
-                            <input type="text" inputMode="decimal" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs text-right" />
+                            <input type="text" inputMode="decimal" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs text-right font-mono" />
                           ) : (
-                            <span className="text-xs font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</span>
+                            <span className="text-xs font-bold font-mono tabular-nums">{fmt(menu.precio_carta || 0)}</span>
                           )}
                         </td>
                         <td className="px-2 py-2 text-center">
                           {editingId === menu.id ? (
-                            <input type="text" inputMode="decimal" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-14 rounded border border-gray-300 px-1 py-0.5 text-xs text-center" />
+                            <input type="text" inputMode="decimal" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-14 rounded border border-gray-300 px-1 py-0.5 text-xs text-center font-mono" />
                           ) : (
-                            <span className="text-xs text-gray-600">{menu.margen_objetivo || 30}%</span>
+                            <span className="text-xs text-gray-600 font-mono">{menu.margen_objetivo || 30}%</span>
                           )}
                         </td>
                         <td className="px-2 py-2 text-center">
                           <div className="flex items-center justify-center gap-1">
                             {getEstadoIcon(estado)}
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getEstadoClass(estado)}`}>{foodCost.toFixed(1)}%</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium font-mono ${getEstadoClass(estado)}`}>{foodCost.toFixed(1)}%</span>
                           </div>
                         </td>
                         <td className="px-2 py-2 text-right bg-green-50">
-                          <span className={`text-xs font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</span>
+                          <span className={`text-xs font-bold font-mono tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</span>
                         </td>
                         <td className="px-2 py-2">
                           <div className="flex justify-end gap-1">
@@ -658,35 +658,35 @@ export default function MenusPage() {
                           <tbody>
                             <tr>
                               <td className="py-1.5 text-left">
-                                <span className="text-[11px] text-gray-600"><span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                                <span className="text-[9px] text-gray-400 ml-1">({comensales}p)</span>
+                                <span className="text-[11px] text-gray-600 font-mono"><span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                <span className="text-[9px] text-gray-400 ml-1 font-mono">({comensales}p)</span>
                               </td>
                               <td className="py-1.5 text-right">
-                                <span className="text-xs font-bold text-green-600"><span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                <span className="text-xs font-bold font-mono text-green-600"><span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                               </td>
                               <td className="py-1.5 text-center">
                                 <div className="flex items-center justify-center gap-0.5">
-                                  <input type="text" inputMode="decimal" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-10 px-1 py-0.5 border border-gray-300 rounded text-center text-[11px]" />
+                                  <input type="text" inputMode="decimal" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-10 px-1 py-0.5 border border-gray-300 rounded text-center text-[11px] font-mono" />
                                   <span className="text-[9px] text-gray-400">%</span>
                                 </div>
                               </td>
                               <td className="py-1.5 text-right">
-                                <span className="text-[11px] text-blue-600 font-medium"><span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                <span className="text-[11px] text-blue-600 font-medium font-mono"><span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                               </td>
                               <td className="py-1.5 text-right">
                                 <div className="flex items-center justify-end gap-0.5">
                                   <span className="text-[9px] text-gray-400">$</span>
-                                  <input type="text" value={Number(getEditValueEsp(menu.id, 'precio', precioVenta) || 0).toLocaleString('es-AR')} onChange={(e) => { const raw = e.target.value.replace(/\D/g, ''); setEditValueEsp(menu.id, 'precio', raw) }} onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); handleBlurSaveEsp(menu.id, 'precio', raw, precioVenta) }} className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-[11px]" placeholder="0" />
+                                  <input type="text" value={Number(getEditValueEsp(menu.id, 'precio', precioVenta) || 0).toLocaleString('es-AR')} onChange={(e) => { const raw = e.target.value.replace(/\D/g, ''); setEditValueEsp(menu.id, 'precio', raw) }} onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); handleBlurSaveEsp(menu.id, 'precio', raw, precioVenta) }} className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-[11px] font-mono" placeholder="0" />
                                 </div>
                               </td>
                               <td className="py-1.5 text-center">
                                 {currentPrecio > 0 ? (
-                                  <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-[9px] font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{currentFcReal.toFixed(1)}%</span>
+                                  <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-[9px] font-medium font-mono ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{currentFcReal.toFixed(1)}%</span>
                                 ) : <span className="text-gray-400 text-[11px]">—</span>}
                               </td>
                               <td className="py-1.5 text-right bg-green-50">
                                 {currentPrecio > 0 ? (
-                                  <span className="text-[11px] font-bold text-green-700"><span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                  <span className="text-[11px] font-bold font-mono text-green-700"><span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                                 ) : <span className="text-gray-400 text-[11px]">—</span>}
                               </td>
                               <td className="py-1.5 text-right">
@@ -715,11 +715,11 @@ export default function MenusPage() {
                       {personas > 0 && (
                         <div className="flex items-center gap-2">
                           <span className="text-gray-400 text-xs">→</span>
-                          <span className="text-xs text-gray-600">Costo: <span className="font-bold text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
+                          <span className="text-xs text-gray-600">Costo: <span className="font-bold font-mono text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
                           {precioVenta > 0 && (
                             <>
                               <span className="text-gray-400">|</span>
-                              <span className="text-xs text-gray-600">Ingreso: <span className="font-bold text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
+                              <span className="text-xs text-gray-600">Ingreso: <span className="font-bold font-mono text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
                             </>
                           )}
                         </div>

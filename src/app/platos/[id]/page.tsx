@@ -10,13 +10,13 @@ import { Button, Input, Select } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Carnes': '#d98a8a',
-  'Pescados_Mariscos': '#64b5f6',
-  'Verduras_Frutas': '#ffd54f',
-  'Lacteos_Fiambres': '#ffb74d',
-  'Bebidas': '#4fc3f7',
-  'Almacen': '#bdbdbd',
-  'Elaboracion': '#81c784',
+  'Carnes': '#9B2C2C',
+  'Pescados_Mariscos': '#4A6572',
+  'Verduras_Frutas': '#3D8B5E',
+  'Lacteos_Fiambres': '#5C7A5E',
+  'Bebidas': '#C4704B',
+  'Almacen': '#A67B3D',
+  'Elaboracion': '#C4704B',
 }
 
 interface Insumo {
@@ -661,14 +661,14 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
             {rendimiento > 1 && (
               <div className="bg-gray-100 rounded-lg px-2 py-1 text-center">
                 <p className="text-[10px] text-gray-500">Costo Receta</p>
-                <p className="text-sm font-medium text-gray-600 tabular-nums">
+                <p className="text-sm font-medium text-gray-600 tabular-nums font-mono">
                   ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </p>
               </div>
             )}
             <div className="bg-green-50 rounded-lg px-3 py-1 text-center">
               <p className="text-[10px] text-gray-500">Costo x Porción</p>
-              <p className="text-base sm:text-lg font-bold text-green-600 tabular-nums">
+              <p className="text-base sm:text-lg font-bold text-green-600 tabular-nums font-mono">
                 ${costoPorPorcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
               </p>
             </div>
@@ -975,13 +975,13 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-gray-500 mb-0.5">Costo</p>
-                        <p className="text-sm font-bold text-green-700">
+                        <p className="text-sm font-bold text-green-700 font-mono">
                           ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-gray-500 mb-0.5">Incidencia</p>
-                        <p className="text-sm font-semibold text-blue-700">
+                        <p className="text-sm font-semibold text-blue-700 font-mono">
                           {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
                         </p>
                       </div>
@@ -1026,13 +1026,13 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                           />
                           <span className="ml-1 text-xs text-gray-500">{ing.unidad}</span>
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums">
+                        <td className="px-2 py-1.5 text-xs text-right text-gray-600 tabular-nums font-mono">
                           ${ing.costo_unitario.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums">
+                        <td className="px-2 py-1.5 text-xs text-right font-bold text-green-700 bg-green-50 tabular-nums font-mono">
                           ${ing.costo_linea.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50">
+                        <td className="px-2 py-1.5 text-xs text-right font-semibold text-blue-700 bg-blue-50 font-mono">
                           {costoTotal > 0 ? `${((ing.costo_linea / costoTotal) * 100).toFixed(0)}%` : '0%'}
                         </td>
                         {!isReadOnly && (
@@ -1116,7 +1116,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                     const pct = costoTotal > 0 ? ((dominante.costo_linea / costoTotal) * 100).toFixed(0) : 0
                     return (
                       <p className="text-[11px] text-gray-500 text-center mt-1">
-                        Principal: <span className="font-medium text-gray-700">{dominante.nombre}</span> ({pct}%)
+                        Principal: <span className="font-medium text-gray-700">{dominante.nombre}</span> (<span className="font-mono">{pct}%</span>)
                       </p>
                     )
                   })()}

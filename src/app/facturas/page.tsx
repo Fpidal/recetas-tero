@@ -307,7 +307,7 @@ function FacturasContent() {
       key: 'total',
       header: 'Total',
       render: (f: FacturaConDetalle) => (
-        <span className={`text-xs font-medium tabular-nums ${f.tipo === 'nota_credito' ? 'text-red-600' : ''}`}>
+        <span className={`text-xs font-medium tabular-nums font-mono ${f.tipo === 'nota_credito' ? 'text-red-600' : ''}`}>
           {formatearMoneda(f.total)}
         </span>
       ),
@@ -424,10 +424,10 @@ function FacturasContent() {
 
           {/* Contador y Total */}
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-[10px] text-gray-400">
+            <span className="text-[10px] text-gray-400 font-mono">
               {facturasFiltradas.length} de {facturas.length}
             </span>
-            <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-lg font-mono">
               Total: {formatearMoneda(facturasFiltradas.reduce((sum, f) => sum + f.total, 0))}
             </span>
           </div>

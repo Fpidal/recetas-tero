@@ -30,9 +30,9 @@ import {
 } from '@/types/ventas'
 
 const COLORES_SERVICIO = {
-  mediodia: '#fbbf24',
-  noche: '#1e293b',
-  eventos: '#a855f7',
+  mediodia: '#A67B3D',
+  noche: '#1B3A2D',
+  eventos: '#C4704B',
 }
 
 export default function DashboardIncidencia() {
@@ -204,17 +204,17 @@ export default function DashboardIncidencia() {
               <div className={`text-[10px] sm:text-xs uppercase mb-1 font-semibold ${colorIncidencia.text}`}>
                 % Incidencia
               </div>
-              <div className={`text-lg sm:text-2xl font-bold ${colorIncidencia.text}`}>
+              <div className={`text-lg sm:text-2xl font-bold font-mono ${colorIncidencia.text}`}>
                 {resumen.incidencia.toFixed(1)}%
               </div>
-              <div className={`text-[10px] sm:text-xs mt-1 ${colorIncidencia.text}`}>
+              <div className={`text-[10px] sm:text-xs mt-1 font-mono ${colorIncidencia.text}`}>
                 Objetivo: ≤ {OBJETIVO_INCIDENCIA}%
               </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-5">
               <div className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Margen bruto</div>
-              <div className="text-lg sm:text-2xl font-bold text-gray-900 break-all">{formatearMonedaVentas(resumen.margenBruto)}</div>
-              <div className="text-[10px] sm:text-xs text-gray-500 mt-1">
+              <div className="text-lg sm:text-2xl font-bold text-gray-900 break-all font-mono">{formatearMonedaVentas(resumen.margenBruto)}</div>
+              <div className="text-[10px] sm:text-xs text-gray-500 mt-1 font-mono">
                 {resumen.ventasTotal > 0
                   ? `${((resumen.margenBruto / resumen.ventasTotal) * 100).toFixed(1)}% del total`
                   : '—'}
@@ -265,14 +265,14 @@ export default function DashboardIncidencia() {
                   <Tooltip formatter={(v: any) => `${Number(v || 0).toFixed(1)}%`} />
                   <ReferenceLine
                     y={OBJETIVO_INCIDENCIA}
-                    stroke="#22c55e"
+                    stroke="#3D8B5E"
                     strokeDasharray="5 5"
-                    label={{ value: `Objetivo ${OBJETIVO_INCIDENCIA}%`, fontSize: 10, fill: '#22c55e', position: 'right' }}
+                    label={{ value: `Objetivo ${OBJETIVO_INCIDENCIA}%`, fontSize: 10, fill: '#3D8B5E', position: 'right' }}
                   />
                   <Line
                     type="monotone"
                     dataKey="incidencia"
-                    stroke="#0f172a"
+                    stroke="#1B3A2D"
                     strokeWidth={2}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
@@ -355,10 +355,10 @@ export default function DashboardIncidencia() {
                     />
                     <tr className="font-semibold bg-gray-50">
                       <td className="py-3">Total</td>
-                      <td className="text-right">{resumen.cubiertosTotal.toLocaleString('es-AR')}</td>
-                      <td className="text-right text-gray-600">100%</td>
-                      <td className="text-right">{formatearMonedaVentas(resumen.ventasTotal)}</td>
-                      <td className="text-right">{formatearMonedaVentas(resumen.ticketPromedioGeneral)}</td>
+                      <td className="text-right font-mono">{resumen.cubiertosTotal.toLocaleString('es-AR')}</td>
+                      <td className="text-right text-gray-600 font-mono">100%</td>
+                      <td className="text-right font-mono">{formatearMonedaVentas(resumen.ventasTotal)}</td>
+                      <td className="text-right font-mono">{formatearMonedaVentas(resumen.ticketPromedioGeneral)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -404,8 +404,8 @@ export default function DashboardIncidencia() {
                   />
                   <tr className="font-semibold bg-gray-50">
                     <td className="py-3">Total</td>
-                    <td className="text-right">{formatearMonedaVentas(resumen.ventasTotal)}</td>
-                    <td className="text-right text-gray-600">100%</td>
+                    <td className="text-right font-mono">{formatearMonedaVentas(resumen.ventasTotal)}</td>
+                    <td className="text-right text-gray-600 font-mono">100%</td>
                     <td className="text-right hidden sm:table-cell text-gray-600">—</td>
                   </tr>
                 </tbody>
@@ -449,8 +449,8 @@ function KPICard({
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-5">
       <div className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">{label}</div>
-      <div className="text-lg sm:text-2xl font-bold text-gray-900 break-all">{valor}</div>
-      <div className={`flex items-center gap-1 text-[10px] sm:text-xs mt-1 ${colorVar}`}>
+      <div className="text-lg sm:text-2xl font-bold text-gray-900 break-all font-mono">{valor}</div>
+      <div className={`flex items-center gap-1 text-[10px] sm:text-xs mt-1 font-mono ${colorVar}`}>
         {sube && <TrendingUp className="w-3 h-3 flex-shrink-0" />}
         {baja && <TrendingDown className="w-3 h-3 flex-shrink-0" />}
         <span className="truncate">
@@ -483,10 +483,10 @@ function KPIMini({
       <div className={`text-[10px] uppercase font-semibold ${destacar ? 'text-blue-700' : 'text-gray-500'}`}>
         {label}
       </div>
-      <div className={`text-lg font-bold mt-0.5 ${destacar ? 'text-blue-700' : 'text-gray-900'}`}>
+      <div className={`text-lg font-bold mt-0.5 font-mono ${destacar ? 'text-blue-700' : 'text-gray-900'}`}>
         {valor}
       </div>
-      {sub && <div className={`text-[10px] mt-0.5 ${destacar ? 'text-blue-600' : 'text-gray-500'}`}>{sub}</div>}
+      {sub && <div className={`text-[10px] mt-0.5 font-mono ${destacar ? 'text-blue-600' : 'text-gray-500'}`}>{sub}</div>}
     </div>
   )
 }
@@ -514,10 +514,10 @@ function FilaCubiertos({
       <td className="py-3 flex items-center gap-2">
         <span className="text-base">{icono}</span> {nombre}
       </td>
-      <td className="text-right py-3">{cubiertos > 0 ? cubiertos.toLocaleString('es-AR') : '—'}</td>
-      <td className="text-right py-3 text-gray-600">{cubiertos > 0 ? `${porcentaje.toFixed(1)}%` : '—'}</td>
-      <td className="text-right py-3">{ventas > 0 ? formatearMonedaVentas(ventas) : '—'}</td>
-      <td className="text-right py-3 font-medium">
+      <td className="text-right py-3 font-mono">{cubiertos > 0 ? cubiertos.toLocaleString('es-AR') : '—'}</td>
+      <td className="text-right py-3 text-gray-600 font-mono">{cubiertos > 0 ? `${porcentaje.toFixed(1)}%` : '—'}</td>
+      <td className="text-right py-3 font-mono">{ventas > 0 ? formatearMonedaVentas(ventas) : '—'}</td>
+      <td className="text-right py-3 font-medium font-mono">
         {ticketProm > 0 ? formatearMonedaVentas(ticketProm) : '—'}
       </td>
     </tr>
@@ -547,9 +547,9 @@ function FilaServicio({
       <td className="py-3 flex items-center gap-2">
         <span className="text-base">{icono}</span> {nombre}
       </td>
-      <td className="text-right py-3">{formatearMonedaVentas(ventas)}</td>
-      <td className="text-right py-3 text-gray-600">{porcentaje.toFixed(1)}%</td>
-      <td className="text-right py-3 hidden sm:table-cell text-gray-600">
+      <td className="text-right py-3 font-mono">{formatearMonedaVentas(ventas)}</td>
+      <td className="text-right py-3 text-gray-600 font-mono">{porcentaje.toFixed(1)}%</td>
+      <td className="text-right py-3 hidden sm:table-cell text-gray-600 font-mono">
         {promedio > 0 ? formatearMonedaVentas(promedio) : '—'}
       </td>
     </tr>

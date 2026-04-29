@@ -107,8 +107,8 @@ export default function Historico() {
                 />
                 <Tooltip formatter={(v: any) => formatearMonedaVentas(v || 0)} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="Ventas" fill="#0f172a" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Compras" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Ventas" fill="#1B3A2D" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Compras" fill="#C4704B" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -151,10 +151,10 @@ export default function Historico() {
                     return (
                       <tr key={p.label} className="hover:bg-gray-50">
                         <td className="py-3 px-3 sm:px-4 text-gray-900">{p.label}</td>
-                        <td className="text-right py-3 px-3 sm:px-4 text-gray-700">
+                        <td className="text-right py-3 px-3 sm:px-4 text-gray-700 font-mono">
                           {p.ventasTotal > 0 ? formatearMonedaVentas(p.ventasTotal) : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="text-right py-3 px-3 sm:px-4 text-gray-700 hidden xs:table-cell">
+                        <td className="text-right py-3 px-3 sm:px-4 text-gray-700 hidden xs:table-cell font-mono">
                           {p.compras > 0 ? formatearMonedaVentas(p.compras) : <span className="text-gray-400">—</span>}
                         </td>
                         <td className="text-right py-3 px-3 sm:px-4">
@@ -162,19 +162,19 @@ export default function Historico() {
                             <span className="text-gray-400">—</span>
                           ) : (
                             <span
-                              className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colorBadge}`}
+                              className={`inline-block px-2 py-0.5 rounded text-xs font-medium font-mono ${colorBadge}`}
                             >
                               {p.incidencia.toFixed(1)}%
                             </span>
                           )}
                         </td>
-                        <td className="text-right py-3 px-3 sm:px-4 hidden sm:table-cell text-gray-700">
+                        <td className="text-right py-3 px-3 sm:px-4 hidden sm:table-cell text-gray-700 font-mono">
                           {p.cubiertosTotal > 0 ? p.cubiertosTotal.toLocaleString('es-AR') : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="text-right py-3 px-3 sm:px-4 hidden sm:table-cell text-gray-700">
+                        <td className="text-right py-3 px-3 sm:px-4 hidden sm:table-cell text-gray-700 font-mono">
                           {p.ticketPromedioGeneral > 0 ? formatearMonedaVentas(p.ticketPromedioGeneral) : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="text-right py-3 px-3 sm:px-4 hidden md:table-cell text-gray-700">
+                        <td className="text-right py-3 px-3 sm:px-4 hidden md:table-cell text-gray-700 font-mono">
                           {p.ventasTotal > 0 ? formatearMonedaVentas(p.margenBruto) : <span className="text-gray-400">—</span>}
                         </td>
                       </tr>

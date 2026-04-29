@@ -30,19 +30,19 @@ export default function Table<T>({
 }: TableProps<T>) {
   if (isLoading) {
     return (
-      <div className="table-container p-8 text-center">
+      <div className="card p-8 text-center">
         <div className="animate-pulse flex justify-center">
-          <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+          <div className="h-8 w-8 bg-sand rounded-full"></div>
         </div>
-        <p className="mt-2 text-gray-500">Cargando...</p>
+        <p className="mt-2 text-ink-muted">Cargando...</p>
       </div>
     )
   }
 
   if (data.length === 0) {
     return (
-      <div className="table-container p-8 text-center">
-        <p className="text-gray-500">{emptyMessage}</p>
+      <div className="card p-8 text-center">
+        <p className="text-ink-muted">{emptyMessage}</p>
       </div>
     )
   }
@@ -51,25 +51,25 @@ export default function Table<T>({
     <>
       {/* Vista de tabla para desktop */}
       <div className="table-container hidden md:block">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-sand">
+          <thead className="table-header">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   scope="col"
-                  className={`table-header px-6 py-3 ${column.className || ''}`}
+                  className={`px-4 py-3 ${column.className || ''}`}
                 >
                   {column.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-cream-light divide-y divide-sand">
             {data.map((item) => (
               <tr
                 key={keyExtractor(item)}
-                className={`hover:bg-gray-50 ${onRowClick ? 'cursor-pointer' : ''}`}
+                className={`table-row ${onRowClick ? 'cursor-pointer' : ''}`}
                 onClick={() => onRowClick?.(item)}
               >
                 {columns.map((column) => (
@@ -90,7 +90,7 @@ export default function Table<T>({
         {data.map((item) => (
           <div
             key={keyExtractor(item)}
-            className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 ${onRowClick ? 'cursor-pointer active:bg-gray-50' : ''}`}
+            className={`card p-4 ${onRowClick ? 'cursor-pointer active:shadow-card-hover' : ''}`}
             onClick={() => onRowClick?.(item)}
           >
             {mobileCard ? (
@@ -100,8 +100,8 @@ export default function Table<T>({
               <div className="space-y-2">
                 {columns.filter(col => !col.hideOnMobile && col.key !== 'acciones').map((column) => (
                   <div key={column.key} className="flex justify-between items-start gap-2">
-                    <span className="text-xs text-gray-500 flex-shrink-0">{column.mobileLabel || column.header}:</span>
-                    <div className="text-sm text-right">
+                    <span className="text-xs text-ink-muted flex-shrink-0">{column.mobileLabel || column.header}:</span>
+                    <div className="text-sm text-right text-ink">
                       {column.render
                         ? column.render(item)
                         : (item as Record<string, unknown>)[column.key] as ReactNode}
@@ -110,7 +110,7 @@ export default function Table<T>({
                 ))}
                 {/* Acciones al final */}
                 {columns.find(col => col.key === 'acciones')?.render && (
-                  <div className="pt-2 border-t mt-2 flex justify-end">
+                  <div className="pt-2 border-t border-sand mt-2 flex justify-end">
                     {columns.find(col => col.key === 'acciones')?.render?.(item)}
                   </div>
                 )}

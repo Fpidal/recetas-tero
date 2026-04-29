@@ -10,6 +10,7 @@ Sistema de gestión de recetas, costos y menús para restaurante. Permite admini
 - **Lenguaje**: TypeScript
 - **Base de datos**: Supabase (PostgreSQL)
 - **Estilos**: Tailwind CSS
+- **Tipografías**: DM Sans (texto), JetBrains Mono (números), Playfair Display (logo)
 - **Iconos**: Lucide React
 - **PDF**: jsPDF + jspdf-autotable
 - **Gráficos**: Recharts
@@ -78,7 +79,8 @@ src/
 
 - Soft delete: campo `activo` (boolean) en lugar de borrar
 - Timestamps: `created_at` automático
-- IVA: almacenado como decimal (0.19, 0.10, 0)
+- IVA: almacenado como decimal (0.21, 0.10, 0)
+- Números: siempre con `font-mono` para alineación tabular
 
 ## Patrones de Código
 
@@ -92,12 +94,25 @@ const { data, error } = await supabase
   .order('nombre')
 ```
 
-### Formateo de Moneda (CLP)
+### Formateo de Moneda (ARS)
 
 ```typescript
-import { formatCLP, formatNumber } from '@/lib/formato-numeros'
-formatCLP(15000)  // "$15.000"
-formatNumber(1.5) // "1,5"
+import { formatearMoneda, formatNumber } from '@/lib/formato-numeros'
+formatearMoneda(15000)  // "$15.000"
+formatNumber(1.5)       // "1,5"
+```
+
+### Tipografía Numérica
+
+Todos los valores numéricos deben usar la clase `font-mono` (JetBrains Mono):
+- Montos: `$1.234.567`
+- Porcentajes: `32,5%`
+- Cantidades: `15 kg`
+- Inputs numéricos
+
+```tsx
+<span className="font-mono">{precio.toLocaleString('es-AR')}</span>
+<span className="font-mono">{porcentaje.toFixed(1)}%</span>
 ```
 
 ### Componentes UI

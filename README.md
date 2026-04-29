@@ -10,10 +10,28 @@ Sistema de gestión de recetas, costos y menús para restaurante. Permite admini
 | **Lenguaje** | TypeScript 5.5.4 |
 | **Base de datos** | Supabase (PostgreSQL) |
 | **Estilos** | Tailwind CSS 3.4.7 |
+| **Tipografías** | DM Sans, JetBrains Mono, Playfair Display |
 | **Iconos** | Lucide React |
 | **PDF** | jsPDF + jspdf-autotable |
 | **Gráficos** | Recharts |
 | **Deploy** | Vercel |
+
+## Sistema de Diseño
+
+### Tipografía
+
+| Fuente | Uso | Clase CSS |
+|--------|-----|-----------|
+| **DM Sans** | Texto general, UI, labels | `font-sans` (default) |
+| **JetBrains Mono** | Números, montos, porcentajes, cantidades | `font-mono` |
+| **Playfair Display** | Logo "Tero Restó" en sidebar | `font-display` |
+
+### Colores
+
+La paleta de colores está definida en `tailwind.config.ts` con variantes para:
+- **Primary**: Tonos principales de la marca
+- **Gray**: Escala de grises para texto y fondos
+- **Semánticos**: Green (éxito), Yellow (warning), Red (danger)
 
 ## Estructura de Carpetas
 
@@ -290,6 +308,7 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 - **Formato de fechas**: DD/MM/YYYY
 - **Variables de dominio**: En español (`precioVenta`, `costoInsumo`)
 - **Lógica técnica**: En inglés
+- **Tipografía numérica**: Todos los valores numéricos usan `font-mono` (JetBrains Mono)
 
 ## Deploy
 

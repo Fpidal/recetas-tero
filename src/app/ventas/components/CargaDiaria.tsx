@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Sun, Moon, PartyPopper, Save, AlertTriangle, Pencil, Trash2 } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { Sun, Moon, PartyPopper, Save, AlertTriangle, Pencil, Trash2, Calendar, ChevronDown } from 'lucide-react'
 import { Button, Input, Modal } from '@/components/ui'
 import {
   obtenerDiasConVentas,
@@ -10,8 +10,10 @@ import {
   eliminarVenta,
   dateToString,
   formatearMonedaVentas,
+  generarOpcionesMeses,
   type FiltroVentas,
   type DiaCalendario,
+  type OpcionMes,
 } from '@/lib/ventas-queries'
 import { formatearFecha, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import type { VentaDiaria } from '@/types/ventas'
@@ -33,6 +35,11 @@ export default function CargaDiaria() {
   const [cargandoLista, setCargandoLista] = useState(true)
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [filtro, setFiltro] = useState<FiltroVentas>('mes')
+  const [modoFiltro, setModoFiltro] = useState<'mes' | 'ultimos30' | 'seleccionar'>('mes')
+  const [mesSeleccionado, setMesSeleccionado] = useState<OpcionMes | null>(null)
+  const [menuMesAbierto, setMenuMesAbierto] = useState(false)
+  const opcionesMeses = generarOpcionesMeses(12)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   // Modal de confirmación de reemplazo
   const [modalReemplazo, setModalReemplazo] = useState<{
@@ -47,8 +54,31 @@ export default function CargaDiaria() {
   }>({ abierto: false, venta: null })
 
   useEffect(() => {
+    if (modoFiltro === 'mes') {
+      setFiltro('mes')
+    } else if (modoFiltro === 'ultimos30') {
+      setFiltro('ultimos30')
+    } else if (modoFiltro === 'seleccionar' && mesSeleccionado) {
+      setFiltro({ año: mesSeleccionado.año, mes: mesSeleccionado.mes })
+    }
+  }, [modoFiltro, mesSeleccionado])
+
+  useEffect(() => {
     cargarDias()
   }, [filtro])
+
+  // Cerrar menú al hacer click afuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuMesAbierto(false)
+      }
+    }
+    if (menuMesAbierto) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuMesAbierto])
 
   async function cargarDias() {
     try {
@@ -256,9 +286,12 @@ export default function CargaDiaria() {
                 {/* Toggle filtro */}
                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                   <button
-                    onClick={() => setFiltro('mes')}
+                    onClick={() => {
+                      setModoFiltro('mes')
+                      setMenuMesAbierto(false)
+                    }}
                     className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                      filtro === 'mes'
+                      modoFiltro === 'mes'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
@@ -266,15 +299,56 @@ export default function CargaDiaria() {
                     Este mes
                   </button>
                   <button
-                    onClick={() => setFiltro('ultimos30')}
+                    onClick={() => {
+                      setModoFiltro('ultimos30')
+                      setMenuMesAbierto(false)
+                    }}
                     className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                      filtro === 'ultimos30'
+                      modoFiltro === 'ultimos30'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
                     Últimos 30 días
                   </button>
+                  {/* Selector de mes */}
+                  <div className="relative" ref={menuRef}>
+                    <button
+                      onClick={() => setMenuMesAbierto(!menuMesAbierto)}
+                      className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        modoFiltro === 'seleccionar'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      {modoFiltro === 'seleccionar' && mesSeleccionado
+                        ? mesSeleccionado.label
+                        : 'Mes'}
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${menuMesAbierto ? 'rotate-180' : ''}`} />
+                    </button>
+                    {menuMesAbierto && (
+                      <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-64 overflow-y-auto">
+                        {opcionesMeses.map((opcion) => (
+                          <button
+                            key={`${opcion.año}-${opcion.mes}`}
+                            onClick={() => {
+                              setMesSeleccionado(opcion)
+                              setModoFiltro('seleccionar')
+                              setMenuMesAbierto(false)
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
+                              mesSeleccionado?.año === opcion.año && mesSeleccionado?.mes === opcion.mes
+                                ? 'bg-primary-50 text-primary-700 font-medium'
+                                : 'text-gray-700'
+                            }`}
+                          >
+                            {opcion.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

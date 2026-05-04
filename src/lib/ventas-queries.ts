@@ -162,8 +162,11 @@ export async function obtenerUltimosDias(limit: number = 10): Promise<VentaDiari
 
 /**
  * Tipo de filtro para la vista de días
+ * - 'mes': mes actual
+ * - 'ultimos30': últimos 30 días
+ * - { año, mes }: mes específico (mes 1-12)
  */
-export type FiltroVentas = 'mes' | 'ultimos30'
+export type FiltroVentas = 'mes' | 'ultimos30' | { año: number; mes: number }
 
 /**
  * Representa un día del calendario (con o sin datos de venta)
@@ -176,9 +179,42 @@ export interface DiaCalendario {
 }
 
 /**
+ * Opción para el selector de mes
+ */
+export interface OpcionMes {
+  año: number
+  mes: number
+  label: string
+}
+
+/**
+ * Genera las opciones de meses para el selector (últimos N meses)
+ */
+export function generarOpcionesMeses(cantidadMeses: number = 12): OpcionMes[] {
+  const meses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  ]
+  const hoy = new Date()
+  const opciones: OpcionMes[] = []
+
+  for (let i = 0; i < cantidadMeses; i++) {
+    const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1)
+    opciones.push({
+      año: fecha.getFullYear(),
+      mes: fecha.getMonth() + 1,
+      label: `${meses[fecha.getMonth()]} ${fecha.getFullYear()}`,
+    })
+  }
+
+  return opciones
+}
+
+/**
  * Obtiene todos los días de un período con sus datos de venta (si existen)
  * Para "mes": todos los días del mes actual
  * Para "ultimos30": los últimos 30 días desde hoy
+ * Para { año, mes }: todos los días del mes específico
  */
 export async function obtenerDiasConVentas(filtro: FiltroVentas): Promise<DiaCalendario[]> {
   const hoy = new Date()
@@ -190,11 +226,15 @@ export async function obtenerDiasConVentas(filtro: FiltroVentas): Promise<DiaCal
     desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
     // Último día del mes actual
     hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
-  } else {
+  } else if (filtro === 'ultimos30') {
     // Últimos 30 días
     hasta = new Date(hoy)
     desde = new Date(hoy)
     desde.setDate(desde.getDate() - 29) // 30 días incluyendo hoy
+  } else {
+    // Mes específico { año, mes }
+    desde = new Date(filtro.año, filtro.mes - 1, 1)
+    hasta = new Date(filtro.año, filtro.mes, 0) // día 0 del mes siguiente = último del actual
   }
 
   const desdeStr = dateToString(desde)

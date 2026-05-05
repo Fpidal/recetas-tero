@@ -125,12 +125,16 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
       acc.venta += d.venta
       acc.costo += d.costo
       acc.cubiertos += d.cubiertos
-      if (d.tiene_consumo) acc.diasConCarga++
+      if (d.tiene_consumo) {
+        acc.diasConCarga++
+        acc.ventaConCosto += d.venta // Solo ventas de días con costo cargado
+      }
       return acc
     },
-    { venta: 0, costo: 0, cubiertos: 0, diasConCarga: 0 }
+    { venta: 0, costo: 0, cubiertos: 0, diasConCarga: 0, ventaConCosto: 0 }
   )
-  const incidenciaMes = totales.venta > 0 ? (totales.costo / totales.venta) * 100 : 0
+  // Incidencia calculada solo con días que tienen costo (muestreo)
+  const incidenciaMes = totales.ventaConCosto > 0 ? (totales.costo / totales.ventaConCosto) * 100 : 0
   const margenMes = totales.venta - totales.costo
   const colorMes = getColorEstado(getEstadoIncidenciaReal(incidenciaMes))
 
@@ -272,10 +276,16 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
             ⭐ Incidencia REAL
           </div>
           <div className={`text-lg sm:text-2xl font-bold mt-1 font-mono ${colorMes.text}`}>
-            {incidenciaMes.toFixed(1)}%
+            {totales.diasConCarga > 0 ? `${incidenciaMes.toFixed(1)}%` : '—'}
           </div>
-          <div className={`text-[10px] mt-1 font-mono ${colorMes.text}`}>
-            Objetivo ≤ {OBJETIVO_INCIDENCIA_REAL}%
+          <div className={`text-[10px] mt-1 ${colorMes.text}`}>
+            {totales.diasConCarga > 0 ? (
+              <span className="font-mono">
+                Muestreo: {totales.diasConCarga} de {incidencias.filter(d => d.tiene_venta).length} días
+              </span>
+            ) : (
+              'Sin costos cargados'
+            )}
           </div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4">

@@ -310,7 +310,6 @@ export async function obtenerFacturasRango(
 
 /**
  * Calcula el resumen de un período dado (rango de fechas, ventas y facturas)
- * La incidencia se calcula solo con los días que tienen costos cargados (muestreo)
  */
 function calcularResumen(
   label: string,
@@ -319,7 +318,6 @@ function calcularResumen(
   ventas: VentaDiaria[],
   facturas: { fecha: string; total: number }[]
 ): ResumenPeriodo {
-  // Totales de ventas (todos los días)
   const ventaMediodia = ventas.reduce((acc, v) => acc + Number(v.venta_mediodia), 0)
   const ventaNoche = ventas.reduce((acc, v) => acc + Number(v.venta_noche), 0)
   const ventaEventos = ventas.reduce((acc, v) => acc + Number(v.venta_eventos), 0)
@@ -335,24 +333,8 @@ function calcularResumen(
   const ticketPromedioEventos = cubiertosEventos > 0 ? ventaEventos / cubiertosEventos : 0
   const ticketPromedioGeneral = cubiertosTotal > 0 ? ventasTotal / cubiertosTotal : 0
 
-  // Total de compras del período
   const compras = facturas.reduce((acc, f) => acc + f.total, 0)
-
-  // Días que tienen facturas (fechas únicas)
-  const fechasConCostos = new Set(facturas.map(f => f.fecha))
-  const diasConCostos = fechasConCostos.size
-
-  // Para la incidencia: solo considerar ventas de días que tienen costos cargados
-  const ventasDiasConCostos = ventas.filter(v => fechasConCostos.has(v.fecha))
-  const ventasTotalMuestreo = ventasDiasConCostos.reduce(
-    (acc, v) => acc + Number(v.venta_mediodia) + Number(v.venta_noche) + Number(v.venta_eventos),
-    0
-  )
-
-  // Incidencia calculada solo con días que tienen costos (muestreo)
-  const incidencia = ventasTotalMuestreo > 0 ? (compras / ventasTotalMuestreo) * 100 : 0
-
-  // Margen bruto sigue siendo sobre el total de ventas
+  const incidencia = ventasTotal > 0 ? (compras / ventasTotal) * 100 : 0
   const margenBruto = ventasTotal - compras
 
   const diasConVentas = ventas.filter(
@@ -379,7 +361,6 @@ function calcularResumen(
     incidencia,
     margenBruto,
     diasConVentas,
-    diasConCostos,
   }
 }
 

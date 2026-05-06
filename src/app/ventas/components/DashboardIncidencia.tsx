@@ -205,16 +205,10 @@ export default function DashboardIncidencia() {
                 % Incidencia
               </div>
               <div className={`text-lg sm:text-2xl font-bold font-mono ${colorIncidencia.text}`}>
-                {resumen.diasConCostos > 0 ? `${resumen.incidencia.toFixed(1)}%` : '—'}
+                {resumen.incidencia.toFixed(1)}%
               </div>
-              <div className={`text-[10px] sm:text-xs mt-1 ${colorIncidencia.text}`}>
-                {resumen.diasConCostos > 0 ? (
-                  <span className="font-mono">
-                    Muestreo: {resumen.diasConCostos} de {resumen.diasConVentas} días
-                  </span>
-                ) : (
-                  'Sin costos cargados'
-                )}
+              <div className={`text-[10px] sm:text-xs mt-1 font-mono ${colorIncidencia.text}`}>
+                Objetivo: ≤ {OBJETIVO_INCIDENCIA}%
               </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-5">

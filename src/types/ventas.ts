@@ -59,7 +59,6 @@ export interface ResumenPeriodo {
 
   // Días con datos
   diasConVentas: number
-  diasConCostos: number      // Días que tienen facturas cargadas (para muestreo)
 }
 
 export type TipoPeriodo = 'mensual' | 'semanal'

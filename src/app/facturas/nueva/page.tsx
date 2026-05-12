@@ -88,6 +88,10 @@ export default function NuevaFacturaPage() {
 
   // Modal nuevo insumo
   const [showNuevoInsumo, setShowNuevoInsumo] = useState(false)
+
+  // Modal alerta diferencia de precio
+  const [showAlertaDiferencia, setShowAlertaDiferencia] = useState(false)
+  const [itemsConDiferencia, setItemsConDiferencia] = useState<{ nombre: string; precioOC: number; precioFactura: number; diferenciaPct: number }[]>([])
   const [nuevoInsumoNombre, setNuevoInsumoNombre] = useState('')
   const [nuevoInsumoCategoria, setNuevoInsumoCategoria] = useState('')
   const [nuevoInsumoUnidad, setNuevoInsumoUnidad] = useState('kg')
@@ -405,7 +409,42 @@ export default function NuevaFacturaPage() {
   const totalPercepciones = percepciones.reduce((sum, p) => sum + parsearNumero(p.valor), 0)
   const total = subtotalNeto + totalIva + totalPercepciones
 
-  async function handleGuardar() {
+  // Función para detectar diferencias de precio > 15% respecto a la OC
+  function detectarDiferenciasPrecio(): { nombre: string; precioOC: number; precioFactura: number; diferenciaPct: number }[] {
+    if (!selectedOrden) return []
+
+    const diferencias: { nombre: string; precioOC: number; precioFactura: number; diferenciaPct: number }[] = []
+
+    for (const item of items) {
+      const itemOC = selectedOrden.items.find(i =>
+        item.vino_id ? i.vino_id === item.vino_id : i.insumo_id === item.insumo_id
+      )
+
+      if (itemOC) {
+        const precioFactura = typeof item.precio_unitario === 'string'
+          ? parsearNumero(item.precio_unitario)
+          : item.precio_unitario
+        const precioOC = itemOC.precio_unitario
+
+        if (precioOC > 0) {
+          const diferenciaPct = ((precioFactura - precioOC) / precioOC) * 100
+
+          if (Math.abs(diferenciaPct) > 15) {
+            diferencias.push({
+              nombre: item.insumo_nombre,
+              precioOC,
+              precioFactura,
+              diferenciaPct,
+            })
+          }
+        }
+      }
+    }
+
+    return diferencias
+  }
+
+  async function handleGuardar(confirmarDiferencias = false) {
     if (!selectedProveedor) {
       alert('Seleccioná un proveedor')
       return
@@ -419,6 +458,16 @@ export default function NuevaFacturaPage() {
     if (items.length === 0) {
       alert('Agregá al menos un item')
       return
+    }
+
+    // Verificar diferencias de precio > 15% (solo si viene de OC y no se confirmó ya)
+    if (selectedOrden && !confirmarDiferencias) {
+      const diferencias = detectarDiferenciasPrecio()
+      if (diferencias.length > 0) {
+        setItemsConDiferencia(diferencias)
+        setShowAlertaDiferencia(true)
+        return
+      }
     }
 
     setIsSaving(true)
@@ -1063,7 +1112,7 @@ export default function NuevaFacturaPage() {
           <Button variant="secondary" onClick={() => router.back()}>
             Cancelar
           </Button>
-          <Button onClick={handleGuardar} disabled={isSaving}>
+          <Button onClick={() => handleGuardar()} disabled={isSaving}>
             <Save className="w-4 h-4 mr-2" />
             {isSaving ? 'Guardando...' : tipoComprobante === 'nota_credito' ? 'Guardar NC' : 'Guardar Factura'}
           </Button>
@@ -1178,6 +1227,63 @@ export default function NuevaFacturaPage() {
             </Button>
             <Button onClick={handleGuardarNuevoInsumo} disabled={savingInsumo}>
               {savingInsumo ? 'Guardando...' : 'Crear Insumo'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Alerta Diferencia de Precio */}
+      <Modal
+        isOpen={showAlertaDiferencia}
+        onClose={() => setShowAlertaDiferencia(false)}
+        title="⚠️ Diferencia de precio detectada"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Los siguientes items tienen una diferencia de precio mayor al 15% respecto a la Orden de Compra:
+          </p>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-lg divide-y divide-amber-200">
+            {itemsConDiferencia.map((item, idx) => (
+              <div key={idx} className="p-3">
+                <p className="font-medium text-gray-900">{item.nombre}</p>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-gray-600">Precio OC:</span>
+                  <span className="font-mono">{formatearMoneda(item.precioOC)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Precio Factura:</span>
+                  <span className="font-mono">{formatearMoneda(item.precioFactura)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-medium">
+                  <span className={item.diferenciaPct > 0 ? 'text-red-600' : 'text-green-600'}>
+                    Diferencia:
+                  </span>
+                  <span className={`font-mono ${item.diferenciaPct > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {item.diferenciaPct > 0 ? '+' : ''}{item.diferenciaPct.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-sm text-gray-600">
+            ¿Estás seguro de que los precios son correctos?
+          </p>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="secondary" onClick={() => setShowAlertaDiferencia(false)}>
+              Revisar precios
+            </Button>
+            <Button
+              onClick={() => {
+                setShowAlertaDiferencia(false)
+                handleGuardar(true)
+              }}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Confirmar y guardar
             </Button>
           </div>
         </div>

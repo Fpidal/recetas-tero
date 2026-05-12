@@ -84,7 +84,7 @@ export default function RootLayout({
         ) : (
           <div className="flex h-screen bg-cream">
             <Sidebar />
-            <main className="flex-1 overflow-y-auto overflow-x-hidden mobile-content-padding">
+            <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden mobile-content-padding">
               {children}
             </main>
           </div>

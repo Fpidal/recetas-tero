@@ -145,7 +145,7 @@ export default function HojasControl() {
 
               <Button
                 onClick={() => handleGenerarPDF(cat.categoria)}
-                disabled={isLoading || count === 0}
+                disabled={isLoading}
                 className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
               >
                 {isLoading ? (
@@ -180,7 +180,7 @@ export default function HojasControl() {
 
           <Button
             onClick={handleGenerarPDFMenus}
-            disabled={loading === 'menus' || conteoMenus === 0}
+            disabled={loading === 'menus'}
             className="w-full bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-50"
           >
             {loading === 'menus' ? (

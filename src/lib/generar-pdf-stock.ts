@@ -140,8 +140,25 @@ export async function generarPDFStock(categoria: CategoriaStock): Promise<void> 
   const config = CATEGORIA_CONFIG[categoria]
   const insumos = await fetchInsumosCategoria(categoria)
 
+  // Si no hay insumos, generar PDF vacío con mensaje
   if (insumos.length === 0) {
-    throw new Error('No hay insumos en esta categoría')
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.text('TERO - CONTROL DE STOCK', 10, 15)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    doc.text(config.titulo, 10, 25)
+    doc.setFontSize(10)
+    doc.setTextColor(100, 100, 100)
+    doc.text('No hay insumos registrados en esta categoría.', 10, 40)
+    doc.text('Agregá insumos en la sección Insumos para generar la hoja de control.', 10, 48)
+    const now = new Date()
+    const dd = String(now.getDate()).padStart(2, '0')
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const yyyy = now.getFullYear()
+    doc.save(`${config.filename}-${dd}-${mm}-${yyyy}.pdf`)
+    return
   }
 
   // A4 vertical
@@ -326,8 +343,7 @@ function formatStock(value: number): string {
 }
 
 // === INSUMOS MENÚS ===
-// ID del proveedor "COCINA" que tiene las OC con insumos de menús
-const PROVEEDOR_COCINA_ID = '6205cb15-a690-4730-b359-4dd097243bbd'
+// Insumos marcados con control_menus = true
 
 interface InsumoMenu {
   id: string
@@ -353,53 +369,36 @@ const CATEGORIA_TITULOS: Record<string, string> = {
 }
 
 export async function fetchInsumosMenus(): Promise<InsumoMenu[]> {
-  // Buscar OC del proveedor COCINA (están en papelera)
-  const { data: ordenes } = await supabase
-    .from('ordenes_compra')
-    .select('id')
-    .eq('proveedor_id', PROVEEDOR_COCINA_ID)
-    .eq('activo', false)
+  // Buscar insumos marcados con control_menus = true
+  const { data: insumos, error } = await supabase
+    .from('insumos')
+    .select('id, nombre, unidad_medida, categoria')
+    .eq('activo', true)
+    .eq('control_menus', true)
+    .order('categoria')
+    .order('nombre')
 
-  if (!ordenes || ordenes.length === 0) {
+  if (error || !insumos) {
+    console.error('Error fetching insumos menus:', error)
     return []
   }
 
-  const ordenIds = ordenes.map(o => o.id)
+  // Ordenar por categoría personalizada y nombre
+  const result = insumos.map(i => ({
+    id: i.id,
+    nombre: i.nombre,
+    unidad_medida: i.unidad_medida,
+    categoria: i.categoria || 'Almacen',
+  }))
 
-  // Obtener items de esas OC con info del insumo
-  const { data: items } = await supabase
-    .from('orden_compra_items')
-    .select('insumo_id, insumos(id, nombre, unidad_medida, categoria)')
-    .in('orden_compra_id', ordenIds)
-
-  if (!items) return []
-
-  // Extraer insumos únicos
-  const insumosMap = new Map<string, InsumoMenu>()
-  for (const item of items) {
-    if (item.insumo_id && item.insumos) {
-      const insumo = item.insumos as any
-      if (!insumosMap.has(insumo.id)) {
-        insumosMap.set(insumo.id, {
-          id: insumo.id,
-          nombre: insumo.nombre,
-          unidad_medida: insumo.unidad_medida,
-          categoria: insumo.categoria || 'Almacen',
-        })
-      }
-    }
-  }
-
-  // Ordenar por categoría y nombre
-  const insumos = Array.from(insumosMap.values())
-  insumos.sort((a, b) => {
+  result.sort((a, b) => {
     const catA = CATEGORIA_ORDEN_MENUS.indexOf(a.categoria)
     const catB = CATEGORIA_ORDEN_MENUS.indexOf(b.categoria)
     if (catA !== catB) return catA - catB
     return a.nombre.localeCompare(b.nombre)
   })
 
-  return insumos
+  return result
 }
 
 export async function contarInsumosMenus(): Promise<number> {
@@ -410,8 +409,25 @@ export async function contarInsumosMenus(): Promise<number> {
 export async function generarPDFInsumosMenus(): Promise<void> {
   const insumos = await fetchInsumosMenus()
 
+  // Si no hay insumos, generar PDF vacío con mensaje
   if (insumos.length === 0) {
-    throw new Error('No hay insumos de menús')
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.text('TERO - CONTROL DE INSUMOS', 10, 15)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    doc.text('Menús Ejecutivos', 10, 25)
+    doc.setFontSize(10)
+    doc.setTextColor(100, 100, 100)
+    doc.text('No hay insumos de menús registrados.', 10, 40)
+    doc.text('Creá órdenes de compra para el proveedor COCINA para definir los insumos.', 10, 48)
+    const now = new Date()
+    const dd = String(now.getDate()).padStart(2, '0')
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const yyyy = now.getFullYear()
+    doc.save(`insumos-menus-${dd}-${mm}-${yyyy}.pdf`)
+    return
   }
 
   // Agregar "Pescado Blanco" si no existe en Pescados_Mariscos

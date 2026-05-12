@@ -45,6 +45,11 @@
 /* =====================================================
    BASE STYLES
    ===================================================== */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 body {
   color: var(--color-ink);
   background: var(--color-cream);

@@ -23,6 +23,7 @@ interface InsumoCompleto {
   iva_porcentaje: number
   activo: boolean
   inventario: boolean
+  control_menus: boolean
   precio_actual: number | null
   precio_anterior: number | null
   fecha_actualizacion: string | null
@@ -41,6 +42,7 @@ interface InsumoForm {
   precio: string
   proveedor_id: string
   inventario: boolean
+  control_menus: boolean
 }
 
 interface Proveedor {
@@ -83,6 +85,7 @@ const initialForm: InsumoForm = {
   precio: '',
   proveedor_id: '',
   inventario: false,
+  control_menus: false,
 }
 
 interface HistorialPrecio {
@@ -201,6 +204,7 @@ export default function InsumosPage() {
         precio: precioPaquete ? formatearCantidad(precioPaquete, 2) : '',
         proveedor_id: insumo.proveedor_id || '',
         inventario: insumo.inventario || false,
+        control_menus: insumo.control_menus || false,
       })
     } else {
       setEditingId(null)
@@ -229,6 +233,7 @@ export default function InsumosPage() {
       merma_porcentaje: parsearNumero(form.merma_porcentaje) || 0,
       iva_porcentaje: !isNaN(ivaValue) ? ivaValue : 21,
       inventario: form.inventario,
+      control_menus: form.control_menus,
     }
 
     const precioPaquete = parsearNumero(form.precio)
@@ -498,7 +503,7 @@ export default function InsumosPage() {
   }
 
   return (
-    <div>
+    <div className="overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Insumos</h1>
@@ -611,27 +616,27 @@ export default function InsumosPage() {
           </div>
 
           {/* Vista desktop - Tabla */}
-          <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-xs">
+          <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden max-w-full">
+            <div className="overflow-x-auto max-w-full">
+              <table className="w-full divide-y divide-gray-200 text-xs table-fixed">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Cód.</th>
+                    <th className="w-[60px] px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Cód.</th>
                     <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Producto</th>
-                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Categ.</th>
-                    <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Fecha</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Ant.</th>
-                    <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Var</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Precio</th>
-                    <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Un.</th>
-                    <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Cont.</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
-                    <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">IVA</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">IVA Incl.</th>
-                    <th className="px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Mer.</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">C.Final</th>
-                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Proveedor</th>
-                    <th className="px-1 py-2"></th>
+                    <th className="w-[70px] px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Categ.</th>
+                    <th className="w-[65px] px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Fecha</th>
+                    <th className="w-[60px] px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Ant.</th>
+                    <th className="w-[45px] px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Var</th>
+                    <th className="w-[60px] px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Precio</th>
+                    <th className="w-[30px] px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Un.</th>
+                    <th className="w-[35px] px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Cont.</th>
+                    <th className="w-[55px] px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
+                    <th className="w-[40px] px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">IVA</th>
+                    <th className="w-[60px] px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">IVA Incl.</th>
+                    <th className="w-[35px] px-1 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Mer.</th>
+                    <th className="w-[60px] px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">C.Final</th>
+                    <th className="w-[90px] px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Proveedor</th>
+                    <th className="w-[70px] px-1 py-2"></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -656,10 +661,10 @@ export default function InsumosPage() {
                           <td className="px-2 py-1.5 text-gray-500 font-mono text-[10px]">
                             {insumo.codigo}
                           </td>
-                          <td className="px-2 py-1.5 font-medium text-gray-900">
+                          <td className="px-2 py-1.5 font-medium text-gray-900 truncate" title={insumo.nombre}>
                             {insumo.nombre}
                           </td>
-                          <td className="px-2 py-1.5 text-gray-600">
+                          <td className="px-2 py-1.5 text-gray-600 truncate">
                             {categorias.find((c) => c.value === insumo.categoria)?.label?.split(' ')[0]}
                           </td>
                           <td className="px-2 py-1.5 text-center font-mono text-gray-500">
@@ -688,7 +693,7 @@ export default function InsumosPage() {
                             {formatCurrency(precioPaquete)}
                           </td>
                           <td className="px-1 py-1.5 text-center">
-                            <span className="text-gray-600">{insumo.unidad_medida}</span>
+                            <span className="text-gray-600">{insumo.unidad_medida === 'unidad' ? 'u.' : insumo.unidad_medida}</span>
                           </td>
                           <td className="px-1 py-1.5 text-center">
                             {cantPaq !== 1 ? (
@@ -766,7 +771,7 @@ export default function InsumosPage() {
                 placeholder="Nombre del insumo"
               />
             </div>
-            <div className="pt-6">
+            <div className="pt-6 flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -775,6 +780,15 @@ export default function InsumosPage() {
                   className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                 />
                 <span className="text-sm font-medium text-gray-700">Inventario</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.control_menus}
+                  onChange={(e) => setForm({ ...form, control_menus: e.target.checked })}
+                  className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Control Menús</span>
               </label>
             </div>
           </div>

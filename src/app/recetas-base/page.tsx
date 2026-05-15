@@ -1,10 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, ChefHat, Search, Eye, X, ClipboardList, ImageIcon, Share2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChefHat, Search, Eye, X, ClipboardList, ImageIcon, Share2, Package, ChevronDown, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
 import Link from 'next/link'
+
+interface InsumoEnElaboraciones {
+  id: string
+  nombre: string
+  cantidadElaboraciones: number
+  elaboraciones: { id: string; nombre: string }[]
+}
 
 interface RecetaConCosto {
   id: string
@@ -42,9 +49,73 @@ export default function RecetasBasePage() {
   const [recetaDetalle, setRecetaDetalle] = useState<RecetaDetalle | null>(null)
   const [loadingDetalle, setLoadingDetalle] = useState(false)
 
+  // Estados para tab de insumos
+  const [tab, setTab] = useState<'elaboraciones' | 'insumos'>('elaboraciones')
+  const [insumosEnElaboraciones, setInsumosEnElaboraciones] = useState<InsumoEnElaboraciones[]>([])
+  const [isLoadingInsumos, setIsLoadingInsumos] = useState(false)
+  const [insumoExpandido, setInsumoExpandido] = useState<string | null>(null)
+  const [busquedaInsumos, setBusquedaInsumos] = useState('')
+
   useEffect(() => {
     fetchRecetas()
   }, [])
+
+  useEffect(() => {
+    if (tab === 'insumos' && insumosEnElaboraciones.length === 0) {
+      fetchInsumosEnElaboraciones()
+    }
+  }, [tab])
+
+  async function fetchInsumosEnElaboraciones() {
+    setIsLoadingInsumos(true)
+
+    // Cargar todas las elaboraciones activas con sus ingredientes
+    const { data: elaboracionesData } = await supabase
+      .from('recetas_base')
+      .select(`
+        id, nombre,
+        receta_base_ingredientes (
+          insumo_id,
+          insumos (id, nombre)
+        )
+      `)
+      .eq('activo', true)
+
+    if (!elaboracionesData) {
+      setIsLoadingInsumos(false)
+      return
+    }
+
+    // Mapear insumos a sus elaboraciones
+    const insumoMap = new Map<string, { nombre: string; elaboraciones: { id: string; nombre: string }[] }>()
+
+    elaboracionesData.forEach((elaboracion: any) => {
+      const ingredientes = elaboracion.receta_base_ingredientes || []
+      ingredientes.forEach((ing: any) => {
+        if (ing.insumo_id && ing.insumos) {
+          const key = ing.insumo_id
+          if (!insumoMap.has(key)) {
+            insumoMap.set(key, { nombre: ing.insumos.nombre, elaboraciones: [] })
+          }
+          const item = insumoMap.get(key)!
+          if (!item.elaboraciones.find(e => e.id === elaboracion.id)) {
+            item.elaboraciones.push({ id: elaboracion.id, nombre: elaboracion.nombre })
+          }
+        }
+      })
+    })
+
+    // Convertir a array y ordenar por cantidad de elaboraciones
+    const resultado: InsumoEnElaboraciones[] = Array.from(insumoMap.entries()).map(([key, value]) => ({
+      id: key,
+      nombre: value.nombre,
+      cantidadElaboraciones: value.elaboraciones.length,
+      elaboraciones: value.elaboraciones.sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    })).sort((a, b) => b.cantidadElaboraciones - a.cantidadElaboraciones)
+
+    setInsumosEnElaboraciones(resultado)
+    setIsLoadingInsumos(false)
+  }
 
   async function fetchRecetas() {
     setIsLoading(true)
@@ -177,6 +248,10 @@ export default function RecetasBasePage() {
     ? recetas.filter(r => r.nombre.toLowerCase().includes(busqueda.toLowerCase()))
     : recetas
 
+  const insumosFiltrados = busquedaInsumos
+    ? insumosEnElaboraciones.filter(i => i.nombre.toLowerCase().includes(busquedaInsumos.toLowerCase()))
+    : insumosEnElaboraciones
+
   // Card component for mobile
   const RecetaCard = ({ receta }: { receta: RecetaConCosto }) => (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -228,7 +303,7 @@ export default function RecetasBasePage() {
         </Button>
       </div>
     </div>
-  )
+  );
 
   return (
     <div>
@@ -245,6 +320,28 @@ export default function RecetasBasePage() {
         </Link>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-4">
+        <button
+          onClick={() => setTab('elaboraciones')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            tab === 'elaboraciones' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Elaboraciones
+        </button>
+        <button
+          onClick={() => setTab('insumos')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            tab === 'insumos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Insumos de Elaboraciones
+        </button>
+      </div>
+
+      {tab === 'elaboraciones' && (
+      <>
       <div className="mb-4">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -332,6 +429,89 @@ export default function RecetasBasePage() {
               </tbody>
             </table>
           </div>
+        </>
+      )}
+      </>
+      )}
+
+      {/* Vista Insumos de Elaboraciones */}
+      {tab === 'insumos' && (
+        <>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={busquedaInsumos}
+                onChange={(e) => setBusquedaInsumos(e.target.value)}
+                placeholder="Buscar insumo..."
+                className="pl-9 pr-3 py-2.5 sm:py-2 w-full sm:w-64 rounded-lg border border-gray-300 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+          </div>
+
+          {isLoadingInsumos ? (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-gray-500">Cargando...</p>
+            </div>
+          ) : insumosEnElaboraciones.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+              <p className="text-gray-500">No hay insumos en elaboraciones</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-3 bg-gray-50 border-b">
+                <p className="text-xs text-gray-500">
+                  {insumosFiltrados.length} {insumosFiltrados.length === 1 ? 'insumo' : 'insumos'} encontrados
+                </p>
+              </div>
+              <div className="divide-y divide-gray-200">
+                {insumosFiltrados.map((item) => (
+                  <div key={item.id}>
+                    <button
+                      onClick={() => setInsumoExpandido(insumoExpandido === item.id ? null : item.id)}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-green-100">
+                        <Package className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">{item.nombre}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-purple-600 font-mono">
+                          {item.cantidadElaboraciones} {item.cantidadElaboraciones === 1 ? 'elaboración' : 'elaboraciones'}
+                        </span>
+                        {insumoExpandido === item.id ? (
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                        )}
+                      </div>
+                    </button>
+
+                    {insumoExpandido === item.id && (
+                      <div className="bg-gray-50 px-4 py-2 border-t">
+                        <p className="text-xs font-medium text-gray-500 mb-2">Elaboraciones que lo usan:</p>
+                        <div className="space-y-1">
+                          {item.elaboraciones.map((elab) => (
+                            <Link
+                              key={elab.id}
+                              href={`/recetas-base/${elab.id}`}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
+                            >
+                              <ChefHat className="w-3.5 h-3.5 text-purple-500" />
+                              <span className="text-sm text-gray-700">{elab.nombre}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 

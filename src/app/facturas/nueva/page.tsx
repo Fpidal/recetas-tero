@@ -47,6 +47,7 @@ interface ItemFactura {
   vino_id: string | null
   insumo_nombre: string
   unidad_medida: string
+  contenido: number | string  // contenido del paquete (editable para override)
   cantidad: number | string  // string mientras edita
   precio_unitario: number | string  // string mientras edita
   descuento: number | string  // string mientras edita
@@ -164,6 +165,8 @@ export default function NuevaFacturaPage() {
       const esVino = !!item.vino_id
       const insumoActual = !esVino ? insumos.find(i => i.id === item.insumo_id) : null
       const ivaPorcentaje = insumoActual?.iva_porcentaje ?? item.iva_porcentaje
+      // Obtener contenido del paquete del insumo
+      const contenido = insumoActual?.cantidad_por_paquete ? Number(insumoActual.cantidad_por_paquete) : 1
       const subtotal = item.cantidad * item.precio_unitario
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
       return {
@@ -172,6 +175,7 @@ export default function NuevaFacturaPage() {
         vino_id: item.vino_id,
         insumo_nombre: item.insumo_nombre,
         unidad_medida: item.unidad_medida,
+        contenido,
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
         descuento: 0,
@@ -221,6 +225,8 @@ export default function NuevaFacturaPage() {
     const subtotal = cantidadNum * precioNum * (1 - descuentoNum / 100)
     const ivaPorcentaje = insumo.iva_porcentaje ?? 21
     const ivaMonto = subtotal * (ivaPorcentaje / 100)
+    // Obtener contenido del paquete del insumo
+    const contenido = insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1
 
     const nuevoItem: ItemFactura = {
       id: crypto.randomUUID(),
@@ -228,6 +234,7 @@ export default function NuevaFacturaPage() {
       vino_id: null,
       insumo_nombre: insumo.nombre,
       unidad_medida: insumo.unidad_medida,
+      contenido,
       cantidad: cantidadNum,
       precio_unitario: precioNum,
       descuento: descuentoNum,
@@ -343,6 +350,18 @@ export default function NuevaFacturaPage() {
           ...item,
           iva_porcentaje: nuevoIva,
           iva_monto: ivaMonto,
+        }
+      }
+      return item
+    }))
+  }
+
+  function handleContenidoChange(id: string, nuevoContenido: string) {
+    setItems(items.map(item => {
+      if (item.id === id) {
+        return {
+          ...item,
+          contenido: nuevoContenido,
         }
       }
       return item
@@ -518,14 +537,19 @@ export default function NuevaFacturaPage() {
     }
 
     // Insertar items (esto dispara el trigger que actualiza precios)
-    const itemsData = items.map(item => ({
-      factura_id: factura.id,
-      insumo_id: item.insumo_id || null,
-      vino_id: item.vino_id || null,
-      cantidad: typeof item.cantidad === 'string' ? parsearNumero(item.cantidad) : item.cantidad,
-      precio_unitario: typeof item.precio_unitario === 'string' ? parsearNumero(item.precio_unitario) : item.precio_unitario,
-      descuento: typeof item.descuento === 'string' ? parsearNumero(item.descuento) : (item.descuento || 0),
-    }))
+    const itemsData = items.map(item => {
+      const contenidoNum = typeof item.contenido === 'string' ? parsearNumero(item.contenido) : item.contenido
+      return {
+        factura_id: factura.id,
+        insumo_id: item.insumo_id || null,
+        vino_id: item.vino_id || null,
+        cantidad: typeof item.cantidad === 'string' ? parsearNumero(item.cantidad) : item.cantidad,
+        precio_unitario: typeof item.precio_unitario === 'string' ? parsearNumero(item.precio_unitario) : item.precio_unitario,
+        descuento: typeof item.descuento === 'string' ? parsearNumero(item.descuento) : (item.descuento || 0),
+        // Solo enviar contenido_override si es diferente a 1 (para que el trigger lo use)
+        contenido_override: contenidoNum > 0 ? contenidoNum : null,
+      }
+    })
 
     const { error: itemsError } = await supabase
       .from('factura_items')
@@ -885,6 +909,7 @@ export default function NuevaFacturaPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cont.</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dto %</th>
@@ -902,6 +927,22 @@ export default function NuevaFacturaPage() {
                           <span className="text-sm text-gray-900">{item.insumo_nombre}</span>
                           {getDiferenciaBadge(item.diferencia)}
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {!item.vino_id ? (
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={typeof item.contenido === 'string' ? item.contenido : String(item.contenido).replace('.', ',')}
+                              onChange={(e) => handleContenidoChange(item.id, formatearInputNumero(e.target.value))}
+                              className="w-14 rounded border border-gray-300 px-2 py-1 text-sm font-mono text-center"
+                              title="Contenido del paquete (ej: 3 para paquete de 3kg)"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center">
@@ -972,7 +1013,7 @@ export default function NuevaFacturaPage() {
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr>
-                    <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
+                    <td colSpan={5} className="px-4 py-2 text-right text-sm text-gray-600">
                       Subtotal Neto:
                     </td>
                     <td className="px-4 py-2 text-right text-sm text-gray-900 font-mono">
@@ -982,7 +1023,7 @@ export default function NuevaFacturaPage() {
                   </tr>
                   {totalIva21 > 0 && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                      <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
                         IVA 21%:
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
@@ -993,7 +1034,7 @@ export default function NuevaFacturaPage() {
                   )}
                   {totalIva105 > 0 && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                      <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
                         IVA 10.5%:
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
@@ -1004,7 +1045,7 @@ export default function NuevaFacturaPage() {
                   )}
                   {totalIva0 > 0 && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                      <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
                         Exento (0%):
                       </td>
                       <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
@@ -1014,7 +1055,7 @@ export default function NuevaFacturaPage() {
                     </tr>
                   )}
                   <tr className="border-t border-gray-300">
-                    <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
+                    <td colSpan={5} className="px-4 py-3 text-right font-medium text-gray-900">
                       Total:
                     </td>
                     <td className="px-4 py-3 text-right text-lg font-bold text-green-600 font-mono">

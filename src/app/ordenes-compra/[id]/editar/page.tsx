@@ -78,11 +78,12 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
   async function fetchData() {
     setIsLoading(true)
 
-    // Verificar si la orden tiene factura asociada
+    // Verificar si la orden tiene factura ACTIVA asociada
     const { data: facturaData } = await supabase
       .from('facturas_proveedor')
       .select('id')
       .eq('orden_compra_id', id)
+      .eq('activo', true)
       .single()
 
     if (facturaData) {

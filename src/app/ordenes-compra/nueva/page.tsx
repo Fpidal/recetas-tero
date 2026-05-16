@@ -531,6 +531,7 @@ export default function NuevaOrdenCompraPage() {
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
                     <Select
+                      key={`select-insumo-mobile-${filtroCategoria}`}
                       name="select-insumo-mobile"
                       label="Insumo"
                       options={[
@@ -667,6 +668,7 @@ export default function NuevaOrdenCompraPage() {
             <div className="flex-1 flex gap-2 items-end">
               <div className="flex-1">
                 <Select
+                  key={`select-insumo-${filtroCategoria}`}
                   name={filtroCategoria === 'Vinos' ? 'select-vino-desktop' : 'select-insumo-desktop'}
                   label={filtroCategoria === 'Vinos' ? 'Vino' : 'Insumo'}
                   options={

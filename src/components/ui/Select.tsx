@@ -4,16 +4,20 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
   error?: string
   options: { value: string; label: string }[]
+  compact?: boolean
 }
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className = '', label, error, id, options, ...props }, ref) => {
+  ({ className = '', label, error, id, options, compact, ...props }, ref) => {
     return (
       <div className="w-full">
         {label && (
           <label
             htmlFor={id}
-            className="block text-sm font-medium text-ink mb-1.5"
+            className={compact
+              ? "block text-[11px] font-medium text-ink mb-0.5"
+              : "block text-sm font-medium text-ink mb-1.5"
+            }
           >
             {label}
           </label>
@@ -25,10 +29,14 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           data-lpignore="true"
           data-form-type="other"
           className={`
-            block w-full rounded-lg border px-3 py-2.5 sm:py-2 text-base sm:text-sm
+            block w-full rounded-lg border
             bg-white cursor-pointer
             focus:outline-none focus:ring-2 focus:ring-terracotta/15 focus:border-terracotta
             transition-colors
+            ${compact
+              ? 'h-8 px-2.5 py-1.5 text-[13px]'
+              : 'px-3 py-2.5 sm:py-2 text-base sm:text-sm'
+            }
             ${error
               ? 'border-danger focus:ring-danger/15 focus:border-danger'
               : 'border-sand-dark'

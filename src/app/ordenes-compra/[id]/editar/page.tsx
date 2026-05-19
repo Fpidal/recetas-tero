@@ -536,6 +536,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                 />
               )}
               <Select
+                key={`select-insumo-${filtroCategoria}-${selectedBodega}`}
                 label={filtroCategoria === 'Vinos' ? 'Vino' : 'Insumo'}
                 options={[
                   { value: '', label: 'Seleccionar...' },
@@ -613,77 +614,75 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
             </Button>
           </div>
 
-          {/* Form agregar - Desktop */}
-          <div className="hidden lg:flex gap-3 items-end mb-4">
-            <div className="w-44">
-              <Select
-                label="Categoría"
-                options={[
-                  { value: '', label: 'Todas' },
-                  { value: 'Carnes', label: 'Carnes' },
-                  { value: 'Almacen', label: 'Almacén' },
-                  { value: 'Verduras_Frutas', label: 'Verduras y Frutas' },
-                  { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
-                  { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
-                  { value: 'Bebidas', label: 'Bebidas' },
-                  { value: 'Vinos', label: 'Vinos' },
-                ]}
-                value={filtroCategoria}
-                onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setSelectedBodega(''); setPrecioUnitario(''); setPrecioListaVino(''); setDescuentoVino('') }}
-              />
-            </div>
-            {filtroCategoria === 'Vinos' ? (
-              <div className="w-40">
-                <Select
-                  label="Bodega"
-                  options={[
-                    { value: '', label: 'Todas' },
-                    ...bodegasUnicas.map(b => ({ value: b, label: b }))
-                  ]}
-                  value={selectedBodega}
-                  onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo(''); setPrecioUnitario(''); setPrecioListaVino(''); setDescuentoVino('') }}
-                />
-              </div>
-            ) : null}
-            <div className="flex-1">
-              <Select
-                label={filtroCategoria === 'Vinos' ? 'Vino' : 'Insumo'}
-                options={[
-                  { value: '', label: filtroCategoria === 'Vinos' ? 'Seleccionar vino...' : 'Seleccionar insumo...' },
-                  ...(filtroCategoria === 'Vinos'
-                    ? vinosFiltrados.map(v => ({
+          {/* Form agregar - Desktop: Vinos - 2 filas compactas */}
+          {filtroCategoria === 'Vinos' ? (
+            <div className="hidden lg:block space-y-2 mb-3">
+              {/* Fila 1: Categoría, Bodega, Vino */}
+              <div className="flex flex-wrap gap-2 items-end">
+                <div className="w-40">
+                  <Select
+                    compact
+                    label="Categoría"
+                    options={[
+                      { value: '', label: 'Todas' },
+                      { value: 'Carnes', label: 'Carnes' },
+                      { value: 'Almacen', label: 'Almacén' },
+                      { value: 'Verduras_Frutas', label: 'Verduras y Frutas' },
+                      { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
+                      { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
+                      { value: 'Bebidas', label: 'Bebidas' },
+                      { value: 'Vinos', label: 'Vinos' },
+                    ]}
+                    value={filtroCategoria}
+                    onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setSelectedBodega(''); setPrecioUnitario(''); setPrecioListaVino(''); setDescuentoVino('') }}
+                  />
+                </div>
+                <div className="w-36">
+                  <Select
+                    compact
+                    label="Bodega"
+                    options={[
+                      { value: '', label: 'Todas' },
+                      ...bodegasUnicas.map(b => ({ value: b, label: b }))
+                    ]}
+                    value={selectedBodega}
+                    onChange={(e) => { setSelectedBodega(e.target.value); setSelectedInsumo(''); setPrecioUnitario(''); setPrecioListaVino(''); setDescuentoVino('') }}
+                  />
+                </div>
+                <div className="flex-1 min-w-64">
+                  <Select
+                    compact
+                    key={`select-vino-desktop-${selectedBodega}`}
+                    name="select-vino-desktop"
+                    label="Vino"
+                    options={[
+                      { value: '', label: 'Seleccionar vino...' },
+                      ...vinosFiltrados.map(v => ({
                         value: `vino_${v.id}`,
-                        label: `${v.nombre} (${v.cepa}) [${v.unidades_caja} bot]`
+                        label: `${v.nombre} (${v.cepa}) [${v.unidades_caja}]`
                       }))
-                    : (filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
-                        const cant = i.cantidad ? Number(i.cantidad) : 1
-                        const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
-                        const presentacion = cantPaq > 1 ? ` [${cant} x ${cantPaq}]` : ''
-                        return {
-                          value: i.id,
-                          label: `${i.nombre} (${i.unidad_medida})${presentacion}`
-                        }
-                      })
-                  )
-                ]}
-                value={selectedInsumo}
-                onChange={(e) => handleSelectInsumo(e.target.value)}
-              />
-            </div>
-            <div className="w-24">
-              <Input
-                label="Cantidad"
-                type="text"
-                inputMode="decimal"
-                value={cantidad}
-                onChange={(e) => setCantidad(formatearInputNumero(e.target.value))}
-                placeholder="0"
-              />
-            </div>
-            {filtroCategoria === 'Vinos' && selectedInsumo ? (
-              <>
-                <div className="w-28">
+                    ]}
+                    value={selectedInsumo}
+                    onChange={(e) => handleSelectInsumo(e.target.value)}
+                  />
+                </div>
+              </div>
+              {/* Fila 2: Cantidad, P. Lista, Desc %, P. Final, Agregar */}
+              <div className="flex flex-wrap gap-2 items-end">
+                <div className="w-20">
                   <Input
+                    compact
+                    label="Cantidad"
+                    type="text"
+                    inputMode="decimal"
+                    value={cantidad}
+                    onChange={(e) => setCantidad(formatearInputNumero(e.target.value))}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="w-24">
+                  <Input
+                    compact
                     label="P. Lista"
                     type="text"
                     value={precioListaVino}
@@ -691,8 +690,9 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     className="bg-gray-100"
                   />
                 </div>
-                <div className="w-20">
+                <div className="w-16">
                   <Input
+                    compact
                     label="Desc %"
                     type="text"
                     inputMode="decimal"
@@ -701,8 +701,9 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     placeholder="0"
                   />
                 </div>
-                <div className="w-28">
+                <div className="w-24">
                   <Input
+                    compact
                     label="P. Final"
                     type="text"
                     inputMode="decimal"
@@ -711,8 +712,63 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     placeholder="0,00"
                   />
                 </div>
-              </>
-            ) : (
+                <Button onClick={handleAgregarItem} className="h-8 px-3 text-[13px]">
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Agregar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Form agregar - Desktop: Insumos - 1 fila */
+            <div className="hidden lg:flex gap-3 items-end mb-4">
+              <div className="w-44">
+                <Select
+                  label="Categoría"
+                  options={[
+                    { value: '', label: 'Todas' },
+                    { value: 'Carnes', label: 'Carnes' },
+                    { value: 'Almacen', label: 'Almacén' },
+                    { value: 'Verduras_Frutas', label: 'Verduras y Frutas' },
+                    { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
+                    { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
+                    { value: 'Bebidas', label: 'Bebidas' },
+                    { value: 'Vinos', label: 'Vinos' },
+                  ]}
+                  value={filtroCategoria}
+                  onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedInsumo(''); setSelectedBodega(''); setPrecioUnitario(''); setPrecioListaVino(''); setDescuentoVino('') }}
+                />
+              </div>
+              <div className="flex-1">
+                <Select
+                  key={`select-insumo-${filtroCategoria}`}
+                  name="select-insumo-desktop"
+                  label="Insumo"
+                  options={[
+                    { value: '', label: 'Seleccionar insumo...' },
+                    ...(filtroCategoria ? insumos.filter(i => i.categoria === filtroCategoria) : insumos).map(i => {
+                      const cant = i.cantidad ? Number(i.cantidad) : 1
+                      const cantPaq = i.cantidad_por_paquete ? Number(i.cantidad_por_paquete) : 1
+                      const presentacion = cantPaq > 1 ? ` [${cant} x ${cantPaq}]` : ''
+                      return {
+                        value: i.id,
+                        label: `${i.nombre} (${i.unidad_medida})${presentacion}`
+                      }
+                    })
+                  ]}
+                  value={selectedInsumo}
+                  onChange={(e) => handleSelectInsumo(e.target.value)}
+                />
+              </div>
+              <div className="w-24">
+                <Input
+                  label="Cantidad"
+                  type="text"
+                  inputMode="decimal"
+                  value={cantidad}
+                  onChange={(e) => setCantidad(formatearInputNumero(e.target.value))}
+                  placeholder="0"
+                />
+              </div>
               <div className="w-32">
                 <Input
                   label="Precio Unit. ($)"
@@ -723,12 +779,12 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   placeholder="0,00"
                 />
               </div>
-            )}
-            <Button onClick={handleAgregarItem}>
-              <Plus className="w-4 h-4 mr-1" />
-              Agregar
-            </Button>
-          </div>
+              <Button onClick={handleAgregarItem}>
+                <Plus className="w-4 h-4 mr-1" />
+                Agregar
+              </Button>
+            </div>
+          )}
 
           {/* Lista de items */}
           {itemsActivos.length > 0 ? (
@@ -842,65 +898,73 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
-                      <th className="px-4 py-3"></th>
+                      <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-2/5">Insumo</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-24">Cant.</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Precio Unit.</th>
+                      <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase w-14">IVA</th>
+                      <th className="px-3 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Subtotal</th>
+                      <th className="px-2 py-2 w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {itemsActivos.map((item) => (
                       <tr key={item.id} className={item.isNew ? 'bg-green-50' : ''}>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
-                            <Package className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-900">
+                            <Package className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                            <span className="text-xs text-gray-900">
                               {item.insumo_nombre}
-                              {item.contenido > 1 && <span className="text-gray-500"> [{item.contenido} {item.unidad_medida}]</span>}
+                              {item.contenido > 1 && (
+                                <span className="text-gray-500">
+                                  {item.vino_id ? ` [${item.contenido}]` : ` [${item.contenido} ${item.unidad_medida}]`}
+                                </span>
+                              )}
                             </span>
                             {item.isNew && (
-                              <span className="text-xs text-green-600">(nuevo)</span>
+                              <span className="text-[10px] text-green-600">(nuevo)</span>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           <div className="flex items-center gap-1">
                             <input
                               type="text"
                               inputMode="decimal"
                               value={String(item.cantidad).replace('.', ',')}
                               onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
-                              className="w-20 rounded border border-gray-300 px-2 py-1 text-sm font-mono"
+                              className="w-12 h-7 rounded border border-gray-300 px-1.5 text-xs font-mono"
                             />
-                            <select
-                              value={item.unidad_display}
-                              onChange={(e) => handleUnidadDisplayChange(item.id, e.target.value)}
-                              className="text-sm px-1 py-1 border border-gray-300 rounded bg-white cursor-pointer"
-                            >
-                              <option value={item.unidad_medida}>{item.unidad_medida}</option>
-                              {item.unidad_medida !== 'unidad' && <option value="unidad">unidad</option>}
-                            </select>
+                            {item.vino_id ? (
+                              <span className="text-xs text-gray-600">caja</span>
+                            ) : (
+                              <select
+                                value={item.unidad_display}
+                                onChange={(e) => handleUnidadDisplayChange(item.id, e.target.value)}
+                                className="text-xs text-gray-600 bg-gray-100 border-0 rounded px-1 py-0.5 cursor-pointer"
+                              >
+                                <option value={item.unidad_medida}>{item.unidad_medida}</option>
+                                {item.unidad_medida !== 'unidad' && <option value="unidad">unidad</option>}
+                              </select>
+                            )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           <div className="flex items-center">
-                            <span className="text-sm text-gray-500 mr-1">$</span>
+                            <span className="text-xs text-gray-500 mr-0.5">$</span>
                             <input
                               type="text"
                               inputMode="decimal"
                               value={String(item.precio_unitario).replace('.', ',')}
                               onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
-                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm font-mono"
+                              className="w-20 h-7 rounded border border-gray-300 px-1.5 text-xs font-mono"
                             />
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-2 py-2 text-center">
                           <select
                             value={item.iva_porcentaje}
                             onChange={(e) => handleIvaChange(item.id, parseFloat(e.target.value))}
-                            className={`px-2 py-0.5 rounded text-xs font-medium font-mono border-0 cursor-pointer ${
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-medium font-mono border-0 cursor-pointer ${
                               item.iva_porcentaje === 21 ? 'bg-blue-100 text-blue-800' :
                               item.iva_porcentaje === 10.5 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-green-100 text-green-800'
@@ -911,37 +975,38 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                             <option value={0}>0%</option>
                           </select>
                         </td>
-                        <td className="px-4 py-3 text-right font-medium font-mono">
+                        <td className="px-3 py-2 text-right text-xs font-medium font-mono">
                           {formatearMoneda(item.subtotal)}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEliminarItem(item.id)}
+                            className="p-1"
                           >
-                            <Trash2 className="w-4 h-4 text-red-500" />
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
                           </Button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-gray-50">
+                  <tfoot className="bg-gray-50 text-xs">
                     <tr>
-                      <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
+                      <td colSpan={4} className="px-3 py-1.5 text-right text-gray-600">
                         Subtotal Neto:
                       </td>
-                      <td className="px-4 py-2 text-right text-sm text-gray-900 font-mono">
+                      <td className="px-3 py-1.5 text-right text-gray-900 font-mono">
                         {formatearMoneda(subtotalNeto)}
                       </td>
                       <td></td>
                     </tr>
                     {totalIva21 > 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                        <td colSpan={4} className="px-3 py-1 text-right text-gray-600">
                           IVA 21%:
                         </td>
-                        <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
+                        <td className="px-3 py-1 text-right text-gray-900 font-mono">
                           {formatearMoneda(totalIva21)}
                         </td>
                         <td></td>
@@ -949,10 +1014,10 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     )}
                     {totalIva105 > 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                        <td colSpan={4} className="px-3 py-1 text-right text-gray-600">
                           IVA 10.5%:
                         </td>
-                        <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
+                        <td className="px-3 py-1 text-right text-gray-900 font-mono">
                           {formatearMoneda(totalIva105)}
                         </td>
                         <td></td>
@@ -960,20 +1025,20 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     )}
                     {totalIva0 > 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                        <td colSpan={4} className="px-3 py-1 text-right text-gray-600">
                           Exento (0%):
                         </td>
-                        <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
+                        <td className="px-3 py-1 text-right text-gray-900 font-mono">
                           {formatearMoneda(totalIva0)}
                         </td>
                         <td></td>
                       </tr>
                     )}
                     <tr className="border-t border-gray-300">
-                      <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
+                      <td colSpan={4} className="px-3 py-2 text-right font-medium text-gray-900">
                         Total:
                       </td>
-                      <td className="px-4 py-3 text-right text-lg font-bold text-green-600 font-mono">
+                      <td className="px-3 py-2 text-right text-sm font-bold text-green-600 font-mono">
                         {formatearMoneda(total)}
                       </td>
                       <td></td>

@@ -142,14 +142,20 @@ export default function NuevaOrdenCompraPage() {
     }
   }
 
+  function handlePrecioListaVinoChange(nuevoPrecio: string) {
+    setPrecioListaVino(nuevoPrecio)
+    const precioListaNum = parsearNumero(nuevoPrecio)
+    const descuentoNum = parsearNumero(descuentoVino)
+    const precioFinal = precioListaNum * (1 - descuentoNum / 100)
+    setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
+  }
+
   function handleDescuentoVinoChange(nuevoDescuento: string) {
     setDescuentoVino(nuevoDescuento)
     const descuentoNum = parsearNumero(nuevoDescuento)
     const precioListaNum = parsearNumero(precioListaVino)
-    if (precioListaNum > 0) {
-      const precioFinal = precioListaNum * (1 - descuentoNum / 100)
-      setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
-    }
+    const precioFinal = precioListaNum * (1 - descuentoNum / 100)
+    setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
   }
 
   function handleAgregarItem() {
@@ -705,9 +711,10 @@ export default function NuevaOrdenCompraPage() {
                     compact
                     label="P. Lista"
                     type="text"
+                    inputMode="decimal"
                     value={precioListaVino}
-                    disabled
-                    className="bg-gray-100"
+                    onChange={(e) => handlePrecioListaVinoChange(formatearInputNumero(e.target.value))}
+                    placeholder="0,00"
                   />
                 </div>
                 <div className="w-16">

@@ -200,6 +200,14 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     }
   }
 
+  function handlePrecioListaVinoChange(nuevoPrecio: string) {
+    setPrecioListaVino(nuevoPrecio)
+    const precioListaNum = parsearNumero(nuevoPrecio)
+    const descuentoNum = parsearNumero(descuentoVino)
+    const precioFinal = precioListaNum * (1 - descuentoNum / 100)
+    setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
+  }
+
   function handleAgregarItem() {
     if (!selectedInsumo || !cantidad || !precioUnitario) {
       alert('Completá todos los campos del item')
@@ -567,9 +575,10 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                 <Input
                   label="P. Lista"
                   type="text"
+                  inputMode="decimal"
                   value={precioListaVino}
-                  disabled
-                  className="bg-gray-100"
+                  onChange={(e) => handlePrecioListaVinoChange(formatearInputNumero(e.target.value))}
+                  placeholder="0,00"
                 />
                 <Input
                   label="Desc %"
@@ -686,9 +695,10 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     compact
                     label="P. Lista"
                     type="text"
+                    inputMode="decimal"
                     value={precioListaVino}
-                    disabled
-                    className="bg-gray-100"
+                    onChange={(e) => handlePrecioListaVinoChange(formatearInputNumero(e.target.value))}
+                    placeholder="0,00"
                   />
                 </div>
                 <div className="w-16">

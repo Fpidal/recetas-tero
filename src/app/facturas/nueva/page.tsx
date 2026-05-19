@@ -909,7 +909,7 @@ export default function NuevaFacturaPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Insumo</th>
-                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-14">Cant.</th>
+                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-14">Cont.</th>
                     <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-24">Cantidad</th>
                     <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Precio</th>
                     <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase w-14">Dto%</th>

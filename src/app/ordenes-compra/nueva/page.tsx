@@ -113,19 +113,20 @@ export default function NuevaOrdenCompraPage() {
     // Verificar si es un vino
     if (filtroCategoria === 'Vinos') {
       const vino = vinos.find(v => v.id === insumoId)
-      if (vino && vino.precio_caja) {
-        // Guardar precio de lista (full)
-        setPrecioListaVino(vino.precio_caja.toFixed(2).replace('.', ','))
+      if (vino) {
+        const precioCaja = vino.precio_caja || 0
+        // Guardar precio de lista (puede ser 0)
+        setPrecioListaVino(precioCaja.toFixed(2).replace('.', ','))
         // Guardar descuento del vino
         const descuento = vino.descuento_porcentaje || 0
         setDescuentoVino(String(descuento).replace('.', ','))
-        // Calcular precio final con descuento
-        const precioFinal = vino.precio_caja * (1 - descuento / 100)
+        // Calcular precio final con descuento (editable si es 0)
+        const precioFinal = precioCaja * (1 - descuento / 100)
         setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
       } else {
-        setPrecioListaVino('')
-        setDescuentoVino('')
-        setPrecioUnitario('')
+        setPrecioListaVino('0')
+        setDescuentoVino('0')
+        setPrecioUnitario('0')
       }
       return
     }

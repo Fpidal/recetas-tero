@@ -24,7 +24,8 @@ interface Insumo {
 
 interface ItemFactura {
   id: string
-  insumo_id: string
+  insumo_id: string | null
+  vino_id: string | null
   insumo_nombre: string
   unidad_medida: string
   cantidad: number
@@ -77,8 +78,9 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         .select(`
           id, proveedor_id, numero_factura, fecha, notas, percepciones,
           factura_items (
-            id, insumo_id, cantidad, precio_unitario, descuento, subtotal,
-            insumos (nombre, unidad_medida, iva_porcentaje)
+            id, insumo_id, vino_id, cantidad, precio_unitario, descuento, subtotal,
+            insumos (nombre, unidad_medida, iva_porcentaje),
+            vinos (bodega, nombre, cepa)
           )
         `)
         .eq('id', id)
@@ -120,13 +122,24 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
     const itemsData: ItemFactura[] = (facturaRes.data.factura_items as any[]).map((item: any) => {
       const subtotal = parseFloat(item.subtotal)
-      const ivaPorcentaje = item.insumos?.iva_porcentaje ?? 21
+      const esVino = !!item.vino_id
+      const ivaPorcentaje = esVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
+
+      // Nombre del item: vino o insumo
+      let nombreItem = 'Desconocido'
+      if (esVino && item.vinos) {
+        nombreItem = `${item.vinos.nombre} (${item.vinos.cepa})`
+      } else if (item.insumos) {
+        nombreItem = item.insumos.nombre
+      }
+
       return {
         id: item.id,
         insumo_id: item.insumo_id,
-        insumo_nombre: item.insumos?.nombre || 'Desconocido',
-        unidad_medida: item.insumos?.unidad_medida || '',
+        vino_id: item.vino_id,
+        insumo_nombre: nombreItem,
+        unidad_medida: esVino ? 'caja' : (item.insumos?.unidad_medida || ''),
         cantidad: parseFloat(item.cantidad),
         precio_unitario: parseFloat(item.precio_unitario),
         descuento: parseFloat(item.descuento) || 0,
@@ -197,6 +210,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     const nuevoItem: ItemFactura = {
       id: crypto.randomUUID(),
       insumo_id: insumo.id,
+      vino_id: null,
       insumo_nombre: insumo.nombre,
       unidad_medida: insumo.unidad_medida,
       cantidad: cantidadNum,
@@ -368,7 +382,8 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
     if (itemsActivos.length > 0) {
       const insertData = itemsActivos.map(item => ({
         factura_id: id,
-        insumo_id: item.insumo_id,
+        insumo_id: item.insumo_id || null,
+        vino_id: item.vino_id || null,
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
         descuento: item.descuento || 0,

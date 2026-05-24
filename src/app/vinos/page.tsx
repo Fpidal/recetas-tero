@@ -318,11 +318,12 @@ export default function VinosPage() {
     const headerRow = rows[headerRowIndex] as string[]
 
     // Buscar columnas de código, producto y precio (flexible)
-    let codigoCol = -1, productoCol = -1, precioCol = -1
+    let codigoCol = -1, productoCol = -1, precioCol = -1, precioColPriority: number | undefined
 
     // Variantes de nombres de columna (en orden de prioridad)
     const variantesProducto = ['producto', 'descripción', 'descripcion', 'nombre', 'detalle', 'description', 'item']
-    const variantesPrecio = ['final unit', 'final botella', 'precio final', 'p. final', 'precio', 'price', 'importe', 'total']
+    // Priorizar precio por caja sobre precio por unidad
+    const variantesPrecio = ['precio final', 'final caja', 'precio caja', 'p. final', 'final unit', 'final botella', 'precio', 'price', 'importe', 'total']
     const variantesCodigo = ['código', 'codigo', 'cód.', 'cód', 'cod.', 'cod', 'code', 'sku', 'ref']
 
     headerRow.forEach((cell, idx) => {
@@ -348,12 +349,14 @@ export default function VinosPage() {
         }
       }
 
-      // Buscar columna de precio (priorizar "final" sobre "precio" genérico)
-      for (const v of variantesPrecio) {
+      // Buscar columna de precio (respetar orden de prioridad)
+      for (let vi = 0; vi < variantesPrecio.length; vi++) {
+        const v = variantesPrecio[vi]
         if (cellStr === v || cellStr.includes(v)) {
-          // Si ya encontramos una columna de precio, solo reemplazar si esta es más específica
-          if (precioCol === -1 || v.includes('final')) {
+          // Solo asignar si no hay columna o esta tiene mayor prioridad (índice menor)
+          if (precioCol === -1 || vi < (precioColPriority ?? Infinity)) {
             precioCol = idx
+            precioColPriority = vi
           }
           break
         }
@@ -401,10 +404,19 @@ export default function VinosPage() {
         if (matchedVino) matchType = 'codigo'
       }
 
-      // Si no hay match por código, buscar por nombre
+      // Si no hay match por código, buscar por nombre (considerando cepa)
       if (!matchedVino) {
+        // Detectar si el producto del Excel contiene una cepa conocida
+        const productoLower = producto.toLowerCase()
+        const cepaDetectada = CEPAS.find(c => productoLower.includes(c.toLowerCase()))
+
         let mejorSimilitud = 0
         for (const vino of vinosBodega) {
+          // Si detectamos una cepa en el Excel, solo matchear con vinos de esa cepa
+          if (cepaDetectada && vino.cepa.toLowerCase() !== cepaDetectada.toLowerCase()) {
+            continue
+          }
+
           const similitud = calcularSimilitud(producto, vino.nombre)
           if (similitud > mejorSimilitud && similitud >= 0.5) {
             mejorSimilitud = similitud

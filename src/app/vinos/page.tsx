@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen, FileText, Star } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen, FileText, Star, Upload } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Modal } from '@/components/ui'
-import { parsearNumero } from '@/lib/formato-numeros'
+import { parsearNumero, formatearMoneda } from '@/lib/formato-numeros'
 import { Vino, CartaVino } from '@/types/database'
 import { generarPDFCartaVinos } from '@/lib/generar-pdf-carta-vinos'
+import * as XLSX from 'xlsx'
 
 const CATEGORIAS_VINO = ['Tintos', 'Blancos', 'Espumantes']
 
@@ -35,6 +36,7 @@ const ZONAS = [
 interface VinoForm {
   bodega: string
   nombre: string
+  codigo_proveedor: string
   categoria: string
   cepa: string
   zona: string
@@ -44,7 +46,7 @@ interface VinoForm {
 }
 
 const initialForm: VinoForm = {
-  bodega: '', nombre: '', categoria: '', cepa: '', zona: '',
+  bodega: '', nombre: '', codigo_proveedor: '', categoria: '', cepa: '', zona: '',
   precio_caja: '', unidades_caja: '6', descuento_porcentaje: '50'
 }
 
@@ -74,6 +76,24 @@ export default function VinosPage() {
   // Carta state
   const [editingCartaId, setEditingCartaId] = useState<string | null>(null)
   const [cartaForm, setCartaForm] = useState({ precio_carta: '', margen_objetivo: '30' })
+
+  // Importar precios state
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importBodega, setImportBodega] = useState('')
+  const [importData, setImportData] = useState<{
+    codigo: string
+    producto: string
+    vinoId: string | null
+    vinoNombre: string
+    precioAnterior: number
+    precioNuevo: number
+    incluir: boolean
+    matchType: 'codigo' | 'nombre' | 'sin_match'
+  }[]>([])
+  const [isImporting, setIsImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ actualizados: number; sinMatch: number; codigosGuardados: number } | null>(null)
+  const [guardarCodigos, setGuardarCodigos] = useState(true)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchVinos()
@@ -130,7 +150,9 @@ export default function VinosPage() {
     if (vino) {
       setEditingId(vino.id)
       setForm({
-        bodega: vino.bodega, nombre: vino.nombre, categoria: vino.categoria || '',
+        bodega: vino.bodega, nombre: vino.nombre,
+        codigo_proveedor: (vino as any).codigo_proveedor || '',
+        categoria: vino.categoria || '',
         cepa: vino.cepa, zona: vino.zona || '',
         precio_caja: vino.precio_caja.toLocaleString('es-AR'),
         unidades_caja: vino.unidades_caja.toString(),
@@ -160,6 +182,7 @@ export default function VinosPage() {
     const descuentoValue = parsearNumero(form.descuento_porcentaje)
     const vinoData = {
       bodega: form.bodega.trim(), nombre: form.nombre.trim(),
+      codigo_proveedor: form.codigo_proveedor.trim() || null,
       categoria: form.categoria, cepa: form.cepa, zona: form.zona || null,
       precio_caja: parsearNumero(form.precio_caja),
       unidades_caja: parseInt(form.unidades_caja) || 6,
@@ -237,6 +260,159 @@ export default function VinosPage() {
     await generarPDFCartaVinos()
   }
 
+  // === IMPORT FUNCTIONS ===
+  function handleCloseImportModal() {
+    setShowImportModal(false)
+    setImportBodega('')
+    setImportData([])
+    setImportResult(null)
+    setGuardarCodigos(true)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function normalizeString(str: string): string {
+    return str.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '')
+  }
+
+  function calcularSimilitud(str1: string, str2: string): number {
+    const s1 = normalizeString(str1)
+    const s2 = normalizeString(str2)
+    if (s1 === s2) return 1
+    if (s1.includes(s2) || s2.includes(s1)) return 0.8
+    // Palabras en común
+    const words1 = s1.split(/\s+/).filter(w => w.length > 2)
+    const words2 = s2.split(/\s+/).filter(w => w.length > 2)
+    const common = words1.filter(w => words2.some(w2 => w2.includes(w) || w.includes(w2)))
+    return common.length / Math.max(words1.length, words2.length, 1)
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !importBodega) return
+
+    const buffer = await file.arrayBuffer()
+    const workbook = XLSX.read(buffer, { type: 'array' })
+    const sheet = workbook.Sheets[workbook.SheetNames[0]]
+    const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+
+    // Buscar columnas de código, producto y precio
+    let codigoCol = -1, productoCol = -1, precioCol = -1
+    const headerRow = rows[0] as string[]
+    headerRow.forEach((cell, idx) => {
+      const cellStr = String(cell || '').toLowerCase()
+      if (cellStr.includes('cod') || cellStr.includes('código') || cellStr.includes('sku')) codigoCol = idx
+      if (cellStr.includes('producto') || cellStr.includes('nombre') || cellStr.includes('vino') || cellStr.includes('descripcion')) productoCol = idx
+      if (cellStr.includes('precio') || cellStr.includes('lista') || cellStr.includes('pvp')) precioCol = idx
+    })
+
+    if (productoCol === -1 || precioCol === -1) {
+      alert('No se encontraron columnas de Producto y Precio en el archivo')
+      return
+    }
+
+    // Obtener vinos de la bodega seleccionada
+    const vinosBodega = vinos.filter(v => v.bodega === importBodega)
+
+    const items: typeof importData = []
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i] as any[]
+      const codigo = codigoCol >= 0 ? String(row[codigoCol] || '').trim() : ''
+      const producto = String(row[productoCol] || '').trim()
+      const precioRaw = row[precioCol]
+
+      if (!producto || !precioRaw) continue
+
+      // Parsear precio (puede venir como número o string con formato)
+      let precioNuevo = 0
+      if (typeof precioRaw === 'number') {
+        precioNuevo = precioRaw
+      } else {
+        const precioStr = String(precioRaw).replace(/[^0-9,.]/g, '').replace(',', '.')
+        precioNuevo = parseFloat(precioStr) || 0
+      }
+
+      if (precioNuevo === 0) continue
+
+      // Buscar match por código primero
+      let matchedVino: Vino | null = null
+      let matchType: 'codigo' | 'nombre' | 'sin_match' = 'sin_match'
+
+      if (codigo) {
+        matchedVino = vinosBodega.find(v =>
+          (v as any).codigo_proveedor?.toLowerCase() === codigo.toLowerCase()
+        ) || null
+        if (matchedVino) matchType = 'codigo'
+      }
+
+      // Si no hay match por código, buscar por nombre
+      if (!matchedVino) {
+        let mejorSimilitud = 0
+        for (const vino of vinosBodega) {
+          const similitud = calcularSimilitud(producto, vino.nombre)
+          if (similitud > mejorSimilitud && similitud >= 0.5) {
+            mejorSimilitud = similitud
+            matchedVino = vino
+            matchType = 'nombre'
+          }
+        }
+      }
+
+      items.push({
+        codigo,
+        producto,
+        vinoId: matchedVino?.id || null,
+        vinoNombre: matchedVino ? `${matchedVino.nombre} (${matchedVino.cepa})` : '',
+        precioAnterior: matchedVino?.precio_caja || 0,
+        precioNuevo,
+        incluir: matchedVino !== null,
+        matchType
+      })
+    }
+
+    setImportData(items)
+  }
+
+  async function handleActualizarPrecios() {
+    const itemsToUpdate = importData.filter(item => item.incluir && item.vinoId)
+    if (itemsToUpdate.length === 0) {
+      alert('No hay vinos para actualizar')
+      return
+    }
+
+    setIsImporting(true)
+    let actualizados = 0
+    let codigosGuardados = 0
+
+    for (const item of itemsToUpdate) {
+      const updateData: { precio_caja: number; codigo_proveedor?: string } = {
+        precio_caja: item.precioNuevo
+      }
+
+      // Si está activado guardar códigos y hay código en el Excel
+      if (guardarCodigos && item.codigo) {
+        updateData.codigo_proveedor = item.codigo
+        codigosGuardados++
+      }
+
+      const { error } = await supabase
+        .from('vinos')
+        .update(updateData)
+        .eq('id', item.vinoId)
+
+      if (!error) actualizados++
+    }
+
+    setImportResult({
+      actualizados,
+      sinMatch: importData.filter(item => !item.vinoId).length,
+      codigosGuardados
+    })
+    setIsImporting(false)
+    fetchVinos()
+  }
+
   // Helpers
   function calcularValores(precioCaja: number, unidadesCaja: number, descuentoPorcentaje: number) {
     const precioUnidad = unidadesCaja > 0 ? precioCaja / unidadesCaja : 0
@@ -285,10 +461,20 @@ export default function VinosPage() {
           <p className="text-xs text-gray-600">Gestión de vinos por bodega</p>
         </div>
         {activeTab === 'vinos' && (
-          <Button onClick={() => handleOpenModal()} size="sm" className="w-full sm:w-auto text-xs">
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            Nuevo Vino
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-md flex items-center justify-center gap-1.5 text-white"
+              style={{ backgroundColor: '#7a7a3a' }}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Importar Precios
+            </button>
+            <Button onClick={() => handleOpenModal()} size="sm" className="flex-1 sm:flex-none text-xs">
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Nuevo Vino
+            </Button>
+          </div>
         )}
       </div>
 
@@ -689,6 +875,7 @@ export default function VinosPage() {
       {/* Modal Vino */}
       <Modal isOpen={showModal} onClose={handleCloseModal} title={editingId ? 'Editar Vino' : 'Nuevo Vino'}>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Fila 1: Bodega + Nombre */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Bodega *</label>
@@ -705,7 +892,14 @@ export default function VinosPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          {/* Fila 2: Código proveedor + Categoría */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Código Proveedor</label>
+              <input type="text" value={form.codigo_proveedor} onChange={(e) => setForm({ ...form, codigo_proveedor: e.target.value })}
+                placeholder="Ej: SRM1, SGVU1*" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500" />
+              <p className="text-xs text-gray-500 mt-1">Código de la lista de precios de la bodega</p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
               <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}
@@ -714,6 +908,10 @@ export default function VinosPage() {
                 {CATEGORIAS_VINO.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
+          </div>
+
+          {/* Fila 3: Cepa + Zona */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Cepa *</label>
               <select value={form.cepa} onChange={(e) => setForm({ ...form, cepa: e.target.value })}
@@ -802,6 +1000,181 @@ export default function VinosPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal Importar Precios */}
+      <Modal isOpen={showImportModal} onClose={handleCloseImportModal} title="Importar Precios de Bodega">
+        <div className="space-y-4">
+          {/* Paso 1: Seleccionar bodega */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bodega *</label>
+            <select
+              value={importBodega}
+              onChange={(e) => {
+                setImportBodega(e.target.value)
+                setImportData([])
+                setImportResult(null)
+                if (fileInputRef.current) fileInputRef.current.value = ''
+              }}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">Seleccionar bodega...</option>
+              {bodegas.map(b => <option key={b.id} value={b.nombre}>{b.nombre}</option>)}
+            </select>
+          </div>
+
+          {/* Paso 2: Subir archivo */}
+          {importBodega && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Archivo de precios (.xlsx)</label>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">El archivo debe tener columnas de Código (opcional), Producto y Precio</p>
+            </div>
+          )}
+
+          {/* Paso 3: Preview de datos */}
+          {importData.length > 0 && !importResult && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-gray-700">
+                  Vista previa ({importData.filter(i => i.incluir).length} de {importData.length} vinos a actualizar)
+                </p>
+                <div className="flex gap-2 text-[10px]">
+                  <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">Por código</span>
+                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">Por nombre</span>
+                  <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">Sin match</span>
+                </div>
+              </div>
+
+              {/* Toggle guardar códigos */}
+              <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={guardarCodigos}
+                  onChange={(e) => setGuardarCodigos(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <span className="text-sm text-gray-700">Guardar códigos de proveedor</span>
+                <span className="text-xs text-gray-500">(para matching automático en próximas importaciones)</span>
+              </label>
+
+              <div className="max-h-64 overflow-y-auto border rounded-md">
+                <table className="min-w-full divide-y divide-gray-200 text-xs">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500 w-8"></th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Código</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Excel</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500">Sistema</th>
+                      <th className="px-2 py-1.5 text-right font-medium text-gray-500">Anterior</th>
+                      <th className="px-2 py-1.5 text-right font-medium text-gray-500">Nuevo</th>
+                      <th className="px-2 py-1.5 text-right font-medium text-gray-500">Dif</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {importData.map((item, idx) => {
+                      const diferencia = item.precioAnterior > 0
+                        ? ((item.precioNuevo - item.precioAnterior) / item.precioAnterior) * 100
+                        : 0
+                      return (
+                        <tr key={idx} className={!item.vinoId ? 'bg-gray-50 opacity-60' : ''}>
+                          <td className="px-2 py-1.5">
+                            <input
+                              type="checkbox"
+                              checked={item.incluir}
+                              disabled={!item.vinoId}
+                              onChange={() => {
+                                const newData = [...importData]
+                                newData[idx].incluir = !newData[idx].incluir
+                                setImportData(newData)
+                              }}
+                              className="w-3.5 h-3.5 rounded border-gray-300 text-purple-600"
+                            />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <span className="font-mono text-gray-600">{item.codigo || '-'}</span>
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <span className="text-gray-900">{item.producto}</span>
+                          </td>
+                          <td className="px-2 py-1.5">
+                            {item.vinoId ? (
+                              <span className={`px-1 py-0.5 rounded ${
+                                item.matchType === 'codigo' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {item.vinoNombre}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic">Sin match</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-1.5 text-right font-mono text-gray-500">
+                            {item.precioAnterior > 0 ? fmt(item.precioAnterior) : '-'}
+                          </td>
+                          <td className="px-2 py-1.5 text-right font-mono font-medium">
+                            {fmt(item.precioNuevo)}
+                          </td>
+                          <td className="px-2 py-1.5 text-right font-mono">
+                            {item.precioAnterior > 0 && (
+                              <span className={diferencia > 0 ? 'text-red-600' : diferencia < 0 ? 'text-green-600' : 'text-gray-500'}>
+                                {diferencia > 0 ? '+' : ''}{diferencia.toFixed(1)}%
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t mt-4">
+                <Button type="button" variant="secondary" onClick={handleCloseImportModal}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleActualizarPrecios}
+                  disabled={isImporting || importData.filter(i => i.incluir).length === 0}
+                  className="text-white"
+                  style={{ backgroundColor: '#7a7a3a' }}
+                >
+                  {isImporting ? 'Actualizando...' : `Actualizar ${importData.filter(i => i.incluir).length} precios`}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Resultado */}
+          {importResult && (
+            <div className="text-center py-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Save className="w-6 h-6 text-green-600" />
+              </div>
+              <p className="text-lg font-semibold text-gray-900 mb-1">
+                {importResult.actualizados} precio{importResult.actualizados !== 1 ? 's' : ''} actualizado{importResult.actualizados !== 1 ? 's' : ''}
+              </p>
+              {importResult.codigosGuardados > 0 && (
+                <p className="text-sm text-green-600">
+                  {importResult.codigosGuardados} código{importResult.codigosGuardados !== 1 ? 's' : ''} de proveedor guardado{importResult.codigosGuardados !== 1 ? 's' : ''}
+                </p>
+              )}
+              {importResult.sinMatch > 0 && (
+                <p className="text-sm text-gray-500">
+                  {importResult.sinMatch} producto{importResult.sinMatch !== 1 ? 's' : ''} sin match
+                </p>
+              )}
+              <Button onClick={handleCloseImportModal} className="mt-4">
+                Cerrar
+              </Button>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   )

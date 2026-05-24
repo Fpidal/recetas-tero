@@ -297,18 +297,52 @@ export default function VinosPage() {
     const sheet = workbook.Sheets[workbook.SheetNames[0]]
     const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 })
 
-    // Buscar columnas de código, producto y precio
+    // Buscar columnas de código, producto y precio (flexible)
     let codigoCol = -1, productoCol = -1, precioCol = -1
     const headerRow = rows[0] as string[]
+
+    // Variantes de nombres de columna (en orden de prioridad)
+    const variantesProducto = ['producto', 'descripción', 'descripcion', 'nombre', 'detalle', 'description', 'item']
+    const variantesPrecio = ['final unit', 'final botella', 'precio final', 'p. final', 'precio', 'price', 'importe', 'total']
+    const variantesCodigo = ['código', 'codigo', 'cód.', 'cód', 'cod.', 'cod', 'code', 'sku', 'ref']
+
     headerRow.forEach((cell, idx) => {
-      const cellStr = String(cell || '').toLowerCase()
-      if (cellStr.includes('cod') || cellStr.includes('código') || cellStr.includes('sku')) codigoCol = idx
-      if (cellStr.includes('producto') || cellStr.includes('nombre') || cellStr.includes('vino') || cellStr.includes('descripcion')) productoCol = idx
-      if (cellStr.includes('precio') || cellStr.includes('lista') || cellStr.includes('pvp')) precioCol = idx
+      const cellStr = String(cell || '').toLowerCase().trim()
+
+      // Buscar columna de código
+      if (codigoCol === -1) {
+        for (const v of variantesCodigo) {
+          if (cellStr === v || cellStr.startsWith(v + ' ') || cellStr.endsWith(' ' + v)) {
+            codigoCol = idx
+            break
+          }
+        }
+      }
+
+      // Buscar columna de producto
+      if (productoCol === -1) {
+        for (const v of variantesProducto) {
+          if (cellStr === v || cellStr.includes(v)) {
+            productoCol = idx
+            break
+          }
+        }
+      }
+
+      // Buscar columna de precio (priorizar "final" sobre "precio" genérico)
+      for (const v of variantesPrecio) {
+        if (cellStr === v || cellStr.includes(v)) {
+          // Si ya encontramos una columna de precio, solo reemplazar si esta es más específica
+          if (precioCol === -1 || v.includes('final')) {
+            precioCol = idx
+          }
+          break
+        }
+      }
     })
 
     if (productoCol === -1 || precioCol === -1) {
-      alert('No se encontraron columnas de Producto y Precio en el archivo')
+      alert('No se encontraron columnas de Producto y Precio en el archivo.\n\nColumnas detectadas: ' + headerRow.join(', '))
       return
     }
 

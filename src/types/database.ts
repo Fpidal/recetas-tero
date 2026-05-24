@@ -252,6 +252,7 @@ export interface Database {
           id: string
           bodega: string
           nombre: string
+          codigo_proveedor: string | null
           categoria: string
           cepa: string
           zona: string | null

@@ -151,7 +151,7 @@ export default function VinosPage() {
       setEditingId(vino.id)
       setForm({
         bodega: vino.bodega, nombre: vino.nombre,
-        codigo_proveedor: (vino as any).codigo_proveedor || '',
+        codigo_proveedor: vino.codigo_proveedor || '',
         categoria: vino.categoria || '',
         cepa: vino.cepa, zona: vino.zona || '',
         precio_caja: vino.precio_caja.toLocaleString('es-AR'),
@@ -399,7 +399,7 @@ export default function VinosPage() {
 
       if (codigo) {
         matchedVino = vinosBodega.find(v =>
-          (v as any).codigo_proveedor?.toLowerCase() === codigo.toLowerCase()
+          v.codigo_proveedor?.toLowerCase() === codigo.toLowerCase()
         ) || null
         if (matchedVino) matchType = 'codigo'
       }

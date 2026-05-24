@@ -257,6 +257,8 @@ export interface Database {
           cepa: string
           zona: string | null
           precio_caja: number
+          precio_caja_anterior: number | null
+          fecha_lista_precios: string | null
           unidades_caja: number
           descuento_porcentaje: number
           activo: boolean

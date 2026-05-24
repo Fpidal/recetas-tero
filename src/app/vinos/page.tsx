@@ -70,6 +70,7 @@ export default function VinosPage() {
   const [filtroZona, setFiltroZona] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingVino, setEditingVino] = useState<Vino | null>(null)
   const [form, setForm] = useState<VinoForm>(initialForm)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -80,6 +81,7 @@ export default function VinosPage() {
   // Importar precios state
   const [showImportModal, setShowImportModal] = useState(false)
   const [importBodega, setImportBodega] = useState('')
+  const [importFechaLista, setImportFechaLista] = useState('')
   const [importData, setImportData] = useState<{
     codigo: string
     producto: string
@@ -149,6 +151,7 @@ export default function VinosPage() {
   function handleOpenModal(vino?: Vino) {
     if (vino) {
       setEditingId(vino.id)
+      setEditingVino(vino)
       setForm({
         bodega: vino.bodega, nombre: vino.nombre,
         codigo_proveedor: vino.codigo_proveedor || '',
@@ -160,6 +163,7 @@ export default function VinosPage() {
       })
     } else {
       setEditingId(null)
+      setEditingVino(null)
       setForm(initialForm)
     }
     setShowModal(true)
@@ -167,6 +171,7 @@ export default function VinosPage() {
 
   function handleCloseModal() {
     setShowModal(false)
+    setEditingVino(null)
     setEditingId(null)
     setForm(initialForm)
   }
@@ -264,6 +269,7 @@ export default function VinosPage() {
   function handleCloseImportModal() {
     setShowImportModal(false)
     setImportBodega('')
+    setImportFechaLista('')
     setImportData([])
     setImportResult(null)
     setGuardarCodigos(true)
@@ -453,8 +459,23 @@ export default function VinosPage() {
     let codigosGuardados = 0
 
     for (const item of itemsToUpdate) {
-      const updateData: { precio_caja: number; codigo_proveedor?: string } = {
+      const updateData: {
+        precio_caja: number
+        precio_caja_anterior?: number
+        fecha_lista_precios?: string
+        codigo_proveedor?: string
+      } = {
         precio_caja: item.precioNuevo
+      }
+
+      // Guardar precio anterior si hay cambio
+      if (item.precioAnterior > 0 && item.precioAnterior !== item.precioNuevo) {
+        updateData.precio_caja_anterior = item.precioAnterior
+      }
+
+      // Guardar fecha de lista de precios
+      if (importFechaLista) {
+        updateData.fecha_lista_precios = importFechaLista
       }
 
       // Si está activado guardar códigos y hay código en el Excel
@@ -965,7 +986,6 @@ export default function VinosPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Código Proveedor</label>
               <input type="text" value={form.codigo_proveedor} onChange={(e) => setForm({ ...form, codigo_proveedor: e.target.value })}
                 placeholder="Ej: SRM1, SGVU1*" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500" />
-              <p className="text-xs text-gray-500 mt-1">Código de la lista de precios de la bodega</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
@@ -976,6 +996,36 @@ export default function VinosPage() {
               </select>
             </div>
           </div>
+
+          {/* Info de última actualización de precios (solo al editar) */}
+          {editingVino?.fecha_lista_precios && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-blue-600 font-medium">Última lista de precios</p>
+                  <p className="text-sm text-blue-900">
+                    {new Date(editingVino.fecha_lista_precios).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </p>
+                </div>
+                {editingVino.precio_caja_anterior && editingVino.precio_caja_anterior !== editingVino.precio_caja && (
+                  <div className="text-right">
+                    <p className="text-xs text-blue-600 font-medium">Variación</p>
+                    {(() => {
+                      const variacion = ((editingVino.precio_caja - editingVino.precio_caja_anterior) / editingVino.precio_caja_anterior) * 100
+                      return (
+                        <p className={`text-sm font-semibold font-mono ${variacion > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {variacion > 0 ? '+' : ''}{variacion.toFixed(1)}%
+                          <span className="text-xs text-gray-500 ml-1">
+                            (ant: ${editingVino.precio_caja_anterior.toLocaleString('es-AR')})
+                          </span>
+                        </p>
+                      )
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Fila 3: Cepa + Zona */}
           <div className="grid grid-cols-2 gap-3">
@@ -1090,7 +1140,21 @@ export default function VinosPage() {
             </select>
           </div>
 
-          {/* Paso 2: Subir archivo */}
+          {/* Paso 2: Fecha de lista de precios */}
+          {importBodega && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de lista de precios</label>
+              <input
+                type="date"
+                value={importFechaLista}
+                onChange={(e) => setImportFechaLista(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Fecha de la lista de precios del proveedor</p>
+            </div>
+          )}
+
+          {/* Paso 3: Subir archivo */}
           {importBodega && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Archivo de precios (.xlsx)</label>

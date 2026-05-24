@@ -297,9 +297,28 @@ export default function VinosPage() {
     const sheet = workbook.Sheets[workbook.SheetNames[0]]
     const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 })
 
+    // Buscar la fila de encabezados (primera fila con 4+ celdas no vacías en las primeras 15 filas)
+    let headerRowIndex = -1
+    for (let i = 0; i < Math.min(15, rows.length); i++) {
+      const row = rows[i] as any[]
+      if (!row) continue
+      const nonEmptyCells = row.filter(cell => cell !== null && cell !== undefined && String(cell).trim() !== '').length
+      if (nonEmptyCells >= 4) {
+        headerRowIndex = i
+        break
+      }
+    }
+
+    if (headerRowIndex === -1) {
+      const debugRows = rows.slice(0, 5).map((r, i) => `Fila ${i + 1}: ${(r || []).slice(0, 6).join(' | ')}`).join('\n')
+      alert('No se encontró una fila de encabezados válida (necesita 4+ columnas).\n\nPrimeras filas:\n' + debugRows)
+      return
+    }
+
+    const headerRow = rows[headerRowIndex] as string[]
+
     // Buscar columnas de código, producto y precio (flexible)
     let codigoCol = -1, productoCol = -1, precioCol = -1
-    const headerRow = rows[0] as string[]
 
     // Variantes de nombres de columna (en orden de prioridad)
     const variantesProducto = ['producto', 'descripción', 'descripcion', 'nombre', 'detalle', 'description', 'item']
@@ -342,7 +361,8 @@ export default function VinosPage() {
     })
 
     if (productoCol === -1 || precioCol === -1) {
-      alert('No se encontraron columnas de Producto y Precio en el archivo.\n\nColumnas detectadas: ' + headerRow.join(', '))
+      const debugRows = rows.slice(0, 5).map((r, i) => `Fila ${i + 1}: ${(r || []).slice(0, 6).join(' | ')}`).join('\n')
+      alert(`No se encontraron columnas de Producto y Precio.\n\nEncabezado (fila ${headerRowIndex + 1}): ${headerRow.join(', ')}\n\nPrimeras filas:\n${debugRows}`)
       return
     }
 
@@ -350,7 +370,8 @@ export default function VinosPage() {
     const vinosBodega = vinos.filter(v => v.bodega === importBodega)
 
     const items: typeof importData = []
-    for (let i = 1; i < rows.length; i++) {
+    // Empezar desde la fila siguiente al encabezado
+    for (let i = headerRowIndex + 1; i < rows.length; i++) {
       const row = rows[i] as any[]
       const codigo = codigoCol >= 0 ? String(row[codigoCol] || '').trim() : ''
       const producto = String(row[productoCol] || '').trim()

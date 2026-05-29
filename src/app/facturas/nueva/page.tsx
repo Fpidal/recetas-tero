@@ -546,6 +546,7 @@ export default function NuevaFacturaPage() {
         cantidad: typeof item.cantidad === 'string' ? parsearNumero(item.cantidad) : item.cantidad,
         precio_unitario: typeof item.precio_unitario === 'string' ? parsearNumero(item.precio_unitario) : item.precio_unitario,
         descuento: typeof item.descuento === 'string' ? parsearNumero(item.descuento) : (item.descuento || 0),
+        iva_porcentaje: item.iva_porcentaje,
         // Solo enviar contenido_override si es diferente a 1 (para que el trigger lo use)
         contenido_override: contenidoNum > 0 ? contenidoNum : null,
       }

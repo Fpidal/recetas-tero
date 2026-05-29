@@ -387,6 +387,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
         descuento: item.descuento || 0,
+        iva_porcentaje: item.iva_porcentaje || 21,
       }))
       const { error: insertErr } = await supabase
         .from('factura_items')

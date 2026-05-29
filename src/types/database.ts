@@ -241,6 +241,9 @@ export interface Database {
           vino_id: string | null
           cantidad: number
           precio_unitario: number
+          descuento: number
+          iva_porcentaje: number
+          contenido_override: number | null
           subtotal: number
           created_at: string
         }

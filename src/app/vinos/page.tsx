@@ -13,8 +13,8 @@ import * as XLSX from 'xlsx'
 const CATEGORIAS_VINO = ['Tintos', 'Blancos', 'Espumantes']
 
 const CEPAS = [
-  'Malbec', 'Cabernet Sauvignon', 'Cabernet Franc', 'Cabernet Merlot',
-  'Pinot Noir', 'Merlot', 'Syrah', 'Blend', 'Chardonnay', 'Sauvignon Blanc',
+  'Malbec', 'Cabernet Sauvignon', 'Cabernet Franc', 'Cabernet Merlot', 'Cabernet Malbec',
+  'Pinot Noir', 'Merlot', 'Syrah', 'Syrah Syrah', 'Blend', 'Chardonnay', 'Sauvignon Blanc',
   'Torrontés', 'Petit Verdot', 'Tannat', 'Bonarda', 'Tempranillo', 'Rosé',
   'Brut Nature', 'Extra Brut', 'Blanc de Blanc', 'Otra'
 ]

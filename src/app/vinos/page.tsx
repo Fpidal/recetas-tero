@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen, FileText, Star, Upload } from 'lucide-react'
+import { Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen, FileText, Star, Upload, LineChart as LineChartIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Button, Modal } from '@/components/ui'
 import { parsearNumero, formatearMoneda } from '@/lib/formato-numeros'
-import { Vino, CartaVino } from '@/types/database'
+import { Vino, CartaVino, ProveedorMapeoExcel } from '@/types/database'
 import { generarPDFCartaVinos } from '@/lib/generar-pdf-carta-vinos'
 import * as XLSX from 'xlsx'
 
@@ -100,6 +101,20 @@ export default function VinosPage() {
   const [excelWorkbook, setExcelWorkbook] = useState<XLSX.WorkBook | null>(null)
   const [availableSheets, setAvailableSheets] = useState<string[]>([])
   const [selectedSheet, setSelectedSheet] = useState('')
+  // Estado para mapeo de columnas
+  const [excelHeaders, setExcelHeaders] = useState<string[]>([])
+  const [mapeoGuardado, setMapeoGuardado] = useState<ProveedorMapeoExcel | null>(null)
+  const [colCodigo, setColCodigo] = useState<string>('')
+  const [colProducto, setColProducto] = useState<string>('')
+  const [colProducto2, setColProducto2] = useState<string>('')
+  const [colPrecio, setColPrecio] = useState<string>('')
+  const [showMapeoEditor, setShowMapeoEditor] = useState(false)
+  const [mapeoModificado, setMapeoModificado] = useState(false)
+  // Estado para historial de precios
+  const [showHistorial, setShowHistorial] = useState(false)
+  const [historialData, setHistorialData] = useState<{ fecha: string; precio: number }[]>([])
+  const [historialNombre, setHistorialNombre] = useState('')
+  const [historialLoading, setHistorialLoading] = useState(false)
 
   useEffect(() => {
     fetchVinos()
@@ -270,6 +285,26 @@ export default function VinosPage() {
     await generarPDFCartaVinos()
   }
 
+  async function fetchHistorialVino(vino: Vino) {
+    setHistorialNombre(`${vino.bodega} - ${vino.nombre}`)
+    setHistorialLoading(true)
+    setShowHistorial(true)
+
+    const { data } = await supabase
+      .from('precios_vino')
+      .select('precio_caja, fecha')
+      .eq('vino_id', vino.id)
+      .order('fecha', { ascending: true })
+
+    const historial = (data || []).map(p => ({
+      fecha: new Date(p.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+      precio: p.precio_caja
+    }))
+
+    setHistorialData(historial)
+    setHistorialLoading(false)
+  }
+
   // === IMPORT FUNCTIONS ===
   function handleCloseImportModal() {
     setShowImportModal(false)
@@ -281,25 +316,71 @@ export default function VinosPage() {
     setExcelWorkbook(null)
     setAvailableSheets([])
     setSelectedSheet('')
+    setExcelHeaders([])
+    setMapeoGuardado(null)
+    setColCodigo('')
+    setColProducto('')
+    setColProducto2('')
+    setColPrecio('')
+    setShowMapeoEditor(false)
+    setMapeoModificado(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  function normalizeString(str: string): string {
-    return str.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]/g, '')
+  // Cargar mapeo guardado del proveedor
+  async function cargarMapeoProveedor(bodegaNombre: string) {
+    const bodega = bodegas.find(b => b.nombre === bodegaNombre)
+    if (!bodega) return null
+
+    const { data } = await supabase
+      .from('proveedor_mapeo_excel')
+      .select('*')
+      .eq('proveedor_id', bodega.id)
+      .single()
+
+    return data as ProveedorMapeoExcel | null
   }
 
-  function calcularSimilitud(str1: string, str2: string): number {
-    const s1 = normalizeString(str1)
-    const s2 = normalizeString(str2)
-    if (s1 === s2) return 1
-    if (s1.includes(s2) || s2.includes(s1)) return 0.8
-    // Palabras en común
-    const words1 = s1.split(/\s+/).filter(w => w.length > 2)
-    const words2 = s2.split(/\s+/).filter(w => w.length > 2)
-    const common = words1.filter(w => words2.some(w2 => w2.includes(w) || w.includes(w2)))
-    return common.length / Math.max(words1.length, words2.length, 1)
+  // Detectar columnas automáticamente
+  function detectarColumnas(headers: string[]) {
+    const variantesCodigo = ['código', 'codigo', 'cód', 'cod', 'code', 'sku', 'ref']
+    const variantesProducto = ['producto', 'descripción', 'descripcion', 'nombre', 'detalle', 'item', 'línea', 'linea', 'variedad']
+    const variantesPrecioConIva = ['c/iva', 'con iva', 'final', 'público', 'publico']
+    const variantesPrecioGeneral = ['precio caja', 'precio', 'importe', 'total']
+
+    let codigo = '', producto = '', precio = ''
+
+    for (const h of headers) {
+      const hLower = h.toLowerCase().trim()
+
+      // Código
+      if (!codigo && variantesCodigo.some(v => hLower === v || hLower.includes(v))) {
+        codigo = h
+      }
+
+      // Producto
+      if (!producto && variantesProducto.some(v => hLower === v || hLower.includes(v))) {
+        producto = h
+      }
+
+      // Precio - priorizar columnas con IVA
+      if (!precio && variantesPrecioConIva.some(v => hLower.includes(v))) {
+        precio = h
+      }
+    }
+
+    // Si no encontró precio con IVA, buscar precio general
+    if (!precio) {
+      for (const h of headers) {
+        const hLower = h.toLowerCase().trim()
+        if (variantesPrecioGeneral.some(v => hLower.includes(v))) {
+          precio = h
+          break
+        }
+      }
+    }
+
+    return { codigo, producto, precio }
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -314,21 +395,24 @@ export default function VinosPage() {
     setAvailableSheets(workbook.SheetNames)
     setImportData([])
 
+    // Cargar mapeo guardado del proveedor
+    const mapeo = await cargarMapeoProveedor(importBodega)
+    setMapeoGuardado(mapeo)
+
     // Si solo hay una hoja, procesarla automáticamente
     if (workbook.SheetNames.length === 1) {
       setSelectedSheet(workbook.SheetNames[0])
-      processSheet(workbook, workbook.SheetNames[0])
+      await prepararMapeoColumnas(workbook, workbook.SheetNames[0], mapeo)
     } else {
-      // Si hay múltiples hojas, limpiar selección para que el usuario elija
       setSelectedSheet('')
     }
   }
 
-  function processSheet(workbook: XLSX.WorkBook, sheetName: string) {
+  async function prepararMapeoColumnas(workbook: XLSX.WorkBook, sheetName: string, mapeo: ProveedorMapeoExcel | null) {
     const sheet = workbook.Sheets[sheetName]
     const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 })
 
-    // Buscar la fila de encabezados (primera fila con 4+ celdas no vacías en las primeras 15 filas)
+    // Buscar fila de encabezados
     let headerRowIndex = -1
     for (let i = 0; i < Math.min(15, rows.length); i++) {
       const row = rows[i] as any[]
@@ -341,79 +425,100 @@ export default function VinosPage() {
     }
 
     if (headerRowIndex === -1) {
-      const debugRows = rows.slice(0, 5).map((r, i) => `Fila ${i + 1}: ${(r || []).slice(0, 6).join(' | ')}`).join('\n')
-      alert('No se encontró una fila de encabezados válida (necesita 4+ columnas).\n\nPrimeras filas:\n' + debugRows)
+      alert('No se encontró una fila de encabezados válida')
       return
     }
 
-    const headerRow = rows[headerRowIndex] as string[]
+    const headers = (rows[headerRowIndex] as any[]).map(h => String(h || '').trim()).filter(h => h)
+    setExcelHeaders(headers)
 
-    // Buscar columnas de código, producto y precio (flexible)
-    let codigoCol = -1, productoCol = -1, precioCol = -1, precioColPriority: number | undefined
-
-    // Variantes de nombres de columna (en orden de prioridad)
-    const variantesProducto = ['producto', 'descripción', 'descripcion', 'nombre', 'detalle', 'description', 'item']
-    // Priorizar precio por caja sobre precio por unidad
-    const variantesPrecio = ['precio final', 'final caja', 'precio caja', 'p. final', 'final unit', 'final botella', 'precio', 'price', 'importe', 'total']
-    const variantesCodigo = ['código', 'codigo', 'cód.', 'cód', 'cod.', 'cod', 'code', 'sku', 'ref']
-
-    headerRow.forEach((cell, idx) => {
-      const cellStr = String(cell || '').toLowerCase().trim()
-
-      // Buscar columna de código
-      if (codigoCol === -1) {
-        for (const v of variantesCodigo) {
-          if (cellStr === v || cellStr.startsWith(v + ' ') || cellStr.endsWith(' ' + v)) {
-            codigoCol = idx
-            break
-          }
-        }
+    // Verificar si el mapeo guardado es válido (columnas existen)
+    if (mapeo) {
+      const columnasNoEncontradas: string[] = []
+      if (mapeo.col_codigo && !headers.includes(mapeo.col_codigo)) {
+        columnasNoEncontradas.push(`Código: "${mapeo.col_codigo}"`)
+      }
+      if (mapeo.col_precio && !headers.includes(mapeo.col_precio)) {
+        columnasNoEncontradas.push(`Precio: "${mapeo.col_precio}"`)
       }
 
-      // Buscar columna de producto
-      if (productoCol === -1) {
-        for (const v of variantesProducto) {
-          if (cellStr === v || cellStr.includes(v)) {
-            productoCol = idx
-            break
-          }
-        }
+      if (columnasNoEncontradas.length > 0) {
+        // Mapeo inválido, mostrar selector
+        setShowMapeoEditor(true)
+        const detectado = detectarColumnas(headers)
+        setColCodigo(detectado.codigo)
+        setColProducto(detectado.producto)
+        setColPrecio(detectado.precio)
+        setColProducto2('')
+      } else {
+        // Mapeo válido, aplicarlo
+        setColCodigo(mapeo.col_codigo || '')
+        setColProducto(mapeo.col_producto || '')
+        setColProducto2(mapeo.col_producto_2 || '')
+        setColPrecio(mapeo.col_precio || '')
+        setShowMapeoEditor(false)
+        // Procesar datos automáticamente
+        procesarDatosConMapeo(workbook, sheetName, headers, mapeo.col_codigo, mapeo.col_producto, mapeo.col_producto_2, mapeo.col_precio)
       }
+    } else {
+      // No hay mapeo guardado, detectar automáticamente y mostrar selector
+      const detectado = detectarColumnas(headers)
+      setColCodigo(detectado.codigo)
+      setColProducto(detectado.producto)
+      setColPrecio(detectado.precio)
+      setColProducto2('')
+      setShowMapeoEditor(true)
+    }
+  }
 
-      // Buscar columna de precio (respetar orden de prioridad)
-      for (let vi = 0; vi < variantesPrecio.length; vi++) {
-        const v = variantesPrecio[vi]
-        if (cellStr === v || cellStr.includes(v)) {
-          // Solo asignar si no hay columna o esta tiene mayor prioridad (índice menor)
-          if (precioCol === -1 || vi < (precioColPriority ?? Infinity)) {
-            precioCol = idx
-            precioColPriority = vi
-          }
-          break
-        }
+  function procesarDatosConMapeo(
+    workbook: XLSX.WorkBook,
+    sheetName: string,
+    headers: string[],
+    cCodigo: string | null,
+    cProducto: string | null,
+    cProducto2: string | null,
+    cPrecio: string | null
+  ) {
+    const sheet = workbook.Sheets[sheetName]
+    const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+
+    // Encontrar índice de headers
+    let headerRowIndex = -1
+    for (let i = 0; i < Math.min(15, rows.length); i++) {
+      const row = rows[i] as any[]
+      if (!row) continue
+      const nonEmptyCells = row.filter(cell => cell !== null && cell !== undefined && String(cell).trim() !== '').length
+      if (nonEmptyCells >= 4) {
+        headerRowIndex = i
+        break
       }
-    })
-
-    if (productoCol === -1 || precioCol === -1) {
-      const debugRows = rows.slice(0, 5).map((r, i) => `Fila ${i + 1}: ${(r || []).slice(0, 6).join(' | ')}`).join('\n')
-      alert(`No se encontraron columnas de Producto y Precio.\n\nEncabezado (fila ${headerRowIndex + 1}): ${headerRow.join(', ')}\n\nPrimeras filas:\n${debugRows}`)
-      return
     }
 
-    // Obtener vinos de la bodega seleccionada
+    if (headerRowIndex === -1) return
+
+    const headerRow = rows[headerRowIndex] as any[]
+    const codigoCol = cCodigo ? headerRow.findIndex(h => String(h).trim() === cCodigo) : -1
+    const productoCol = cProducto ? headerRow.findIndex(h => String(h).trim() === cProducto) : -1
+    const producto2Col = cProducto2 ? headerRow.findIndex(h => String(h).trim() === cProducto2) : -1
+    const precioCol = cPrecio ? headerRow.findIndex(h => String(h).trim() === cPrecio) : -1
+
     const vinosBodega = vinos.filter(v => v.bodega === importBodega)
-
     const items: typeof importData = []
-    // Empezar desde la fila siguiente al encabezado
+
     for (let i = headerRowIndex + 1; i < rows.length; i++) {
       const row = rows[i] as any[]
+      if (!row) continue
+
       const codigo = codigoCol >= 0 ? String(row[codigoCol] || '').trim() : ''
-      const producto = String(row[productoCol] || '').trim()
-      const precioRaw = row[precioCol]
+      let producto = productoCol >= 0 ? String(row[productoCol] || '').trim() : ''
+      if (producto2Col >= 0 && row[producto2Col]) {
+        producto = `${producto} ${String(row[producto2Col]).trim()}`.trim()
+      }
+      const precioRaw = precioCol >= 0 ? row[precioCol] : null
 
-      if (!producto || !precioRaw) continue
+      if (!precioRaw) continue
 
-      // Parsear precio (puede venir como número o string con formato)
       let precioNuevo = 0
       if (typeof precioRaw === 'number') {
         precioNuevo = precioRaw
@@ -424,8 +529,6 @@ export default function VinosPage() {
 
       if (precioNuevo === 0) continue
 
-      // Buscar match SOLO por código exacto
-      // (el código se carga manualmente en cada vino para evitar confusiones)
       let matchedVino: Vino | null = null
       let matchType: 'codigo' | 'sin_match' = 'sin_match'
 
@@ -454,7 +557,18 @@ export default function VinosPage() {
   function handleSheetSelect(sheetName: string) {
     setSelectedSheet(sheetName)
     if (excelWorkbook && sheetName) {
-      processSheet(excelWorkbook, sheetName)
+      prepararMapeoColumnas(excelWorkbook, sheetName, mapeoGuardado)
+    }
+  }
+
+  function handleAplicarMapeo() {
+    if (!colPrecio || !colCodigo) {
+      alert('Seleccioná al menos las columnas de Código y Precio')
+      return
+    }
+    if (excelWorkbook && selectedSheet) {
+      setMapeoModificado(true)
+      procesarDatosConMapeo(excelWorkbook, selectedSheet, excelHeaders, colCodigo, colProducto, colProducto2, colPrecio)
     }
   }
 
@@ -468,8 +582,29 @@ export default function VinosPage() {
     setIsImporting(true)
     let actualizados = 0
     let codigosGuardados = 0
+    const fechaPrecio = importFechaLista || new Date().toISOString().split('T')[0]
 
     for (const item of itemsToUpdate) {
+      const vinoId = item.vinoId!
+
+      // 1. Marcar precio anterior como no actual en historial
+      await supabase
+        .from('precios_vino')
+        .update({ es_precio_actual: false })
+        .eq('vino_id', vinoId)
+        .eq('es_precio_actual', true)
+
+      // 2. Insertar nuevo precio en historial
+      await supabase
+        .from('precios_vino')
+        .insert({
+          vino_id: vinoId,
+          precio_caja: item.precioNuevo,
+          fecha: fechaPrecio,
+          es_precio_actual: true
+        })
+
+      // 3. Actualizar tabla vinos (desnormalizado para consultas rápidas)
       const updateData: {
         precio_caja: number
         precio_caja_anterior?: number
@@ -479,17 +614,14 @@ export default function VinosPage() {
         precio_caja: item.precioNuevo
       }
 
-      // Guardar precio anterior si hay cambio
       if (item.precioAnterior > 0 && item.precioAnterior !== item.precioNuevo) {
         updateData.precio_caja_anterior = item.precioAnterior
       }
 
-      // Guardar fecha de lista de precios
       if (importFechaLista) {
         updateData.fecha_lista_precios = importFechaLista
       }
 
-      // Si está activado guardar códigos y hay código en el Excel
       if (guardarCodigos && item.codigo) {
         updateData.codigo_proveedor = item.codigo
         codigosGuardados++
@@ -498,9 +630,26 @@ export default function VinosPage() {
       const { error } = await supabase
         .from('vinos')
         .update(updateData)
-        .eq('id', item.vinoId)
+        .eq('id', vinoId)
 
       if (!error) actualizados++
+    }
+
+    // 4. Guardar mapeo de columnas si es nuevo o fue modificado
+    if (mapeoModificado || !mapeoGuardado) {
+      const bodega = bodegas.find(b => b.nombre === importBodega)
+      if (bodega) {
+        await supabase
+          .from('proveedor_mapeo_excel')
+          .upsert({
+            proveedor_id: bodega.id,
+            col_codigo: colCodigo || null,
+            col_producto: colProducto || null,
+            col_producto_2: colProducto2 || null,
+            col_precio: colPrecio || null,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'proveedor_id' })
+      }
     }
 
     setImportResult({
@@ -699,6 +848,9 @@ export default function VinosPage() {
                         <p className="text-[10px] text-gray-500">{vino.cepa}</p>
                       </div>
                       <div className="flex gap-0.5">
+                        <button onClick={() => fetchHistorialVino(vino)} className="p-1 hover:bg-gray-100 rounded" title="Historial de precios">
+                          <LineChartIcon className="w-3.5 h-3.5 text-blue-500" />
+                        </button>
                         <button onClick={() => handleOpenModal(vino)} className="p-1 hover:bg-gray-100 rounded">
                           <Pencil className="w-3.5 h-3.5 text-gray-500" />
                         </button>
@@ -757,6 +909,9 @@ export default function VinosPage() {
                         <td className="px-2 py-1.5 text-right bg-green-50"><span className="text-xs font-bold text-green-700 font-mono">{fmt(unidadFinal)}</span></td>
                         <td className="px-1 py-1.5">
                           <div className="flex justify-end gap-0.5">
+                            <button onClick={() => fetchHistorialVino(vino)} className="p-1 hover:bg-gray-100 rounded" title="Historial de precios">
+                              <LineChartIcon className="w-3.5 h-3.5 text-blue-500" />
+                            </button>
                             <button onClick={() => handleOpenModal(vino)} className="p-1 hover:bg-gray-100 rounded">
                               <Pencil className="w-3.5 h-3.5 text-gray-500" />
                             </button>
@@ -1155,6 +1310,17 @@ export default function VinosPage() {
                 setImportBodega(e.target.value)
                 setImportData([])
                 setImportResult(null)
+                setExcelWorkbook(null)
+                setAvailableSheets([])
+                setSelectedSheet('')
+                setExcelHeaders([])
+                setMapeoGuardado(null)
+                setColCodigo('')
+                setColProducto('')
+                setColProducto2('')
+                setColPrecio('')
+                setShowMapeoEditor(false)
+                setMapeoModificado(false)
                 if (fileInputRef.current) fileInputRef.current.value = ''
               }}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500"
@@ -1213,7 +1379,122 @@ export default function VinosPage() {
             </div>
           )}
 
-          {/* Paso 5: Preview de datos */}
+          {/* Paso 5: Mapeo de columnas */}
+          {excelHeaders.length > 0 && selectedSheet && !importResult && (
+            <div className="border rounded-md p-3 bg-gray-50">
+              {/* Resumen de mapeo guardado */}
+              {mapeoGuardado && !showMapeoEditor && importData.length > 0 && (
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <span className="text-green-600 font-medium">✓ Mapeo guardado</span>
+                    <span className="text-gray-500 ml-2">
+                      Código: &quot;{colCodigo}&quot; | Producto: &quot;{colProducto}{colProducto2 ? ` + ${colProducto2}` : ''}&quot; | Precio: &quot;{colPrecio}&quot;
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowMapeoEditor(true)}
+                    className="text-xs text-purple-600 hover:text-purple-800 underline"
+                  >
+                    Editar mapeo
+                  </button>
+                </div>
+              )}
+
+              {/* Editor de mapeo */}
+              {(showMapeoEditor || !mapeoGuardado || importData.length === 0) && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-700">Mapeo de columnas</p>
+                    {mapeoGuardado && (
+                      <button
+                        onClick={() => {
+                          setShowMapeoEditor(false)
+                          setColCodigo(mapeoGuardado.col_codigo || '')
+                          setColProducto(mapeoGuardado.col_producto || '')
+                          setColProducto2(mapeoGuardado.col_producto_2 || '')
+                          setColPrecio(mapeoGuardado.col_precio || '')
+                        }}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Columna Código *</label>
+                      <select
+                        value={colCodigo}
+                        onChange={(e) => setColCodigo(e.target.value)}
+                        className={`w-full rounded border px-2 py-1.5 text-sm ${!colCodigo ? 'border-red-300' : 'border-gray-300'}`}
+                      >
+                        <option value="">Seleccionar...</option>
+                        {excelHeaders.map((h, idx) => (
+                          <option key={idx} value={h}>{h}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Columna Precio *</label>
+                      <select
+                        value={colPrecio}
+                        onChange={(e) => setColPrecio(e.target.value)}
+                        className={`w-full rounded border px-2 py-1.5 text-sm ${!colPrecio ? 'border-red-300' : 'border-gray-300'}`}
+                      >
+                        <option value="">Seleccionar...</option>
+                        {excelHeaders.map((h, idx) => (
+                          <option key={idx} value={h}>{h}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Columna Producto</label>
+                      <select
+                        value={colProducto}
+                        onChange={(e) => setColProducto(e.target.value)}
+                        className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      >
+                        <option value="">Seleccionar...</option>
+                        {excelHeaders.map((h, idx) => (
+                          <option key={idx} value={h}>{h}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        + Segunda columna
+                        <span className="text-gray-400 font-normal ml-1">(opcional, para combinar)</span>
+                      </label>
+                      <select
+                        value={colProducto2}
+                        onChange={(e) => setColProducto2(e.target.value)}
+                        className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      >
+                        <option value="">Ninguna</option>
+                        {excelHeaders.map((h, idx) => (
+                          <option key={idx} value={h}>{h}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleAplicarMapeo}
+                    disabled={!colCodigo || !colPrecio}
+                    className="w-full px-3 py-2 text-sm font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Aplicar mapeo y ver preview
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Paso 6: Preview de datos */}
           {importData.length > 0 && !importResult && (
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -1347,6 +1628,88 @@ export default function VinosPage() {
                 Cerrar
               </Button>
             </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Modal Historial de Precios */}
+      <Modal isOpen={showHistorial} onClose={() => setShowHistorial(false)} title={`Historial de Precios`}>
+        <div className="space-y-4">
+          <p className="text-sm font-medium text-gray-700">{historialNombre}</p>
+
+          {historialLoading ? (
+            <div className="text-center py-8">
+              <p className="text-xs text-gray-500">Cargando historial...</p>
+            </div>
+          ) : historialData.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-xs text-gray-500">No hay historial de precios registrado</p>
+              <p className="text-[10px] text-gray-400 mt-1">El historial se genera al importar precios desde Excel</p>
+            </div>
+          ) : (
+            <>
+              {/* Gráfico */}
+              <div className="h-48 border rounded-md p-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={historialData}>
+                    <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
+                    <YAxis
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                      domain={['auto', 'auto']}
+                    />
+                    <Tooltip
+                      formatter={(value) => [`$${Number(value).toLocaleString('es-AR')}`, 'Precio Caja']}
+                      labelFormatter={(label) => `Fecha: ${label}`}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="precio"
+                      stroke="#7a7a3a"
+                      strokeWidth={2}
+                      dot={{ fill: '#7a7a3a', r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Tabla de precios */}
+              <div className="max-h-48 overflow-y-auto border rounded-md">
+                <table className="min-w-full divide-y divide-gray-200 text-xs">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-gray-500">Fecha</th>
+                      <th className="px-3 py-2 text-right font-medium text-gray-500">Precio Caja</th>
+                      <th className="px-3 py-2 text-right font-medium text-gray-500">Variación</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {[...historialData].reverse().map((item, idx, arr) => {
+                      const prevItem = arr[idx + 1]
+                      const variacion = prevItem ? ((item.precio - prevItem.precio) / prevItem.precio) * 100 : 0
+                      return (
+                        <tr key={idx} className={idx === 0 ? 'bg-green-50' : ''}>
+                          <td className="px-3 py-2 text-gray-900">{item.fecha}</td>
+                          <td className="px-3 py-2 text-right font-mono font-medium">{fmt(item.precio)}</td>
+                          <td className="px-3 py-2 text-right font-mono">
+                            {prevItem && (
+                              <span className={`flex items-center justify-end gap-1 ${
+                                variacion > 0 ? 'text-red-600' : variacion < 0 ? 'text-green-600' : 'text-gray-500'
+                              }`}>
+                                {variacion > 0 ? <TrendingUp className="w-3 h-3" /> :
+                                 variacion < 0 ? <TrendingDown className="w-3 h-3" /> :
+                                 <Minus className="w-3 h-3" />}
+                                {variacion > 0 ? '+' : ''}{variacion.toFixed(1)}%
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </Modal>

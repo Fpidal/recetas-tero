@@ -284,6 +284,32 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['carta_vinos']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['carta_vinos']['Insert']>
       }
+      precios_vino: {
+        Row: {
+          id: string
+          vino_id: string
+          precio_caja: number
+          fecha: string
+          es_precio_actual: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['precios_vino']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['precios_vino']['Insert']>
+      }
+      proveedor_mapeo_excel: {
+        Row: {
+          id: string
+          proveedor_id: string
+          col_codigo: string | null
+          col_producto: string | null
+          col_producto_2: string | null
+          col_precio: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['proveedor_mapeo_excel']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['proveedor_mapeo_excel']['Insert']>
+      }
     }
   }
 }
@@ -307,3 +333,5 @@ export type FacturaProveedor = Database['public']['Tables']['facturas_proveedor'
 export type FacturaItem = Database['public']['Tables']['factura_items']['Row']
 export type Vino = Database['public']['Tables']['vinos']['Row']
 export type CartaVino = Database['public']['Tables']['carta_vinos']['Row']
+export type PrecioVino = Database['public']['Tables']['precios_vino']['Row']
+export type ProveedorMapeoExcel = Database['public']['Tables']['proveedor_mapeo_excel']['Row']

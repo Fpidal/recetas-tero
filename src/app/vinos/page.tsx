@@ -90,12 +90,16 @@ export default function VinosPage() {
     precioAnterior: number
     precioNuevo: number
     incluir: boolean
-    matchType: 'codigo' | 'nombre' | 'sin_match'
+    matchType: 'codigo' | 'sin_match'
   }[]>([])
   const [isImporting, setIsImporting] = useState(false)
   const [importResult, setImportResult] = useState<{ actualizados: number; sinMatch: number; codigosGuardados: number } | null>(null)
   const [guardarCodigos, setGuardarCodigos] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Estado para selección de hoja de Excel
+  const [excelWorkbook, setExcelWorkbook] = useState<XLSX.WorkBook | null>(null)
+  const [availableSheets, setAvailableSheets] = useState<string[]>([])
+  const [selectedSheet, setSelectedSheet] = useState('')
 
   useEffect(() => {
     fetchVinos()
@@ -273,6 +277,9 @@ export default function VinosPage() {
     setImportData([])
     setImportResult(null)
     setGuardarCodigos(true)
+    setExcelWorkbook(null)
+    setAvailableSheets([])
+    setSelectedSheet('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -300,7 +307,24 @@ export default function VinosPage() {
 
     const buffer = await file.arrayBuffer()
     const workbook = XLSX.read(buffer, { type: 'array' })
-    const sheet = workbook.Sheets[workbook.SheetNames[0]]
+
+    // Guardar el workbook y las hojas disponibles
+    setExcelWorkbook(workbook)
+    setAvailableSheets(workbook.SheetNames)
+    setImportData([])
+
+    // Si solo hay una hoja, procesarla automáticamente
+    if (workbook.SheetNames.length === 1) {
+      setSelectedSheet(workbook.SheetNames[0])
+      processSheet(workbook, workbook.SheetNames[0])
+    } else {
+      // Si hay múltiples hojas, limpiar selección para que el usuario elija
+      setSelectedSheet('')
+    }
+  }
+
+  function processSheet(workbook: XLSX.WorkBook, sheetName: string) {
+    const sheet = workbook.Sheets[sheetName]
     const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 })
 
     // Buscar la fila de encabezados (primera fila con 4+ celdas no vacías en las primeras 15 filas)
@@ -399,41 +423,16 @@ export default function VinosPage() {
 
       if (precioNuevo === 0) continue
 
-      // Buscar match por código primero (solo vinos que tienen código)
+      // Buscar match SOLO por código exacto
+      // (el código se carga manualmente en cada vino para evitar confusiones)
       let matchedVino: Vino | null = null
-      let matchType: 'codigo' | 'nombre' | 'sin_match' = 'sin_match'
+      let matchType: 'codigo' | 'sin_match' = 'sin_match'
 
       if (codigo) {
         matchedVino = vinosBodega.find(v =>
           v.codigo_proveedor?.toLowerCase() === codigo.toLowerCase()
         ) || null
         if (matchedVino) matchType = 'codigo'
-      }
-
-      // Si no hay match por código, buscar por nombre SOLO en vinos SIN código
-      // (vinos con código solo matchean por código exacto)
-      if (!matchedVino) {
-        // Detectar si el producto del Excel contiene una cepa conocida
-        const productoLower = producto.toLowerCase()
-        const cepaDetectada = CEPAS.find(c => productoLower.includes(c.toLowerCase()))
-
-        // Solo considerar vinos que NO tienen codigo_proveedor
-        const vinosSinCodigo = vinosBodega.filter(v => !v.codigo_proveedor)
-
-        let mejorSimilitud = 0
-        for (const vino of vinosSinCodigo) {
-          // Si detectamos una cepa en el Excel, solo matchear con vinos de esa cepa
-          if (cepaDetectada && vino.cepa.toLowerCase() !== cepaDetectada.toLowerCase()) {
-            continue
-          }
-
-          const similitud = calcularSimilitud(producto, vino.nombre)
-          if (similitud > mejorSimilitud && similitud >= 0.5) {
-            mejorSimilitud = similitud
-            matchedVino = vino
-            matchType = 'nombre'
-          }
-        }
       }
 
       items.push({
@@ -449,6 +448,13 @@ export default function VinosPage() {
     }
 
     setImportData(items)
+  }
+
+  function handleSheetSelect(sheetName: string) {
+    setSelectedSheet(sheetName)
+    if (excelWorkbook && sheetName) {
+      processSheet(excelWorkbook, sheetName)
+    }
   }
 
   async function handleActualizarPrecios() {
@@ -1173,7 +1179,27 @@ export default function VinosPage() {
             </div>
           )}
 
-          {/* Paso 3: Preview de datos */}
+          {/* Paso 4: Seleccionar hoja (si hay múltiples) */}
+          {availableSheets.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar hoja del Excel *</label>
+              <select
+                value={selectedSheet}
+                onChange={(e) => handleSheetSelect(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Elegir hoja...</option>
+                {availableSheets.map((sheet, idx) => (
+                  <option key={idx} value={sheet}>{sheet}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                El archivo tiene {availableSheets.length} hojas disponibles
+              </p>
+            </div>
+          )}
+
+          {/* Paso 5: Preview de datos */}
           {importData.length > 0 && !importResult && (
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -1181,9 +1207,8 @@ export default function VinosPage() {
                   Vista previa ({importData.filter(i => i.incluir).length} de {importData.length} vinos a actualizar)
                 </p>
                 <div className="flex gap-2 text-[10px]">
-                  <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">Por código</span>
-                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">Por nombre</span>
-                  <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">Sin match</span>
+                  <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">Match por código</span>
+                  <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">Sin match (agregar código al vino)</span>
                 </div>
               </div>
 

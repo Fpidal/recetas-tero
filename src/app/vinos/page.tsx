@@ -399,7 +399,7 @@ export default function VinosPage() {
 
       if (precioNuevo === 0) continue
 
-      // Buscar match por código primero
+      // Buscar match por código primero (solo vinos que tienen código)
       let matchedVino: Vino | null = null
       let matchType: 'codigo' | 'nombre' | 'sin_match' = 'sin_match'
 
@@ -410,14 +410,18 @@ export default function VinosPage() {
         if (matchedVino) matchType = 'codigo'
       }
 
-      // Si no hay match por código, buscar por nombre (considerando cepa)
+      // Si no hay match por código, buscar por nombre SOLO en vinos SIN código
+      // (vinos con código solo matchean por código exacto)
       if (!matchedVino) {
         // Detectar si el producto del Excel contiene una cepa conocida
         const productoLower = producto.toLowerCase()
         const cepaDetectada = CEPAS.find(c => productoLower.includes(c.toLowerCase()))
 
+        // Solo considerar vinos que NO tienen codigo_proveedor
+        const vinosSinCodigo = vinosBodega.filter(v => !v.codigo_proveedor)
+
         let mejorSimilitud = 0
-        for (const vino of vinosBodega) {
+        for (const vino of vinosSinCodigo) {
           // Si detectamos una cepa en el Excel, solo matchear con vinos de esa cepa
           if (cepaDetectada && vino.cepa.toLowerCase() !== cepaDetectada.toLowerCase()) {
             continue

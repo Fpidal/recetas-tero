@@ -324,8 +324,8 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
               </div>
             )}
 
-            {/* Más usados */}
-            {!seleccionado && masUsados.length > 0 && (
+            {/* Más usados - solo mostrar cuando no hay búsqueda activa */}
+            {!seleccionado && !busqueda && masUsados.length > 0 && (
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <div className="text-[10px] uppercase text-gray-400 mb-2 font-semibold">
                   ⚡ Insumos sugeridos

@@ -132,3 +132,14 @@ Usar componentes de `@/components/ui/`:
 - Las comparaciones de precios permiten proveedores temporales (sin registrar)
 - Los menús ejecutivos tienen secciones: Parrilla, Entrada, Fondo, Postre, Jugo
 - El inventario usa "hojas de control" para registro diario
+
+## IMPORTANTE: Workflow de Git (antes de cada commit/push)
+
+**OBLIGATORIO antes de pushear:**
+
+1. `npm run build` → Verificar que compila sin errores
+2. `git diff origin/main --stat` → Mostrar resumen de cambios
+3. Confirmar con el usuario que son SOLO los archivos esperados
+4. Recién ahí hacer `git push`
+
+Si aparece un archivo que no tocamos en la sesión → PARAR y revisar antes de pushear.

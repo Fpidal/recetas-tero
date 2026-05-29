@@ -266,13 +266,13 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
             </div>
 
             {/* Resultados */}
-            <div className="border border-gray-200 rounded-md mb-3 divide-y divide-gray-100 text-sm max-h-48 overflow-y-auto">
+            <div key={`results-${busqueda}-${tipoSeleccionado}`} className="border border-gray-200 rounded-md mb-3 divide-y divide-gray-100 text-sm max-h-48 overflow-y-auto">
               {opcionesFiltradas.length === 0 ? (
                 <div className="px-3 py-3 text-gray-400 text-xs text-center">Sin resultados</div>
               ) : (
-                opcionesFiltradas.map((o) => (
+                opcionesFiltradas.map((o, idx) => (
                   <button
-                    key={`${o.tipo}-${o.id}`}
+                    key={`${o.tipo}-${o.id}-${idx}`}
                     onClick={() => selectOption(o)}
                     className={`w-full text-left px-3 py-2 hover:bg-blue-50 ${
                       seleccionado?.id === o.id ? 'bg-blue-50' : ''

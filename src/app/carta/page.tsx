@@ -72,6 +72,11 @@ interface MenuConOpciones extends MenuEspecial {
   precio_venta?: number
 }
 
+interface MenuEjecutivoConCosto extends MenuEjecutivo {
+  costo_calculado: number
+  dias_actualizacion: number
+}
+
 type TabType = 'en_carta' | 'fuera_carta' | 'ejecutivos' | 'especiales'
 
 // Normalizar tipo_opcion de valores viejos a nuevos
@@ -123,7 +128,7 @@ export default function CartaPage() {
   const [busqueda, setBusqueda] = useState('')
 
   // ============ ESTADOS MENÚS EJECUTIVOS ============
-  const [menusEjecutivos, setMenusEjecutivos] = useState<MenuEjecutivo[]>([])
+  const [menusEjecutivos, setMenusEjecutivos] = useState<MenuEjecutivoConCosto[]>([])
   const [isLoadingEjec, setIsLoadingEjec] = useState(true)
   const [editingMenuId, setEditingMenuId] = useState<string | null>(null)
   const [editMenuPrecio, setEditMenuPrecio] = useState('')
@@ -586,12 +591,90 @@ export default function CartaPage() {
   // ============ FUNCIONES MENÚS EJECUTIVOS ============
   async function fetchMenusEjecutivos() {
     setIsLoadingEjec(true)
+
+    // Cargar datos necesarios para calcular costos
+    const { data: insumosData } = await supabase
+      .from('v_insumos_con_precio')
+      .select('id, precio_actual, iva_porcentaje, merma_porcentaje')
+
+    const { data: recetasBaseData } = await supabase
+      .from('recetas_base')
+      .select('id, rendimiento_porciones, receta_base_ingredientes (insumo_id, cantidad)')
+      .eq('activo', true)
+
+    const { data: platosData } = await supabase
+      .from('platos')
+      .select('id, rendimiento_porciones, plato_ingredientes (insumo_id, receta_base_id, cantidad)')
+      .eq('activo', true)
+
+    // Funciones auxiliares para calcular costos
+    function getCostoInsumo(insumoId: string): number {
+      const insumo = insumosData?.find(i => i.id === insumoId)
+      if (!insumo?.precio_actual) return 0
+      return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+    }
+
+    function getCostoRecetaBase(recetaBaseId: string): number {
+      const receta = recetasBaseData?.find((r: any) => r.id === recetaBaseId)
+      if (!receta) return 0
+      let costoTotal = 0
+      for (const ing of (receta as any).receta_base_ingredientes || []) {
+        costoTotal += ing.cantidad * getCostoInsumo(ing.insumo_id)
+      }
+      return (receta as any).rendimiento_porciones > 0 ? costoTotal / (receta as any).rendimiento_porciones : 0
+    }
+
+    function getCostoPlato(platoId: string): number {
+      const plato = platosData?.find((p: any) => p.id === platoId)
+      if (!plato) return 0
+      let costoTotal = 0
+      for (const ing of (plato as any).plato_ingredientes || []) {
+        if (ing.insumo_id) costoTotal += ing.cantidad * getCostoInsumo(ing.insumo_id)
+        else if (ing.receta_base_id) costoTotal += ing.cantidad * getCostoRecetaBase(ing.receta_base_id)
+      }
+      return (plato as any).rendimiento_porciones > 0 ? costoTotal / (plato as any).rendimiento_porciones : 0
+    }
+
+    // Cargar menús con sus items
     const { data, error } = await supabase
       .from('menus_ejecutivos')
-      .select('*')
+      .select(`
+        *,
+        menu_ejecutivo_items (
+          id, tipo, insumo_id, receta_base_id, plato_id, cantidad
+        )
+      `)
       .eq('activo', true)
       .order('nombre')
-    if (!error) setMenusEjecutivos(data || [])
+
+    if (!error && data) {
+      const menusConCosto = data.map((menu: any) => {
+        // Calcular costo sumando items
+        let costoCalculado = 0
+        for (const item of menu.menu_ejecutivo_items || []) {
+          const cantidad = Number(item.cantidad) || 0
+          if (item.insumo_id) {
+            costoCalculado += cantidad * getCostoInsumo(item.insumo_id)
+          } else if (item.receta_base_id) {
+            costoCalculado += cantidad * getCostoRecetaBase(item.receta_base_id)
+          } else if (item.plato_id) {
+            costoCalculado += cantidad * getCostoPlato(item.plato_id)
+          }
+        }
+
+        // Calcular días desde última actualización
+        const diasActualizacion = menu.updated_at
+          ? Math.floor((Date.now() - new Date(menu.updated_at).getTime()) / (1000 * 60 * 60 * 24))
+          : -1
+
+        return {
+          ...menu,
+          costo_calculado: costoCalculado,
+          dias_actualizacion: diasActualizacion
+        }
+      })
+      setMenusEjecutivos(menusConCosto)
+    }
     setIsLoadingEjec(false)
   }
 
@@ -607,7 +690,7 @@ export default function CartaPage() {
     return 'danger'
   }
 
-  function handleStartEditMenu(menu: MenuEjecutivo) {
+  function handleStartEditMenu(menu: MenuEjecutivoConCosto) {
     setEditingMenuId(menu.id)
     setEditMenuPrecio(menu.precio_carta?.toString() || '0')
     setEditMenuMargen(menu.margen_objetivo?.toString() || '30')
@@ -619,12 +702,12 @@ export default function CartaPage() {
     setEditMenuMargen('')
   }
 
-  async function handleSaveEditMenu(menu: MenuEjecutivo) {
+  async function handleSaveEditMenu(menu: MenuEjecutivoConCosto) {
     setIsSavingMenu(true)
     const precio = parsearNumero(editMenuPrecio)
     const margen = parsearNumero(editMenuMargen) || 30
-    const precioSugerido = calcularPrecioSugerido(menu.costo_total, margen)
-    const foodCost = calcularFoodCost(menu.costo_total, precio)
+    const precioSugerido = calcularPrecioSugerido(menu.costo_calculado, margen)
+    const foodCost = calcularFoodCost(menu.costo_calculado, precio)
     const { error } = await supabase
       .from('menus_ejecutivos')
       .update({ precio_carta: precio, margen_objetivo: margen, precio_sugerido: precioSugerido, food_cost_real: foodCost })
@@ -1232,10 +1315,10 @@ export default function CartaPage() {
             {/* Vista Móvil - Cards */}
             <div className="lg:hidden space-y-2">
               {menusEjecutivos.map((menu) => {
-                const precioSugerido = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || 30)
-                const foodCost = calcularFoodCost(menu.costo_total, menu.precio_carta || 0)
+                const precioSugerido = calcularPrecioSugerido(menu.costo_calculado, menu.margen_objetivo || 30)
+                const foodCost = calcularFoodCost(menu.costo_calculado, menu.precio_carta || 0)
                 const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
-                const contribucion = (menu.precio_carta || 0) - menu.costo_total
+                const contribucion = (menu.precio_carta || 0) - menu.costo_calculado
                 return (
                   <div key={menu.id} className={`bg-white rounded-lg border p-3 ${estado === 'danger' ? 'border-red-300 bg-red-50' : ''}`}>
                     <div className="flex items-center justify-between mb-2">
@@ -1261,7 +1344,7 @@ export default function CartaPage() {
                     ) : (
                       <>
                         <div className="grid grid-cols-4 gap-1 text-center mb-2">
-                          <div><p className="text-[10px] text-gray-500">Costo</p><p className="text-[11px] font-mono font-medium tabular-nums">{fmt(menu.costo_total)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">Costo</p><p className="text-[11px] font-mono font-medium tabular-nums">{fmt(menu.costo_calculado)}</p></div>
                           <div><p className="text-[10px] text-gray-500">P.Sug.</p><p className="text-[11px] font-mono text-gray-600 tabular-nums">{fmt(precioSugerido)}</p></div>
                           <div><p className="text-[10px] text-gray-500">P.Carta</p><p className="text-[11px] font-mono font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</p></div>
                           <div><p className="text-[10px] text-gray-500">Contrib.</p><p className={`text-[11px] font-mono font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</p></div>
@@ -1300,10 +1383,10 @@ export default function CartaPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {menusEjecutivos.map((menu) => {
-                    const precioSugerido = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || 30)
-                    const foodCost = calcularFoodCost(menu.costo_total, menu.precio_carta || 0)
+                    const precioSugerido = calcularPrecioSugerido(menu.costo_calculado, menu.margen_objetivo || 30)
+                    const foodCost = calcularFoodCost(menu.costo_calculado, menu.precio_carta || 0)
                     const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
-                    const contribucion = (menu.precio_carta || 0) - menu.costo_total
+                    const contribucion = (menu.precio_carta || 0) - menu.costo_calculado
                     return (
                       <tr key={menu.id} className={`hover:bg-gray-50 ${estado === 'danger' ? 'bg-red-50' : ''}`}>
                         <td className="px-4 py-2">
@@ -1315,8 +1398,8 @@ export default function CartaPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono font-medium text-green-600 tabular-nums">{fmt(menu.costo_total)}</span></td>
-                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono text-gray-500 tabular-nums">{fmt(editingMenuId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMenuMargen) || 30) : precioSugerido)}</span></td>
+                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono font-medium text-green-600 tabular-nums">{fmt(menu.costo_calculado)}</span></td>
+                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono text-gray-500 tabular-nums">{fmt(editingMenuId === menu.id ? calcularPrecioSugerido(menu.costo_calculado, parsearNumero(editMenuMargen) || 30) : precioSugerido)}</span></td>
                         <td className="px-2 py-2 text-right">
                           {editingMenuId === menu.id ? <input type="text" inputMode="decimal" value={editMenuPrecio} onChange={(e) => setEditMenuPrecio(e.target.value)} className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs font-mono text-right" /> : <span className="text-xs font-mono font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</span>}
                         </td>

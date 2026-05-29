@@ -145,7 +145,8 @@ export default function VinosPage() {
 
     const vinosConCosto = vinos.map(v => {
       const precioUnidad = v.unidades_caja > 0 ? v.precio_caja / v.unidades_caja : 0
-      const costo = precioUnidad * (1 - v.descuento_porcentaje / 100) * 1.21
+      // El precio ya incluye IVA, así que: quitar IVA, aplicar descuento, volver a sumar IVA
+      const costo = (precioUnidad / 1.21) * (1 - v.descuento_porcentaje / 100) * 1.21
       return { ...v, costo, carta: cartaMap.get(v.id) }
     })
 
@@ -512,10 +513,24 @@ export default function VinosPage() {
   }
 
   // Helpers
+  // NOTA: El precio_caja ya incluye IVA (viene de "Precio Final" de las listas de bodegas)
   function calcularValores(precioCaja: number, unidadesCaja: number, descuentoPorcentaje: number) {
     const precioUnidad = unidadesCaja > 0 ? precioCaja / unidadesCaja : 0
-    const totalConDescuento = (precioCaja + precioCaja * 0.21) * (1 - descuentoPorcentaje / 100)
-    return { precioUnidad, totalConDescuento }
+    // Precio sin IVA con descuento (para mostrar "Botella c/Desc")
+    const precioUnidadSinIva = precioUnidad / 1.21
+    const unidadConDescuentoSinIva = precioUnidadSinIva * (1 - descuentoPorcentaje / 100)
+    // Precio final con IVA y descuento
+    const unidadFinal = unidadConDescuentoSinIva * 1.21
+    // Lo mismo para caja completa
+    const cajaConDescuentoSinIva = (precioCaja / 1.21) * (1 - descuentoPorcentaje / 100)
+    const cajaFinal = cajaConDescuentoSinIva * 1.21
+    return {
+      precioUnidad,
+      unidadConDescuentoSinIva,
+      unidadFinal,
+      cajaConDescuentoSinIva,
+      cajaFinal
+    }
   }
 
   const fmt = (v: number) => `$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
@@ -674,7 +689,7 @@ export default function VinosPage() {
             {/* Vista Móvil */}
             <div className="lg:hidden divide-y">
               {vinosFiltrados.map((vino) => {
-                const { precioUnidad, totalConDescuento } = calcularValores(vino.precio_caja, vino.unidades_caja, vino.descuento_porcentaje)
+                const { precioUnidad, unidadFinal } = calcularValores(vino.precio_caja, vino.unidades_caja, vino.descuento_porcentaje)
                 return (
                   <div key={vino.id} className="p-3">
                     <div className="flex items-start justify-between mb-1.5">
@@ -703,7 +718,7 @@ export default function VinosPage() {
                       </div>
                       <div className="bg-green-100 rounded -m-1.5 p-1.5">
                         <p className="text-[9px] text-green-700">Final</p>
-                        <p className="text-[10px] font-bold text-green-700 font-mono">{fmt(precioUnidad * (1 - vino.descuento_porcentaje / 100) * 1.21)}</p>
+                        <p className="text-[10px] font-bold text-green-700 font-mono">{fmt(unidadFinal)}</p>
                       </div>
                     </div>
                   </div>
@@ -729,8 +744,7 @@ export default function VinosPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {vinosFiltrados.map((vino) => {
-                    const { precioUnidad, totalConDescuento } = calcularValores(vino.precio_caja, vino.unidades_caja, vino.descuento_porcentaje)
-                    const finalBotella = precioUnidad * (1 - vino.descuento_porcentaje / 100) * 1.21
+                    const { precioUnidad, cajaFinal, unidadFinal } = calcularValores(vino.precio_caja, vino.unidades_caja, vino.descuento_porcentaje)
                     return (
                       <tr key={vino.id} className="hover:bg-gray-50">
                         <td className="px-2 py-1.5"><span className="text-xs font-medium text-purple-700">{vino.bodega}</span></td>
@@ -739,8 +753,8 @@ export default function VinosPage() {
                         <td className="px-2 py-1.5 text-xs text-right text-gray-900 font-mono">{fmt(vino.precio_caja)}</td>
                         <td className="px-2 py-1.5 text-xs text-center text-gray-600 font-mono">{vino.unidades_caja}</td>
                         <td className="px-2 py-1.5 text-xs text-center text-gray-600 font-mono">{vino.descuento_porcentaje}%</td>
-                        <td className="px-2 py-1.5 text-right"><span className="text-xs font-medium text-gray-900 font-mono">{fmt(totalConDescuento)}</span></td>
-                        <td className="px-2 py-1.5 text-right bg-green-50"><span className="text-xs font-bold text-green-700 font-mono">{fmt(finalBotella)}</span></td>
+                        <td className="px-2 py-1.5 text-right"><span className="text-xs font-medium text-gray-900 font-mono">{fmt(cajaFinal)}</span></td>
+                        <td className="px-2 py-1.5 text-right bg-green-50"><span className="text-xs font-bold text-green-700 font-mono">{fmt(unidadFinal)}</span></td>
                         <td className="px-1 py-1.5">
                           <div className="flex justify-end gap-0.5">
                             <button onClick={() => handleOpenModal(vino)} className="p-1 hover:bg-gray-100 rounded">
@@ -1062,7 +1076,7 @@ export default function VinosPage() {
             const unidadesCaja = parseInt(form.unidades_caja) || 1
             const descuentoValue = parsearNumero(form.descuento_porcentaje)
             const descuento = descuentoValue || 50
-            const { precioUnidad } = calcularValores(precioCaja, unidadesCaja, descuento)
+            const { precioUnidad, unidadConDescuentoSinIva, unidadFinal, cajaConDescuentoSinIva, cajaFinal } = calcularValores(precioCaja, unidadesCaja, descuento)
             return (
               <>
                 <div className="grid grid-cols-[1fr_80px_1fr] gap-3 items-end">
@@ -1097,11 +1111,11 @@ export default function VinosPage() {
                   </div>
                   <div className="text-center bg-gray-50 rounded-md p-2 border border-gray-200">
                     <p className="text-xs text-gray-500">Botella c/Desc</p>
-                    <p className="text-sm font-semibold text-gray-900 font-mono">{form.precio_caja ? fmt(precioUnidad * (1 - descuento / 100)) : '-'}</p>
+                    <p className="text-sm font-semibold text-gray-900 font-mono">{form.precio_caja ? fmt(unidadConDescuentoSinIva) : '-'}</p>
                   </div>
                   <div className="text-center bg-green-100 rounded-md p-2 border border-green-200">
                     <p className="text-xs text-green-700">Botella Final</p>
-                    <p className="text-sm font-bold text-green-700 font-mono">{form.precio_caja ? fmt(precioUnidad * (1 - descuento / 100) * 1.21) : '-'}</p>
+                    <p className="text-sm font-bold text-green-700 font-mono">{form.precio_caja ? fmt(unidadFinal) : '-'}</p>
                   </div>
                 </div>
 
@@ -1109,11 +1123,11 @@ export default function VinosPage() {
                   <div></div>
                   <div className="text-center bg-gray-50 rounded-md p-2 border border-gray-200">
                     <p className="text-xs text-gray-500">Caja c/Desc</p>
-                    <p className="text-sm font-semibold text-gray-900 font-mono">{form.precio_caja ? fmt(precioCaja * (1 - descuento / 100)) : '-'}</p>
+                    <p className="text-sm font-semibold text-gray-900 font-mono">{form.precio_caja ? fmt(cajaConDescuentoSinIva) : '-'}</p>
                   </div>
                   <div className="text-center bg-green-100 rounded-md p-2 border border-green-200">
                     <p className="text-xs text-green-700">Caja Final</p>
-                    <p className="text-sm font-bold text-green-700 font-mono">{form.precio_caja ? fmt(precioCaja * (1 - descuento / 100) * 1.21) : '-'}</p>
+                    <p className="text-sm font-bold text-green-700 font-mono">{form.precio_caja ? fmt(cajaFinal) : '-'}</p>
                   </div>
                 </div>
               </>

@@ -263,12 +263,16 @@ export default function NuevaFacturaPage() {
         const descuentoNum = typeof item.descuento === 'string' ? parsearNumero(item.descuento) : item.descuento
         // Detectar diferencia con orden original
         let diferencia = item.diferencia
+        // Resetear contenido a 1 si cambia la cantidad (usuario probablemente cambió de unidades a kg)
+        let nuevoContenido = item.contenido
         if (selectedOrden && diferencia !== 'nuevo') {
           const itemOrden = selectedOrden.items.find(i =>
             item.vino_id ? i.vino_id === item.vino_id : i.insumo_id === item.insumo_id
           )
           if (itemOrden && cantidadNum !== itemOrden.cantidad) {
             diferencia = 'cantidad'
+            // Si la cantidad cambió, resetear contenido a 1 (el precio ya viene por unidad base)
+            nuevoContenido = 1
           } else if (itemOrden && precioNum !== itemOrden.precio_unitario) {
             diferencia = 'precio'
           } else {
@@ -280,6 +284,7 @@ export default function NuevaFacturaPage() {
         return {
           ...item,
           cantidad: nuevaCantidad, // Mantener como string mientras edita
+          contenido: nuevoContenido,
           subtotal,
           iva_monto: ivaMonto,
           diferencia,

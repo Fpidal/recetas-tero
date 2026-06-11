@@ -18,6 +18,7 @@ import {
   X,
   Warehouse,
   Wine,
+  Martini,
   LogOut,
   User,
   DollarSign,
@@ -34,6 +35,7 @@ const navigation = [
   { name: 'Análisis', href: '/analisis', icon: TrendingUp },
   { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen },
   { name: 'Recetas', href: '/platos', icon: ChefHat },
+  { name: 'Tragos', href: '/tragos', icon: Martini },
   { name: 'Carta', href: '/carta', icon: ClipboardList },
   { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart },
   { name: 'Facturas', href: '/facturas', icon: FileText },
@@ -82,11 +84,12 @@ export default function Sidebar() {
 
   async function fetchPapeleraCount() {
     // Nota: carta no se cuenta porque "Fuera de Carta" no es papelera, es temporal
-    const [prov, ins, rb, pl, me, mesp, oc, fa] = await Promise.all([
+    const [prov, ins, rb, pl, tr, me, mesp, oc, fa] = await Promise.all([
       supabase.from('proveedores').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('insumos').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('recetas_base').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('platos').select('id', { count: 'exact', head: true }).eq('activo', false),
+      supabase.from('tragos').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('menus_ejecutivos').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('menus_especiales').select('id', { count: 'exact', head: true }).eq('activo', false),
       supabase.from('ordenes_compra').select('id', { count: 'exact', head: true }).eq('activo', false),
@@ -94,7 +97,7 @@ export default function Sidebar() {
     ])
 
     const total = (prov.count || 0) + (ins.count || 0) + (rb.count || 0) +
-      (pl.count || 0) + (me.count || 0) + (mesp.count || 0) +
+      (pl.count || 0) + (tr.count || 0) + (me.count || 0) + (mesp.count || 0) +
       (oc.count || 0) + (fa.count || 0)
 
     setPapeleraCount(total)

@@ -119,6 +119,37 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['plato_ingredientes']['Row'], 'id' | 'created_at' | 'costo_linea'>
         Update: Partial<Database['public']['Tables']['plato_ingredientes']['Insert']>
       }
+      tragos: {
+        Row: {
+          id: string
+          nombre: string
+          descripcion: string | null
+          vaso: string | null
+          tecnica: string | null
+          paso_a_paso: string | null
+          precio_venta: number
+          margen_objetivo: number
+          costo_total: number
+          activo: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['tragos']['Row'], 'id' | 'created_at' | 'updated_at' | 'costo_total' | 'margen_objetivo'>
+        Update: Partial<Database['public']['Tables']['tragos']['Insert']>
+      }
+      trago_ingredientes: {
+        Row: {
+          id: string
+          trago_id: string
+          insumo_id: string | null
+          receta_base_id: string | null
+          cantidad: number
+          costo_linea: number
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['trago_ingredientes']['Row'], 'id' | 'created_at' | 'costo_linea'>
+        Update: Partial<Database['public']['Tables']['trago_ingredientes']['Insert']>
+      }
       menus_ejecutivos: {
         Row: {
           id: string
@@ -322,6 +353,8 @@ export type RecetaBase = Database['public']['Tables']['recetas_base']['Row']
 export type RecetaBaseIngrediente = Database['public']['Tables']['receta_base_ingredientes']['Row']
 export type Plato = Database['public']['Tables']['platos']['Row']
 export type PlatoIngrediente = Database['public']['Tables']['plato_ingredientes']['Row']
+export type Trago = Database['public']['Tables']['tragos']['Row']
+export type TragoIngrediente = Database['public']['Tables']['trago_ingredientes']['Row']
 export type MenuEjecutivo = Database['public']['Tables']['menus_ejecutivos']['Row']
 export type MenuEjecutivoItem = Database['public']['Tables']['menu_ejecutivo_items']['Row']
 export type MenuEspecial = Database['public']['Tables']['menus_especiales']['Row']

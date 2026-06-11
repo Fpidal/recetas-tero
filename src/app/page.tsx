@@ -343,7 +343,7 @@ export default function Home() {
       // Traer precios actuales (es_precio_actual = true)
       const { data: preciosActuales } = await supabase
         .from('precios_insumo')
-        .select('insumo_id, precio')
+        .select('insumo_id, precio, fecha')
         .eq('es_precio_actual', true)
 
       // Traer todos los precios para encontrar el anterior
@@ -360,6 +360,11 @@ export default function Home() {
 
       if (preciosActuales && todosPrecios && insumos) {
         const variaciones: { insumoId: string; nombre: string; categoria: string; variacion: number }[] = []
+
+        // Fecha límite: últimos 30 días
+        const hace30Dias = new Date()
+        hace30Dias.setDate(hace30Dias.getDate() - 30)
+        const fechaLimite = hace30Dias.toISOString().split('T')[0]
 
         insumos.forEach((insumo: any) => {
           // Buscar precio actual (es_precio_actual = true)
@@ -382,8 +387,11 @@ export default function Home() {
               variacion,
             })
 
-            // Items con aumento >7%
-            if (variacion > 7) {
+            // Solo mostrar aumentos/bajas si el precio actual es de los últimos 30 días
+            const precioEsReciente = precioActualReg.fecha >= fechaLimite
+
+            // Items con aumento >7% (solo últimos 30 días)
+            if (variacion > 7 && precioEsReciente) {
               itemsConAumentoCount++
               itemsConAumentoDetalle.push({
                 nombre: insumo.nombre,
@@ -392,8 +400,8 @@ export default function Home() {
               })
             }
 
-            // Items con baja >5% (variación menor a -5%)
-            if (variacion < -5) {
+            // Items con baja >5% (solo últimos 30 días)
+            if (variacion < -5 && precioEsReciente) {
               itemsConBajaCount++
               itemsConBajaDetalle.push({
                 nombre: insumo.nombre,

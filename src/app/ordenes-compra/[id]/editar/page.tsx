@@ -173,8 +173,9 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         // Guardar descuento del vino
         const descuento = vino.descuento_porcentaje || 0
         setDescuentoVino(String(descuento).replace('.', ','))
-        // Calcular precio final con descuento (editable si es 0)
-        const precioFinal = precioCaja * (1 - descuento / 100)
+        // Calcular precio final con descuento. Se divide por 1,21 para sacar
+        // el IVA: precio_caja se guarda CON IVA y la OC trabaja en neto.
+        const precioFinal = (precioCaja / 1.21) * (1 - descuento / 100)
         setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
       } else {
         setPrecioListaVino('0')
@@ -198,7 +199,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     const descuentoNum = parsearNumero(nuevoDescuento)
     const precioListaNum = parsearNumero(precioListaVino)
     if (precioListaNum > 0) {
-      const precioFinal = precioListaNum * (1 - descuentoNum / 100)
+      const precioFinal = (precioListaNum / 1.21) * (1 - descuentoNum / 100)
       setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
     }
   }
@@ -207,7 +208,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     setPrecioListaVino(nuevoPrecio)
     const precioListaNum = parsearNumero(nuevoPrecio)
     const descuentoNum = parsearNumero(descuentoVino)
-    const precioFinal = precioListaNum * (1 - descuentoNum / 100)
+    const precioFinal = (precioListaNum / 1.21) * (1 - descuentoNum / 100)
     setPrecioUnitario(precioFinal.toFixed(2).replace('.', ','))
   }
 

@@ -91,10 +91,30 @@ interface DistribucionItem {
   color?: string
 }
 
+// Helpers para el contexto de variación de precios (de $X a $Y, fechas, tiempo entre compras)
+function fechaCorta(f: string): string {
+  const parts = f.split('T')[0].split('-')
+  return `${parts[2]}/${parts[1]}`
+}
+function tiempoEntreFechas(desde: string, hasta: string): string {
+  const dias = Math.max(0, Math.round((new Date(hasta).getTime() - new Date(desde).getTime()) / 86400000))
+  if (dias < 31) return `${dias} ${dias === 1 ? 'día' : 'días'}`
+  const meses = Math.round(dias / 30)
+  return `${meses} ${meses === 1 ? 'mes' : 'meses'}`
+}
+// Fecha real de la factura asociada a un precio (o la copia de precios_insumo como fallback)
+function fechaRealDe(p: any): string {
+  return p?.factura_items?.facturas_proveedor?.fecha || p?.fecha
+}
+
 interface ItemConAumentoDetalle {
   nombre: string
   categoria: string
   variacion: number
+  precioAnterior: number
+  precioActual: number
+  fechaAnterior: string
+  fechaActual: string
 }
 
 interface OrdenSinFacturaDetalle {
@@ -114,6 +134,10 @@ interface ItemConBajaDetalle {
   nombre: string
   categoria: string
   variacion: number
+  precioAnterior: number
+  precioActual: number
+  fechaAnterior: string
+  fechaActual: string
 }
 
 interface ComprasPorCategoriaItem {
@@ -340,16 +364,17 @@ export default function Home() {
         .select('id, nombre, categoria')
         .eq('activo', true)
 
-      // Traer precios actuales (es_precio_actual = true)
+      // Precio ACTUAL de cada insumo (es_precio_actual=true) — uno por insumo, con la fecha REAL de factura.
       const { data: preciosActuales } = await supabase
         .from('precios_insumo')
-        .select('insumo_id, precio, fecha')
+        .select('insumo_id, precio, fecha, factura_items(facturas_proveedor(fecha))')
         .eq('es_precio_actual', true)
 
-      // Traer todos los precios para encontrar el anterior
+      // Historial reciente para encontrar el "anterior". La fecha de la factura es la fuente de
+      // verdad: la copia en precios_insumo puede quedar desfasada si se edita la factura después.
       const { data: todosPrecios } = await supabase
         .from('precios_insumo')
-        .select('insumo_id, precio, es_precio_actual')
+        .select('insumo_id, precio, es_precio_actual, fecha, factura_items(facturas_proveedor(fecha))')
         .order('fecha', { ascending: false })
 
       let mayorVariacion: DashboardData['mayorVariacion'] = null
@@ -367,17 +392,20 @@ export default function Home() {
         const fechaLimite = hace30Dias.toISOString().split('T')[0]
 
         insumos.forEach((insumo: any) => {
-          // Buscar precio actual (es_precio_actual = true)
+          // Precio actual = el que marca el sistema (el mismo que usa la receta / food cost)
           const precioActualReg = preciosActuales.find((p: any) => p.insumo_id === insumo.id)
-          if (!precioActualReg) return // Sin precio actual, no se puede calcular variación
+          if (!precioActualReg) return
+          const fechaActual = fechaRealDe(precioActualReg)
 
-          // Buscar precio anterior (NO es_precio_actual)
-          const preciosInsumo = todosPrecios.filter((p: any) => p.insumo_id === insumo.id)
-          const precioAnteriorReg = preciosInsumo.find((p: any) => !p.es_precio_actual)
+          // Precio anterior = el de FECHA DE FACTURA más reciente, anterior a la del actual
+          const precioAnteriorReg = todosPrecios
+            .filter((p: any) => p.insumo_id === insumo.id && p.precio > 0 && fechaRealDe(p) < fechaActual)
+            .sort((a: any, b: any) => fechaRealDe(b).localeCompare(fechaRealDe(a)))[0]
 
           if (precioAnteriorReg && precioAnteriorReg.precio > 0) {
             const precioActual = precioActualReg.precio
             const precioAnterior = precioAnteriorReg.precio
+            const fechaAnterior = fechaRealDe(precioAnteriorReg)
             const variacion = ((precioActual - precioAnterior) / precioAnterior) * 100
 
             variaciones.push({
@@ -387,8 +415,8 @@ export default function Home() {
               variacion,
             })
 
-            // Solo mostrar aumentos/bajas si el precio actual es de los últimos 30 días
-            const precioEsReciente = precioActualReg.fecha >= fechaLimite
+            // Solo mostrar si el precio actual (por fecha de factura) es de los últimos 30 días
+            const precioEsReciente = fechaActual >= fechaLimite
 
             // Items con aumento >7% (solo últimos 30 días)
             if (variacion > 7 && precioEsReciente) {
@@ -397,6 +425,10 @@ export default function Home() {
                 nombre: insumo.nombre,
                 categoria: CATEG_LABELS[insumo.categoria] || insumo.categoria,
                 variacion,
+                precioAnterior,
+                precioActual,
+                fechaAnterior,
+                fechaActual,
               })
             }
 
@@ -407,6 +439,10 @@ export default function Home() {
                 nombre: insumo.nombre,
                 categoria: CATEG_LABELS[insumo.categoria] || insumo.categoria,
                 variacion,
+                precioAnterior,
+                precioActual,
+                fechaAnterior,
+                fechaActual,
               })
             }
           }
@@ -633,11 +669,6 @@ export default function Home() {
       fecha30DiasAtras.setDate(fecha30DiasAtras.getDate() - 30)
 
       // Traer precios con fecha para gráfico de variación por categoría
-      const { data: preciosConFecha } = await supabase
-        .from('precios_insumo')
-        .select('insumo_id, precio, fecha')
-        .order('fecha', { ascending: false })
-
       const variacionCategoriasData: DashboardData['variacionCategoriasData'] = []
 
       if (insumos && preciosActuales && todosPrecios) {
@@ -651,9 +682,12 @@ export default function Home() {
           categInsumos.forEach((insumo: any) => {
             const precioActualReg = preciosActuales.find((p: any) => p.insumo_id === insumo.id)
             if (!precioActualReg) return
+            const fechaActual = fechaRealDe(precioActualReg)
 
-            const preciosInsumo = todosPrecios.filter((p: any) => p.insumo_id === insumo.id)
-            const precioAnteriorReg = preciosInsumo.find((p: any) => !p.es_precio_actual)
+            // Anterior por fecha de factura más reciente, anterior a la del actual
+            const precioAnteriorReg = todosPrecios
+              .filter((p: any) => p.insumo_id === insumo.id && p.precio > 0 && fechaRealDe(p) < fechaActual)
+              .sort((a: any, b: any) => fechaRealDe(b).localeCompare(fechaRealDe(a)))[0]
 
             if (precioAnteriorReg && precioAnteriorReg.precio > 0) {
               const variacion = ((precioActualReg.precio - precioAnteriorReg.precio) / precioAnteriorReg.precio) * 100
@@ -1273,6 +1307,9 @@ export default function Home() {
                       <div>
                         <p className="font-medium text-ink">{item.nombre}</p>
                         <p className="text-xs text-ink-muted">{item.categoria}</p>
+                        <p className="text-[11px] text-ink-muted font-mono mt-0.5">
+                          {formatMoney(item.precioAnterior)} ({fechaCorta(item.fechaAnterior)}) → {formatMoney(item.precioActual)} ({fechaCorta(item.fechaActual)}) · {tiempoEntreFechas(item.fechaAnterior, item.fechaActual)}
+                        </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: COLORS.dangerBg, color: COLORS.danger }}>
                         +{item.variacion.toFixed(0)}%
@@ -1345,6 +1382,9 @@ export default function Home() {
                       <div>
                         <p className="font-medium text-ink">{item.nombre}</p>
                         <p className="text-xs text-ink-muted">{item.categoria}</p>
+                        <p className="text-[11px] text-ink-muted font-mono mt-0.5">
+                          {formatMoney(item.precioAnterior)} ({fechaCorta(item.fechaAnterior)}) → {formatMoney(item.precioActual)} ({fechaCorta(item.fechaActual)}) · {tiempoEntreFechas(item.fechaAnterior, item.fechaActual)}
+                        </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: COLORS.successBg, color: COLORS.success }}>
                         {item.variacion.toFixed(0)}%

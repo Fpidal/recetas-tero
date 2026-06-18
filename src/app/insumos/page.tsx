@@ -27,6 +27,7 @@ interface InsumoCompleto {
   precio_actual: number | null
   precio_anterior: number | null
   fecha_actualizacion: string | null
+  fecha_anterior: string | null
   proveedor_id: string | null
   proveedor_nombre: string | null
 }
@@ -159,25 +160,37 @@ export default function InsumosPage() {
         precio,
         fecha,
         proveedor_id,
-        proveedores (nombre)
+        proveedores (nombre),
+        factura_items (facturas_proveedor (fecha))
       `)
       .eq('es_precio_actual', true)
 
     const { data: todosPrecios } = await supabase
       .from('precios_insumo')
-      .select('insumo_id, precio, fecha, es_precio_actual')
+      .select('insumo_id, precio, fecha, es_precio_actual, factura_items (facturas_proveedor (fecha))')
       .order('fecha', { ascending: false })
+
+    // Fecha real de la factura (o la copia como fallback). Es la fuente de verdad para comparar.
+    const fechaRealDe = (p: any): string => p?.factura_items?.facturas_proveedor?.fecha || p?.fecha
 
     const insumosCompletos: InsumoCompleto[] = (insumosData || []).map(insumo => {
       const precioActual = preciosActuales?.find(p => p.insumo_id === insumo.id)
+      const fechaActualReal = precioActual ? fechaRealDe(precioActual) : null
       const preciosInsumo = todosPrecios?.filter(p => p.insumo_id === insumo.id) || []
-      const precioAnterior = preciosInsumo.find(p => !p.es_precio_actual)
+
+      // Precio anterior = el de FECHA DE FACTURA más reciente, anterior a la del actual (igual que el dashboard)
+      const precioAnteriorReg = fechaActualReal
+        ? preciosInsumo
+            .filter(p => (p.precio as number) > 0 && fechaRealDe(p) < fechaActualReal)
+            .sort((a, b) => fechaRealDe(b).localeCompare(fechaRealDe(a)))[0]
+        : undefined
 
       return {
         ...insumo,
         precio_actual: precioActual?.precio || null,
-        precio_anterior: precioAnterior?.precio || null,
-        fecha_actualizacion: precioActual?.fecha || null,
+        precio_anterior: precioAnteriorReg?.precio || null,
+        fecha_actualizacion: fechaActualReal,
+        fecha_anterior: precioAnteriorReg ? fechaRealDe(precioAnteriorReg) : null,
         proveedor_id: precioActual?.proveedor_id || null,
         proveedor_nombre: (precioActual?.proveedores as any)?.nombre || null,
       }

@@ -33,8 +33,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Si no hay usuario y no está en /login, redirigir a login
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+  // Rutas públicas (sin login): login y el menú digital (QR para clientes)
+  const esRutaPublica =
+    request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname.startsWith('/menu')
+
+  // Si no hay usuario y no es ruta pública, redirigir a login
+  if (!user && !esRutaPublica) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

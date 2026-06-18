@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Playfair_Display, DM_Sans, JetBrains_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { headers } from "next/headers";
@@ -19,6 +19,13 @@ const dmSans = DM_Sans({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
+});
+
+// Fuente para el diseño de la carta/menú (estilo editorial)
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-menu-sans",
   display: "swap",
 });
 
@@ -64,10 +71,11 @@ export default function RootLayout({
 }>) {
   const headersList = headers()
   const pathname = headersList.get('x-next-pathname') || ''
-  const isLoginPage = pathname === '/login'
+  // Páginas a pantalla completa (sin sidebar): login, menú público e impresión de carta
+  const isFullScreen = pathname === '/login' || pathname === '/menu' || pathname === '/carta/menu'
 
   return (
-    <html lang="es" className={`${playfair.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
+    <html lang="es" className={`${playfair.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${montserrat.variable}`}>
       <head>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
@@ -79,7 +87,7 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
       </head>
       <body className="font-body antialiased">
-        {isLoginPage ? (
+        {isFullScreen ? (
           children
         ) : (
           <div className="flex h-screen bg-cream">

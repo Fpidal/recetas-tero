@@ -8,7 +8,6 @@ import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal } from '@/components/ui'
 import { parsearNumero } from '@/lib/formato-numeros'
-import { generarPDFCarta } from '@/lib/generar-pdf-carta'
 
 const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
 
@@ -847,16 +846,16 @@ export default function CartaPage() {
         <div className="flex items-center gap-2">
           {(tabActiva === 'en_carta' || tabActiva === 'fuera_carta') && (
             <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => generarPDFCarta(items, 'TERO')}
-                disabled={items.length === 0}
-                title="Descargar PDF de la carta"
-              >
-                <FileDown className="w-3.5 h-3.5 mr-1" />
-                PDF
-              </Button>
+              <Link href="/carta/menu">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  title="Diseñar e imprimir la carta (estilo editorial + QR)"
+                >
+                  <FileDown className="w-3.5 h-3.5 mr-1" />
+                  Carta / Menú
+                </Button>
+              </Link>
               <Button onClick={() => setIsModalOpen(true)} disabled={platosDisponibles.length === 0} size="sm">
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Agregar

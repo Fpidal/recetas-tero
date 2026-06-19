@@ -25,6 +25,7 @@ import {
   TrendingUp
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { APP_VERSION, APP_FECHA } from '@/lib/version'
 
 const navigation = [
   { name: 'Inicio', href: '/', icon: Home },
@@ -107,7 +108,10 @@ export default function Sidebar() {
     <>
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
-        <h1 className="font-display text-xl font-bold text-white tracking-tight">Tero Restó</h1>
+        <div>
+          <h1 className="font-display text-xl font-bold text-white tracking-tight leading-none">Tero Restó</h1>
+          <p className="text-[10px] text-white/40 font-mono mt-0.5">{APP_VERSION} ({APP_FECHA})</p>
+        </div>
         {/* Botón cerrar en mobile */}
         <button
           className="lg:hidden text-white/60 hover:text-white p-2 transition-colors"

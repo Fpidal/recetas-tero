@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Select, Input } from '@/components/ui'
-import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Scale, Calendar } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Calendar } from 'lucide-react'
 
 // ============ TIPOS ============
 interface Insumo {
@@ -124,7 +124,7 @@ const CATEG_COLORES: Record<string, string> = {
   Salsas_Recetas: '#C4704B',
 }
 
-type TabType = 'proveedores' | 'comparador' | 'variacion' | 'alertas' | 'compras_semanales' | 'comparacion_mensual'
+type TabType = 'proveedores' | 'variacion' | 'compras_semanales' | 'comparacion_mensual'
 
 interface FacturaResumenProveedor {
   proveedor_id: string
@@ -241,16 +241,10 @@ export default function EstadisticasPage() {
   const [rangoFechas, setRangoFechas] = useState({ desde: '', hasta: '' })
 
   // Datos para compras semanales
-  const [modoComprasSemanal, setModoComprasSemanal] = useState<'insumos' | 'proveedores' | 'frecuencia'>('insumos')
+  const [modoComprasSemanal, setModoComprasSemanal] = useState<'insumos' | 'proveedores'>('insumos')
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
 
-  // Datos para comparador de precios
-  const [modoComparador, setModoComparador] = useState<'insumo' | 'categoria'>('insumo')
-  const [insumoSeleccionado, setInsumoSeleccionado] = useState('')
-  const [categoriaComparador, setCategoriaComparador] = useState('')
-  const [busquedaInsumo, setBusquedaInsumo] = useState('')
-
-  // Todos los precios históricos para comparador y alertas
+  // Todos los precios históricos para alertas
   const [todosLosPrecios, setTodosLosPrecios] = useState<{
     insumo_id: string
     proveedor_id: string
@@ -632,126 +626,6 @@ export default function EstadisticasPage() {
     }[]
   }, [preciosDeFacturas, insumos, preciosAnterioresMapa])
 
-  // ============ COMPARADOR DE PRECIOS ============
-  const insumosFiltrados = useMemo(() => {
-    if (!busquedaInsumo) return insumos
-    const busqueda = busquedaInsumo.toLowerCase()
-    return insumos.filter(i => i.nombre.toLowerCase().includes(busqueda))
-  }, [insumos, busquedaInsumo])
-
-  const comparacionPrecios = useMemo((): PrecioProveedor[] => {
-    if (!insumoSeleccionado) return []
-
-    const preciosInsumo = todosLosPrecios.filter(p => p.insumo_id === insumoSeleccionado)
-    if (preciosInsumo.length === 0) return []
-
-    // Agrupar por proveedor
-    const porProveedor = new Map<string, typeof preciosInsumo>()
-    preciosInsumo.forEach(p => {
-      if (!porProveedor.has(p.proveedor_nombre)) {
-        porProveedor.set(p.proveedor_nombre, [])
-      }
-      porProveedor.get(p.proveedor_nombre)!.push(p)
-    })
-
-    const resultado: PrecioProveedor[] = []
-    porProveedor.forEach((precios, proveedor) => {
-      const preciosOrdenados = precios.sort((a, b) => a.fecha.localeCompare(b.fecha))
-      const preciosNumeros = preciosOrdenados.map(p => p.precio)
-
-      const ultimoPrecio = preciosOrdenados[preciosOrdenados.length - 1].precio
-      const primerPrecio = preciosOrdenados[0].precio
-      const variacion = primerPrecio > 0 ? ((ultimoPrecio - primerPrecio) / primerPrecio) * 100 : 0
-
-      resultado.push({
-        proveedor,
-        ultimoPrecio,
-        fechaUltimo: preciosOrdenados[preciosOrdenados.length - 1].fecha,
-        precioPromedio: preciosNumeros.reduce((a, b) => a + b, 0) / preciosNumeros.length,
-        precioMin: Math.min(...preciosNumeros),
-        precioMax: Math.max(...preciosNumeros),
-        variacionPrimeraUltima: variacion,
-        cantidadCompras: precios.length,
-      })
-    })
-
-    // Ordenar por último precio (menor primero)
-    return resultado.sort((a, b) => a.ultimoPrecio - b.ultimoPrecio)
-  }, [insumoSeleccionado, todosLosPrecios])
-
-  const menorPrecioActual = useMemo(() => {
-    if (comparacionPrecios.length === 0) return 0
-    return comparacionPrecios[0].ultimoPrecio
-  }, [comparacionPrecios])
-
-  // Matriz de precios por categoría (proveedores vs insumos)
-  const matrizPreciosCategoria = useMemo(() => {
-    if (!categoriaComparador) return { insumos: [], proveedores: [], precios: new Map<string, number>() }
-
-    // Filtrar insumos de la categoría seleccionada
-    const insumosCategoria = insumos.filter(i => i.categoria === categoriaComparador)
-    const insumoIds = new Set(insumosCategoria.map(i => i.id))
-
-    // Filtrar precios de esos insumos
-    const preciosFiltrados = todosLosPrecios.filter(p => insumoIds.has(p.insumo_id))
-
-    // Obtener lista de proveedores únicos que tienen precios en esta categoría
-    const proveedoresSet = new Set<string>()
-    preciosFiltrados.forEach(p => proveedoresSet.add(p.proveedor_nombre))
-    const proveedoresList = Array.from(proveedoresSet).sort()
-
-    // Crear mapa de último precio por insumo-proveedor
-    const ultimosPreciosMap = new Map<string, { precio: number; fecha: string }>()
-    preciosFiltrados.forEach(p => {
-      const key = `${p.insumo_id}|${p.proveedor_nombre}`
-      const existing = ultimosPreciosMap.get(key)
-      if (!existing || p.fecha > existing.fecha) {
-        ultimosPreciosMap.set(key, { precio: p.precio, fecha: p.fecha })
-      }
-    })
-
-    // Filtrar insumos que tienen al menos un precio
-    const insumosConPrecios = insumosCategoria.filter(i => {
-      return proveedoresList.some(prov => ultimosPreciosMap.has(`${i.id}|${prov}`))
-    })
-
-    // Crear mapa simple de precios
-    const preciosSimple = new Map<string, number>()
-    ultimosPreciosMap.forEach((val, key) => {
-      preciosSimple.set(key, val.precio)
-    })
-
-    return {
-      insumos: insumosConPrecios,
-      proveedores: proveedoresList,
-      precios: preciosSimple,
-    }
-  }, [categoriaComparador, insumos, todosLosPrecios])
-
-  // Encontrar el mejor precio por insumo
-  const mejorPrecioPorInsumo = useMemo(() => {
-    const mejores = new Map<string, { proveedor: string; precio: number }>()
-
-    matrizPreciosCategoria.insumos.forEach(insumo => {
-      let mejorPrecio = Infinity
-      let mejorProveedor = ''
-
-      matrizPreciosCategoria.proveedores.forEach(prov => {
-        const precio = matrizPreciosCategoria.precios.get(`${insumo.id}|${prov}`)
-        if (precio !== undefined && precio < mejorPrecio) {
-          mejorPrecio = precio
-          mejorProveedor = prov
-        }
-      })
-
-      if (mejorProveedor) {
-        mejores.set(insumo.id, { proveedor: mejorProveedor, precio: mejorPrecio })
-      }
-    })
-
-    return mejores
-  }, [matrizPreciosCategoria])
-
   // ============ ALERTAS ============
   const alertas = useMemo((): Alerta[] => {
     const listaAlertas: Alerta[] = []
@@ -1043,9 +917,7 @@ export default function EstadisticasPage() {
     { id: 'compras_semanales' as TabType, label: 'Compras Semanales', icon: Calendar },
     { id: 'comparacion_mensual' as TabType, label: 'Comparación Mensual', icon: FileText },
     { id: 'proveedores' as TabType, label: 'Compras por Proveedor', icon: Users },
-    { id: 'comparador' as TabType, label: 'Comparador de Precios', icon: Scale },
     { id: 'variacion' as TabType, label: 'Variación de Precios', icon: TrendingUp },
-    { id: 'alertas' as TabType, label: 'Alertas', icon: AlertTriangle },
   ]
 
   return (
@@ -1090,7 +962,7 @@ export default function EstadisticasPage() {
               >
                 <Icon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'comparacion_mensual' ? 'Mensual' : tab.id === 'proveedores' ? 'Compras' : tab.id === 'comparador' ? 'Comparar' : tab.id === 'variacion' ? 'Variación' : 'Alertas'}</span>
+                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'comparacion_mensual' ? 'Mensual' : tab.id === 'proveedores' ? 'Compras' : 'Variación'}</span>
               </button>
             )
           })}
@@ -1163,18 +1035,6 @@ export default function EstadisticasPage() {
                 <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 Por Proveedor
               </button>
-              <button
-                type="button"
-                onClick={() => setModoComprasSemanal('frecuencia')}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                  modoComprasSemanal === 'frecuencia'
-                    ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
-                    : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
-                }`}
-              >
-                <Calendar className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                Frecuencia
-              </button>
             </div>
           </div>
 
@@ -1243,7 +1103,7 @@ export default function EstadisticasPage() {
                 </div>
               ))}
             </div>
-          ) : modoComprasSemanal === 'proveedores' ? (
+          ) : (
             /* VISTA POR PROVEEDORES */
             <div className="bg-white rounded-lg border overflow-hidden">
               <div className="overflow-x-auto">
@@ -1288,129 +1148,6 @@ export default function EstadisticasPage() {
                         </td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            /* VISTA FRECUENCIA */
-            <div className="space-y-4">
-              {/* Recurrentes */}
-              <div className="bg-white rounded-lg border overflow-hidden">
-                <div className="px-3 sm:px-4 py-2 sm:py-3 bg-green-50 border-b">
-                  <h3 className="text-sm sm:text-base font-semibold text-green-800">Compra recurrente (4-5 semanas)</h3>
-                  <p className="text-[10px] sm:text-xs text-green-600">Insumos que se compran regularmente</p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Insumo</th>
-                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Categoría</th>
-                        <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Frec.</th>
-                        <th className="px-3 sm:px-4 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Total</th>
-                        <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Compras</th>
-                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Proveedor(es)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {comprasPorInsumoSemana.porInsumo
-                        .filter(i => i.frecuencia >= 4)
-                        .sort((a, b) => b.frecuencia - a.frecuencia || b.total - a.total)
-                        .map(item => (
-                          <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-900">{item.nombre}</td>
-                            <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
-                              <span className="inline-flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEG_COLORES[item.categoria] || '#6b7280' }} />
-                                {CATEG_LABELS[item.categoria] || item.categoria}
-                              </span>
-                            </td>
-                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm font-semibold text-green-600 font-mono">{item.frecuenciaLabel}</td>
-                            <td className="px-3 sm:px-4 py-2 text-right text-xs sm:text-sm font-bold text-gray-900 font-mono">
-                              {item.total % 1 === 0 ? item.total : item.total.toFixed(1)}
-                            </td>
-                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm text-gray-600 font-mono">{item.vecesTotal}</td>
-                            <td className="px-3 sm:px-4 py-2 text-xs text-gray-500 hidden sm:table-cell">{item.proveedoresList.join(', ')}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Esporádicos */}
-              <div className="bg-white rounded-lg border overflow-hidden">
-                <div className="px-3 sm:px-4 py-2 sm:py-3 bg-red-50 border-b">
-                  <h3 className="text-sm sm:text-base font-semibold text-red-800">Compra esporádica (1-2 semanas)</h3>
-                  <p className="text-[10px] sm:text-xs text-red-600">Insumos que se compran ocasionalmente</p>
-                </div>
-                <div className="overflow-x-auto max-h-96">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50 sticky top-0">
-                      <tr>
-                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Insumo</th>
-                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Categoría</th>
-                        <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Frec.</th>
-                        <th className="px-3 sm:px-4 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Total</th>
-                        <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Compras</th>
-                        <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Proveedor(es)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {comprasPorInsumoSemana.porInsumo
-                        .filter(i => i.frecuencia <= 2)
-                        .sort((a, b) => b.total - a.total)
-                        .map(item => (
-                          <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-900">{item.nombre}</td>
-                            <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
-                              <span className="inline-flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEG_COLORES[item.categoria] || '#6b7280' }} />
-                                {CATEG_LABELS[item.categoria] || item.categoria}
-                              </span>
-                            </td>
-                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm font-semibold text-red-500 font-mono">{item.frecuenciaLabel}</td>
-                            <td className="px-3 sm:px-4 py-2 text-right text-xs sm:text-sm font-bold text-gray-900 font-mono">
-                              {item.total % 1 === 0 ? item.total : item.total.toFixed(1)}
-                            </td>
-                            <td className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm text-gray-600 font-mono">{item.vecesTotal}</td>
-                            <td className="px-3 sm:px-4 py-2 text-xs text-gray-500 hidden sm:table-cell">{item.proveedoresList.join(', ')}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Resumen por categoría */}
-              <div className="bg-white rounded-lg border overflow-hidden">
-                <div className="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border-b">
-                  <h3 className="text-sm sm:text-base font-semibold text-gray-800">Resumen por Categoría</h3>
-                </div>
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-3 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                      <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Insumos</th>
-                      <th className="px-3 sm:px-4 py-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Compras Totales</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {comprasPorInsumoSemana.porCategoria
-                      .sort((a, b) => b.totalCompras - a.totalCompras)
-                      .map(cat => (
-                        <tr key={cat.categoria} className="hover:bg-gray-50">
-                          <td className="px-3 sm:px-4 py-2 sm:py-3">
-                            <span className="inline-flex items-center gap-2">
-                              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
-                              <span className="text-xs sm:text-sm font-medium text-gray-900">{cat.label}</span>
-                            </span>
-                          </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600 font-mono">{cat.totalInsumos}</td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold text-gray-900 font-mono">{cat.totalCompras}</td>
-                        </tr>
-                      ))}
                   </tbody>
                 </table>
               </div>
@@ -1681,271 +1418,6 @@ export default function EstadisticasPage() {
             </div>
           </div>
         </div>
-      ) : activeTab === 'comparador' ? (
-        /* ============ TAB COMPARADOR DE PRECIOS ============ */
-        <div className="space-y-4 sm:space-y-6">
-          {/* Selector de modo */}
-          <div className="bg-white rounded-lg border p-3 sm:p-4">
-            <div className="flex gap-2 mb-3 sm:mb-4">
-              <button
-                type="button"
-                onClick={() => { setModoComparador('insumo'); setCategoriaComparador('') }}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                  modoComparador === 'insumo'
-                    ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
-                    : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
-                }`}
-              >
-                <Package className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                Por Insumo
-              </button>
-              <button
-                type="button"
-                onClick={() => { setModoComparador('categoria'); setInsumoSeleccionado('') }}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                  modoComparador === 'categoria'
-                    ? 'bg-purple-100 text-purple-800 border-2 border-purple-500'
-                    : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
-                }`}
-              >
-                <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                Por Categoría
-              </button>
-            </div>
-
-            {modoComparador === 'insumo' ? (
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-                <div className="relative flex-1 sm:max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar insumo..."
-                    value={busquedaInsumo}
-                    onChange={(e) => setBusquedaInsumo(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-                <div className="flex-1">
-                  <Select
-                    options={[
-                      { value: '', label: 'Seleccionar insumo...' },
-                      ...insumosFiltrados.map(i => ({ value: i.id, label: `${i.nombre} (${CATEG_LABELS[i.categoria] || i.categoria})` }))
-                    ]}
-                    value={insumoSeleccionado}
-                    onChange={(e) => setInsumoSeleccionado(e.target.value)}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="max-w-md">
-                <Select
-                  label="Categoría"
-                  options={[
-                    { value: '', label: 'Seleccionar categoría...' },
-                    { value: 'Carnes', label: 'Carnes' },
-                    { value: 'Almacen', label: 'Almacén' },
-                    { value: 'Verduras_Frutas', label: 'Verduras y Frutas' },
-                    { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
-                    { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
-                    { value: 'Bebidas', label: 'Bebidas' },
-                  ]}
-                  value={categoriaComparador}
-                  onChange={(e) => setCategoriaComparador(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Contenido según modo */}
-          {modoComparador === 'insumo' ? (
-            /* MODO INSUMO */
-            insumoSeleccionado && comparacionPrecios.length > 0 ? (
-              <>
-                <div className="bg-white rounded-lg border overflow-hidden">
-                  <div className="px-4 py-3 bg-gray-50 border-b">
-                    <h3 className="text-sm font-semibold text-gray-700">
-                      Comparación de precios: {insumos.find(i => i.id === insumoSeleccionado)?.nombre}
-                    </h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 sm:px-4 py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Proveedor</th>
-                        <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Últ. Precio</th>
-                        <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Promedio</th>
-                        <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Mín / Máx</th>
-                        <th className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase">Var.</th>
-                        <th className="px-3 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Compras</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {comparacionPrecios.map((p, idx) => (
-                        <tr key={p.proveedor} className={`hover:bg-gray-50 ${idx === 0 ? 'bg-green-50' : ''}`}>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3">
-                            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                              <span className="text-xs sm:text-sm font-medium text-gray-900">{p.proveedor}</span>
-                              {p.ultimoPrecio === menorPrecioActual && (
-                                <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium">
-                                  MEJOR
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-gray-500 hidden sm:block">
-                              Última compra: {new Date(p.fechaUltimo + 'T12:00:00').toLocaleDateString('es-AR')}
-                            </span>
-                          </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
-                            <span className={`text-xs sm:text-sm font-bold font-mono ${idx === 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                              {formatMoney(p.ultimoPrecio)}
-                            </span>
-                          </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-600 hidden sm:table-cell font-mono">
-                            {formatMoney(p.precioPromedio)}
-                          </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-600 hidden sm:table-cell font-mono">
-                            {formatMoney(p.precioMin)} / {formatMoney(p.precioMax)}
-                          </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              {p.variacionPrimeraUltima > 0 ? (
-                                <TrendingUp className="w-3 h-3 text-red-500" />
-                              ) : p.variacionPrimeraUltima < 0 ? (
-                                <TrendingDown className="w-3 h-3 text-green-500" />
-                              ) : (
-                                <Minus className="w-3 h-3 text-gray-400" />
-                              )}
-                              <span className={`text-[10px] sm:text-xs font-semibold font-mono ${
-                                p.variacionPrimeraUltima > 0 ? 'text-red-600' : p.variacionPrimeraUltima < 0 ? 'text-green-600' : 'text-gray-500'
-                              }`}>
-                                {p.variacionPrimeraUltima > 0 ? '+' : ''}{p.variacionPrimeraUltima.toFixed(1)}%
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-gray-600 hidden sm:table-cell font-mono">
-                            {p.cantidadCompras}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  </div>
-                </div>
-
-                {/* Gráfico de barras horizontal */}
-                <div className="bg-white rounded-lg border p-3 sm:p-4">
-                  <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Comparación Visual</h3>
-                  <div className="h-48 sm:h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        layout="vertical"
-                        data={comparacionPrecios.map(p => ({
-                          proveedor: p.proveedor,
-                          precio: p.ultimoPrecio,
-                          fill: p.ultimoPrecio === menorPrecioActual ? '#16a34a' : '#6b7280'
-                        }))}
-                        margin={{ left: 70, right: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" tickFormatter={(v) => formatMoney(v)} tick={{ fontSize: 10 }} />
-                        <YAxis dataKey="proveedor" type="category" tick={{ fontSize: 10 }} width={65} />
-                        <Tooltip formatter={(v: any) => formatMoney(v || 0)} />
-                        <Bar dataKey="precio" fill="#6b7280">
-                          {comparacionPrecios.map((entry, idx) => (
-                            <Cell key={idx} fill={entry.ultimoPrecio === menorPrecioActual ? '#16a34a' : '#6b7280'} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </>
-            ) : insumoSeleccionado ? (
-              <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
-                <p className="text-gray-400 text-sm">No hay compras registradas para este insumo</p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
-                <Scale className="w-10 sm:w-12 h-10 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
-                <p className="text-gray-400 text-sm">Seleccioná un insumo para comparar precios</p>
-              </div>
-            )
-          ) : (
-            /* MODO CATEGORÍA - Matriz insumos vs proveedores */
-            categoriaComparador && matrizPreciosCategoria.insumos.length > 0 ? (
-              <div className="bg-white rounded-lg border overflow-hidden">
-                <div className="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border-b">
-                  <h3 className="text-xs sm:text-sm font-semibold text-gray-700">
-                    Matriz: {CATEG_LABELS[categoriaComparador] || categoriaComparador}
-                  </h3>
-                  <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 font-mono">
-                    {matrizPreciosCategoria.insumos.length} insumos · {matrizPreciosCategoria.proveedores.length} proveedores
-                  </p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-10 min-w-[120px] sm:min-w-[180px]">
-                          Insumo
-                        </th>
-                        {matrizPreciosCategoria.proveedores.map(proveedor => (
-                          <th key={proveedor} className="px-2 sm:px-3 py-2 sm:py-3 text-center text-[9px] sm:text-[10px] font-medium text-gray-500 uppercase min-w-[70px] sm:min-w-[100px]">
-                            <div className="truncate max-w-[70px] sm:max-w-[100px]" title={proveedor}>
-                              {proveedor}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {matrizPreciosCategoria.insumos.map(insumo => {
-                        const mejorPrecio = mejorPrecioPorInsumo.get(insumo.id)
-                        return (
-                          <tr key={insumo.id} className="hover:bg-gray-50">
-                            <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r">
-                              {insumo.nombre}
-                            </td>
-                            {matrizPreciosCategoria.proveedores.map(proveedor => {
-                              const precio = matrizPreciosCategoria.precios.get(`${insumo.id}|${proveedor}`)
-                              const esMejor = mejorPrecio?.proveedor === proveedor && precio !== undefined
-
-                              return (
-                                <td key={proveedor} className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs ${esMejor ? 'bg-green-50' : ''}`}>
-                                  {precio !== undefined ? (
-                                    <span className={`font-medium font-mono ${esMejor ? 'text-green-700' : 'text-gray-900'}`}>
-                                      {formatMoney(precio)}
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-300">-</span>
-                                  )}
-                                </td>
-                              )
-                            })}
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-50 border-t text-[10px] sm:text-xs text-gray-500">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="w-2.5 sm:w-3 h-2.5 sm:h-3 bg-green-100 rounded" /> Mejor precio
-                  </span>
-                </div>
-              </div>
-            ) : categoriaComparador ? (
-              <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
-                <p className="text-gray-400 text-sm">No hay datos de precios para esta categoría</p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
-                <Scale className="w-10 sm:w-12 h-10 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
-                <p className="text-gray-400 text-sm">Seleccioná una categoría para ver la matriz</p>
-              </div>
-            )
-          )}
-        </div>
       ) : activeTab === 'variacion' ? (
         /* ============ TAB VARIACIÓN ============ */
         <div className="space-y-4">
@@ -2081,94 +1553,6 @@ export default function EstadisticasPage() {
                   Ordenado por mayor variación
                 </span>
               </div>
-            </div>
-          )}
-        </div>
-      ) : activeTab === 'alertas' ? (
-        /* ============ TAB ALERTAS ============ */
-        <div className="space-y-4">
-          {/* Resumen de alertas */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-red-50 rounded-lg border border-red-200 p-3 sm:p-4">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-red-700 mb-1">
-                <AlertTriangle className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                <span className="text-[10px] sm:text-xs font-medium">Aumentos &gt;10%</span>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-red-700 font-mono">
-                {alertas.filter(a => a.tipo === 'aumento').length}
-              </p>
-            </div>
-            <div className="bg-green-50 rounded-lg border border-green-200 p-3 sm:p-4">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-green-700 mb-1">
-                <Lightbulb className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                <span className="text-[10px] sm:text-xs font-medium">Oportunidades</span>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-green-700 font-mono">
-                {alertas.filter(a => a.tipo === 'oportunidad').length}
-              </p>
-            </div>
-          </div>
-
-          {/* Lista de alertas */}
-          {alertas.length > 0 ? (
-            <div className="bg-white rounded-lg border overflow-hidden">
-              <div className="divide-y divide-gray-200">
-                {alertas.map(alerta => (
-                  <div
-                    key={alerta.id}
-                    className={`p-3 sm:p-4 ${alerta.tipo === 'aumento' ? 'hover:bg-red-50' : 'hover:bg-green-50'}`}
-                  >
-                    <div className="flex items-start gap-2 sm:gap-3">
-                      <div className={`p-1.5 sm:p-2 rounded-full flex-shrink-0 ${
-                        alerta.tipo === 'aumento' ? 'bg-red-100' : 'bg-green-100'
-                      }`}>
-                        {alerta.tipo === 'aumento' ? (
-                          <AlertTriangle className={`w-3.5 sm:w-4 h-3.5 sm:h-4 text-red-600`} />
-                        ) : (
-                          <Lightbulb className={`w-3.5 sm:w-4 h-3.5 sm:h-4 text-green-600`} />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
-                          <span className={`text-xs sm:text-sm font-semibold ${
-                            alerta.tipo === 'aumento' ? 'text-red-700' : 'text-green-700'
-                          }`}>
-                            {alerta.tipo === 'aumento' ? 'Aumento' : 'Oportunidad'}
-                          </span>
-                          <span className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded font-medium font-mono ${
-                            alerta.tipo === 'aumento'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-green-100 text-green-700'
-                          }`}>
-                            {alerta.tipo === 'aumento' ? '+' : '-'}{Math.abs(alerta.porcentaje).toFixed(0)}%
-                          </span>
-                        </div>
-                        <p className="text-xs sm:text-sm text-gray-900 font-medium">{alerta.insumoNombre}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">
-                          {alerta.tipo === 'aumento' ? (
-                            <>Prov: <span className="font-medium">{alerta.proveedorAfectado}</span></>
-                          ) : (
-                            <>
-                              <span className="font-medium">{alerta.proveedorAlternativo}</span> mejor que <span className="font-medium">{alerta.proveedorAfectado}</span>
-                            </>
-                          )}
-                        </p>
-                        <p className="text-[10px] text-gray-400 mt-1">
-                          {new Date(alerta.fecha + 'T12:00:00').toLocaleDateString('es-AR', {
-                            day: 'numeric', month: 'short'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg border p-8 sm:p-12 text-center">
-              <AlertTriangle className="w-10 sm:w-12 h-10 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
-              <p className="text-gray-400 text-sm">No hay alertas en este momento</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-1">Se generan automáticamente desde las facturas</p>
             </div>
           )}
         </div>

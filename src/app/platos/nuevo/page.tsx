@@ -79,8 +79,14 @@ export default function NuevoPlatoPage() {
       .eq('activo', true)
       .order('nombre')
 
+    // Deduplicar por id: la vista v_insumos_con_precio puede devolver más de una fila
+    // por insumo cuando hay varios precios marcados como es_precio_actual = true.
+    const insumosUnicos = Array.from(
+      new Map((insumosRaw || []).map(i => [i.id, i] as const)).values()
+    )
+
     // Calcular costo final para cada insumo
-    const insumosData = (insumosRaw || []).map(insumo => ({
+    const insumosData = insumosUnicos.map(insumo => ({
       ...insumo,
       costo_final: insumo.precio_actual !== null
         ? insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)

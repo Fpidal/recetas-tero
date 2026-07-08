@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus, Trash2, ArrowLeft, Save, Package, ChefHat, RefreshCw, FileDown, ClipboardList } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Save, Package, ChefHat, RefreshCw, FileDown, ClipboardList, ImagePlus } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
@@ -73,6 +73,8 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
   const [isLoading, setIsLoading] = useState(true)
   const [isReadOnly, setIsReadOnly] = useState(false)
   const [isInPapelera, setIsInPapelera] = useState(false)
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -88,8 +90,14 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
       .eq('activo', true)
       .order('nombre')
 
+    // Deduplicar por id: la vista v_insumos_con_precio puede devolver más de una fila
+    // por insumo cuando hay varios precios marcados como es_precio_actual = true.
+    const insumosUnicos = Array.from(
+      new Map((insumosRaw || []).map(i => [i.id, i] as const)).values()
+    )
+
     // Calcular costo final para cada insumo
-    const insumosData = (insumosRaw || []).map(insumo => ({
+    const insumosData = insumosUnicos.map(insumo => ({
       ...insumo,
       costo_final: insumo.precio_actual !== null
         ? insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
@@ -149,6 +157,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
     setPasoAPaso(plato.paso_a_paso || '')
     setRendimiento(plato.rendimiento_porciones || 1)
     setVersionReceta(plato.version_receta || '1.0')
+    setImagenUrl(plato.imagen_url || null)
     setIsInPapelera(plato.activo === false)
     setIsReadOnly(plato.activo === false || viewMode)
 
@@ -324,6 +333,72 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
 
   const costoTotal = ingredientes.reduce((sum, ing) => sum + ing.costo_linea, 0)
   const costoPorPorcion = rendimiento > 0 ? costoTotal / rendimiento : costoTotal
+
+  async function handleSubirImagen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validar tipo y tamaño
+    if (!file.type.startsWith('image/')) {
+      alert('Solo se permiten imágenes')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('La imagen no puede superar 2MB')
+      return
+    }
+
+    setIsUploadingImage(true)
+
+    // Eliminar imagen anterior si existe
+    if (imagenUrl) {
+      const oldPath = imagenUrl.split('/').pop()
+      if (oldPath) {
+        await supabase.storage.from('fotos platos').remove([`${id}/${oldPath}`])
+      }
+    }
+
+    // Subir nueva imagen
+    const ext = file.name.split('.').pop()
+    const fileName = `${Date.now()}.${ext}`
+    const filePath = `${id}/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('fotos platos')
+      .upload(filePath, file)
+
+    if (uploadError) {
+      console.error('Error subiendo imagen:', uploadError)
+      alert('Error al subir la imagen')
+      setIsUploadingImage(false)
+      return
+    }
+
+    // Obtener URL pública
+    const { data: urlData } = supabase.storage.from('fotos platos').getPublicUrl(filePath)
+    const newUrl = urlData?.publicUrl || null
+
+    // Guardar en el plato
+    const { error: saveError } = await supabase.from('platos').update({ imagen_url: newUrl }).eq('id', id)
+    if (saveError) {
+      console.error('Error guardando imagen_url:', saveError)
+      alert('Error al guardar la URL de la imagen')
+    }
+    setImagenUrl(newUrl)
+    setIsUploadingImage(false)
+  }
+
+  async function handleEliminarImagen() {
+    if (!imagenUrl) return
+    if (!confirm('¿Eliminar la imagen?')) return
+
+    const pathParts = imagenUrl.split('/fotos%20platos/')
+    if (pathParts[1]) {
+      await supabase.storage.from('fotos platos').remove([decodeURIComponent(pathParts[1])])
+    }
+    await supabase.from('platos').update({ imagen_url: null }).eq('id', id)
+    setImagenUrl(null)
+  }
 
   async function handleGuardar() {
     if (!nombre.trim()) {
@@ -1138,6 +1213,42 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                 className="w-full h-32 text-xs border border-gray-200 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder:text-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             </div>
+          </div>
+
+          {/* Foto de la receta */}
+          <div className="mt-3 border rounded-lg bg-white p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-gray-700">Foto</h4>
+              {imagenUrl && !isReadOnly && (
+                <button
+                  onClick={handleEliminarImagen}
+                  className="text-red-500 hover:text-red-600 text-xs"
+                >
+                  Eliminar
+                </button>
+              )}
+            </div>
+            {imagenUrl ? (
+              <img src={imagenUrl} alt={nombre} className="w-full h-40 object-contain rounded-lg" />
+            ) : (
+              <label className={`flex flex-col items-center justify-center h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSubirImagen}
+                  className="hidden"
+                  disabled={isReadOnly || isUploadingImage}
+                />
+                {isUploadingImage ? (
+                  <span className="text-sm text-gray-400">Subiendo...</span>
+                ) : (
+                  <>
+                    <ImagePlus className="w-8 h-8 text-gray-400 mb-1" />
+                    <span className="text-xs text-gray-400">Clic para subir imagen</span>
+                  </>
+                )}
+              </label>
+            )}
           </div>
 
           {/* Versión - texto gris al final */}

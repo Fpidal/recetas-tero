@@ -87,8 +87,10 @@ $$ LANGUAGE plpgsql;
 -- =====================================================
 -- ACTUALIZAR VISTA: Incluir multiples_presentaciones
 -- =====================================================
+-- DISTINCT ON (i.id) garantiza UNA sola fila por insumo aunque exista más de un
+-- precio marcado como es_precio_actual = true (toma el más reciente por fecha).
 CREATE OR REPLACE VIEW v_insumos_con_precio AS
-SELECT
+SELECT DISTINCT ON (i.id)
   i.id,
   i.codigo,
   i.nombre,
@@ -101,13 +103,15 @@ SELECT
   i.activo,
   i.inventario,
   i.multiples_presentaciones,
+  i.presentaciones_csv,
   p.precio as precio_actual,
   p.fecha as fecha_precio,
   p.proveedor_id,
   pr.nombre as proveedor_nombre
 FROM insumos i
 LEFT JOIN precios_insumo p ON p.insumo_id = i.id AND p.es_precio_actual = true
-LEFT JOIN proveedores pr ON pr.id = p.proveedor_id;
+LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
+ORDER BY i.id, p.fecha DESC NULLS LAST;
 
 -- =====================================================
 -- EJEMPLO: Ricotta con 2 presentaciones

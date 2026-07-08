@@ -617,15 +617,32 @@ CREATE TRIGGER trigger_calcular_total_orden_delete
 -- =====================================================
 
 -- Vista: Insumos con precio actual
-CREATE VIEW v_insumos_con_precio AS
-SELECT
-  i.*,
-  pi.precio as precio_actual,
-  pi.proveedor_id as proveedor_actual_id,
-  p.nombre as proveedor_actual_nombre
+-- DISTINCT ON (i.id) garantiza UNA fila por insumo aunque exista más de un
+-- precio marcado como es_precio_actual = true (toma el más reciente por fecha).
+-- Columnas alineadas con producción: proveedor_id / proveedor_nombre / fecha_precio.
+CREATE OR REPLACE VIEW v_insumos_con_precio AS
+SELECT DISTINCT ON (i.id)
+  i.id,
+  i.codigo,
+  i.nombre,
+  i.categoria,
+  i.unidad_medida,
+  i.cantidad,
+  i.cantidad_por_paquete,
+  i.merma_porcentaje,
+  i.iva_porcentaje,
+  i.activo,
+  i.inventario,
+  i.multiples_presentaciones,
+  i.presentaciones_csv,
+  p.precio as precio_actual,
+  p.fecha as fecha_precio,
+  p.proveedor_id,
+  pr.nombre as proveedor_nombre
 FROM insumos i
-LEFT JOIN precios_insumo pi ON i.id = pi.insumo_id AND pi.es_precio_actual = true
-LEFT JOIN proveedores p ON pi.proveedor_id = p.id;
+LEFT JOIN precios_insumo p ON p.insumo_id = i.id AND p.es_precio_actual = true
+LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
+ORDER BY i.id, p.fecha DESC NULLS LAST;
 
 -- Vista: Carta con detalles de plato y food cost
 CREATE VIEW v_carta_detalle AS

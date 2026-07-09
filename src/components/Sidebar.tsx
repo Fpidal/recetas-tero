@@ -22,10 +22,12 @@ import {
   LogOut,
   User,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  History
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { APP_VERSION, APP_FECHA } from '@/lib/version'
+import { APP_VERSION, APP_FECHA, CHANGELOG } from '@/lib/version'
+import Modal from './ui/Modal'
 
 const navigation = [
   { name: 'Inicio', href: '/', icon: Home },
@@ -51,6 +53,7 @@ export default function Sidebar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userName, setUserName] = useState('')
   const [userRole, setUserRole] = useState('')
+  const [changelogOpen, setChangelogOpen] = useState(false)
 
   useEffect(() => {
     fetchPapeleraCount()
@@ -110,7 +113,14 @@ export default function Sidebar() {
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
         <div>
           <h1 className="font-display text-xl font-bold text-white tracking-tight leading-none">Tero Restó</h1>
-          <p className="text-[10px] text-white/40 font-mono mt-0.5">{APP_VERSION} ({APP_FECHA})</p>
+          <button
+            onClick={() => setChangelogOpen(true)}
+            className="text-[10px] text-white/40 hover:text-white/80 font-mono mt-0.5 transition-colors cursor-pointer text-left inline-flex items-center gap-1"
+            title="Ver novedades"
+          >
+            {APP_VERSION} ({APP_FECHA})
+            <History className="w-2.5 h-2.5" />
+          </button>
         </div>
         {/* Botón cerrar en mobile */}
         <button
@@ -219,6 +229,35 @@ export default function Sidebar() {
       <div className="hidden lg:flex h-full w-64 flex-col bg-forest flex-shrink-0">
         <NavContent />
       </div>
+
+      {/* Modal de Novedades (changelog) */}
+      <Modal
+        isOpen={changelogOpen}
+        onClose={() => setChangelogOpen(false)}
+        title="Novedades"
+        size="sm"
+      >
+        <div className="space-y-5">
+          {CHANGELOG.map((v, i) => (
+            <div key={v.version}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="font-mono text-sm font-bold text-forest">{v.version}</span>
+                {i === 0 && (
+                  <span className="text-[10px] font-medium text-forest bg-forest/10 px-2 py-0.5 rounded-full">
+                    actual
+                  </span>
+                )}
+                <span className="ml-auto font-mono text-xs text-ink/40">{v.fecha}</span>
+              </div>
+              <ul className="list-disc pl-5 space-y-0.5 text-sm text-ink/70">
+                {v.cambios.map((c, j) => (
+                  <li key={j}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </Modal>
     </>
   )
 }

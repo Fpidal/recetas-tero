@@ -143,12 +143,42 @@ Sincronizar con Vercel antes de hacer cualquier cambio.
 
 ### Antes de cada PUSH (OBLIGATORIO):
 
-1. `npm run build` → Verificar que compila sin errores
-2. `git diff origin/main --stat` → Mostrar resumen de cambios
-3. **MOSTRAR al usuario** los archivos que van a cambiar
-4. **ESPERAR confirmación** de que son SOLO los archivos esperados
-5. Recién ahí hacer `git push`
+1. **Actualizar el changelog** en `src/lib/version.ts` (ver sección "Versiones / Changelog")
+2. `npm run build` → Verificar que compila sin errores
+3. `git diff origin/main --stat` → Mostrar resumen de cambios
+4. **MOSTRAR al usuario** los archivos que van a cambiar
+5. **ESPERAR confirmación** de que son SOLO los archivos esperados
+6. Recién ahí hacer `git push`
 
 **Si aparece un archivo que no tocamos en la sesión → PARAR y revisar antes de pushear.**
 
 ### Nunca hacer push sin confirmación del usuario.
+
+## Versiones / Changelog
+
+La app muestra su versión en el Sidebar (ej: `V.13 (09/07/26)`). Al hacer clic se abre
+el modal de **Novedades** con el historial completo. Todo sale de `src/lib/version.ts`.
+
+### Regla obligatoria en CADA push a producción:
+
+Agregar una entrada NUEVA arriba de todo en el array `CHANGELOG` de `src/lib/version.ts`:
+
+```ts
+export const CHANGELOG: VersionEntry[] = [
+  {
+    version: 'V.14',            // subir el número respecto de la entrada anterior
+    fecha: '10/07/26',         // fecha del push, formato DD/MM/YY
+    cambios: [
+      'Descripción corta y clara del cambio, en lenguaje de usuario',
+    ],
+  },
+  // ...entradas anteriores debajo, NO borrarlas
+]
+```
+
+**Reglas:**
+- La entrada más nueva va SIEMPRE primera (la app la marca como "actual").
+- `APP_VERSION` y `APP_FECHA` se derivan solos de `CHANGELOG[0]` — nunca editarlos a mano.
+- Los `cambios` se escriben pensando en el usuario del restaurante, no en términos técnicos
+  (ej: "Foto del plato en la ficha de recetas", no "add columna imagen_url").
+- Nunca borrar entradas viejas: el historial sirve para rastrear qué versión introdujo un problema.

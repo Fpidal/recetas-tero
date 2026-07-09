@@ -17,6 +17,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Bebidas': '#C4704B',
   'Salsas_Recetas': '#C4704B',
   'Almacen': '#A67B3D',
+  'Otros': '#6B7280',
 }
 
 interface Insumo {

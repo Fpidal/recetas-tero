@@ -520,6 +520,7 @@ export default function NuevaOrdenCompraPage() {
                   { value: 'Pescados_Mariscos', label: 'Pescados' },
                   { value: 'Lacteos_Fiambres', label: 'Lácteos' },
                   { value: 'Bebidas', label: 'Bebidas' },
+                  { value: 'Otros', label: 'Otros' },
                   { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
@@ -658,6 +659,7 @@ export default function NuevaOrdenCompraPage() {
                       { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
                       { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
                       { value: 'Bebidas', label: 'Bebidas' },
+                      { value: 'Otros', label: 'Otros' },
                       { value: 'Vinos', label: 'Vinos' },
                     ]}
                     value={filtroCategoria}
@@ -760,6 +762,7 @@ export default function NuevaOrdenCompraPage() {
                     { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
                     { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
                     { value: 'Bebidas', label: 'Bebidas' },
+                    { value: 'Otros', label: 'Otros' },
                     { value: 'Vinos', label: 'Vinos' },
                   ]}
                   value={filtroCategoria}
@@ -1150,6 +1153,7 @@ export default function NuevaOrdenCompraPage() {
               { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
               { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
               { value: 'Bebidas', label: 'Bebidas' },
+              { value: 'Otros', label: 'Otros' },
             ]}
           />
           <div className="grid grid-cols-2 gap-4">

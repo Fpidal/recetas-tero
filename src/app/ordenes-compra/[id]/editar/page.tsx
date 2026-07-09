@@ -561,6 +561,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
                   { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
                   { value: 'Bebidas', label: 'Bebidas' },
+                  { value: 'Otros', label: 'Otros' },
                   { value: 'Vinos', label: 'Vinos' },
                 ]}
                 value={filtroCategoria}
@@ -674,6 +675,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                       { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
                       { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
                       { value: 'Bebidas', label: 'Bebidas' },
+                      { value: 'Otros', label: 'Otros' },
                       { value: 'Vinos', label: 'Vinos' },
                     ]}
                     value={filtroCategoria}
@@ -776,6 +778,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                     { value: 'Pescados_Mariscos', label: 'Pescados y Mariscos' },
                     { value: 'Lacteos_Fiambres', label: 'Lácteos y Fiambres' },
                     { value: 'Bebidas', label: 'Bebidas' },
+                    { value: 'Otros', label: 'Otros' },
                     { value: 'Vinos', label: 'Vinos' },
                   ]}
                   value={filtroCategoria}

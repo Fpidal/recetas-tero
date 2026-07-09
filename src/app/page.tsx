@@ -52,8 +52,8 @@ const COLORS = {
 // Colores para el gráfico de torta
 const PIE_COLORS = ['#C4704B', '#5C7A5E', '#4A6572', '#A67B3D', '#8CA88F', '#B5553A']
 
-// Las 5 categorías principales para los gráficos
-const CATEGORIAS_GRAFICOS = ['Carnes', 'Pescados_Mariscos', 'Verduras_Frutas', 'Almacen', 'Lacteos_Fiambres']
+// Las categorías principales para los gráficos
+const CATEGORIAS_GRAFICOS = ['Carnes', 'Pescados_Mariscos', 'Verduras_Frutas', 'Almacen', 'Lacteos_Fiambres', 'Otros']
 
 // Colores por categoría para el gráfico de barras (por key interna)
 const CATEG_COLORES: Record<string, string> = {

@@ -10,6 +10,13 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.15',
+    fecha: '09/07/26',
+    cambios: [
+      "Nueva categoría de insumos \"Otros\" (bolsas de vacío, carbón, leña, servilletas)",
+    ],
+  },
+  {
     version: 'V.14',
     fecha: '09/07/26',
     cambios: [

@@ -64,6 +64,7 @@ export const CATEGORIAS_LABEL: Record<string, string> = {
   Lacteos_Fiambres: 'Lácteos y Fiambres',
   Bebidas: 'Bebidas',
   Salsas_Recetas: 'Salsas y Recetas',
+  Otros: 'Otros',
 }
 
 export const CATEGORIAS_COLOR: Record<string, { bg: string; text: string; border: string }> = {
@@ -74,6 +75,7 @@ export const CATEGORIAS_COLOR: Record<string, { bg: string; text: string; border
   Lacteos_Fiambres: { bg: 'bg-yellow-50', text: 'text-yellow-800', border: 'border-yellow-200' },
   Bebidas: { bg: 'bg-purple-50', text: 'text-purple-800', border: 'border-purple-200' },
   Salsas_Recetas: { bg: 'bg-rose-50', text: 'text-rose-800', border: 'border-rose-200' },
+  Otros: { bg: 'bg-gray-50', text: 'text-gray-800', border: 'border-gray-200' },
 }
 
 // Orden fijo para mostrar categorías
@@ -85,6 +87,7 @@ export const CATEGORIAS_ORDEN = [
   'Almacen',
   'Salsas_Recetas',
   'Bebidas',
+  'Otros',
 ]
 
 // Buscador: opción que se muestra en la lista

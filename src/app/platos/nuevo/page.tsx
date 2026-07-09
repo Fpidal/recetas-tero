@@ -426,6 +426,7 @@ export default function NuevoPlatoPage() {
                     { value: 'Pescados_Mariscos', label: 'Pescados' },
                     { value: 'Lacteos_Fiambres', label: 'Lácteos' },
                     { value: 'Bebidas', label: 'Bebidas' },
+                    { value: 'Otros', label: 'Otros' },
                   ]}
                   value={filtroCategoria}
                   onChange={(e) => { setFiltroCategoria(e.target.value); setSelectedItem('') }}

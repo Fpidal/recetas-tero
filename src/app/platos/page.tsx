@@ -291,6 +291,41 @@ export default function PlatosPage() {
         `)
         .eq('plato_id', id)
 
+      // Recalcular costos con precios ACTUALES (igual que la lista), no el costo_linea
+      // congelado que quedó guardado al momento de crear/editar la receta.
+      const { data: insumosData } = await supabase
+        .from('v_insumos_con_precio')
+        .select('id, precio_actual, iva_porcentaje, merma_porcentaje')
+
+      const { data: recetasBaseData } = await supabase
+        .from('recetas_base')
+        .select(`
+          id, rendimiento_porciones,
+          receta_base_ingredientes (
+            insumo_id,
+            cantidad
+          )
+        `)
+        .eq('activo', true)
+
+      const getCostoFinalInsumo = (insumoId: string): number => {
+        const insumo = insumosData?.find(i => i.id === insumoId)
+        if (!insumo || !insumo.precio_actual) return 0
+        return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+      }
+
+      const getCostoPorcionReceta = (recetaBaseId: string): number => {
+        const receta = recetasBaseData?.find((r: any) => r.id === recetaBaseId)
+        if (!receta) return 0
+        let costoReceta = 0
+        for (const ing of (receta as any).receta_base_ingredientes || []) {
+          costoReceta += ing.cantidad * getCostoFinalInsumo(ing.insumo_id)
+        }
+        return (receta as any).rendimiento_porciones > 0
+          ? costoReceta / (receta as any).rendimiento_porciones
+          : 0
+      }
+
       const ingredientes = (ingredientesData || []).map((ing: any) => {
         if (ing.insumo_id && ing.insumos) {
           return {
@@ -298,7 +333,7 @@ export default function PlatosPage() {
             cantidad: ing.cantidad,
             unidad_medida: ing.insumos.unidad_medida,
             tipo: 'insumo' as const,
-            costo_linea: ing.costo_linea || 0,
+            costo_linea: ing.cantidad * getCostoFinalInsumo(ing.insumo_id),
           }
         } else {
           return {
@@ -306,7 +341,7 @@ export default function PlatosPage() {
             cantidad: ing.cantidad,
             unidad_medida: 'porción',
             tipo: 'elaboracion' as const,
-            costo_linea: ing.costo_linea || 0,
+            costo_linea: ing.cantidad * getCostoPorcionReceta(ing.receta_base_id),
           }
         }
       })

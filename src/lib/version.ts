@@ -10,6 +10,13 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.16',
+    fecha: '18/07/26',
+    cambios: [
+      'Facturas con descuento: ahora el precio del insumo se guarda con el descuento aplicado',
+    ],
+  },
+  {
     version: 'V.15',
     fecha: '09/07/26',
     cambios: [

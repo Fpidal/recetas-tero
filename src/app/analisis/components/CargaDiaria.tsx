@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Plus, X, ChefHat, BookOpen, Package } from 'lucide-react'
+import { Search, Plus, X, ChefHat, BookOpen, Package, FileDown } from 'lucide-react'
 import { Button } from '@/components/ui'
 import {
   obtenerInsumosBuscador,
@@ -15,6 +15,7 @@ import {
   formatearMonedaAnalisis,
 } from '@/lib/consumo-queries'
 import { parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
+import { generarPDFConsumo } from '@/lib/generar-pdf-consumo'
 import {
   type ConsumoDiario,
   type ConsumoItem,
@@ -53,6 +54,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
   const [seleccionado, setSeleccionado] = useState<OpcionBuscador | null>(null)
   const [cantidad, setCantidad] = useState('')
   const [agregando, setAgregando] = useState(false)
+  const [generandoPDF, setGenerandoPDF] = useState(false)
 
   // Cargar opciones del buscador (1 vez)
   useEffect(() => {
@@ -173,6 +175,25 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
       }
     } catch (e) {
       console.error('Error eliminando:', e)
+    }
+  }
+
+  async function handleDescargarPDF() {
+    if (items.length === 0) return
+    try {
+      setGenerandoPDF(true)
+      await generarPDFConsumo({
+        fecha,
+        servicio,
+        items,
+        confirmado: consumo?.confirmado ?? false,
+        notas: consumo?.notas,
+      })
+    } catch (e) {
+      console.error('Error generando PDF:', e)
+      alert('Error al generar el PDF')
+    } finally {
+      setGenerandoPDF(false)
     }
   }
 
@@ -353,13 +374,24 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
         <div className="xl:col-span-2 space-y-4">
           {/* Tabla de items */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-900">🍳 Consumo del servicio</h3>
-              <p className="text-[11px] text-gray-500">
-                {totalItems === 0
-                  ? 'Todavía no cargaste items. Empezá usando el buscador de la izquierda.'
-                  : `${totalItems} items · todos los costos con IVA incluido`}
-              </p>
+            <div className="px-4 py-3 border-b border-gray-200 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">🍳 Consumo del servicio</h3>
+                <p className="text-[11px] text-gray-500">
+                  {totalItems === 0
+                    ? 'Todavía no cargaste items. Empezá usando el buscador de la izquierda.'
+                    : `${totalItems} items · todos los costos con IVA incluido`}
+                </p>
+              </div>
+              <button
+                onClick={handleDescargarPDF}
+                disabled={totalItems === 0 || generandoPDF}
+                title="Descargar consumo en PDF"
+                className="shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <FileDown className="w-4 h-4" />
+                <span className="hidden sm:inline">{generandoPDF ? 'Generando...' : 'PDF'}</span>
+              </button>
             </div>
 
             {cargandoData ? (

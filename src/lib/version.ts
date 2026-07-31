@@ -10,6 +10,13 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.17',
+    fecha: '31/07/26',
+    cambios: [
+      'Análisis: nuevo botón para descargar en PDF el consumo del servicio (con desglose por insumo y % sobre el total)',
+    ],
+  },
+  {
     version: 'V.16',
     fecha: '18/07/26',
     cambios: [

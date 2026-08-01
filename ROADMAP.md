@@ -1,0 +1,107 @@
+# Roadmap — Recetas Tero
+
+Mapa del sistema y camino a seguir. Dos partes:
+1. **El mapa** — qué hay hoy y cómo se conecta (para no perderse al tocar algo).
+2. **El camino** — qué sigue, en tres horizontes.
+
+**Cómo se mantiene:** cada vez que se agrega una entrada al `CHANGELOG` de `src/lib/version.ts`
+para un push, se actualiza también este archivo (mover el item hecho, subir uno de *Próximo*
+a *Ahora*). Si no se toca junto con el changelog, este documento muere.
+
+Sin fechas a propósito: las estimaciones no se cumplen y le hacen perder credibilidad al mapa.
+
+---
+
+## 1. El mapa: qué hay hoy
+
+### Flujo del dato (el circuito que sostiene todo)
+
+```
+Órdenes de compra  →  Facturas  →  precio del insumo  →  costo de la receta  →  carta / margen
+                                          ↑
+                                   Comparador de precios
+                                   Importación de vinos
+
+Consumo real (Análisis)  ┐
+                         ├→  food cost real
+Ventas del día (Ventas)  ┘
+```
+
+**Regla de oro del sistema:** el precio de un insumo sale siempre de la **última factura
+registrada**. Todo lo demás (costo de recetas, márgenes, carta) se deriva de ahí por triggers
+en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
+
+### Módulos
+
+| Módulo | Para qué sirve |
+|---|---|
+| **Inicio** | Panel de entrada: alertas de variación de precios (últimos 30 días) |
+| **Insumos** | Ingredientes: unidad, categoría, IVA, merma, presentaciones. Acceso a Proveedores y al Comparador de precios |
+| **Vinos** | Carta de vinos con importación de listas de precios desde Excel de bodega (matching por código y cepa) |
+| **Elaboraciones** | Sub-recetas (bases) que se usan como ingrediente dentro de las recetas |
+| **Recetas** | Platos: ingredientes, costo, margen, precio de venta, foto |
+| **Tragos** | Coctelería con costos y beverage cost |
+| **Carta** | Carta editorial en HTML + QR al menú digital público (`/menu`). Desde acá se llega a Menús ejecutivos y especiales |
+| **Órdenes de Compra** | Pedidos a proveedores, con PDF |
+| **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito |
+| **Ventas** | Carga diaria de ventas. **Nivel grueso:** ventas vs compras del período |
+| **Análisis** | Carga del consumo real de cocina por servicio. **Nivel fino:** consumo real vs ventas, incidencia por insumo |
+| **Estadísticas** | Dashboard consolidado (4 pestañas) |
+| **Inventario** | Hojas de control de stock. **Pausado a propósito** — ver Decisiones tomadas |
+| **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
+
+### Convenciones que no se negocian
+
+- Soft delete con campo `activo`, nunca borrado físico.
+- Números siempre con `font-mono` (JetBrains Mono) para alineación tabular.
+- Formato argentino: `1.234,56` y fechas `DD/MM/YYYY`.
+- Toda tabla nueva en Supabase: GRANT + RLS + policy (ver `CLAUDE.md` global).
+- Antes de cada push: changelog → build → diff → confirmación.
+
+---
+
+## 2. El camino
+
+### Ahora
+
+- **Cerrar el módulo Análisis.** Es el más nuevo del sistema. La carga del consumo y el PDF ya
+  están; falta que las solapas **Resumen** e **Histórico** muestren la evolución en el tiempo.
+  Sin eso se carga el consumo todos los días y no se ve la tendencia, que es el motivo por el
+  que existe el módulo.
+
+### Próximo
+
+- **Blindar los triggers de Supabase.** Los triggers y funciones se editan a mano en el
+  dashboard y derivan de lo que está versionado en el repo. Ya causó dos regresiones: el
+  trigger que ignoraba vinos y el del descuento en facturas (V.16). Cada regresión ahí corrompe
+  costos en silencio, que es justo lo que el sistema existe para evitar. Objetivo: que el estado
+  real de la base esté versionado y sea verificable.
+
+- **Objetivo de food cost por categoría.** Hoy Análisis dice *cuánto* se consumió, pero no si
+  está bien o mal. Definir un target por categoría convierte el dato en alerta accionable.
+
+### Más adelante
+
+- **Inventario conectado al consumo.** Reactivar cuando haya suficiente carga de datos de venta
+  para que el stock se concilie contra el consumo real. *Condición de disparo: varios meses de
+  ventas y consumo cargados de forma consistente.*
+- **Mobile para cocina.** La carga de consumo se hace parada en la cocina, con el celular.
+- **Alertas proactivas de aumentos de precio**, más allá del panel de Inicio.
+- **Accesos directos** a Proveedores y Menús en el sidebar (hoy se llega desde Insumos y Carta).
+
+---
+
+## 3. Decisiones tomadas
+
+Registradas para no volver a discutirlas.
+
+- **Ventas y Análisis no se unifican.** Son dos niveles de zoom sobre el mismo negocio:
+  Ventas es la foto gruesa (ventas vs compras), Análisis es el detalle fino (consumo real de
+  cocina vs ventas, insumo por insumo). Que ambos hablen de food cost no los hace redundantes.
+
+- **Inventario está pausado a propósito**, no abandonado. Espera masa crítica de datos de venta
+  para que la conciliación con el consumo tenga sentido.
+
+- **Este roadmap cubre solo recetas-tero.** Los otros sistemas (Admin Tero, Eventos, Faisán,
+  Bodega Catena) son proyectos independientes, con su propia base de datos. Integrarlos no está
+  en el alcance de este documento.

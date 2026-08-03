@@ -55,6 +55,11 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 - Soft delete con campo `activo`, nunca borrado físico.
 - Números siempre con `font-mono` (JetBrains Mono) para alineación tabular.
 - Formato argentino: `1.234,56` y fechas `DD/MM/YYYY`.
+- **Inputs numéricos editables:** mientras el campo está en foco debe mostrar el *texto* que se
+  está tipeando, y recién convertir a número en el `blur`. Si el input muestra directamente el
+  número del estado, la coma se borra sola al escribirla y no se pueden cargar decimales.
+  Ya pasó dos veces (editar OC en mayo, editar factura en V.18) — revisar esto en cualquier
+  pantalla nueva con cantidades o precios editables.
 - Toda tabla nueva en Supabase: GRANT + RLS + policy (ver `CLAUDE.md` global).
 - Antes de cada push: changelog → build → diff → confirmación.
 
@@ -64,10 +69,10 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Ahora
 
-- **Cerrar el módulo Análisis.** Es el más nuevo del sistema. La carga del consumo y el PDF ya
-  están; falta que las solapas **Resumen** e **Histórico** muestren la evolución en el tiempo.
-  Sin eso se carga el consumo todos los días y no se ve la tendencia, que es el motivo por el
-  que existe el módulo.
+- **Cerrar el módulo Análisis.** Es el más nuevo del sistema. Ya están la carga del consumo y
+  la descarga en PDF del servicio (V.17). Falta que las solapas **Resumen** e **Histórico**
+  muestren la evolución en el tiempo. Sin eso se carga el consumo todos los días y no se ve la
+  tendencia, que es el motivo por el que existe el módulo.
 
 ### Próximo
 

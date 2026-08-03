@@ -22,6 +22,8 @@ interface Insumo {
   cantidad_por_paquete?: number | null
 }
 
+type CampoEditable = 'cantidad' | 'precio' | 'descuento'
+
 interface ItemFactura {
   id: string
   insumo_id: string | null
@@ -56,6 +58,9 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [datosOriginales, setDatosOriginales] = useState<any>(null)
+
+  // Estado temporal para edición de inputs (permite escribir coma sin perderla)
+  const [editingField, setEditingField] = useState<{ id: string; field: CampoEditable; valor: string } | null>(null)
 
   // Percepciones (objetos independientes)
   const [percepciones, setPercepciones] = useState(() => [
@@ -270,6 +275,41 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
       }
       return item
     }))
+  }
+
+  // Helpers para edición de campos con soporte de coma decimal.
+  // El input muestra el string que se está tipeando (no el número del estado),
+  // así la coma no se pierde al escribir "4,200".
+  function startEditing(itemId: string, field: CampoEditable, valorActual: number) {
+    setEditingField({ id: itemId, field, valor: valorActual ? String(valorActual).replace('.', ',') : '' })
+  }
+
+  function updateEditingValue(valor: string) {
+    if (editingField) {
+      setEditingField({ ...editingField, valor: formatearInputNumero(valor) })
+    }
+  }
+
+  function finishEditing() {
+    if (!editingField) return
+    if (editingField.field === 'cantidad') {
+      handleCantidadChange(editingField.id, editingField.valor)
+    } else if (editingField.field === 'precio') {
+      handlePrecioChange(editingField.id, editingField.valor)
+    } else {
+      handleDescuentoChange(editingField.id, editingField.valor)
+    }
+    setEditingField(null)
+  }
+
+  function getFieldValue(itemId: string, field: CampoEditable, valorActual: number): string {
+    if (editingField?.id === itemId && editingField?.field === field) {
+      return editingField.valor
+    }
+    if (field === 'descuento') {
+      return valorActual ? String(valorActual).replace('.', ',') : ''
+    }
+    return String(valorActual).replace('.', ',')
   }
 
   function handleDescuentoChange(itemId: string, nuevoDescuento: string) {
@@ -583,8 +623,10 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                         <input
                           type="text"
                           inputMode="decimal"
-                          value={String(item.cantidad).replace('.', ',')}
-                          onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                          value={getFieldValue(item.id, 'cantidad', item.cantidad)}
+                          onFocus={() => startEditing(item.id, 'cantidad', item.cantidad)}
+                          onChange={(e) => updateEditingValue(e.target.value)}
+                          onBlur={finishEditing}
                           className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                         />
                         <span className="text-[10px] text-gray-400">{item.unidad_medida}</span>
@@ -596,8 +638,10 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={String(item.precio_unitario).replace('.', ',')}
-                            onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
+                            value={getFieldValue(item.id, 'precio', item.precio_unitario)}
+                            onFocus={() => startEditing(item.id, 'precio', item.precio_unitario)}
+                            onChange={(e) => updateEditingValue(e.target.value)}
+                            onBlur={finishEditing}
                             className="w-full rounded border border-gray-300 px-1 py-1 text-sm"
                           />
                         </div>
@@ -607,8 +651,10 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                         <input
                           type="text"
                           inputMode="decimal"
-                          value={item.descuento ? String(item.descuento).replace('.', ',') : ''}
-                          onChange={(e) => handleDescuentoChange(item.id, formatearInputNumero(e.target.value))}
+                          value={getFieldValue(item.id, 'descuento', item.descuento)}
+                          onFocus={() => startEditing(item.id, 'descuento', item.descuento)}
+                          onChange={(e) => updateEditingValue(e.target.value)}
+                          onBlur={finishEditing}
                           className="w-full rounded border border-gray-300 px-2 py-1 text-sm text-center"
                           placeholder="0"
                         />
@@ -685,8 +731,10 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                             <input
                               type="text"
                               inputMode="decimal"
-                              value={String(item.cantidad).replace('.', ',')}
-                              onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
+                              value={getFieldValue(item.id, 'cantidad', item.cantidad)}
+                              onFocus={() => startEditing(item.id, 'cantidad', item.cantidad)}
+                              onChange={(e) => updateEditingValue(e.target.value)}
+                              onBlur={finishEditing}
                               className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                             />
                             <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
@@ -698,8 +746,10 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                             <input
                               type="text"
                               inputMode="decimal"
-                              value={String(item.precio_unitario).replace('.', ',')}
-                              onChange={(e) => handlePrecioChange(item.id, formatearInputNumero(e.target.value))}
+                              value={getFieldValue(item.id, 'precio', item.precio_unitario)}
+                              onFocus={() => startEditing(item.id, 'precio', item.precio_unitario)}
+                              onChange={(e) => updateEditingValue(e.target.value)}
+                              onBlur={finishEditing}
                               className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
                             />
                           </div>
@@ -708,8 +758,10 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.descuento ? String(item.descuento).replace('.', ',') : ''}
-                            onChange={(e) => handleDescuentoChange(item.id, formatearInputNumero(e.target.value))}
+                            value={getFieldValue(item.id, 'descuento', item.descuento)}
+                            onFocus={() => startEditing(item.id, 'descuento', item.descuento)}
+                            onChange={(e) => updateEditingValue(e.target.value)}
+                            onBlur={finishEditing}
                             className="w-14 rounded border border-gray-300 px-2 py-1 text-sm text-center"
                             placeholder="0"
                           />

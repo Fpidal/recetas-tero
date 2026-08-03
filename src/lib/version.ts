@@ -10,6 +10,13 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.18',
+    fecha: '03/08/26',
+    cambios: [
+      'Editar factura: ahora se pueden escribir decimales con coma en cantidad, precio y descuento (ej: 4,200 kg)',
+    ],
+  },
+  {
     version: 'V.17',
     fecha: '31/07/26',
     cambios: [

@@ -60,6 +60,10 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   número del estado, la coma se borra sola al escribirla y no se pueden cargar decimales.
   Ya pasó dos veces (editar OC en mayo, editar factura en V.18) — revisar esto en cualquier
   pantalla nueva con cantidades o precios editables.
+- **Nombre de ítem clickeable:** en las tablas, el nombre abre la vista de detalle (verde +
+  subrayado en hover, ojo al costado). Usar el componente `ClickableItemName` de
+  `src/components/ui/` — no reescribir la lógica inline. Ya se usa en En Carta, Recetas y
+  Elaboraciones (V.19); el texto secundario en gris va **fuera** del área clickeable.
 - Toda tabla nueva en Supabase: GRANT + RLS + policy (ver `CLAUDE.md` global).
 - Antes de cada push: changelog → build → diff → confirmación.
 
@@ -91,6 +95,10 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   para que el stock se concilie contra el consumo real. *Condición de disparo: varios meses de
   ventas y consumo cargados de forma consistente.*
 - **Mobile para cocina.** La carga de consumo se hace parada en la cocina, con el celular.
+- **Nombre clickeable en las tarjetas de celular** de Recetas y Elaboraciones. En V.19 se aplicó
+  solo a las tablas (escritorio): en touch no hay hover, así que el nombre no daría ninguna
+  pista visual y el ojo nunca aparecería. Las tarjetas conservan su botón "Ver". Si se hace,
+  el ojo tiene que quedar siempre visible, no en hover.
 - **Alertas proactivas de aumentos de precio**, más allá del panel de Inicio.
 - **Accesos directos** a Proveedores y Menús en el sidebar (hoy se llega desde Insumos y Carta).
 

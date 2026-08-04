@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.22',
+    fecha: '04/08/26',
+    cambios: [
+      'Insumos y panel de inicio: vuelven a mostrar las subas y bajas de precio que estaban faltando (63 insumos no las mostraban)',
+      'Facturas con descuento: el porcentaje de variación ya no incluye el descuento del proveedor, así que muestra la suba real',
+    ],
+  },
+  {
     version: 'V.21',
     fecha: '04/08/26',
     cambios: [

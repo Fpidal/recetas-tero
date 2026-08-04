@@ -30,6 +30,7 @@ interface FacturaDetalle {
     unidad_medida: string
     cantidad: number
     precio_unitario: number
+    descuento: number
     subtotal: number
     iva_porcentaje: number
     iva_monto: number
@@ -79,6 +80,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
           vino_id,
           cantidad,
           precio_unitario,
+          descuento,
           subtotal,
           insumos (nombre, unidad_medida, iva_porcentaje),
           vinos (bodega, nombre, cepa)
@@ -119,6 +121,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
           unidad_medida: esVino ? 'caja' : (item.insumos?.unidad_medida || ''),
           cantidad: parseFloat(item.cantidad),
           precio_unitario: parseFloat(item.precio_unitario),
+          descuento: parseFloat(item.descuento) || 0,
           subtotal,
           iva_porcentaje: ivaPorcentaje,
           iva_monto: ivaMonto,
@@ -249,14 +252,24 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
       item.vino_id ? oc.vino_id === item.vino_id : oc.insumo_id === item.insumo_id
     )
 
-    if (!ocItem || item.precio_unitario === ocItem.precio_unitario) {
-      // Sin OC o precio igual
+    // Comparar NETO contra NETO. El precio de la OC ya viene con el descuento
+    // aplicado (sale del precio guardado del insumo), así que comparar contra
+    // el precio de lista de la factura inventaba una suba igual al descuento:
+    // con 3% de descuento todos los ítems mostraban un falso ▲3,1%.
+    const precioNetoFactura = item.precio_unitario * (1 - (item.descuento || 0) / 100)
+
+    const diferencia = ocItem ? precioNetoFactura - ocItem.precio_unitario : 0
+    const variacion = ocItem && ocItem.precio_unitario > 0
+      ? (diferencia / ocItem.precio_unitario) * 100
+      : 0
+
+    // Sin OC, o variación que redondea a 0,0% (diferencias de centavos por
+    // redondeo del descuento): no tiene sentido mostrar un cartel
+    if (!ocItem || Math.abs(variacion) < 0.05) {
       return <span className="font-mono">{formatearMoneda(item.precio_unitario)}</span>
     }
 
-    // Calcular diferencia porcentual
-    const diferencia = item.precio_unitario - ocItem.precio_unitario
-    const porcentaje = ((diferencia / ocItem.precio_unitario) * 100).toFixed(1)
+    const porcentaje = variacion.toFixed(1)
     const subio = diferencia > 0
 
     if (mobile) {

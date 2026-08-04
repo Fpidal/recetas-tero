@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
+import { obtenerHistorialPrecios } from '@/lib/precios-queries'
 import { Button, Input, Modal, Select } from '@/components/ui'
 import { CategoriaInsumo, UnidadMedida } from '@/types/database'
 import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
@@ -167,10 +168,9 @@ export default function InsumosPage() {
       `)
       .eq('es_precio_actual', true)
 
-    const { data: todosPrecios } = await supabase
-      .from('precios_insumo')
-      .select('insumo_id, precio, fecha, es_precio_actual, factura_items (facturas_proveedor (fecha))')
-      .order('fecha', { ascending: false })
+    // Paginado: sin esto Supabase corta en 1000 filas y los precios viejos
+    // quedan invisibles, así que la variación no se puede calcular.
+    const todosPrecios = await obtenerHistorialPrecios()
 
     // Fecha real de la factura (o la copia como fallback). Es la fuente de verdad para comparar.
     const fechaRealDe = (p: any): string => p?.factura_items?.facturas_proveedor?.fecha || p?.fecha

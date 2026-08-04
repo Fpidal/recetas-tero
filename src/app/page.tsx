@@ -15,6 +15,7 @@ import {
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
+import { obtenerHistorialPrecios } from '@/lib/precios-queries'
 import {
   LineChart,
   Line,
@@ -373,10 +374,9 @@ export default function Home() {
 
       // Historial reciente para encontrar el "anterior". La fecha de la factura es la fuente de
       // verdad: la copia en precios_insumo puede quedar desfasada si se edita la factura después.
-      const { data: todosPrecios } = await supabase
-        .from('precios_insumo')
-        .select('insumo_id, precio, es_precio_actual, fecha, factura_items(facturas_proveedor(fecha))')
-        .order('fecha', { ascending: false })
+      // Paginado: sin esto Supabase corta en 1000 filas y los precios viejos
+      // quedan invisibles, así que las alertas de variación se pierden.
+      const todosPrecios = await obtenerHistorialPrecios()
 
       let mayorVariacion: DashboardData['mayorVariacion'] = null
       let itemsConAumentoCount = 0

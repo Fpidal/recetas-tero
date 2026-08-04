@@ -131,7 +131,13 @@ frontend hacía `console.log` del error del DELETE y **seguía insertando igual*
 que el síntoma no era un error sino items duplicados en la factura.
 
 Corregido en `supabase-fix-triggers-factura-items.sql` + el guard del frontend en
-`facturas/[id]/editar/page.tsx`.
+`facturas/[id]/editar/page.tsx`. Verificado el 04/08/26 editando dos veces seguidas la
+factura 1001-00174837: sin duplicados, el precio del insumo se actualiza y al revertir
+se elimina el registro que ya no corresponde.
+
+De las 450 facturas activas, solo dos habían quedado con items duplicados. La de Morres
+se reparó; la de El triunfo (26/01/26) se dejó como está a propósito — enero fue el mes
+de arranque y esas cargas fueron de prueba.
 
 **Pendiente conocido:** al restaurar un precio anterior, los triggers no desmarcan
 los otros `es_precio_actual`. Si se borran varios items del mismo insumo de una vez,

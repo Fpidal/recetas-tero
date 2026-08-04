@@ -122,6 +122,11 @@ Registradas para no volver a discutirlas.
 - **Inventario está pausado a propósito**, no abandonado. Espera masa crítica de datos de venta
   para que la conciliación con el consumo tenga sentido.
 
+- **La factura 00004-00118609 (El triunfo, 26/01/26) queda con sus items duplicados.**
+  Enero fue el mes de arranque del sistema y esas cargas fueron de prueba. Es la única
+  que quedó con el problema que se corrigió en V.21; no se limpia a propósito. Si una
+  auditoría futura la detecta, no es un bug nuevo.
+
 - **Este roadmap cubre solo recetas-tero.** Los otros sistemas (Admin Tero, Eventos, Faisán,
   Bodega Catena) son proyectos independientes, con su propia base de datos. Integrarlos no está
   en el alcance de este documento.

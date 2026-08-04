@@ -31,6 +31,10 @@ Ventas del día (Ventas)  ┘
 registrada**. Todo lo demás (costo de recetas, márgenes, carta) se deriva de ahí por triggers
 en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
+> 📄 El detalle completo del costeo —fórmula del C. Final, qué dispara cada recálculo, qué
+> pantalla recalcula y cuál lee de la tabla— está en **`docs/SISTEMA-COSTOS.md`**.
+> Leerlo antes de tocar costos, precios o recetas.
+
 ### Módulos
 
 | Módulo | Para qué sirve |
@@ -80,11 +84,14 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Próximo
 
-- **Blindar los triggers de Supabase.** Los triggers y funciones se editan a mano en el
-  dashboard y derivan de lo que está versionado en el repo. Ya causó dos regresiones: el
-  trigger que ignoraba vinos y el del descuento en facturas (V.16). Cada regresión ahí corrompe
-  costos en silencio, que es justo lo que el sistema existe para evitar. Objetivo: que el estado
-  real de la base esté versionado y sea verificable.
+- **Blindar los triggers de Supabase.** *Primer paso hecho en V.20:* el sistema de costeo
+  quedó documentado en `docs/SISTEMA-COSTOS.md` sobre el estado real de la base, la fórmula
+  vive en un solo lugar por capa, y `supabase-trigger-actualizar-costos.sql` está marcado
+  como obsoleto. **Falta el resto:** los triggers de `factura_items` (son cuatro, más el de
+  anulación) siguen sin estar versionados, y son los que más regresiones causaron.
+  Costó tres incidentes llegar hasta acá: trigger de vinos, descuento en facturas (V.16) y
+  fórmula de merma (V.20). Esta última convirtió un cambio de 10 minutos en una hora, porque
+  el repo describía funciones inexistentes.
 
 - **Objetivo de food cost por categoría.** Hoy Análisis dice *cuánto* se consumió, pero no si
   está bien o mal. Definir un target por categoría convierte el dato en alerta accionable.

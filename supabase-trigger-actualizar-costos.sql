@@ -1,6 +1,25 @@
+-- ⛔ OBSOLETO — NO REFLEJA LA BASE. NO EJECUTAR.
 -- =====================================================
--- SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA DE COSTOS
--- Ejecutar en Supabase SQL Editor
+-- Verificado el 04/08/26 con pg_get_functiondef: las funciones que este
+-- archivo define NO EXISTEN en Supabase.
+--
+--   propagar_cambio_precio_insumo   -> no existe
+--   trg_precio_insumo_insertado     -> no existe
+--   recalcular_costo_menu_ejecutivo -> no existe
+--
+-- La cadena real es otra:
+--   precios_insumo -> actualizar_costos_recetas_base()
+--                  -> actualizar_costos_platos_desde_receta()
+--
+-- Ejecutar este archivo crearía funciones muertas y confundiría más.
+-- Se conserva solo como registro histórico.
+--
+-- 👉 El estado REAL está documentado en  docs/SISTEMA-COSTOS.md
+-- 👉 Las funciones vigentes están en     supabase-fix-formula-merma.sql
+-- =====================================================
+
+-- =====================================================
+-- SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA DE COSTOS  (histórico)
 -- =====================================================
 -- Cuando cambia el precio de un insumo, automáticamente:
 -- 1. Recalcula costos de todas las elaboraciones (recetas_base)

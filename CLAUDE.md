@@ -125,6 +125,33 @@ Usar componentes de `@/components/ui/`:
 - **Producción**: Vercel (https://recetas-tero.vercel.app)
 - **Push + Deploy**: `git push` (Vercel auto-deploy desde main)
 
+## ⚠️ ANTES DE TOCAR COSTOS, PRECIOS O RECETAS
+
+**Leer `docs/SISTEMA-COSTOS.md`.** Tiene el mapa real del costeo: la fórmula del
+C. Final, qué dispara el recálculo, qué pantalla recalcula y cuál lee de la tabla.
+
+Está escrito sobre lo que efectivamente corre en Supabase, extraído con
+`pg_get_functiondef`. **Los `.sql` del repo describen funciones que no existen** —
+en particular `supabase-trigger-actualizar-costos.sql`, que está marcado como
+obsoleto. Confiar en él convirtió un cambio de 10 minutos en una hora de
+arqueología (V.20).
+
+### Regla obligatoria para cambios en la base
+
+Toda función o trigger que se toque en el dashboard de Supabase **vuelve al repo
+el mismo día**, en un `.sql` versionado. Si no, el repo miente y el próximo cambio
+simple se paga carísimo. Ya pasó tres veces: trigger de vinos, descuento en
+facturas (V.16) y fórmula de merma (V.20).
+
+### La fórmula del costo vive en DOS lugares, y solo dos
+
+| Capa | Dónde |
+|---|---|
+| Frontend | `src/lib/costos.ts` → `costoFinalInsumo()` |
+| Base | función `costo_final_insumo()` |
+
+Si se toca una, se toca la otra. Nunca volver a copiarla inline en una pantalla.
+
 ## Notas Importantes
 
 - Los precios de insumos vienen de la última factura registrada

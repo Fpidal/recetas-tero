@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, ArrowLeft, Save, ClipboardList } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { parsearNumero } from '@/lib/formato-numeros'
 import { Button } from '@/components/ui'
 
@@ -78,7 +79,7 @@ export default function NuevaRecetaBasePage() {
         ? Math.min(...preciosInsumo.map(p => p.precio))
         : null
       const costoFinal = precioMinimo !== null
-        ? precioMinimo * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+        ? costoFinalInsumo(precioMinimo, insumo.iva_porcentaje, insumo.merma_porcentaje)
         : null
       return {
         ...insumo,

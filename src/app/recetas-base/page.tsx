@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, ChefHat, Search, Eye, X, ClipboardList, ImageIcon, Share2, Package, ChevronDown, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { Button, ClickableItemName } from '@/components/ui'
 import Link from 'next/link'
 
@@ -151,7 +152,7 @@ export default function RecetasBasePage() {
       for (const ing of receta.receta_base_ingredientes || []) {
         const insumo = insumosData?.find(i => i.id === ing.insumo_id)
         if (insumo && insumo.precio_actual) {
-          const costoFinal = insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+          const costoFinal = costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
           costoTotal += ing.cantidad * costoFinal
         }
       }

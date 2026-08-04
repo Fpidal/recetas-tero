@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, ChefHat, Calculator } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 
 interface Plato {
@@ -94,7 +95,7 @@ export default function NuevoMenuEspecialPage() {
     function getCostoFinalInsumo(insumoId: string): number {
       const insumo = insumosData?.find(i => i.id === insumoId)
       if (!insumo || !insumo.precio_actual) return 0
-      return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+      return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
     }
 
     // Función para calcular costo por porción de receta base

@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.20',
+    fecha: '04/08/26',
+    cambios: [
+      'Corrección importante: el costo de los insumos con merma estaba por debajo del real. Ahora recetas, elaboraciones, carta y menús muestran el costo verdadero',
+      'Los menús ejecutivos vuelven a mostrar su costo actualizado (algunos estaban desfasados)',
+    ],
+  },
+  {
     version: 'V.19',
     fecha: '04/08/26',
     cambios: [

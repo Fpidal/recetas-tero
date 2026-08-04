@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import {
   LineChart,
   Line,
@@ -300,7 +301,7 @@ export default function Home() {
       const getCostoFinalInsumo = (insumoId: string): number => {
         const insumo = insumosConPrecio?.find((i: any) => i.id === insumoId)
         if (!insumo || !insumo.precio_actual) return 0
-        return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+        return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
       }
 
       // Función para calcular costo de un plato (por porción)

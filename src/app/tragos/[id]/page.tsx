@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Trash2, ArrowLeft, Save, Package, ChefHat, RefreshCw } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 
@@ -101,7 +102,7 @@ export default function EditarTragoPage({ params }: { params: { id: string } }) 
     const insumosData = (insumosRaw || []).map(insumo => ({
       ...insumo,
       costo_final: insumo.precio_actual !== null
-        ? insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+        ? costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
         : null
     }))
     if (insumosData) setInsumos(insumosData)

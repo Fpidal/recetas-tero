@@ -6,6 +6,7 @@ import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save,
 import Link from 'next/link'
 import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select, Modal, ClickableItemName } from '@/components/ui'
 import { parsearNumero } from '@/lib/formato-numeros'
 
@@ -177,7 +178,7 @@ export default function CartaPage() {
   function getCostoFinalInsumo(insumoId: string, insumosData: any[]): number {
     const insumo = insumosData?.find(i => i.id === insumoId)
     if (!insumo || !insumo.precio_actual) return 0
-    return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+    return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
   }
 
   // Función para calcular costo real de un plato (por porción)
@@ -352,7 +353,7 @@ export default function CartaPage() {
     const insumosConCosto = (insumosData || []).map(insumo => ({
       ...insumo,
       costo_final: insumo.precio_actual !== null
-        ? insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+        ? costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
         : 0
     }))
 
@@ -610,7 +611,7 @@ export default function CartaPage() {
     function getCostoInsumo(insumoId: string): number {
       const insumo = insumosData?.find(i => i.id === insumoId)
       if (!insumo?.precio_actual) return 0
-      return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+      return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
     }
 
     function getCostoRecetaBase(recetaBaseId: string): number {
@@ -724,7 +725,7 @@ export default function CartaPage() {
     function getCostoFinalInsumoEsp(insumoId: string): number {
       const insumo = insumosData?.find(i => i.id === insumoId)
       if (!insumo || !insumo.precio_actual) return 0
-      return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+      return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
     }
     function getCostoPorcionReceta(recetaBaseId: string): number {
       const receta = recetasBaseData?.find((r: any) => r.id === recetaBaseId)

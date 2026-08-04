@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, Package, BookOpen, ChefHat } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { parsearNumero } from '@/lib/formato-numeros'
 
@@ -96,9 +97,7 @@ export default function NuevoMenuEjecutivoPage() {
     for (const ing of ingredientes) {
       const insumo = insumosData.find(i => i.id === ing.insumo_id)
       if (insumo && insumo.precio_actual !== null) {
-        const costoFinal = insumo.precio_actual *
-          (1 + (insumo.iva_porcentaje || 0) / 100) *
-          (1 + (insumo.merma_porcentaje || 0) / 100)
+        const costoFinal = costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
         costoTotal += ing.cantidad * costoFinal
       }
     }
@@ -125,9 +124,7 @@ export default function NuevoMenuEjecutivoPage() {
       for (const ing of ingredientes) {
         const insumo = insumosData.find(i => i.id === ing.insumo_id)
         if (insumo && insumo.precio_actual !== null) {
-          const costoFinal = insumo.precio_actual *
-            (1 + (insumo.iva_porcentaje || 0) / 100) *
-            (1 + (insumo.merma_porcentaje || 0) / 100)
+          const costoFinal = costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
           costoTotal += ing.cantidad * costoFinal
         }
       }
@@ -148,9 +145,7 @@ export default function NuevoMenuEjecutivoPage() {
           // Es un insumo
           const insumo = insumosData.find(i => i.id === ing.insumo_id)
           if (insumo && insumo.precio_actual !== null) {
-            const costoFinal = insumo.precio_actual *
-              (1 + (insumo.iva_porcentaje || 0) / 100) *
-              (1 + (insumo.merma_porcentaje || 0) / 100)
+            const costoFinal = costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
             costoTotal += ing.cantidad * costoFinal
           }
         } else if (ing.receta_base_id) {
@@ -167,9 +162,7 @@ export default function NuevoMenuEjecutivoPage() {
   // Obtener costo final del insumo aplicando IVA y merma
   function getCostoFinalInsumo(insumo: Insumo): number {
     if (insumo.precio_actual === null) return 0
-    return insumo.precio_actual *
-      (1 + (insumo.iva_porcentaje || 0) / 100) *
-      (1 + (insumo.merma_porcentaje || 0) / 100)
+    return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
   }
 
   // Insumos filtrados por categoría

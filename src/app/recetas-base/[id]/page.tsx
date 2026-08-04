@@ -6,6 +6,7 @@ import { Plus, Trash2, ArrowLeft, Save, RefreshCw, ClipboardList, FileDown, Imag
 import jsPDF from 'jspdf'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
 import { Button } from '@/components/ui'
 
@@ -80,7 +81,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     const insumosData = (insumosRaw || []).map(insumo => ({
       ...insumo,
       costo_final: insumo.precio_actual !== null
-        ? insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+        ? costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
         : null
     }))
 

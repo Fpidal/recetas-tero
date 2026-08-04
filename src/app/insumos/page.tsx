@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, LineChart as Lin
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Modal, Select } from '@/components/ui'
 import { CategoriaInsumo, UnidadMedida } from '@/types/database'
 import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
@@ -396,8 +397,7 @@ export default function InsumosPage() {
   }
 
   function calcularCostoFinal(precio: number, iva: number, merma: number): number {
-    const conIva = precio * (1 + iva / 100)
-    return conIva * (1 + merma / 100)
+    return costoFinalInsumo(precio, iva, merma)
   }
 
   const filteredInsumos = insumos

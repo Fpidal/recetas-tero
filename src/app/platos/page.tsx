@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Eye, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, Package, BookOpen, X, ClipboardList, ImageIcon, Share2, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { Button, ClickableItemName } from '@/components/ui'
 import Link from 'next/link'
 
@@ -194,7 +195,7 @@ export default function PlatosPage() {
     function getCostoFinalInsumo(insumoId: string): number {
       const insumo = insumosData?.find(i => i.id === insumoId)
       if (!insumo || !insumo.precio_actual) return 0
-      return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+      return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
     }
 
     function getCostoPorcionReceta(recetaBaseId: string): number {
@@ -311,7 +312,7 @@ export default function PlatosPage() {
       const getCostoFinalInsumo = (insumoId: string): number => {
         const insumo = insumosData?.find(i => i.id === insumoId)
         if (!insumo || !insumo.precio_actual) return 0
-        return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+        return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
       }
 
       const getCostoPorcionReceta = (recetaBaseId: string): number => {

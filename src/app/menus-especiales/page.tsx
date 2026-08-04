@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, LayoutGrid, Users, Calculator, Eye, Save } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input } from '@/components/ui'
 import { parsearNumero } from '@/lib/formato-numeros'
 import { MenuEspecial } from '@/types/database'
@@ -80,7 +81,7 @@ export default function MenusEspecialesPage() {
     function getCostoFinalInsumo(insumoId: string): number {
       const insumo = insumosData?.find(i => i.id === insumoId)
       if (!insumo || !insumo.precio_actual) return 0
-      return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+      return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
     }
 
     // Función para calcular costo por porción de receta base

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Eye, Martini, Search, ChevronDown, ChevronRight, Package, BookOpen, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { costoFinalInsumo } from '@/lib/costos'
 import { Button } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import Link from 'next/link'
@@ -105,7 +106,7 @@ export default function TragosPage() {
     function getCostoFinalInsumo(insumoId: string): number {
       const insumo = insumosData?.find(i => i.id === insumoId)
       if (!insumo || !insumo.precio_actual) return 0
-      return insumo.precio_actual * (1 + (insumo.iva_porcentaje || 0) / 100) * (1 + (insumo.merma_porcentaje || 0) / 100)
+      return costoFinalInsumo(insumo.precio_actual, insumo.iva_porcentaje, insumo.merma_porcentaje)
     }
 
     function getCostoPorcionReceta(recetaBaseId: string): number {

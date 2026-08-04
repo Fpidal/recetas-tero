@@ -1,6 +1,7 @@
 // Queries del módulo Análisis (consumo + incidencia real)
 
 import { supabase } from './supabase'
+import { costoFinalInsumo } from './costos'
 import type {
   ConsumoDiario,
   ConsumoItem,
@@ -44,9 +45,7 @@ export async function obtenerInsumosBuscador(): Promise<OpcionBuscador[]> {
       unidad: i.unidad_medida,
       // Costo Final = precio × (1 + IVA) × (1 + merma)
       costo_unitario:
-        Number(i.precio_actual) *
-        (1 + Number(i.iva_porcentaje || 0) / 100) *
-        (1 + Number(i.merma_porcentaje || 0) / 100),
+        costoFinalInsumo(i.precio_actual, i.iva_porcentaje, i.merma_porcentaje),
     }))
 }
 
@@ -406,7 +405,7 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
       nombre: (i as any).nombre,
       unidad: (i as any).unidad_medida,
       categoria: (i as any).categoria || 'Almacen',
-      costo_unit_iva: precio * (1 + iva / 100) * (1 + merma / 100),
+      costo_unit_iva: costoFinalInsumo(precio, iva, merma),
     })
   }
 

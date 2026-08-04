@@ -6,7 +6,7 @@ import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save,
 import Link from 'next/link'
 import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import { supabase } from '@/lib/supabase'
-import { Button, Input, Select, Modal } from '@/components/ui'
+import { Button, Input, Select, Modal, ClickableItemName } from '@/components/ui'
 import { parsearNumero } from '@/lib/formato-numeros'
 
 const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
@@ -1185,13 +1185,12 @@ export default function CartaPage() {
                           <IconComponent className="w-3 h-3 text-orange-600" />
                         </div>
                         <div>
-                          <button
+                          <ClickableItemName
+                            nombre={item.plato_nombre}
                             onClick={() => handleVerReceta(item.plato_id)}
-                            className="text-xs font-medium text-gray-900 hover:text-primary-600 hover:underline text-left flex items-center gap-1 group"
-                          >
-                            {item.plato_nombre}
-                            <Eye className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
-                          </button>
+                            size="xs"
+                            title="Ver receta"
+                          />
                           <p className="text-[9px] text-gray-400">
                             {item.plato_dias_actualizacion === 0
                               ? 'Hoy'

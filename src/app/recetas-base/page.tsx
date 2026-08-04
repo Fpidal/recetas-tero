@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, ChefHat, Search, Eye, X, ClipboardList, ImageIcon, Share2, Package, ChevronDown, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui'
+import { Button, ClickableItemName } from '@/components/ui'
 import Link from 'next/link'
 
 interface InsumoEnElaboraciones {
@@ -392,12 +392,16 @@ export default function RecetasBasePage() {
                         <div className="p-1.5 bg-purple-100 rounded-lg">
                           <ChefHat className="w-4 h-4 text-purple-600" />
                         </div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {r.nombre}
+                        <div className="flex items-baseline gap-2">
+                          <ClickableItemName
+                            nombre={r.nombre}
+                            onClick={() => handleVerDetalle(r.id)}
+                            title="Ver elaboración"
+                          />
                           {r.descripcion && (
-                            <span className="ml-2 text-xs text-gray-400 italic font-normal">({r.descripcion})</span>
+                            <span className="text-xs text-gray-400 italic font-normal">({r.descripcion})</span>
                           )}
-                        </p>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-2 text-center text-xs text-gray-600 font-mono">
@@ -411,9 +415,6 @@ export default function RecetasBasePage() {
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleVerDetalle(r.id)}>
-                          <Eye className="w-3.5 h-3.5 text-blue-500" />
-                        </Button>
                         <Link href={`/recetas-base/${r.id}`}>
                           <Button variant="ghost" size="sm">
                             <Pencil className="w-3.5 h-3.5" />

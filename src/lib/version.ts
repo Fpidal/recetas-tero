@@ -10,6 +10,13 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.19',
+    fecha: '04/08/26',
+    cambios: [
+      'Recetas y Elaboraciones: ahora se abre el detalle haciendo clic en el nombre, igual que en Carta',
+    ],
+  },
+  {
     version: 'V.18',
     fecha: '03/08/26',
     cambios: [

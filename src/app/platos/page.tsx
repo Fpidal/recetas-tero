@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Eye, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, Package, BookOpen, X, ClipboardList, ImageIcon, Share2, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui'
+import { Button, ClickableItemName } from '@/components/ui'
 import Link from 'next/link'
 
 const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
@@ -579,12 +579,16 @@ export default function PlatosPage() {
                               <IconComponent className="w-4 h-4 text-orange-600" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {p.nombre}
+                              <div className="flex items-baseline gap-2">
+                                <ClickableItemName
+                                  nombre={p.nombre}
+                                  onClick={() => handleVerDetalle(p.id)}
+                                  title="Ver receta"
+                                />
                                 {p.descripcion && (
-                                  <span className="ml-2 text-xs text-gray-400 italic font-normal">({p.descripcion})</span>
+                                  <span className="text-xs text-gray-400 italic font-normal">({p.descripcion})</span>
                                 )}
-                              </p>
+                              </div>
                               {p.ingredientes_texto && (
                                 <p className="text-[10px] text-gray-400 truncate max-w-md">
                                   {p.ingredientes_texto}
@@ -598,9 +602,6 @@ export default function PlatosPage() {
                         </td>
                         <td className="px-4 py-2 text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" title="Ver receta" onClick={() => handleVerDetalle(p.id)}>
-                              <Eye className="w-3.5 h-3.5 text-blue-500" />
-                            </Button>
                             <Link href={`/platos/${p.id}`}>
                               <Button variant="ghost" size="sm" title="Editar receta">
                                 <Pencil className="w-3.5 h-3.5" />

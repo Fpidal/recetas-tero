@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.21',
+    fecha: '04/08/26',
+    cambios: [
+      'Editar facturas: se corrigió un error que duplicaba los items al guardar. Si algo falla, ahora avisa y no guarda nada',
+      'Anular una factura ahora recalcula los costos de las recetas que usaban esos insumos',
+    ],
+  },
+  {
     version: 'V.20',
     fecha: '04/08/26',
     cambios: [

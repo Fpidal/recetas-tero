@@ -114,6 +114,33 @@ Ya está corregido: `calcular_costo_insumo()` ahora delega en `costo_final_insum
 
 ---
 
+## 4 bis. Los triggers de `factura_items` (corregidos en V.21)
+
+Cinco triggers rodean a `factura_items`. Estaban rotos de tres formas distintas:
+
+| Función | Qué le pasaba |
+|---|---|
+| `revertir_precio_item_eliminado` | Llamaba a `propagar_cambio_precio_insumo()`, **que nunca existió** → borrar items de factura fallaba |
+| `revertir_precios_factura_anulada` | Restauraba el precio anterior pero **no propagaba**: los platos quedaban con el costo de la factura anulada |
+| `actualizar_precio_insumo_on_update` | Escribía en `precio_insumos` (singular), **tabla inexistente** |
+| `revertir_precio_al_eliminar_factura` | Buscaba el precio anterior con `factura_item_id != OLD.id`; los precios cargados a mano tienen ese campo en NULL y `NULL != x` da NULL, así que **nunca los encontraba** (90 de 302 precios vigentes) |
+
+**Por qué sobrevivió tanto:** plpgsql no valida que las funciones llamadas existan
+al crear la función, solo la sintaxis. El error aparece recién al ejecutarse. Y el
+frontend hacía `console.log` del error del DELETE y **seguía insertando igual**, así
+que el síntoma no era un error sino items duplicados en la factura.
+
+Corregido en `supabase-fix-triggers-factura-items.sql` + el guard del frontend en
+`facturas/[id]/editar/page.tsx`.
+
+**Pendiente conocido:** al restaurar un precio anterior, los triggers no desmarcan
+los otros `es_precio_actual`. Si se borran varios items del mismo insumo de una vez,
+quedan varios precios marcados como vigentes. La vista `v_insumos_con_precio` usa
+`DISTINCT ON` y toma el más reciente, así que la app no se rompe, pero el dato queda
+sucio.
+
+---
+
 ## 5. Recalcular todo a mano
 
 Cambiar la definición de una función **no** recalcula lo ya guardado:

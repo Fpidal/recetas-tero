@@ -409,16 +409,45 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
       return
     }
 
-    // Eliminar todos los items y reinsertar los actuales
-    console.log('Eliminando items de factura:', id)
-    const { error: deleteErr, count: deleteCount } = await supabase
+    // Eliminar todos los items y reinsertar los actuales.
+    // CRÍTICO: si el borrado falla NO se puede insertar, porque los items
+    // viejos siguen ahí y quedarían duplicados. Pasó en producción durante
+    // meses: un trigger roto hacía fallar el DELETE, el error solo se logueaba
+    // y el insert seguía igual. Ver docs/SISTEMA-COSTOS.md
+    const { error: deleteErr } = await supabase
       .from('factura_items')
       .delete()
       .eq('factura_id', id)
-    console.log('Delete result:', { error: deleteErr, count: deleteCount })
+
+    if (deleteErr) {
+      console.error('Error eliminando items de la factura:', deleteErr)
+      alert(
+        'No se pudieron actualizar los items de la factura.\n\n' +
+        'La factura quedó como estaba, sin cambios en sus items. ' +
+        'No se guardó nada para evitar que se dupliquen.\n\n' +
+        `Detalle: ${deleteErr.message}`
+      )
+      setIsSaving(false)
+      return
+    }
+
+    // Verificación extra: confirmar que no quedó ningún item viejo
+    const { count: quedaron } = await supabase
+      .from('factura_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('factura_id', id)
+
+    if (quedaron && quedaron > 0) {
+      console.error('Quedaron items sin borrar:', quedaron)
+      alert(
+        `Quedaron ${quedaron} items sin borrar. No se guardaron los cambios ` +
+        'para evitar duplicados. Avisá para revisarlo.'
+      )
+      setIsSaving(false)
+      return
+    }
 
     // Insertar todos los items activos
-    console.log('Items a insertar:', itemsActivos.map(i => ({ nombre: i.insumo_nombre, cantidad: i.cantidad, precio: i.precio_unitario })))
     if (itemsActivos.length > 0) {
       const insertData = itemsActivos.map(item => ({
         factura_id: id,
@@ -432,8 +461,17 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
       const { error: insertErr } = await supabase
         .from('factura_items')
         .insert(insertData)
-      if (insertErr) console.error('Error insertando items:', insertErr)
-      else console.log('Items insertados OK')
+
+      if (insertErr) {
+        console.error('Error insertando items:', insertErr)
+        alert(
+          'ATENCIÓN: los items viejos se borraron pero los nuevos no se pudieron guardar.\n\n' +
+          'La factura quedó SIN ITEMS. Volvé a cargarlos antes de salir.\n\n' +
+          `Detalle: ${insertErr.message}`
+        )
+        setIsSaving(false)
+        return
+      }
     }
 
 

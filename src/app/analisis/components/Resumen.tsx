@@ -147,10 +147,10 @@ export default function Resumen({ fecha, servicio, setServicio }: Props) {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4">
-          <div className="text-[10px] sm:text-xs uppercase text-gray-500 font-semibold">Insumos únicos</div>
+          <div className="text-[10px] sm:text-xs uppercase text-gray-500 font-semibold">Items únicos</div>
           <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 font-mono">{desglose.length}</div>
           <div className="text-[10px] text-gray-500 mt-1">
-            consumidos en la semana
+            insumos y vinos de la semana
           </div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4">
@@ -274,7 +274,7 @@ function SeccionCategoria({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-[10px] text-gray-500 uppercase">
-              <th className="text-left py-2 px-3 font-medium">Insumo</th>
+              <th className="text-left py-2 px-3 font-medium">Item</th>
               <th className="text-left py-2 px-3 font-medium">Origen</th>
               <th className="text-right py-2 px-3 font-medium">Cantidad</th>
               <th className="text-right py-2 px-3 font-medium">Costo (IVA inc.)</th>
@@ -282,7 +282,7 @@ function SeccionCategoria({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {items.map((d) => (
-              <tr key={d.insumo_id} className="hover:bg-gray-50">
+              <tr key={`${d.tipo}:${d.ref_id}`} className="hover:bg-gray-50">
                 <td className="py-2.5 px-3 text-gray-900">{d.nombre}</td>
                 <td className="px-3 text-[11px] text-gray-500">
                   {d.origenes.slice(0, 2).join(' · ')}
@@ -304,7 +304,7 @@ function SeccionCategoria({
       {/* Mobile cards */}
       <div className="md:hidden divide-y divide-gray-100">
         {items.map((d) => (
-          <div key={d.insumo_id} className="p-3">
+          <div key={`${d.tipo}:${d.ref_id}`} className="p-3">
             <div className="flex items-start justify-between mb-1">
               <div className="text-sm font-medium text-gray-900">{d.nombre}</div>
               <div className="text-sm font-semibold text-gray-700 ml-2 font-mono">

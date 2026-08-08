@@ -49,7 +49,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Órdenes de Compra** | Pedidos a proveedores, con PDF |
 | **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito |
 | **Ventas** | Carga diaria de ventas. **Nivel grueso:** ventas vs compras del período |
-| **Análisis** | Carga del consumo real de cocina por servicio. **Nivel fino:** consumo real vs ventas, incidencia por insumo |
+| **Análisis** | Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo |
 | **Estadísticas** | Dashboard consolidado (4 pestañas) |
 | **Inventario** | Hojas de control de stock. **Pausado a propósito** — ver Decisiones tomadas |
 | **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
@@ -77,10 +77,33 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Ahora
 
-- **Cerrar el módulo Análisis.** Es el más nuevo del sistema. Ya están la carga del consumo y
-  la descarga en PDF del servicio (V.17). Falta que las solapas **Resumen** e **Histórico**
-  muestren la evolución en el tiempo. Sin eso se carga el consumo todos los días y no se ve la
-  tendencia, que es el motivo por el que existe el módulo.
+- **Cerrar el módulo Análisis.** Es el más nuevo del sistema. Ya están la carga del consumo,
+  la descarga en PDF del servicio (V.17) y los cinco tipos de carga con separación
+  Cocina / Barra (V.23), con los seis tipos de carga: insumo, elaboración, receta, menú
+  ejecutivo, trago y vino. Falta:
+  - **Incidencia separada Cocina / Barra.** El costo ya se guarda separado en
+    `consumo_diario.costo_cocina` / `costo_barra`, pero la venta no: `ventas_diarias` solo
+    tiene el total por servicio. Para mostrar las dos incidencias hay que cargar la venta de
+    barra todos los días — decisión de rutina, no técnica.
+  - Que las solapas **Resumen** e **Histórico** muestren la evolución en el tiempo. Sin eso se
+    carga el consumo todos los días y no se ve la tendencia, que es el motivo por el que
+    existe el módulo.
+
+- **Propagación a menús ejecutivos.** Detectado el 08/08/26: cuando cambia el precio de un
+  insumo, el costo se propaga bien hasta el plato, pero **no llega a los menús ejecutivos**.
+  `menu_ejecutivo_items.costo_linea` y `menus_ejecutivos.costo_total` quedan con el valor
+  viejo hasta que alguien abre el menú y lo guarda. Al 08/08 eran 8 de 17 menús, con hasta 5%
+  de desvío; los 84 platos y las 79 elaboraciones, en cambio, estaban exactos — falla solo el
+  último eslabón.
+
+  Síntoma visible: la **ficha** del menú y la **lista** de menús muestran números distintos
+  del mismo menú (la ficha recalcula, la lista lee la tabla). Ejemplo del 08/08:
+  "Sugerencia Pescados Noche", $11.943 en la ficha contra $12.264 en la lista.
+
+  V.23 no lo arregla, pero **se protege**: el buscador de Análisis reconstruye el costo desde
+  los insumos en vez de leer la tabla, así el consumo no hereda el desvío. Falta el arreglo de
+  fondo, que es un trigger `plato → menú ejecutivo`, más corregir la lista para que muestre lo
+  mismo que la ficha.
 
 ### Próximo
 

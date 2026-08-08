@@ -10,6 +10,16 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.23',
+    fecha: '08/08/26',
+    cambios: [
+      'Análisis: además de insumos, elaboraciones y recetas, ahora se pueden cargar menús ejecutivos, tragos y vinos en el consumo del día',
+      'Análisis: el costo del servicio se muestra separado en Cocina y Barra, para que el food cost de la cocina no quede tapado por la barra',
+      'Análisis: los vinos aparecen en su propia sección del desglose, con el precio de botella con descuento de bodega',
+      'El PDF del consumo suma las secciones de menús ejecutivos, tragos y vinos',
+    ],
+  },
+  {
     version: 'V.22',
     fecha: '04/08/26',
     cambios: [

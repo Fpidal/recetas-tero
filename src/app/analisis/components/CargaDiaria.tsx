@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Plus, X, ChefHat, BookOpen, Package, FileDown } from 'lucide-react'
+import { Search, Plus, X, ChefHat, BookOpen, Package, FileDown, UtensilsCrossed, Martini, Wine } from 'lucide-react'
 import { Button } from '@/components/ui'
 import {
   obtenerInsumosBuscador,
   obtenerElaboracionesBuscador,
   obtenerRecetasBuscador,
+  obtenerTragosBuscador,
+  obtenerEjecutivosBuscador,
+  obtenerVinosBuscador,
   obtenerOCrearConsumo,
   obtenerConsumo,
   obtenerItemsConsumo,
@@ -15,6 +18,7 @@ import {
   formatearMonedaAnalisis,
 } from '@/lib/consumo-queries'
 import { parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
+import { coincideBusqueda } from '@/lib/buscar'
 import { generarPDFConsumo } from '@/lib/generar-pdf-consumo'
 import {
   type ConsumoDiario,
@@ -24,12 +28,20 @@ import {
   type TipoConsumoItem,
   SERVICIO_LABEL,
   SERVICIO_ICON,
+  TIPO_CONFIG,
+  FK_DE_TIPO,
+  areaDeTipo,
 } from '@/types/analisis'
 
-const TIPOS: { valor: TipoConsumoItem; label: string; icon: any; color: string }[] = [
-  { valor: 'insumo', label: 'Insumo', icon: Package, color: 'text-blue-600' },
-  { valor: 'elaboracion', label: 'Elaboración', icon: BookOpen, color: 'text-amber-600' },
-  { valor: 'receta', label: 'Receta', icon: ChefHat, color: 'text-rose-600' },
+// Los tipos que se pueden cargar, en el orden en que aparecen los botones:
+// primero los de cocina, después los de barra.
+const TIPOS: { valor: TipoConsumoItem; icon: any; color: string }[] = [
+  { valor: 'insumo', icon: Package, color: 'text-blue-600' },
+  { valor: 'elaboracion', icon: BookOpen, color: 'text-amber-600' },
+  { valor: 'receta', icon: ChefHat, color: 'text-rose-600' },
+  { valor: 'ejecutivo', icon: UtensilsCrossed, color: 'text-emerald-600' },
+  { valor: 'trago', icon: Martini, color: 'text-cyan-600' },
+  { valor: 'vino', icon: Wine, color: 'text-purple-600' },
 ]
 
 interface Props {
@@ -48,9 +60,8 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
   // Buscador
   const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoConsumoItem>('insumo')
   const [busqueda, setBusqueda] = useState('')
-  const [opcionesInsumo, setOpcionesInsumo] = useState<OpcionBuscador[]>([])
-  const [opcionesElab, setOpcionesElab] = useState<OpcionBuscador[]>([])
-  const [opcionesReceta, setOpcionesReceta] = useState<OpcionBuscador[]>([])
+  // Opciones del buscador, indexadas por tipo
+  const [opciones, setOpciones] = useState<Partial<Record<TipoConsumoItem, OpcionBuscador[]>>>({})
   const [seleccionado, setSeleccionado] = useState<OpcionBuscador | null>(null)
   const [cantidad, setCantidad] = useState('')
   const [agregando, setAgregando] = useState(false)
@@ -62,11 +73,14 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
       obtenerInsumosBuscador(),
       obtenerElaboracionesBuscador(),
       obtenerRecetasBuscador(),
-    ]).then(([ins, elab, rec]) => {
-      setOpcionesInsumo(ins)
-      setOpcionesElab(elab)
-      setOpcionesReceta(rec)
-    })
+      obtenerEjecutivosBuscador(),
+      obtenerTragosBuscador(),
+      obtenerVinosBuscador(),
+    ])
+      .then(([insumo, elaboracion, receta, ejecutivo, trago, vino]) => {
+        setOpciones({ insumo, elaboracion, receta, ejecutivo, trago, vino })
+      })
+      .catch((e) => console.error('Error cargando opciones del buscador:', e))
   }, [])
 
   // Cargar consumo del día/servicio cuando cambian
@@ -93,31 +107,40 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
     }
   }
 
-  // Opciones filtradas por búsqueda
+  // Opciones filtradas por búsqueda.
+  // Busca por fragmentos sueltos: "sal res mal" encuentra "Reserva Malbec (Salentein)".
   const opcionesFiltradas = useMemo(() => {
-    const fuente =
-      tipoSeleccionado === 'insumo'
-        ? opcionesInsumo
-        : tipoSeleccionado === 'elaboracion'
-        ? opcionesElab
-        : opcionesReceta
+    const fuente = opciones[tipoSeleccionado] || []
+    if (!busqueda.trim()) return fuente.slice(0, 50)
+    return fuente.filter((o) => coincideBusqueda(o.nombre, busqueda)).slice(0, 50)
+  }, [tipoSeleccionado, busqueda, opciones])
 
-    const q = busqueda.trim().toLowerCase()
-    if (!q) return fuente.slice(0, 50)
-    return fuente.filter((o) => o.nombre.toLowerCase().includes(q)).slice(0, 50)
-  }, [tipoSeleccionado, busqueda, opcionesInsumo, opcionesElab, opcionesReceta])
+  // Cuántos quedaron afuera del corte de 50, para no mentir con la lista
+  const totalCoincidencias = useMemo(() => {
+    const fuente = opciones[tipoSeleccionado] || []
+    if (!busqueda.trim()) return fuente.length
+    return fuente.filter((o) => coincideBusqueda(o.nombre, busqueda)).length
+  }, [tipoSeleccionado, busqueda, opciones])
 
-  // Más usados (top 8 items que aparecen más en TODOS los consumos del último mes)
-  // Por simplicidad: muestro los items que ya están en este consumo + los primeros 5 insumos como sugerencia
-  const masUsados = useMemo(() => opcionesInsumo.slice(0, 6), [opcionesInsumo])
+  // Sugerencias rápidas: los primeros insumos, para no tener que tipear
+  const masUsados = useMemo(() => (opciones.insumo || []).slice(0, 6), [opciones.insumo])
 
   const totalCosto = items.reduce((acc, it) => acc + Number(it.subtotal), 0)
   const totalItems = items.length
-  const tipoConteo = {
-    insumo: items.filter((i) => i.tipo === 'insumo').length,
-    elaboracion: items.filter((i) => i.tipo === 'elaboracion').length,
-    receta: items.filter((i) => i.tipo === 'receta').length,
-  }
+
+  // Costo separado por área: cocina y barra tienen márgenes distintos,
+  // sumadas en un solo número se tapan entre sí.
+  const costoCocina = items
+    .filter((i) => areaDeTipo(i.tipo) === 'cocina')
+    .reduce((acc, it) => acc + Number(it.subtotal), 0)
+  const costoBarra = totalCosto - costoCocina
+  const hayBarra = items.some((i) => areaDeTipo(i.tipo) === 'barra')
+
+  // Cuántos items hay de cada tipo, solo de los que aparecen
+  const conteoPorTipo = TIPOS.map((t) => ({
+    tipo: t.valor,
+    cantidad: items.filter((i) => i.tipo === t.valor).length,
+  })).filter((c) => c.cantidad > 0)
 
   function selectOption(o: OpcionBuscador) {
     setSeleccionado(o)
@@ -143,9 +166,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
 
       await agregarItem(c.id, {
         tipo: seleccionado.tipo,
-        insumo_id: seleccionado.tipo === 'insumo' ? seleccionado.id : null,
-        receta_base_id: seleccionado.tipo === 'elaboracion' ? seleccionado.id : null,
-        plato_id: seleccionado.tipo === 'receta' ? seleccionado.id : null,
+        [FK_DE_TIPO[seleccionado.tipo]]: seleccionado.id,
         cantidad: cant,
         unidad: seleccionado.unidad,
         costo_unitario: seleccionado.costo_unitario,
@@ -252,6 +273,8 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
               <div className="grid grid-cols-3 gap-1 bg-gray-100 rounded-md p-1">
                 {TIPOS.map((t) => {
                   const Icon = t.icon
+                  const activo = tipoSeleccionado === t.valor
+                  const disponibles = opciones[t.valor]?.length ?? 0
                   return (
                     <button
                       key={t.valor}
@@ -260,14 +283,13 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                         setSeleccionado(null)
                         setBusqueda('')
                       }}
-                      className={`flex items-center justify-center gap-1 text-xs px-2 py-1.5 rounded transition-colors ${
-                        tipoSeleccionado === t.valor
-                          ? 'bg-white shadow-sm font-medium text-gray-900'
-                          : 'text-gray-600'
+                      title={`${TIPO_CONFIG[t.valor].label} (${disponibles})`}
+                      className={`flex items-center justify-center gap-1 text-[11px] px-1.5 py-1.5 rounded transition-colors ${
+                        activo ? 'bg-white shadow-sm font-medium text-gray-900' : 'text-gray-600'
                       }`}
                     >
-                      <Icon className={`w-3.5 h-3.5 ${tipoSeleccionado === t.valor ? t.color : ''}`} />
-                      <span className="hidden sm:inline">{t.label}</span>
+                      <Icon className={`w-3.5 h-3.5 shrink-0 ${activo ? t.color : ''}`} />
+                      <span className="truncate">{TIPO_CONFIG[t.valor].label}</span>
                     </button>
                   )
                 })}
@@ -281,15 +303,38 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                 type="text"
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                placeholder={`Buscar ${TIPOS.find((t) => t.valor === tipoSeleccionado)?.label.toLowerCase()}...`}
+                placeholder={`Buscar ${TIPO_CONFIG[tipoSeleccionado].label.toLowerCase()}...`}
                 className="w-full border border-gray-300 rounded-md pl-9 pr-3 py-2 text-sm"
               />
+            </div>
+
+            {/* Contador / pista de uso */}
+            <div className="text-[10px] text-gray-400 mb-2 px-0.5 h-3.5">
+              {busqueda.trim() ? (
+                totalCoincidencias === 0 ? (
+                  'sin coincidencias'
+                ) : totalCoincidencias > opcionesFiltradas.length ? (
+                  <span className="font-mono">
+                    mostrando {opcionesFiltradas.length} de {totalCoincidencias}
+                  </span>
+                ) : (
+                  <span className="font-mono">
+                    {totalCoincidencias} {totalCoincidencias === 1 ? 'resultado' : 'resultados'}
+                  </span>
+                )
+              ) : (
+                'Podés escribir partes sueltas: “sal res mal”'
+              )}
             </div>
 
             {/* Resultados */}
             <div key={`results-${busqueda}-${tipoSeleccionado}`} className="border border-gray-200 rounded-md mb-3 divide-y divide-gray-100 text-sm max-h-48 overflow-y-auto">
               {opcionesFiltradas.length === 0 ? (
-                <div className="px-3 py-3 text-gray-400 text-xs text-center">Sin resultados</div>
+                <div className="px-3 py-3 text-gray-400 text-xs text-center">
+                  {busqueda.trim()
+                    ? 'Sin resultados'
+                    : `No hay ${TIPO_CONFIG[tipoSeleccionado].plural.toLowerCase()} cargados todavía`}
+                </div>
               ) : (
                 opcionesFiltradas.map((o, idx) => (
                   <button
@@ -443,7 +488,35 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="bg-gray-50 border-t-2 border-gray-200 font-semibold">
+                      {/* Cocina y barra solo se muestran si hay algo de barra:
+                          si no, el total ya es todo cocina y sobra la fila */}
+                      {hayBarra && (
+                        <>
+                          <tr className="bg-gray-50 border-t-2 border-gray-200 text-gray-600">
+                            <td colSpan={4} className="pt-2.5 px-3 text-right text-xs">
+                              Cocina:
+                            </td>
+                            <td className="text-right px-3 pt-2.5 text-sm font-mono">
+                              {formatearMonedaAnalisis(costoCocina)}
+                            </td>
+                            <td></td>
+                          </tr>
+                          <tr className="bg-gray-50 text-gray-600">
+                            <td colSpan={4} className="pb-1 px-3 text-right text-xs">
+                              Barra:
+                            </td>
+                            <td className="text-right px-3 pb-1 text-sm font-mono">
+                              {formatearMonedaAnalisis(costoBarra)}
+                            </td>
+                            <td></td>
+                          </tr>
+                        </>
+                      )}
+                      <tr
+                        className={`bg-gray-50 font-semibold ${
+                          hayBarra ? 'border-t border-gray-300' : 'border-t-2 border-gray-200'
+                        }`}
+                      >
                         <td colSpan={4} className="py-3 px-3 text-right text-gray-700">
                           Total consumo (IVA inc.):
                         </td>
@@ -483,9 +556,23 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                       </div>
                     </div>
                   ))}
-                  <div className="p-3 bg-gray-50 flex justify-between font-semibold">
-                    <span className="text-sm text-gray-700">Total (IVA inc.)</span>
-                    <span className="text-base text-gray-900 font-mono">{formatearMonedaAnalisis(totalCosto)}</span>
+                  <div className="p-3 bg-gray-50 space-y-1">
+                    {hayBarra && (
+                      <>
+                        <div className="flex justify-between text-xs text-gray-600">
+                          <span>Cocina</span>
+                          <span className="font-mono">{formatearMonedaAnalisis(costoCocina)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-600 pb-1 border-b border-gray-200">
+                          <span>Barra</span>
+                          <span className="font-mono">{formatearMonedaAnalisis(costoBarra)}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex justify-between font-semibold pt-0.5">
+                      <span className="text-sm text-gray-700">Total (IVA inc.)</span>
+                      <span className="text-base text-gray-900 font-mono">{formatearMonedaAnalisis(totalCosto)}</span>
+                    </div>
                   </div>
                 </div>
               </>
@@ -498,13 +585,25 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
               <div className="text-[10px] uppercase text-gray-500 font-semibold">Items cargados</div>
               <div className="text-lg font-bold text-gray-900 mt-1 font-mono">{totalItems}</div>
               <div className="text-[11px] text-gray-500 font-mono">
-                {tipoConteo.insumo} ins · {tipoConteo.elaboracion} elab · {tipoConteo.receta} rec
+                {conteoPorTipo.length === 0
+                  ? '—'
+                  : conteoPorTipo
+                      .map((c) => `${c.cantidad} ${TIPO_CONFIG[c.tipo].badge.toLowerCase()}`)
+                      .join(' · ')}
               </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
               <div className="text-[10px] uppercase text-gray-500 font-semibold">Costo total</div>
               <div className="text-lg font-bold text-gray-900 mt-1 font-mono">{formatearMonedaAnalisis(totalCosto)}</div>
-              <div className="text-[11px] text-gray-500">IVA incluido</div>
+              <div className="text-[11px] text-gray-500">
+                {hayBarra ? (
+                  <span className="font-mono">
+                    {formatearMonedaAnalisis(costoCocina)} cocina · {formatearMonedaAnalisis(costoBarra)} barra
+                  </span>
+                ) : (
+                  'IVA incluido'
+                )}
+              </div>
             </div>
             <div className="bg-blue-50 rounded-lg border-2 border-blue-300 shadow-sm p-3">
               <div className="text-[10px] uppercase text-blue-700 font-semibold">💡 Tip</div>
@@ -520,14 +619,13 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
 }
 
 function BadgeTipo({ tipo }: { tipo: TipoConsumoItem }) {
-  const cfg = {
-    insumo: { label: 'INS', cls: 'bg-blue-100 text-blue-800' },
-    elaboracion: { label: 'ELA', cls: 'bg-amber-100 text-amber-800' },
-    receta: { label: 'REC', cls: 'bg-rose-100 text-rose-800' },
-  }[tipo]
+  const cfg = TIPO_CONFIG[tipo]
   return (
-    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${cfg.cls}`}>
-      {cfg.label}
+    <span
+      title={cfg.label}
+      className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${cfg.badgeClass}`}
+    >
+      {cfg.badge}
     </span>
   )
 }

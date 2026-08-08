@@ -6,6 +6,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { supabase } from '@/lib/supabase'
 import { Button, Modal } from '@/components/ui'
 import { parsearNumero, formatearMoneda } from '@/lib/formato-numeros'
+import { costoBotellaVino } from '@/lib/costos'
 import { Vino, CartaVino, ProveedorMapeoExcel } from '@/types/database'
 import { generarPDFCartaVinos } from '@/lib/generar-pdf-carta-vinos'
 import * as XLSX from 'xlsx'
@@ -668,8 +669,8 @@ export default function VinosPage() {
     // Precio sin IVA con descuento (para mostrar "Botella c/Desc")
     const precioUnidadSinIva = precioUnidad / 1.21
     const unidadConDescuentoSinIva = precioUnidadSinIva * (1 - descuentoPorcentaje / 100)
-    // Precio final con IVA y descuento
-    const unidadFinal = unidadConDescuentoSinIva * 1.21
+    // Precio final con IVA y descuento — misma función que usa Análisis
+    const unidadFinal = costoBotellaVino(precioCaja, unidadesCaja, descuentoPorcentaje)
     // Lo mismo para caja completa
     const cajaConDescuentoSinIva = (precioCaja / 1.21) * (1 - descuentoPorcentaje / 100)
     const cajaFinal = cajaConDescuentoSinIva * 1.21

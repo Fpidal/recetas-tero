@@ -1,21 +1,27 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { supabase } from './supabase'
-import { SERVICIO_LABEL, type ConsumoItem, type Servicio, type TipoConsumoItem } from '@/types/analisis'
+import {
+  SERVICIO_LABEL,
+  TIPO_CONFIG,
+  areaDeTipo,
+  type ConsumoItem,
+  type Servicio,
+  type TipoConsumoItem,
+} from '@/types/analisis'
 
 const TERRACOTA = [163, 82, 52] as const
 const GRIS_CLARO = [245, 245, 245] as const
 
-const TIPO_LABEL: Record<TipoConsumoItem, string> = {
-  insumo: 'INS',
-  elaboracion: 'ELA',
-  receta: 'REC',
-}
-
-const SECCIONES: { tipo: TipoConsumoItem; titulo: string }[] = [
-  { tipo: 'insumo', titulo: 'INSUMOS' },
-  { tipo: 'elaboracion', titulo: 'ELABORACIONES' },
-  { tipo: 'receta', titulo: 'RECETAS' },
+// Orden de las secciones del reporte: primero cocina, después barra.
+// Las secciones vacías no se imprimen.
+const ORDEN_SECCIONES: TipoConsumoItem[] = [
+  'insumo',
+  'elaboracion',
+  'receta',
+  'ejecutivo',
+  'trago',
+  'vino',
 ]
 
 interface DatosConsumoPDF {
@@ -106,11 +112,17 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
   y += headerHeight + 4
 
   // === RESUMEN ===
-  const conteo = {
-    insumo: items.filter((i) => i.tipo === 'insumo').length,
-    elaboracion: items.filter((i) => i.tipo === 'elaboracion').length,
-    receta: items.filter((i) => i.tipo === 'receta').length,
-  }
+  // Solo se listan los tipos que efectivamente aparecen en el consumo
+  const desglosePorTipo = ORDEN_SECCIONES.map((tipo) => ({
+    tipo,
+    cantidad: items.filter((i) => i.tipo === tipo).length,
+  })).filter((c) => c.cantidad > 0)
+
+  const costoCocina = items
+    .filter((i) => areaDeTipo(i.tipo) === 'cocina')
+    .reduce((acc, it) => acc + Number(it.subtotal), 0)
+  const costoBarra = totalCosto - costoCocina
+  const hayBarra = items.some((i) => areaDeTipo(i.tipo) === 'barra')
 
   const boxHeight = 14
   doc.setFillColor(...GRIS_CLARO)
@@ -131,12 +143,15 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
   doc.text(`${items.length}`, margin + 4, y + 11)
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
+  doc.setFontSize(7.5)
   doc.setTextColor(80, 80, 80)
   doc.text(
-    `${conteo.insumo} insumos · ${conteo.elaboracion} elaboraciones · ${conteo.receta} recetas`,
+    desglosePorTipo
+      .map((c) => `${c.cantidad} ${TIPO_CONFIG[c.tipo].plural.toLowerCase()}`)
+      .join(' · '),
     margin + 45,
-    y + 11
+    y + 11,
+    { maxWidth: rightX - margin - 50 }
   )
 
   doc.setFont('helvetica', 'bold')
@@ -146,12 +161,26 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
 
   y += boxHeight + 4
 
+  // Cocina vs barra: solo si hubo barra, si no el total ya es todo cocina
+  if (hayBarra) {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(110, 110, 110)
+    doc.text(
+      `Cocina ${fmtMoney(costoCocina)}   ·   Barra ${fmtMoney(costoBarra)}`,
+      rightX,
+      y + 1,
+      { align: 'right' }
+    )
+    y += 4
+  }
+
   // === TABLA (agrupada por tipo, ordenada por subtotal desc dentro de cada grupo) ===
   const tableData: any[][] = []
 
-  for (const seccion of SECCIONES) {
+  for (const tipo of ORDEN_SECCIONES) {
     const itemsSeccion = items
-      .filter((it) => it.tipo === seccion.tipo)
+      .filter((it) => it.tipo === tipo)
       .sort((a, b) => Number(b.subtotal) - Number(a.subtotal))
 
     if (itemsSeccion.length === 0) continue
@@ -160,7 +189,7 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
 
     tableData.push([
       {
-        content: `${seccion.titulo}  (${itemsSeccion.length})`,
+        content: `${TIPO_CONFIG[tipo].plural}  (${itemsSeccion.length})`,
         colSpan: 5,
         styles: {
           fillColor: [225, 225, 225],
@@ -186,7 +215,7 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
       const incidencia = totalCosto > 0 ? (Number(it.subtotal) / totalCosto) * 100 : 0
       tableData.push([
         it.nombre || '(sin nombre)',
-        TIPO_LABEL[it.tipo],
+        TIPO_CONFIG[it.tipo].badge,
         `${fmtCantidad(it.cantidad)} ${it.unidad}`,
         `${fmtMoney(it.costo_unitario)}/${it.unidad}`,
         `${incidencia.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`,

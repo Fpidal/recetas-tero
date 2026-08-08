@@ -123,7 +123,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
           </div>
           <div className="flex items-end">
             <span className="text-xs text-gray-500">
-              Vista informativa: desglosa recetas y elaboraciones a nivel insumo
+              Vista informativa: abre recetas, elaboraciones, menús y tragos hasta el insumo
             </span>
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
         </div>
       ) : desglose.length === 0 ? (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center text-gray-500 text-sm">
-          La carga existe pero no hay items con insumos asociados.
+          La carga existe pero ninguno de sus items tiene insumos asociados.
         </div>
       ) : (
         <>
@@ -168,10 +168,10 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="px-4 py-3 border-b border-gray-200">
               <h3 className="text-sm font-semibold text-gray-900">
-                Detalle real por insumo
+                Detalle real del consumo
               </h3>
               <p className="text-[11px] text-gray-500">
-                {desglose.length} insumos · suma todo lo cargado (insumos directos + recetas + elaboraciones)
+                {desglose.length} items · todo lo cargado, abierto hasta el insumo (los vinos van enteros)
               </p>
             </div>
 
@@ -180,7 +180,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-[10px] text-gray-500 uppercase">
-                    <th className="text-left py-2 px-3 font-medium">Insumo</th>
+                    <th className="text-left py-2 px-3 font-medium">Item</th>
                     <th className="text-left py-2 px-3 font-medium">Origen</th>
                     <th className="text-right py-2 px-3 font-medium">Cantidad</th>
                     <th className="text-right py-2 px-3 font-medium">Costo (IVA inc.)</th>
@@ -188,7 +188,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {desglose.map((d) => (
-                    <tr key={d.insumo_id} className="hover:bg-gray-50">
+                    <tr key={`${d.tipo}:${d.ref_id}`} className="hover:bg-gray-50">
                       <td className="py-2.5 px-3 text-gray-900">{d.nombre}</td>
                       <td className="px-3 text-[11px] text-gray-500">
                         {d.origenes.slice(0, 2).join(' · ')}
@@ -206,7 +206,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-200 font-semibold">
                     <td colSpan={3} className="py-3 px-3 text-right text-gray-700">
-                      Total cargas directas (IVA inc.):
+                      Total consumo (IVA inc.):
                     </td>
                     <td className="text-right px-3 text-base text-gray-900 font-mono">
                       {formatearMonedaAnalisis(totalCosto)}
@@ -219,7 +219,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
             {/* Mobile: cards */}
             <div className="md:hidden divide-y divide-gray-100">
               {desglose.map((d) => (
-                <div key={d.insumo_id} className="p-3">
+                <div key={`${d.tipo}:${d.ref_id}`} className="p-3">
                   <div className="flex items-start justify-between mb-1">
                     <div className="text-sm font-medium text-gray-900">{d.nombre}</div>
                     <div className="text-sm font-semibold text-gray-700 ml-2 font-mono">

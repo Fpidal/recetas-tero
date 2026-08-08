@@ -38,6 +38,34 @@ C. Final = precio × (1 + IVA/100) ÷ (1 − merma/100)
 frontend y escrita inline en el trigger; por eso el error de la merma sobrevivió
 meses sin que nadie lo viera. No la vuelvas a duplicar.
 
+### El vino tiene su propia fórmula (V.23)
+
+Los vinos **no pasan por `insumos`**: no tienen merma ni IVA editable, y el precio
+viene por caja desde la lista de la bodega. Su costo por botella es:
+
+```
+costo botella = (precio_caja ÷ unidades_caja) × (1 − descuento%)
+```
+
+`precio_caja` ya trae el IVA adentro (es el "Precio Final" de la lista de la bodega).
+El descuento se pacta sobre el neto, así que la cuenta original sacaba el IVA, aplicaba
+el descuento y lo volvía a poner — esas dos operaciones se cancelan.
+
+Vive en **un solo lugar**: `src/lib/costos.ts` → `costoBotellaVino()`. La usan la
+pantalla de Vinos y la carga de consumo de Análisis. No la copies en una tercera.
+
+### Otro par que también vive en dos lugares (V.23)
+
+Qué tipos de consumo cuentan como **Barra** y cuáles como **Cocina**:
+
+| Capa | Archivo / función |
+|---|---|
+| Frontend | `src/types/analisis.ts` → `TIPOS_BARRA` |
+| Base | función `recalcular_costo_consumo()`, en `supabase-analisis-tipos-consumo.sql` |
+
+Hoy son `trago` y `vino`. Misma regla: si se agrega un tipo de barra, se toca en los dos
+lados o los totales de `consumo_diario` dejan de cerrar con lo que muestra la pantalla.
+
 ---
 
 ## 2. Qué dispara el recálculo
@@ -78,6 +106,27 @@ Más dos triggers de edición directa, que solo **re-suman** (no recalculan prec
   pantalla miente menos que la tabla. En el recálculo de V.20 algunos se movieron
   ±20% solo por estar viejos.
 
+  **Medido el 08/08/26, tres días después del recálculo de V.20 y un día después de
+  cargar una factura:** 8 de 17 menús ya estaban desfasados, hasta 5% ($320). Los 84
+  platos, en cambio, coincidían todos dentro del 0,5% — la cadena
+  `precio insumo → plato` funciona; el eslabón que falta es `plato → menú ejecutivo`.
+
+  Desde V.23 esto pesa más: el menú ejecutivo se puede cargar en el consumo de
+  Análisis, y el buscador toma `menus_ejecutivos.costo_total` (igual que las recetas
+  toman el suyo). Si la tabla está vieja, el análisis hereda el error. Verificarlo así:
+
+  ```sql
+  SELECT m.nombre, m.costo_total AS guardado,
+         SUM(mi.costo_linea)     AS suma_items
+  FROM menus_ejecutivos m
+  JOIN menu_ejecutivo_items mi ON mi.menu_ejecutivo_id = m.id
+  WHERE m.activo GROUP BY m.id, m.nombre, m.costo_total
+  HAVING ROUND(m.costo_total,2) <> ROUND(SUM(mi.costo_linea),2);
+  ```
+  Ojo: eso solo detecta que la cabecera no cierra con sus items. Si lo viejo es el
+  `costo_linea` de los items, hay que compararlos contra el costo actual del plato o
+  de la elaboración que referencian.
+
 ---
 
 ## 3. Quién recalcula en vivo y quién lee de la tabla
@@ -89,14 +138,29 @@ Esto explica por qué un mismo plato puede mostrar dos números distintos.
 | Recetas — lista y ficha | **Recalcula** en vivo |
 | Elaboraciones | **Recalcula** |
 | Carta | **Recalcula** |
-| Menús ejecutivos | **Recalcula** |
 | Insumos (C. Final) | **Recalcula** |
-| Tragos | usa `tragos.costo_total` |
+| Tragos — lista | **Recalcula** siempre; nunca lee `tragos.costo_total` |
+| Menús ejecutivos — **ficha** | **Recalcula**, y escribe la tabla solo al guardar |
+| Menús ejecutivos — **lista** | lee `menus_ejecutivos.costo_total` ⚠️ |
+| Análisis — buscador de consumo | **Recalcula** (V.23, ver abajo) |
 | PDFs y reportes | leen de la tabla |
 
 Consecuencia práctica: **un dato corrupto en la base puede no verse en pantalla.**
 Fue exactamente lo que pasó con el IVA faltante — 37 platos dañados que las
 pantallas tapaban al recalcular.
+
+Y al revés también: la ficha de un menú ejecutivo y la lista de menús ejecutivos
+muestran **números distintos del mismo menú** cuando la tabla quedó vieja. El 08/08/26
+"Sugerencia Pescados Noche" mostraba $11.943 en la ficha (correcto) y $12.264 en la
+lista. Verificado ese día: los 84 platos y las 79 elaboraciones estaban exactos, así
+que el desfasaje es solo de la cabecera del menú.
+
+**Por eso el buscador de Análisis reconstruye el costo desde los insumos**
+(`costearCompuestos` en `src/lib/consumo-queries.ts`) en vez de leer `costo_total`
+de tragos o menús. Si leyera la tabla, el consumo cargado arrastraría el número
+viejo al análisis y a la incidencia. Como usa el mismo expansor que el desglose,
+además queda garantizado que el costo con el que se carga un item sea idéntico al
+que sale cuando se lo desglosa.
 
 ---
 

@@ -1,7 +1,9 @@
 // Queries del módulo Análisis (consumo + incidencia real)
 
 import { supabase } from './supabase'
-import { costoFinalInsumo } from './costos'
+import { costoFinalInsumo, costoBotellaVino } from './costos'
+import { expandirCompuestos, type LineaInsumo } from './desglose-compuestos'
+import { FK_DE_TIPO } from '@/types/analisis'
 import type {
   ConsumoDiario,
   ConsumoItem,
@@ -95,15 +97,168 @@ export async function obtenerRecetasBuscador(): Promise<OpcionBuscador[]> {
 }
 
 /**
- * Combina todas las opciones (insumos + elaboraciones + recetas) para un buscador unificado
+ * Costo final (precio + IVA + merma) de cada insumo pedido.
+ */
+async function obtenerCostosInsumos(insumoIds: string[]): Promise<Map<string, number>> {
+  if (insumoIds.length === 0) return new Map()
+
+  const { data, error } = await supabase
+    .from('v_insumos_con_precio')
+    .select('id, precio_actual, iva_porcentaje, merma_porcentaje')
+    .in('id', insumoIds)
+
+  if (error) throw error
+
+  return new Map(
+    (data || []).map((i: any) => [
+      i.id as string,
+      costoFinalInsumo(i.precio_actual, i.iva_porcentaje, i.merma_porcentaje),
+    ])
+  )
+}
+
+/**
+ * Costo de una unidad de cada compuesto, a partir de sus insumos.
+ *
+ * POR QUÉ SE CALCULA Y NO SE LEE DE LA TABLA: ni `tragos.costo_total` ni
+ * `menus_ejecutivos.costo_total` tienen trigger que los mantenga. La pantalla
+ * de Tragos nunca lee esa columna (calcula siempre en vivo) y la ficha de un
+ * menú ejecutivo solo la escribe cuando alguien guarda el menú a mano.
+ *
+ * Medido el 08/08/26: 8 de 17 menús tenían la tabla desfasada hasta 5%, tres
+ * días después del recálculo de V.20. En cambio los 84 platos y las 79
+ * elaboraciones coincidían todos dentro del 0,5%, así que la cadena de abajo
+ * es confiable y conviene reconstruir desde ahí.
+ *
+ * Además esto garantiza que el costo con el que se carga un item sea el mismo
+ * que sale de su desglose: los dos salen del mismo expansor.
+ */
+async function costearCompuestos(expandidos: Map<string, LineaInsumo[]>): Promise<Map<string, number>> {
+  const insumoIds = new Set<string>()
+  Array.from(expandidos.values()).forEach((lineas) =>
+    lineas.forEach((l) => insumoIds.add(l.insumo_id))
+  )
+
+  const costos = await obtenerCostosInsumos(Array.from(insumoIds))
+
+  const resultado = new Map<string, number>()
+  Array.from(expandidos.entries()).forEach(([id, lineas]) => {
+    resultado.set(
+      id,
+      lineas.reduce((acc, l) => acc + l.cantidad * (costos.get(l.insumo_id) || 0), 0)
+    )
+  })
+  return resultado
+}
+
+/**
+ * Tragos — un trago es una unidad, no tienen rendimiento
+ */
+export async function obtenerTragosBuscador(): Promise<OpcionBuscador[]> {
+  const { data, error } = await supabase
+    .from('tragos')
+    .select('id, nombre')
+    .eq('activo', true)
+    .order('nombre')
+
+  if (error) throw error
+  const tragos = data || []
+  if (tragos.length === 0) return []
+
+  const expandidos = await expandirCompuestos({ tragos: tragos.map((t: any) => t.id) })
+  const costos = await costearCompuestos(expandidos.tragos)
+
+  return tragos.map((t: any) => ({
+    id: t.id,
+    tipo: 'trago' as const,
+    nombre: t.nombre,
+    unidad: 'trago',
+    costo_unitario: costos.get(t.id) || 0,
+  }))
+}
+
+/**
+ * Menús ejecutivos — un menú es un cubierto, no tienen rendimiento
+ */
+export async function obtenerEjecutivosBuscador(): Promise<OpcionBuscador[]> {
+  const { data, error } = await supabase
+    .from('menus_ejecutivos')
+    .select('id, nombre')
+    .eq('activo', true)
+    .order('nombre')
+
+  if (error) throw error
+  const menus = data || []
+  if (menus.length === 0) return []
+
+  const expandidos = await expandirCompuestos({ ejecutivos: menus.map((m: any) => m.id) })
+  const costos = await costearCompuestos(expandidos.ejecutivos)
+
+  return menus.map((m: any) => ({
+    id: m.id,
+    tipo: 'ejecutivo' as const,
+    nombre: m.nombre,
+    unidad: 'menu',
+    costo_unitario: costos.get(m.id) || 0,
+  }))
+}
+
+/**
+ * Cómo se nombra un vino en toda la app de Análisis: nombre + cepa + bodega.
+ *
+ * La cepa NO es decorativa: sin ella hay vinos indistinguibles. "Reserva
+ * (Salentein)" son ocho vinos distintos —Malbec, Chardonnay, Pinot Noir, Rosé,
+ * Merlot, Cabernet Sauvignon, Cabernet Franc y Sauvignon Blanc— y 18 combinaciones
+ * de nombre+bodega se repiten. Elegir a ciegas entre ocho renglones iguales es
+ * cargar mal el consumo.
+ */
+export function nombreVino(v: {
+  nombre?: string | null
+  cepa?: string | null
+  bodega?: string | null
+}): string {
+  const partes = [v.nombre, v.cepa].filter(Boolean).join(' ')
+  return v.bodega ? `${partes} (${v.bodega})` : partes || '(sin nombre)'
+}
+
+/**
+ * Vinos — se consume la botella. No pasan por `insumos` ni tienen receta,
+ * así que su costo sale directo de la lista de la bodega.
+ */
+export async function obtenerVinosBuscador(): Promise<OpcionBuscador[]> {
+  const { data, error } = await supabase
+    .from('vinos')
+    .select('id, nombre, bodega, cepa, precio_caja, unidades_caja, descuento_porcentaje')
+    .eq('activo', true)
+    .order('bodega')
+    .order('nombre')
+
+  if (error) throw error
+
+  return (data || [])
+    .map((v: any) => ({
+      id: v.id,
+      tipo: 'vino' as const,
+      nombre: nombreVino(v),
+      unidad: 'botella',
+      costo_unitario: costoBotellaVino(v.precio_caja, v.unidades_caja, v.descuento_porcentaje),
+    }))
+    .filter((v) => v.costo_unitario > 0)
+}
+
+/**
+ * Combina todas las opciones para un buscador unificado
  */
 export async function obtenerTodasOpciones(): Promise<OpcionBuscador[]> {
-  const [ins, elab, rec] = await Promise.all([
+  const [ins, elab, rec, tra, eje, vin] = await Promise.all([
     obtenerInsumosBuscador(),
     obtenerElaboracionesBuscador(),
     obtenerRecetasBuscador(),
+    obtenerTragosBuscador(),
+    obtenerEjecutivosBuscador(),
+    obtenerVinosBuscador(),
   ])
-  return [...ins, ...elab, ...rec]
+  return [...ins, ...elab, ...rec, ...tra, ...eje, ...vin]
 }
 
 // =====================================================
@@ -137,7 +292,10 @@ export async function obtenerItemsConsumo(consumoId: string): Promise<ConsumoIte
       *,
       insumos:insumo_id (nombre),
       recetas_base:receta_base_id (nombre),
-      platos:plato_id (nombre)
+      platos:plato_id (nombre),
+      tragos:trago_id (nombre),
+      menus_ejecutivos:menu_ejecutivo_id (nombre),
+      vinos:vino_id (nombre, bodega, cepa)
     `)
     .eq('consumo_id', consumoId)
     .order('created_at', { ascending: true })
@@ -150,6 +308,9 @@ export async function obtenerItemsConsumo(consumoId: string): Promise<ConsumoIte
       item.insumos?.nombre ||
       item.recetas_base?.nombre ||
       item.platos?.nombre ||
+      item.tragos?.nombre ||
+      item.menus_ejecutivos?.nombre ||
+      (item.vinos ? nombreVino(item.vinos) : null) ||
       '(sin nombre)',
   }))
 }
@@ -175,12 +336,18 @@ export async function obtenerOCrearConsumo(fecha: string, servicio: Servicio): P
  * Agrega un item al consumo
  */
 export async function agregarItem(consumoId: string, item: ConsumoItemInput): Promise<void> {
+  // Solo se carga la FK del tipo; el resto van en null.
+  // La base lo exige con el CHECK `consumo_items_fk_coherente`.
   const { error } = await supabase.from('consumo_items').insert({
     consumo_id: consumoId,
     tipo: item.tipo,
-    insumo_id: item.tipo === 'insumo' ? item.insumo_id : null,
-    receta_base_id: item.tipo === 'elaboracion' ? item.receta_base_id : null,
-    plato_id: item.tipo === 'receta' ? item.plato_id : null,
+    insumo_id: null,
+    receta_base_id: null,
+    plato_id: null,
+    trago_id: null,
+    menu_ejecutivo_id: null,
+    vino_id: null,
+    [FK_DE_TIPO[item.tipo]]: item[FK_DE_TIPO[item.tipo]],
     cantidad: item.cantidad,
     unidad: item.unidad,
     costo_unitario: item.costo_unitario,
@@ -245,148 +412,62 @@ export async function eliminarConsumo(consumoId: string): Promise<void> {
 // =====================================================
 
 /**
- * Toma los items cargados (que pueden ser insumos, elaboraciones o recetas)
- * y los desglosa a nivel insumo, sumando cantidades y costos.
+ * Toma los items cargados —que pueden ser insumos sueltos, elaboraciones,
+ * recetas, tragos o menús ejecutivos— y los desglosa a nivel insumo,
+ * sumando cantidades y costos.
  *
  * Por ejemplo: 12 milanesas + 2,5 kg de bola de lomo
  *   → "Bola de lomo: 1,8 kg + 2,5 kg = 4,3 kg" (con sus orígenes)
+ *
+ * El COSTO no se recalcula: se reparte el subtotal congelado de cada item
+ * entre sus insumos, en proporción a lo que pesa cada uno con los precios
+ * de hoy. Así la suma del desglose siempre da exactamente el total del
+ * consumo, aunque los precios hayan cambiado desde que se cargó.
+ *
+ * Las líneas que no bajan a insumo (hoy: vinos) quedan fuera de esta vista.
  */
 export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosado[]> {
-  // 1. Obtener items del consumo (query directa, sin enrichment ni recálculo de costos)
-  const { data: itemsRaw } = await supabase
-    .from('consumo_items')
-    .select('id, tipo, insumo_id, receta_base_id, plato_id, cantidad, unidad, costo_unitario, subtotal')
-    .eq('consumo_id', consumoId)
-    .order('created_at', { ascending: true })
-
-  const items = (itemsRaw || []) as ConsumoItem[]
+  // 1. Items del consumo, ya con el nombre resuelto (lo usa la columna Origen)
+  const items = await obtenerItemsConsumo(consumoId)
   if (items.length === 0) return []
 
-  // 2. Obtener insumos referenciados directamente
-  const insumosDirectos = items.filter((i) => i.tipo === 'insumo' && i.insumo_id)
+  // 2. Expandir cada compuesto a su lista de insumos por unidad
+  const idsDeTipo = (tipo: string, campo: keyof ConsumoItem) =>
+    items.filter((i) => i.tipo === tipo).map((i) => i[campo] as string)
 
-  // 3. Obtener elaboraciones (recetas_base) y sus ingredientes
-  const elabIds = items
-    .filter((i) => i.tipo === 'elaboracion' && i.receta_base_id)
-    .map((i) => i.receta_base_id!)
+  const expandidos = await expandirCompuestos({
+    elaboraciones: idsDeTipo('elaboracion', 'receta_base_id'),
+    recetas: idsDeTipo('receta', 'plato_id'),
+    tragos: idsDeTipo('trago', 'trago_id'),
+    ejecutivos: idsDeTipo('ejecutivo', 'menu_ejecutivo_id'),
+  })
 
-  // 4. Obtener recetas (platos) y sus ingredientes
-  const platoIds = items
-    .filter((i) => i.tipo === 'receta' && i.plato_id)
-    .map((i) => i.plato_id!)
-
-  // Cargar ingredientes de elaboraciones
-  type IngredienteElab = {
-    receta_base_id: string
-    insumo_id: string
-    cantidad: number
-    rendimiento_porciones: number
-    nombre_receta: string
-  }
-
-  // Type para platos (lo declaramos antes de paralelizar)
-  type IngredientePlato = {
-    plato_id: string
-    insumo_id: string
-    cantidad: number // por porción del plato
-    nombre_plato: string
-  }
-
-  // Paralelizar: cargar recetas_base + platos al mismo tiempo
-  const [elabRes, platoRes] = await Promise.all([
-    elabIds.length > 0
-      ? supabase
-          .from('recetas_base')
-          .select('id, nombre, rendimiento_porciones, receta_base_ingredientes(insumo_id, cantidad)')
-          .in('id', elabIds)
-      : Promise.resolve({ data: [] as any[] }),
-    platoIds.length > 0
-      ? supabase
-          .from('platos')
-          .select(`
-            id, nombre, rendimiento_porciones,
-            plato_ingredientes (
-              insumo_id, receta_base_id, cantidad
-            )
-          `)
-          .in('id', platoIds)
-      : Promise.resolve({ data: [] as any[] }),
-  ])
-
-  let ingredientesElab: IngredienteElab[] = []
-  for (const r of elabRes.data || []) {
-    const rendimiento = (r as any).rendimiento_porciones > 0 ? (r as any).rendimiento_porciones : 1
-    for (const ing of (r as any).receta_base_ingredientes || []) {
-      ingredientesElab.push({
-        receta_base_id: (r as any).id,
-        insumo_id: ing.insumo_id,
-        cantidad: ing.cantidad / rendimiento,
-        rendimiento_porciones: rendimiento,
-        nombre_receta: (r as any).nombre,
-      })
+  /** Insumos por unidad del item. `null` = no desglosa (insumo directo o vino). */
+  function lineasDelItem(item: ConsumoItem): LineaInsumo[] | null {
+    switch (item.tipo) {
+      case 'elaboracion':
+        return expandidos.elaboraciones.get(item.receta_base_id || '') || []
+      case 'receta':
+        return expandidos.recetas.get(item.plato_id || '') || []
+      case 'trago':
+        return expandidos.tragos.get(item.trago_id || '') || []
+      case 'ejecutivo':
+        return expandidos.ejecutivos.get(item.menu_ejecutivo_id || '') || []
+      default:
+        return null
     }
   }
 
-  let ingredientesPlato: IngredientePlato[] = []
-  if (platoIds.length > 0) {
-    const data = platoRes.data || []
-
-    // Cargar receta_base_ingredientes para platos que tengan recetas anidadas
-    const recetaBaseIdsAnidadas = new Set<string>()
-    for (const p of data || []) {
-      for (const ing of (p as any).plato_ingredientes || []) {
-        if (ing.receta_base_id) recetaBaseIdsAnidadas.add(ing.receta_base_id)
-      }
-    }
-
-    let recetasAnidadas: Map<string, { insumo_id: string; cantidad_por_porcion: number }[]> = new Map()
-    if (recetaBaseIdsAnidadas.size > 0) {
-      const { data: rdata } = await supabase
-        .from('recetas_base')
-        .select('id, rendimiento_porciones, receta_base_ingredientes(insumo_id, cantidad)')
-        .in('id', Array.from(recetaBaseIdsAnidadas))
-
-      for (const r of rdata || []) {
-        const rendimiento = (r as any).rendimiento_porciones > 0 ? (r as any).rendimiento_porciones : 1
-        const ings = ((r as any).receta_base_ingredientes || []).map((ing: any) => ({
-          insumo_id: ing.insumo_id,
-          cantidad_por_porcion: ing.cantidad / rendimiento,
-        }))
-        recetasAnidadas.set((r as any).id, ings)
-      }
-    }
-
-    for (const p of data || []) {
-      const rendimiento = (p as any).rendimiento_porciones > 0 ? (p as any).rendimiento_porciones : 1
-      for (const ing of (p as any).plato_ingredientes || []) {
-        if (ing.insumo_id) {
-          ingredientesPlato.push({
-            plato_id: (p as any).id,
-            insumo_id: ing.insumo_id,
-            cantidad: ing.cantidad / rendimiento,
-            nombre_plato: (p as any).nombre,
-          })
-        } else if (ing.receta_base_id) {
-          // El ingrediente es una receta base anidada → desglosar a sus insumos
-          const subIngs = recetasAnidadas.get(ing.receta_base_id) || []
-          for (const sub of subIngs) {
-            ingredientesPlato.push({
-              plato_id: (p as any).id,
-              insumo_id: sub.insumo_id,
-              cantidad: (ing.cantidad / rendimiento) * sub.cantidad_por_porcion,
-              nombre_plato: (p as any).nombre,
-            })
-          }
-        }
-      }
-    }
-  }
-
-  // Pre-cargar precios actuales de todos los insumos involucrados (para prorrateo)
+  // 3. Precios actuales de todos los insumos involucrados (para pesar el prorrateo)
   const todosInsumoIds = new Set<string>()
-  for (const it of insumosDirectos) if (it.insumo_id) todosInsumoIds.add(it.insumo_id)
-  for (const e of ingredientesElab) todosInsumoIds.add(e.insumo_id)
-  for (const p of ingredientesPlato) todosInsumoIds.add(p.insumo_id)
+  for (const item of items) {
+    if (item.tipo === 'insumo' && item.insumo_id) {
+      todosInsumoIds.add(item.insumo_id)
+      continue
+    }
+    for (const l of lineasDelItem(item) || []) todosInsumoIds.add(l.insumo_id)
+  }
+  if (todosInsumoIds.size === 0) return []
 
   const { data: infoInsumos } = await supabase
     .from('v_insumos_con_precio')
@@ -398,114 +479,131 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
     { nombre: string; unidad: string; categoria: string; costo_unit_iva: number }
   >()
   for (const i of infoInsumos || []) {
-    const precio = Number((i as any).precio_actual || 0)
-    const iva = Number((i as any).iva_porcentaje || 0)
-    const merma = Number((i as any).merma_porcentaje || 0)
     infoMap.set((i as any).id, {
       nombre: (i as any).nombre,
       unidad: (i as any).unidad_medida,
       categoria: (i as any).categoria || 'Almacen',
-      costo_unit_iva: costoFinalInsumo(precio, iva, merma),
+      costo_unit_iva: costoFinalInsumo(
+        Number((i as any).precio_actual || 0),
+        Number((i as any).iva_porcentaje || 0),
+        Number((i as any).merma_porcentaje || 0)
+      ),
     })
   }
 
-  // Consolidar a nivel insumo.
-  // El costo se prorratea para que la suma = total del consumo (congelado).
+  // 4. Consolidar. La clave lleva el tipo adelante porque conviven dos cosas
+  //    distintas: insumos (que vienen de abrir compuestos) y vinos (que no se
+  //    abren en nada). Sin el prefijo, un uuid de vino podría pisar a uno de insumo.
   type Acum = {
+    tipo: 'insumo' | 'vino'
+    ref_id: string
+    nombre?: string // solo vinos: no hay tabla donde buscarlo después
+    unidad?: string
     cantidad: number
     costo: number
     origenes: string[]
   }
   const mapa = new Map<string, Acum>()
 
-  // 1) Insumos directos: costo = subtotal cacheado directo
-  for (const item of insumosDirectos) {
-    const acc = mapa.get(item.insumo_id!) || { cantidad: 0, costo: 0, origenes: [] }
-    acc.cantidad += Number(item.cantidad)
-    acc.costo += Number(item.subtotal)
-    acc.origenes.push('Carga directa')
-    mapa.set(item.insumo_id!, acc)
+  const acumular = (
+    base: { tipo: 'insumo' | 'vino'; ref_id: string; nombre?: string; unidad?: string },
+    cantidad: number,
+    costo: number,
+    origen: string
+  ) => {
+    const clave = `${base.tipo}:${base.ref_id}`
+    const acc = mapa.get(clave) || { ...base, cantidad: 0, costo: 0, origenes: [] }
+    acc.cantidad += cantidad
+    acc.costo += costo
+    acc.origenes.push(origen)
+    mapa.set(clave, acc)
   }
 
-  // 2) Elaboraciones: prorratear subtotal cacheado entre sus insumos
   for (const item of items) {
-    if (item.tipo !== 'elaboracion' || !item.receta_base_id) continue
-    const ings = ingredientesElab.filter((e) => e.receta_base_id === item.receta_base_id)
-    if (ings.length === 0) continue
+    // Insumo directo: el subtotal congelado ya es suyo, sin repartir
+    if (item.tipo === 'insumo') {
+      if (item.insumo_id) {
+        acumular(
+          { tipo: 'insumo', ref_id: item.insumo_id },
+          Number(item.cantidad),
+          Number(item.subtotal),
+          'Carga directa'
+        )
+      }
+      continue
+    }
 
-    // Calcular costo teórico de cada insumo con precios actuales (para obtener el peso)
-    const costosTeoricos = ings.map((ing) => {
-      const info = infoMap.get(ing.insumo_id)
-      const cantidadInsumo = Number(item.cantidad) * ing.cantidad
+    // Vino: es una hoja, se consume la botella. No hay nada que desglosar
+    // ni que prorratear — el subtotal congelado es suyo entero.
+    if (item.tipo === 'vino') {
+      if (item.vino_id) {
+        acumular(
+          { tipo: 'vino', ref_id: item.vino_id, nombre: item.nombre, unidad: item.unidad },
+          Number(item.cantidad),
+          Number(item.subtotal),
+          'Carga directa'
+        )
+      }
+      continue
+    }
+
+    const lineas = lineasDelItem(item)
+    if (!lineas || lineas.length === 0) continue
+
+    // Peso de cada insumo dentro del compuesto, con precios de hoy
+    const pesos = lineas.map((l) => {
+      const info = infoMap.get(l.insumo_id)
+      const cantidadInsumo = Number(item.cantidad) * l.cantidad
       return {
-        ing,
+        insumo_id: l.insumo_id,
         cantidadInsumo,
         costoTeorico: info ? cantidadInsumo * info.costo_unit_iva : 0,
       }
     })
-    const totalTeorico = costosTeoricos.reduce((a, c) => a + c.costoTeorico, 0)
-    const subtotalCacheado = Number(item.subtotal)
+    const totalTeorico = pesos.reduce((a, p) => a + p.costoTeorico, 0)
+    const subtotalCongelado = Number(item.subtotal)
+    const origen = `${item.cantidad} ${item.unidad} ${item.nombre}`
 
-    for (const { ing, cantidadInsumo, costoTeorico } of costosTeoricos) {
-      const acc = mapa.get(ing.insumo_id) || { cantidad: 0, costo: 0, origenes: [] }
-      acc.cantidad += cantidadInsumo
-      // Prorrateo: si hay total teórico, usar % ; si no, distribuir en partes iguales
-      if (totalTeorico > 0) {
-        acc.costo += subtotalCacheado * (costoTeorico / totalTeorico)
-      } else {
-        acc.costo += subtotalCacheado / costosTeoricos.length
-      }
-      acc.origenes.push(`${item.cantidad} ${item.unidad} ${ing.nombre_receta}`)
-      mapa.set(ing.insumo_id, acc)
+    for (const p of pesos) {
+      // Si no hay precios (insumos sin costo), repartir en partes iguales
+      const costo =
+        totalTeorico > 0
+          ? subtotalCongelado * (p.costoTeorico / totalTeorico)
+          : subtotalCongelado / pesos.length
+      acumular({ tipo: 'insumo', ref_id: p.insumo_id }, p.cantidadInsumo, costo, origen)
     }
   }
 
-  // 3) Recetas (platos): idem prorrateo
-  for (const item of items) {
-    if (item.tipo !== 'receta' || !item.plato_id) continue
-    const ings = ingredientesPlato.filter((p) => p.plato_id === item.plato_id)
-    if (ings.length === 0) continue
-
-    const costosTeoricos = ings.map((ing) => {
-      const info = infoMap.get(ing.insumo_id)
-      const cantidadInsumo = Number(item.cantidad) * ing.cantidad
-      return {
-        ing,
-        cantidadInsumo,
-        costoTeorico: info ? cantidadInsumo * info.costo_unit_iva : 0,
-      }
-    })
-    const totalTeorico = costosTeoricos.reduce((a, c) => a + c.costoTeorico, 0)
-    const subtotalCacheado = Number(item.subtotal)
-
-    for (const { ing, cantidadInsumo, costoTeorico } of costosTeoricos) {
-      const acc = mapa.get(ing.insumo_id) || { cantidad: 0, costo: 0, origenes: [] }
-      acc.cantidad += cantidadInsumo
-      if (totalTeorico > 0) {
-        acc.costo += subtotalCacheado * (costoTeorico / totalTeorico)
-      } else {
-        acc.costo += subtotalCacheado / costosTeoricos.length
-      }
-      acc.origenes.push(`${item.cantidad} ${item.unidad} ${ing.nombre_plato}`)
-      mapa.set(ing.insumo_id, acc)
-    }
-  }
-
-  if (mapa.size === 0) return []
-
-  // Construir resultado
+  // 5. Armar resultado
   const resultado: ItemDesglosado[] = []
-  Array.from(mapa.entries()).forEach(([id, acc]) => {
-    const info = infoMap.get(id)
-    if (!info) return
-    resultado.push({
-      insumo_id: id,
-      nombre: info.nombre,
-      unidad: info.unidad,
-      categoria: info.categoria,
+  Array.from(mapa.values()).forEach((acc) => {
+    const comun = {
+      ref_id: acc.ref_id,
       cantidad_total: acc.cantidad,
       costo_total: acc.costo,
       origenes: Array.from(new Set(acc.origenes)),
+    }
+
+    if (acc.tipo === 'vino') {
+      resultado.push({
+        ...comun,
+        tipo: 'vino',
+        nombre: acc.nombre || '(sin nombre)',
+        unidad: acc.unidad || 'botella',
+        categoria: 'Vinos',
+      })
+      return
+    }
+
+    // Insumo que ya no existe o quedó sin precio: no se muestra
+    const info = infoMap.get(acc.ref_id)
+    if (!info) return
+    resultado.push({
+      ...comun,
+      tipo: 'insumo',
+      nombre: info.nombre,
+      unidad: info.unidad,
+      categoria: info.categoria,
     })
   })
 
@@ -550,11 +648,13 @@ export async function desglosarRango(
     consumos.map((c: any) => desglosarConsumo(c.id))
   )
 
-  // Consolidar por insumo
+  // Consolidar. Misma clave compuesta que en desglosarConsumo: insumos y vinos
+  // conviven en la misma lista y no se pueden pisar.
   const mapa = new Map<string, ItemDesglosado>()
   for (const desglose of desgloses) {
     for (const d of desglose) {
-      const acc = mapa.get(d.insumo_id)
+      const clave = `${d.tipo}:${d.ref_id}`
+      const acc = mapa.get(clave)
       if (acc) {
         acc.cantidad_total += d.cantidad_total
         acc.costo_total += d.costo_total
@@ -562,7 +662,7 @@ export async function desglosarRango(
         const origenesSet = new Set([...acc.origenes, ...d.origenes])
         acc.origenes = Array.from(origenesSet)
       } else {
-        mapa.set(d.insumo_id, { ...d, origenes: [...d.origenes] })
+        mapa.set(clave, { ...d, origenes: [...d.origenes] })
       }
     }
   }

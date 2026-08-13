@@ -6,6 +6,11 @@ import { ArrowLeft, Package, FileText, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui'
 import { formatearMoneda, formatearCantidad, formatearFecha } from '@/lib/formato-numeros'
+import {
+  claveItem, referenciaDe, semanaDe, obtenerNotas, guardarNota, claveNota,
+  type MapaNotas,
+} from '@/lib/auditoria-semanal'
+import NotaLinea from '../components/NotaLinea'
 
 interface Percepcion {
   nombre: string
@@ -50,6 +55,32 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
   const { id } = params
   const router = useRouter()
   const [factura, setFactura] = useState<FacturaDetalle | null>(null)
+  // Comentarios por ítem. Se escriben acá, al cargar, y se leen en el
+  // resumen semanal de compras: quien carga es quien sabe por qué pasó.
+  const [notas, setNotas] = useState<MapaNotas>(new Map())
+
+  /** Referencia de una línea, igual a la que arma el resumen semanal */
+  function refDe(item: { insumo_id: string | null; vino_id: string | null }, numeroFactura: string) {
+    const clave = claveItem(item)
+    return clave ? referenciaDe(clave, numeroFactura) : null
+  }
+
+  function comentario(ref: string | null) {
+    return ref ? notas.get(claveNota('item_factura', ref)) ?? '' : ''
+  }
+
+  async function handleComentario(ref: string, texto: string) {
+    if (!factura) return
+    const semana = semanaDe(factura.fecha)
+    await guardarNota(semana, 'item_factura', ref, texto)
+    setNotas((prev) => {
+      const copia = new Map(prev)
+      const k = claveNota('item_factura', ref)
+      if (texto.trim()) copia.set(k, texto.trim())
+      else copia.delete(k)
+      return copia
+    })
+  }
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
   const [ocItems, setOcItems] = useState<OCItem[]>([])
@@ -130,6 +161,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
     }
 
     setFactura(facturaData)
+    obtenerNotas(semanaDe(facturaData.fecha)).then(setNotas)
     setIsReadOnly((data as any).activo === false)
 
     // Si tiene OC vinculada, cargar items de la OC para comparación
@@ -480,6 +512,19 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                         <span className="text-sm text-gray-900">{item.insumo_nombre}</span>
                         {getComparacionBadge(item)}
                       </div>
+                      {(() => {
+                        const ref = refDe(item, factura.numero_factura)
+                        if (!ref) return null
+                        return (
+                          <div className="ml-6 max-w-md">
+                            <NotaLinea
+                              valor={comentario(ref)}
+                              onGuardar={(t) => handleComentario(ref, t)}
+                              placeholder="¿pasó algo con este ítem?"
+                            />
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 font-mono">
                       {item.cantidad} {item.unidad_medida}
@@ -509,6 +554,19 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                         <span className="text-sm text-gray-400 line-through">{oc.insumo_nombre}</span>
                         <span className="ml-2 text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded">No entregado</span>
                       </div>
+                      {(() => {
+                        const ref = refDe(oc, factura.numero_factura)
+                        if (!ref) return null
+                        return (
+                          <div className="ml-6 max-w-md">
+                            <NotaLinea
+                              valor={comentario(ref)}
+                              onGuardar={(t) => handleComentario(ref, t)}
+                              placeholder="¿por qué no llegó?"
+                            />
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-400 font-mono">
                       {oc.cantidad} {oc.unidad_medida}

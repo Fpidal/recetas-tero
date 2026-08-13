@@ -50,7 +50,16 @@ export async function generarPDFResumenSemanal(
 ): Promise<void> {
   // La nota es la razón que alguien escribió: sin ella el PDF vuelve a abrir
   // discusiones que ya se cerraron. La columna solo aparece si hay alguna.
-  const nota = (bloque: BloqueAuditoria, ref: string) => notas.get(claveNota(bloque, ref)) ?? ''
+  //
+  // Hay dos orígenes y los dos importan: el comentario que se escribió AL
+  // CARGAR la factura (quien carga sabe por qué pasó) y la nota que se agregó
+  // AUDITANDO. Se imprimen juntos, con el de carga primero porque es el que
+  // explica el hecho; el de auditoría suele ser la conclusión.
+  const nota = (bloque: BloqueAuditoria, ref: string) => {
+    const alCargar = notas.get(claveNota('item_factura', ref)) ?? ''
+    const auditoria = notas.get(claveNota(bloque, ref)) ?? ''
+    return [alCargar, auditoria].filter(Boolean).join(' · ')
+  }
   const hayNotas = (bloque: BloqueAuditoria, refs: string[]) => refs.some((r) => nota(bloque, r))
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })

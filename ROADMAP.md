@@ -47,10 +47,10 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Tragos** | Coctelería con costos y beverage cost |
 | **Carta** | Carta editorial en HTML + QR al menú digital público (`/menu`). Desde acá se llega a Menús ejecutivos y especiales |
 | **Órdenes de Compra** | Pedidos a proveedores, con PDF |
-| **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito |
+| **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito. Solapa **Resumen semanal** (V.26): faltantes, cambios de precio, agregados sin pedir y órdenes sin factura, con notas por línea y PDF |
 | **Ventas** | Carga diaria de ventas. **Nivel grueso:** ventas vs compras del período |
 | **Análisis** | Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo |
-| **Estadísticas** | Dashboard consolidado (4 pestañas) |
+| **Estadísticas** | Dashboard consolidado (5 pestañas, con **Cierre de mes** desde V.25) |
 | **Inventario** | Hojas de control de stock. **Pausado a propósito** — ver Decisiones tomadas |
 | **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
 
@@ -69,6 +69,17 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   `src/components/ui/` — no reescribir la lógica inline. Ya se usa en En Carta, Recetas y
   Elaboraciones (V.19); el texto secundario en gris va **fuera** del área clickeable.
 - Toda tabla nueva en Supabase: GRANT + RLS + policy (ver `CLAUDE.md` global).
+  **`anon` no recibe nada por defecto** — la plantilla vieja incluía `grant select ... to anon`
+  y eso dejó 22 tablas legibles sin login hasta el 13/08/26. Si una página pública necesita
+  datos, se concede **columna por columna**.
+- **Insumos y vinos conviven en las mismas líneas** (`factura_items`, `orden_compra_items`):
+  un vino tiene `insumo_id` en `null` y `vino_id` cargado. Nunca emparejar por `insumo_id`
+  solo: `null === null` es verdadero y todos los vinos matchean entre sí. Usar `claveItem()`
+  de `src/lib/auditoria-semanal.ts`, que devuelve `i:<uuid>` o `v:<uuid>`. Ya rompió dos
+  veces: el semáforo de facturas y la detección de comprobantes duplicados.
+- **Todo lo que lea muchas filas va paginado.** PostgREST corta en 1000 sin avisar y sin
+  error. `factura_items` ya pasó las 2300 y `precios_insumo` las 3500. Ya escondió 63
+  variaciones de precio (V.22).
 - Antes de cada push: changelog → build → diff → confirmación.
 
 ---
@@ -76,6 +87,26 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 2. El camino
 
 ### Ahora
+
+- **Informes.** El plan son ocho; van cuatro. Hechos: **Cierre de mes** (V.25) y
+  **Resumen semanal de compras** (V.26–V.27). Quedan por hacer, y los datos ya están:
+  - **ABC de insumos** — casi gratis: `cierre_mes()` ya calcula el top 10, es extenderlo
+    a la curva completa.
+  - **Proveedor × variación** — media pantalla ya existe en Estadísticas.
+
+  Y tres que **no dependen de programar sino de qué se carga**, así que están bloqueados:
+  - *Rentabilidad por sección*: el sistema no registra qué plato se vendió. `ventas_diarias`
+    guarda un total por turno y nada más.
+  - *Costo por cubierto ejecutivo vs a la carta*: `Servicio` es `mediodia | noche | eventos`,
+    no existe esa distinción.
+  - *Cocina vs barra*: el **costo** ya se separa desde V.23, pero la **venta de barra** no se
+    carga, así que se puede mostrar cuánto costó cada área pero no su margen.
+
+- **Backup a Excel.** Hecho en V.26: las seis pantallas maestras bajan su Excel.
+  **Lo que NO se va a construir es "Restaurar backup"**: Supabase ya hace backups diarios y
+  point-in-time, un JSON restaurado desde el navegador es estrictamente peor, escribiría sobre
+  tablas con triggers en orden impredecible, y no se puede probar salvo el día de la
+  emergencia. Exportar sí, restaurar desde la app no.
 
 - **Cerrar el módulo Análisis.** Es el más nuevo del sistema. Ya están la carga del consumo,
   la descarga en PDF del servicio (V.17) y los cinco tipos de carga con separación

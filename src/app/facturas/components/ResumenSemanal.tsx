@@ -49,6 +49,14 @@ export default function ResumenSemanal() {
 
   const nota = (bloque: BloqueAuditoria, ref: string) => notas.get(claveNota(bloque, ref)) ?? ''
 
+  /**
+   * Comentario escrito al cargar la factura, antes de auditar. Es de solo
+   * lectura acá: se edita en el detalle de la factura, que es donde quien
+   * carga tiene el contexto. Se muestra aparte de la nota de auditoría para
+   * que se vea de dónde salió cada cosa.
+   */
+  const comentarioCarga = (ref: string) => notas.get(claveNota('item_factura', ref)) ?? ''
+
   // No tiene sentido navegar a semanas que todavía no terminaron
   const esUltimaCerrada = semana.desde === ultimaSemanaCerrada().desde
 
@@ -153,11 +161,19 @@ export default function ResumenSemanal() {
               <Fila
                 key={i}
                 nota={
+                  <>
+                  {comentarioCarga(f.ref) && (
+                    <div className="mt-1 flex items-start gap-1 text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded px-1.5 py-1">
+                      <span className="text-gray-400 flex-shrink-0">al cargar:</span>
+                      <span>{comentarioCarga(f.ref)}</span>
+                    </div>
+                  )}
                   <NotaLinea
                     valor={nota('faltante', f.ref)}
                     onGuardar={(t) => handleNota('faltante', f.ref, t)}
                     placeholder="¿por qué no llegó?"
                   />
+                  </>
                 }
               >
                 <Principal nombre={f.nombre} detalle={`${f.proveedor} · ${f.factura}`} />
@@ -236,11 +252,19 @@ export default function ResumenSemanal() {
               <Fila
                 key={i}
                 nota={
+                  <>
+                  {comentarioCarga(p.ref) && (
+                    <div className="mt-1 flex items-start gap-1 text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded px-1.5 py-1">
+                      <span className="text-gray-400 flex-shrink-0">al cargar:</span>
+                      <span>{comentarioCarga(p.ref)}</span>
+                    </div>
+                  )}
                   <NotaLinea
                     valor={nota('precio_distinto', p.ref)}
                     onGuardar={(t) => handleNota('precio_distinto', p.ref, t)}
                     placeholder="¿se acordó este precio?"
                   />
+                  </>
                 }
               >
                 <Principal nombre={p.nombre} detalle={`${p.proveedor} · ${p.factura}`} />
@@ -268,11 +292,19 @@ export default function ResumenSemanal() {
               <Fila
                 key={i}
                 nota={
+                  <>
+                  {comentarioCarga(a.ref) && (
+                    <div className="mt-1 flex items-start gap-1 text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded px-1.5 py-1">
+                      <span className="text-gray-400 flex-shrink-0">al cargar:</span>
+                      <span>{comentarioCarga(a.ref)}</span>
+                    </div>
+                  )}
                   <NotaLinea
                     valor={nota('agregado', a.ref)}
                     onGuardar={(t) => handleNota('agregado', a.ref, t)}
                     placeholder="¿quién lo pidió?"
                   />
+                  </>
                 }
               >
                 <Principal nombre={a.nombre} detalle={`${a.proveedor} · ${a.factura}`} />

@@ -6,7 +6,7 @@ import { Plus, Eye, FileText, Pencil, PackageSearch, Filter, X, FileMinus } from
 import { supabase } from '@/lib/supabase'
 import { Button, Table, Select, BotonExportar } from '@/components/ui'
 import { exportarFacturas } from '@/lib/exportaciones'
-import { claveItem } from '@/lib/auditoria-semanal'
+import { claveItem, UMBRAL_PRECIO } from '@/lib/auditoria-semanal'
 import ResumenSemanal from './components/ResumenSemanal'
 import Link from 'next/link'
 import { formatearMoneda, formatearFecha } from '@/lib/formato-numeros'
@@ -81,7 +81,15 @@ function calcularSemaforo(f: FacturaConDetalle): SemaforoInfo | null {
       faltantes++
     } else {
       if (fi.cantidad < oc.cantidad) parciales++
-      if (fi.precio_unitario !== oc.precio_unitario) precioDif++
+      // Mismo umbral que el resumen semanal: por debajo de 1% es redondeo.
+      // Con `!==` cualquier centavo encendía el punto amarillo, y después esa
+      // línea no aparecía en el resumen — dos pantallas diciendo cosas distintas.
+      if (oc.precio_unitario > 0) {
+        const variacion = Math.abs((fi.precio_unitario - oc.precio_unitario) / oc.precio_unitario) * 100
+        if (variacion >= UMBRAL_PRECIO) precioDif++
+      } else if (fi.precio_unitario !== oc.precio_unitario) {
+        precioDif++
+      }
     }
   }
 

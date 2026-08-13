@@ -95,3 +95,35 @@ FROM information_schema.table_privileges
 WHERE table_schema = 'public'
   AND table_name = 'notas_auditoria'
   AND grantee = 'anon';
+
+
+-- =====================================================
+-- AMPLIACIÓN (13/08/26): comentario cargado desde la factura
+-- =====================================================
+--
+-- POR QUÉ: quien carga la factura es quien SABE por qué pasó lo que pasó
+-- ("el arroz no vino, avisaron que no tenían"). Una semana después, en la
+-- reunión, ya nadie se acuerda. Escribirlo en el momento y leerlo al auditar
+-- es mucho mejor que intentar reconstruirlo.
+--
+-- Se guarda con el mismo `referencia` que usa el resumen semanal
+-- (`i:<uuid>|<numero_factura>`) pero con bloque 'item_factura', porque al
+-- cargar la factura todavía no se sabe en qué sección va a caer esa línea:
+-- puede ser faltante, precio distinto, o las dos a la vez. El informe busca
+-- la nota del bloque que corresponda Y la de 'item_factura'.
+
+ALTER TABLE public.notas_auditoria
+  DROP CONSTRAINT IF EXISTS notas_auditoria_bloque_check;
+
+ALTER TABLE public.notas_auditoria
+  ADD CONSTRAINT notas_auditoria_bloque_check CHECK (bloque IN (
+    'faltante', 'cambio_precio', 'precio_distinto',
+    'agregado', 'orden_sin_factura',
+    'item_factura'
+  ));
+
+-- Verificación: el CHECK tiene los seis valores
+SELECT pg_get_constraintdef(oid) AS definicion
+FROM pg_constraint
+WHERE conrelid = 'public.notas_auditoria'::regclass
+  AND conname = 'notas_auditoria_bloque_check';

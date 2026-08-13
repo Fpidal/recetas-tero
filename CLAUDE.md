@@ -18,11 +18,18 @@ Sistema de gestión de recetas, costos y menús para restaurante. Permite admini
 ## Comandos
 
 ```bash
-npm run dev        # Desarrollo en localhost:3000
+npm run dev        # Desarrollo en localhost:3000 — ⚠️ apunta a la BASE DE PRODUCCIÓN
+npm run dev:demo   # Desarrollo en localhost:3001 contra la BASE DE DEMO
 npm run build      # Build de producción
+npm run start      # Servidor de producción
 npm run lint       # Linter
 npm run seed-demo  # Cargar datos de demo
 ```
+
+⚠️ **Nunca correr `npm run build` con el dev server levantado:** los dos escriben en `.next`
+y el build le pisa los archivos al server en caliente. Bajar el dev primero.
+
+⚠️ **`npm run dev` usa la base real.** Para probar sin riesgo, `npm run dev:demo`.
 
 ## Estructura del Proyecto
 
@@ -81,6 +88,24 @@ src/
 - Timestamps: `created_at` automático
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
+
+## ⚠️ Tres trampas que ya rompieron cosas
+
+**1. `anon` no recibe permisos.** La clave anónima viaja en el bundle público. Hasta el
+13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los márgenes—
+porque la plantilla de tabla nueva incluía `grant select ... to anon`. Si una página pública
+necesita datos, se concede **columna por columna**. Ver `supabase-cerrar-acceso-anonimo.sql`.
+
+**2. Insumos y vinos comparten las líneas.** En `factura_items` y `orden_compra_items`, un
+vino tiene `insumo_id = null` y `vino_id` cargado. Emparejar por `insumo_id` solo hace que
+**todos los vinos matcheen entre sí**, porque `null === null` es verdadero. Usar `claveItem()`
+de `src/lib/auditoria-semanal.ts`. Ya rompió el semáforo de facturas y la detección de
+comprobantes duplicados.
+
+**3. PostgREST corta en 1000 filas.** Sin error y sin aviso. `factura_items` pasó las 2.300 y
+`precios_insumo` las 3.500. Todo lo que lea muchas filas va paginado con `.range()` — ver
+`obtenerHistorialPrecios()` o `traerTodo()` en `src/lib/exportaciones.ts`. Este corte escondió
+63 variaciones de precio durante semanas (V.22).
 
 ## Patrones de Código
 

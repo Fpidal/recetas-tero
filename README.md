@@ -13,6 +13,7 @@ Sistema de gestión de recetas, costos y menús para restaurante. Permite admini
 | **Tipografías** | DM Sans, JetBrains Mono, Playfair Display |
 | **Iconos** | Lucide React |
 | **PDF** | jsPDF + jspdf-autotable |
+| **Excel** | ExcelJS (escritura, con estilos) · SheetJS/xlsx (solo lectura de listas de bodegas) |
 | **Gráficos** | Recharts |
 | **Deploy** | Vercel |
 
@@ -138,17 +139,21 @@ Creación de OC con numeración automática, estados (borrador, enviada, recibid
 - Generación automática de OC de faltantes
 
 ### Facturas (`/facturas`)
-Registro de facturas de proveedores. Actualización automática de precios de insumos. Soporte para Notas de Crédito.
+Dos solapas:
+
+- **Facturas** — registro de facturas de proveedores, con actualización automática de precios de insumos y soporte para Notas de Crédito. El semáforo compara cada factura contra su orden de compra: faltantes, cantidad menor, precio distinto y agregados sin pedir. En el detalle se puede comentar cada ítem (*"sin stock, viene el jueves"*): ese comentario se lee después en el resumen semanal.
+- **Resumen semanal** — el pantallazo de la semana cerrada, pensado para la reunión con el encargado de compras. Cinco bloques ordenados por plata: lo que no llegó completo, los cambios de precio (avisando si además cambió el proveedor), lo facturado a distinto precio del pedido, lo que llegó sin pedirse, y las órdenes que siguen sin factura. Cada línea acepta una nota, y todo se baja en PDF.
 
 ### Inventario (`/inventario`)
 Control de stock con hojas de control diario. Las NC restan del inventario automáticamente.
 
 ### Estadísticas (`/estadisticas`)
-Dashboard analítico con:
+Dashboard analítico en cinco solapas:
 - Compras semanales por insumo/proveedor
-- Comparador de precios histórico
-- Variación de precios
-- Alertas de aumentos
+- Comparación mensual
+- Compras por proveedor
+- Variación de precios, con alertas de aumentos
+- **Cierre de mes** — la foto del mes: compras, ventas, incidencia real, cubiertos y ticket promedio contra el mes anterior, más compras por rubro, semana por semana, top 10 de insumos y ventas por servicio. Se baja en un PDF de una carilla.
 
 ### Ventas (`/ventas`)
 Carga diaria de ventas y cubiertos, con análisis de incidencia (food cost real). Vista en 3 solapas:
@@ -212,7 +217,11 @@ npm run build      # Build de producción
 npm run start      # Iniciar servidor de producción
 npm run lint       # Ejecutar ESLint
 npm run seed-demo  # Cargar datos de demostración
+npm run dev:demo   # Desarrollo contra la BASE DE DEMO (puerto 3001)
 ```
+
+> `dev:demo` reemplaza temporalmente `.env.local` por `.env.demo` y lo restaura al salir.
+> Es la única forma de trabajar sin tocar la base de producción: `npm run dev` apunta a la base real.
 
 ## Variables de Entorno
 

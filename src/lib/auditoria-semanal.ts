@@ -423,6 +423,20 @@ export type BloqueAuditoria =
   | 'precio_distinto'
   | 'agregado'
   | 'orden_sin_factura'
+  /**
+   * Comentario escrito al cargar la factura, antes de auditar. Quien carga es
+   * quien sabe por qué pasó; una semana después ya nadie se acuerda. Va en su
+   * propio bloque porque en ese momento todavía no se sabe en qué sección del
+   * informe va a caer la línea: puede ser faltante, precio distinto, o las dos.
+   * El resumen semanal lo muestra junto a la nota del bloque que corresponda.
+   */
+  | 'item_factura'
+
+/** Lunes de la semana a la que pertenece una fecha, en formato ISO. */
+export function semanaDe(fecha: string): string {
+  const [a, m, d] = fecha.split('-').map(Number)
+  return aISO(lunesDe(new Date(a, m - 1, d)))
+}
 
 /** Notas de una semana, indexadas por `${bloque}|${referencia}` */
 export type MapaNotas = Map<string, string>

@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.27',
+    fecha: '13/08/26',
+    cambios: [
+      'Facturas: en el detalle se puede comentar cada ítem — por ejemplo "sin stock, viene el jueves". Ese comentario aparece después en el Resumen semanal, así al auditar ya sabés qué pasó',
+      'El punto de color de la lista de facturas ahora usa el mismo criterio que el Resumen semanal: avisa desde 1% de diferencia y no por centavos',
+    ],
+  },
+  {
     version: 'V.26',
     fecha: '13/08/26',
     cambios: [

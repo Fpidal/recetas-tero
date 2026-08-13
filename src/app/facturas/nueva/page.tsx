@@ -536,7 +536,18 @@ export default function NuevaFacturaPage() {
 
     if (facturaError) {
       console.error('Error creando factura:', facturaError)
-      alert('Error al crear la factura')
+      // 23505 = el índice único facturas_proveedor_unica rechazó el comprobante
+      // por estar repetido para ese proveedor. Sin este mensaje el usuario ve
+      // un error genérico, y termina reintentando o cargándola con otro número
+      // (que era justamente el problema que el índice viene a evitar).
+      if (facturaError.code === '23505') {
+        alert(
+          `Ya hay una factura ${numeroFactura.trim()} cargada para este proveedor.\n\n` +
+            'Si la anterior se cargó mal, anulala primero y después volvé a cargar esta.'
+        )
+      } else {
+        alert('Error al crear la factura')
+      }
       setIsSaving(false)
       return
     }

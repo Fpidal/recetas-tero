@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.24',
+    fecha: '13/08/26',
+    cambios: [
+      'Facturas: el sistema ya no deja cargar dos veces el mismo comprobante de un proveedor. Si pasa, avisa cuál es y qué hacer',
+      'Seguridad: se cerró el acceso a los datos desde afuera del sistema. Antes, los precios, las facturas y los proveedores se podían leer sin usuario y contraseña',
+      'La carta pública del QR sigue funcionando igual, pero ahora solo muestra nombre, descripción y precio: los costos y márgenes dejaron de estar expuestos',
+    ],
+  },
+  {
     version: 'V.23',
     fecha: '08/08/26',
     cambios: [

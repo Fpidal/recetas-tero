@@ -404,7 +404,17 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
 
     if (facturaError) {
       console.error('Error actualizando factura:', facturaError)
-      alert('Error al actualizar la factura')
+      // 23505 = el número quedaría repetido para ese proveedor (índice único
+      // facturas_proveedor_unica). Pasa al corregir el número de un comprobante
+      // y poner sin querer el de otro que ya está cargado.
+      if (facturaError.code === '23505') {
+        alert(
+          `Ya hay otra factura ${numeroFactura.trim()} cargada para este proveedor.\n\n` +
+            'Revisá el número: no puede haber dos comprobantes activos con el mismo.'
+        )
+      } else {
+        alert('Error al actualizar la factura')
+      }
       setIsSaving(false)
       return
     }

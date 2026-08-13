@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Select, Input } from '@/components/ui'
-import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Calendar } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Calendar, CalendarCheck } from 'lucide-react'
+import CierreMes from './components/CierreMes'
 
 // ============ TIPOS ============
 interface Insumo {
@@ -124,7 +125,7 @@ const CATEG_COLORES: Record<string, string> = {
   Salsas_Recetas: '#C4704B',
 }
 
-type TabType = 'proveedores' | 'variacion' | 'compras_semanales' | 'comparacion_mensual'
+type TabType = 'proveedores' | 'variacion' | 'compras_semanales' | 'comparacion_mensual' | 'cierre_mes'
 
 interface FacturaResumenProveedor {
   proveedor_id: string
@@ -918,6 +919,7 @@ export default function EstadisticasPage() {
     { id: 'comparacion_mensual' as TabType, label: 'Comparación Mensual', icon: FileText },
     { id: 'proveedores' as TabType, label: 'Compras por Proveedor', icon: Users },
     { id: 'variacion' as TabType, label: 'Variación de Precios', icon: TrendingUp },
+    { id: 'cierre_mes' as TabType, label: 'Cierre de Mes', icon: CalendarCheck },
   ]
 
   return (
@@ -962,7 +964,7 @@ export default function EstadisticasPage() {
               >
                 <Icon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'comparacion_mensual' ? 'Mensual' : tab.id === 'proveedores' ? 'Compras' : 'Variación'}</span>
+                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'comparacion_mensual' ? 'Mensual' : tab.id === 'proveedores' ? 'Compras' : tab.id === 'cierre_mes' ? 'Cierre' : 'Variación'}</span>
               </button>
             )
           })}
@@ -1556,6 +1558,9 @@ export default function EstadisticasPage() {
             </div>
           )}
         </div>
+      ) : activeTab === 'cierre_mes' ? (
+        /* ============ TAB CIERRE DE MES ============ */
+        <CierreMes />
       ) : null}
     </div>
   )

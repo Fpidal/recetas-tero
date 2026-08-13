@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.25',
+    fecha: '13/08/26',
+    cambios: [
+      'Estadísticas: nueva pestaña "Cierre de Mes" con la foto del mes — compras, ventas, incidencia, cubiertos y ticket promedio, todo comparado contra el mes anterior',
+      'Cierre de Mes: compras por rubro, compras semana por semana con gráfico, top 10 de insumos por gasto y ventas por servicio',
+      'Cierre de Mes: se puede bajar todo en un PDF de una carilla, con el mes en la cabecera',
+    ],
+  },
+  {
     version: 'V.24',
     fecha: '13/08/26',
     cambios: [

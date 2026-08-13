@@ -823,6 +823,58 @@ export async function obtenerIncidenciaDia(fecha: string, servicio: Servicio): P
 }
 
 /**
+ * Resumen de un conjunto de días de incidencia.
+ *
+ * Vivía inline en la solapa Incidencia de /analisis. Se extrajo tal cual —sin
+ * cambiar la cuenta— para que el Cierre de Mes muestre el MISMO número. Si el
+ * cierre y /analisis dieran distinto, no habría forma de saber cuál está bien.
+ *
+ * La sutileza importante: la incidencia se calcula solo sobre los días que
+ * tienen consumo cargado (`ventaConCosto`), no sobre la venta total. La carga
+ * de consumo es parcial, así que dividir el costo de 9 días por la venta de 31
+ * daría una incidencia ridículamente baja. Por eso siempre hay que mostrar el
+ * muestreo al lado: `diasConCarga` de `diasConVenta`.
+ */
+export interface ResumenIncidencia {
+  venta: number
+  costo: number
+  cubiertos: number
+  /** Días (servicios) con consumo cargado */
+  diasConCarga: number
+  /** Días con venta cargada — el denominador del muestreo */
+  diasConVenta: number
+  /** Venta solo de los días que tienen costo, para que la incidencia sea comparable */
+  ventaConCosto: number
+  incidencia: number
+  ticketPromedio: number
+  margen: number
+}
+
+export function resumirIncidencias(incidencias: IncidenciaDia[]): ResumenIncidencia {
+  const t = incidencias.reduce(
+    (acc, d) => {
+      acc.venta += d.venta
+      acc.costo += d.costo
+      acc.cubiertos += d.cubiertos
+      if (d.tiene_consumo) {
+        acc.diasConCarga++
+        acc.ventaConCosto += d.venta // Solo ventas de días con costo cargado
+      }
+      return acc
+    },
+    { venta: 0, costo: 0, cubiertos: 0, diasConCarga: 0, ventaConCosto: 0 }
+  )
+
+  return {
+    ...t,
+    diasConVenta: incidencias.filter((d) => d.tiene_venta).length,
+    incidencia: t.ventaConCosto > 0 ? (t.costo / t.ventaConCosto) * 100 : 0,
+    ticketPromedio: t.cubiertos > 0 ? t.venta / t.cubiertos : 0,
+    margen: t.venta - t.costo,
+  }
+}
+
+/**
  * Guarda venta + cubiertos en ventas_diarias para un día/servicio
  */
 export async function guardarVentaServicio(

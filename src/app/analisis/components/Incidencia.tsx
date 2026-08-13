@@ -8,6 +8,7 @@ import {
   obtenerIncidenciasMes,
   guardarVentaServicio,
   formatearMonedaAnalisis,
+  resumirIncidencias,
 } from '@/lib/consumo-queries'
 import { formatearInputNumero, parsearNumero, formatearFecha } from '@/lib/formato-numeros'
 import {
@@ -119,23 +120,11 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
     setFechaRef(nueva)
   }
 
-  // Resumen del mes
-  const totales = incidencias.reduce(
-    (acc, d) => {
-      acc.venta += d.venta
-      acc.costo += d.costo
-      acc.cubiertos += d.cubiertos
-      if (d.tiene_consumo) {
-        acc.diasConCarga++
-        acc.ventaConCosto += d.venta // Solo ventas de días con costo cargado
-      }
-      return acc
-    },
-    { venta: 0, costo: 0, cubiertos: 0, diasConCarga: 0, ventaConCosto: 0 }
-  )
-  // Incidencia calculada solo con días que tienen costo (muestreo)
-  const incidenciaMes = totales.ventaConCosto > 0 ? (totales.costo / totales.ventaConCosto) * 100 : 0
-  const margenMes = totales.venta - totales.costo
+  // Resumen del mes. La cuenta vive en resumirIncidencias() para que el
+  // Cierre de Mes muestre exactamente el mismo número que esta pantalla.
+  const totales = resumirIncidencias(incidencias)
+  const incidenciaMes = totales.incidencia
+  const margenMes = totales.margen
   const colorMes = getColorEstado(getEstadoIncidenciaReal(incidenciaMes))
 
   return (
@@ -281,7 +270,7 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
           <div className={`text-[10px] mt-1 ${colorMes.text}`}>
             {totales.diasConCarga > 0 ? (
               <span className="font-mono">
-                Muestreo: {totales.diasConCarga} de {incidencias.filter(d => d.tiene_venta).length} días
+                Muestreo: {totales.diasConCarga} de {totales.diasConVenta} días
               </span>
             ) : (
               'Sin costos cargados'

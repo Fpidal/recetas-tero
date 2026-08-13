@@ -5,7 +5,8 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Plus, Pencil, FileText, X, Trash2, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { generarPDFOrden } from '@/lib/generar-pdf-oc'
-import { Button, Select, Table } from '@/components/ui'
+import { Button, Select, Table, BotonExportar } from '@/components/ui'
+import { exportarOrdenesCompra } from '@/lib/exportaciones'
 import Link from 'next/link'
 import { formatearMoneda, formatearFecha } from '@/lib/formato-numeros'
 
@@ -383,12 +384,19 @@ export default function OrdenesCompraPage() {
             {' '}pendiente de recibir
           </p>
         </div>
-        <Link href="/ordenes-compra/nueva" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Nueva Orden
-          </Button>
-        </Link>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <BotonExportar
+            onExportar={() => exportarOrdenesCompra(ordenesFiltradas.map((o) => o.id))}
+            disabled={ordenesFiltradas.length === 0}
+            titulo={`Descargar en Excel las ${ordenesFiltradas.length} órdenes que estás viendo`}
+          />
+          <Link href="/ordenes-compra/nueva" className="flex-1 sm:flex-none">
+            <Button className="w-full">
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Nueva Orden
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}

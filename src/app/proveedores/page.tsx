@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Phone, Mail, Search, Package, BarChart2, Users } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { Button, Input, Select, Modal, Table } from '@/components/ui'
+import { Button, Input, Select, Modal, Table, BotonExportar } from '@/components/ui'
+import { exportarProveedores } from '@/lib/exportaciones'
 import { Proveedor } from '@/types/database'
 
 const CATEGORIAS = [
@@ -517,10 +518,13 @@ export default function ProveedoresPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Proveedores</h1>
           <p className="text-sm text-gray-600">Gestión de proveedores de insumos</p>
         </div>
-        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo Proveedor
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <BotonExportar onExportar={exportarProveedores} titulo="Descargar proveedores en Excel" />
+          <Button onClick={() => handleOpenModal()} className="flex-1 sm:flex-none">
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo Proveedor
+          </Button>
+        </div>
       </div>
 
       {/* Buscador y filtro por categoría */}

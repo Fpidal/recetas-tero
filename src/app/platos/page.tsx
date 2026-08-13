@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Eye, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, Package, BookOpen, X, ClipboardList, ImageIcon, Share2, type LucideIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
-import { Button, ClickableItemName } from '@/components/ui'
+import { Button, ClickableItemName, BotonExportar } from '@/components/ui'
+import { exportarRecetas } from '@/lib/exportaciones'
 import Link from 'next/link'
 
 const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
@@ -453,12 +454,15 @@ export default function PlatosPage() {
           <p className="text-sm text-gray-600">Recetas de platos agrupadas por sección</p>
         </div>
         {tab === 'recetas' && (
-          <Link href="/platos/nuevo" className="w-full sm:w-auto">
-            <Button className="w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-2" />
-              Nuevo Plato
-            </Button>
-          </Link>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <BotonExportar onExportar={exportarRecetas} titulo="Descargar recetas en Excel" />
+            <Link href="/platos/nuevo" className="flex-1 sm:flex-none">
+              <Button className="w-full">
+                <Plus className="w-4 h-4 mr-2" />
+                Nuevo Plato
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
 

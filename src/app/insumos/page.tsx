@@ -8,7 +8,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { obtenerHistorialPrecios } from '@/lib/precios-queries'
-import { Button, Input, Modal, Select } from '@/components/ui'
+import { Button, Input, Modal, Select, BotonExportar } from '@/components/ui'
+import { exportarInsumos } from '@/lib/exportaciones'
 import { CategoriaInsumo, UnidadMedida } from '@/types/database'
 import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import ComparadorPrecios from '@/components/insumos/ComparadorPrecios'
@@ -526,10 +527,13 @@ export default function InsumosPage() {
           </p>
         </div>
         {activeTab === 'insumos' && (
-          <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Insumo
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <BotonExportar onExportar={exportarInsumos} titulo="Descargar insumos en Excel" />
+            <Button onClick={() => handleOpenModal()} className="flex-1 sm:flex-none">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Insumo
+            </Button>
+          </div>
         )}
       </div>
 

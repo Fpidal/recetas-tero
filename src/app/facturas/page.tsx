@@ -4,7 +4,10 @@ import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Plus, Eye, FileText, Pencil, PackageSearch, Filter, X, FileMinus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { Button, Table, Select } from '@/components/ui'
+import { Button, Table, Select, BotonExportar } from '@/components/ui'
+import { exportarFacturas } from '@/lib/exportaciones'
+import { claveItem } from '@/lib/auditoria-semanal'
+import ResumenSemanal from './components/ResumenSemanal'
 import Link from 'next/link'
 import { formatearMoneda, formatearFecha } from '@/lib/formato-numeros'
 
@@ -30,13 +33,15 @@ interface FacturaConDetalle {
     fecha: string
     estado: string
     orden_compra_items: {
-      insumo_id: string
+      insumo_id: string | null
+      vino_id: string | null
       cantidad: number
       precio_unitario: number
     }[]
   } | null
   factura_items: {
-    insumo_id: string
+    insumo_id: string | null
+    vino_id: string | null
     cantidad: number
     precio_unitario: number
   }[]
@@ -55,12 +60,23 @@ function calcularSemaforo(f: FacturaConDetalle): SemaforoInfo | null {
   const ocItems = f.ordenes_compra.orden_compra_items
   const factItems = f.factura_items || []
 
+  // La comparación va por clave compuesta (insumo o vino), no por insumo_id.
+  // Un vino tiene insumo_id en null, y `null === null` es verdadero: con dos
+  // vinos en la misma factura los dos matcheaban contra el primero, y el
+  // segundo aparecía como faltante sin serlo. Misma clave que auditoria-semanal.
+  const porClave = new Map<string, (typeof factItems)[number]>()
+  for (const fi of factItems) {
+    const k = claveItem(fi)
+    if (k && !porClave.has(k)) porClave.set(k, fi)
+  }
+
   let faltantes = 0
   let parciales = 0
   let precioDif = 0
 
   for (const oc of ocItems) {
-    const fi = factItems.find(i => i.insumo_id === oc.insumo_id)
+    const k = claveItem(oc)
+    const fi = k ? porClave.get(k) : undefined
     if (!fi) {
       faltantes++
     } else {
@@ -70,9 +86,11 @@ function calcularSemaforo(f: FacturaConDetalle): SemaforoInfo | null {
   }
 
   // Items nuevos: en factura pero no en OC
-  const nuevos = factItems.filter(
-    fi => !ocItems.some(oc => oc.insumo_id === fi.insumo_id)
-  ).length
+  const clavesOC = new Set(ocItems.map(claveItem).filter(Boolean) as string[])
+  const nuevos = factItems.filter((fi) => {
+    const k = claveItem(fi)
+    return k ? !clavesOC.has(k) : false
+  }).length
 
   return { faltantes, parciales, precioDif, nuevos }
 }
@@ -113,6 +131,7 @@ function getDomingoDeSemana(lunes: Date): Date {
 }
 
 function FacturasContent() {
+  const [solapa, setSolapa] = useState<'lista' | 'semanal'>('lista')
   const [facturas, setFacturas] = useState<FacturaConDetalle[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -160,8 +179,8 @@ function FacturasContent() {
       .select(`
         *,
         proveedores (nombre),
-        ordenes_compra (numero, fecha, estado, orden_compra_items (insumo_id, cantidad, precio_unitario)),
-        factura_items (insumo_id, cantidad, precio_unitario)
+        ordenes_compra (numero, fecha, estado, orden_compra_items (insumo_id, vino_id, cantidad, precio_unitario)),
+        factura_items (insumo_id, vino_id, cantidad, precio_unitario)
       `)
       .neq('activo', false)
       .order('fecha', { ascending: false })
@@ -354,6 +373,11 @@ function FacturasContent() {
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> Precio dif.</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Agregado</span>
           </div>
+          <BotonExportar
+            onExportar={() => exportarFacturas(facturasFiltradas.map((f) => f.id))}
+            disabled={facturasFiltradas.length === 0}
+            titulo={`Descargar en Excel los ${facturasFiltradas.length} comprobantes que estás viendo`}
+          />
           <Link href="/facturas/nueva">
             <Button>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -363,6 +387,28 @@ function FacturasContent() {
         </div>
       </div>
 
+      {/* Solapas */}
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-3">
+        {([
+          { id: 'lista' as const, label: 'Facturas' },
+          { id: 'semanal' as const, label: 'Resumen semanal' },
+        ]).map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSolapa(t.id)}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              solapa === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {solapa === 'semanal' ? (
+        <ResumenSemanal />
+      ) : (
+      <>
       {/* Filtros */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2.5 sm:p-3 mb-3">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -441,6 +487,8 @@ function FacturasContent() {
         isLoading={isLoading}
         emptyMessage="No hay facturas registradas"
       />
+      </>
+      )}
     </div>
   )
 }

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, ChefHat, Search, Eye, X, ClipboardList, ImageIcon, Share2, Package, ChevronDown, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
-import { Button, ClickableItemName } from '@/components/ui'
+import { Button, ClickableItemName, BotonExportar } from '@/components/ui'
+import { exportarElaboraciones } from '@/lib/exportaciones'
 import Link from 'next/link'
 
 interface InsumoEnElaboraciones {
@@ -313,12 +314,15 @@ export default function RecetasBasePage() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Elaboraciones</h1>
           <p className="text-sm text-gray-600">Salsas, guarniciones y preparados</p>
         </div>
-        <Link href="/recetas-base/nueva" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Elaboración
-          </Button>
-        </Link>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <BotonExportar onExportar={exportarElaboraciones} titulo="Descargar elaboraciones en Excel" />
+          <Link href="/recetas-base/nueva" className="flex-1 sm:flex-none">
+            <Button className="w-full">
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Elaboración
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}

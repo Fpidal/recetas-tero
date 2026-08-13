@@ -10,6 +10,18 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.26',
+    fecha: '13/08/26',
+    cambios: [
+      'Facturas: nueva solapa "Resumen semanal" — lo que no llegó, lo que cambió de precio, lo que vino sin pedir y las órdenes que siguen sin factura, todo de la semana que cerró',
+      'Resumen semanal: si un insumo cambió de precio y además se le compró a otro proveedor, avisa cuál era el anterior. Y muestra cuántas veces subió en los últimos dos meses',
+      'Resumen semanal: se le puede escribir una nota a cada línea (por ejemplo "es de mejor calidad" o "hacía meses que no se compraba") y esa nota sale en el PDF',
+      'Nuevo botón para bajar a Excel en Proveedores, Insumos, Recetas, Elaboraciones, Facturas y Órdenes de compra. En Facturas y Órdenes baja lo que estés viendo, con los filtros aplicados',
+      'Los Excel salen con los importes desglosados en neto, IVA y percepciones, para que las cuentas cierren',
+      'Se corrigió un error que comparaba mal los vinos entre la orden de compra y la factura: con dos vinos en la misma factura, uno figuraba como faltante sin serlo',
+    ],
+  },
+  {
     version: 'V.25',
     fecha: '13/08/26',
     cambios: [

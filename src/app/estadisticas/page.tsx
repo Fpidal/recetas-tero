@@ -4,8 +4,9 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Select, Input } from '@/components/ui'
-import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Calendar, CalendarCheck } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Calendar, CalendarCheck, Layers } from 'lucide-react'
 import CierreMes from './components/CierreMes'
+import AbcInsumos from './components/AbcInsumos'
 
 // ============ TIPOS ============
 interface Insumo {
@@ -125,7 +126,7 @@ const CATEG_COLORES: Record<string, string> = {
   Salsas_Recetas: '#C4704B',
 }
 
-type TabType = 'proveedores' | 'variacion' | 'compras_semanales' | 'comparacion_mensual' | 'cierre_mes'
+type TabType = 'proveedores' | 'variacion' | 'compras_semanales' | 'comparacion_mensual' | 'cierre_mes' | 'abc'
 
 interface FacturaResumenProveedor {
   proveedor_id: string
@@ -920,7 +921,11 @@ export default function EstadisticasPage() {
     { id: 'proveedores' as TabType, label: 'Compras por Proveedor', icon: Users },
     { id: 'variacion' as TabType, label: 'Variación de Precios', icon: TrendingUp },
     { id: 'cierre_mes' as TabType, label: 'Cierre de Mes', icon: CalendarCheck },
+    { id: 'abc' as TabType, label: 'ABC de Insumos', icon: Layers },
   ]
+
+  // Solapas que traen su propio selector de período
+  const tabConFiltroPropio = activeTab === 'cierre_mes' || activeTab === 'abc'
 
   return (
     <div className="overflow-x-hidden">
@@ -928,7 +933,9 @@ export default function EstadisticasPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Estadísticas</h1>
           <p className="text-sm text-gray-600">
-            {rangoFechas.desde && rangoFechas.hasta ? (
+            {tabConFiltroPropio ? (
+              activeTab === 'cierre_mes' ? 'La foto del mes, contra el mes anterior' : 'Dónde se va la plata de las compras'
+            ) : rangoFechas.desde && rangoFechas.hasta ? (
               <>
                 {new Date(rangoFechas.desde + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
                 {' — '}
@@ -937,18 +944,25 @@ export default function EstadisticasPage() {
             ) : 'Análisis de compras y precios'}
           </p>
         </div>
-        <div className="w-full sm:w-44">
-          <Select
-            options={PERIODOS}
-            value={periodo}
-            onChange={(e) => setPeriodo(e.target.value)}
-          />
-        </div>
+        {/* Cierre de Mes y ABC tienen su propio filtro, con otra granularidad:
+            uno pide un mes puntual (y lo compara contra el anterior) y el otro
+            una ventana de varios meses. Un control único no le serviría bien a
+            ninguno de los tres, así que en esas solapas este se esconde en vez
+            de quedar a la vista sin hacer nada. */}
+        {!tabConFiltroPropio && (
+          <div className="w-full sm:w-44">
+            <Select
+              options={PERIODOS}
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6 -mx-4 px-4 overflow-x-auto">
-        <nav className="-mb-px flex space-x-2 sm:space-x-6">
+        <nav className="-mb-px flex space-x-2 sm:space-x-4 lg:space-x-6">
           {tabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
@@ -956,7 +970,7 @@ export default function EstadisticasPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1 sm:gap-2 py-2.5 sm:py-3 px-1 border-b-2 text-[11px] sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+                className={`flex items-center gap-1 sm:gap-1.5 py-2.5 sm:py-3 px-1 border-b-2 text-[11px] sm:text-xs lg:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                   isActive
                     ? 'border-purple-500 text-purple-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -964,7 +978,7 @@ export default function EstadisticasPage() {
               >
                 <Icon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'comparacion_mensual' ? 'Mensual' : tab.id === 'proveedores' ? 'Compras' : tab.id === 'cierre_mes' ? 'Cierre' : 'Variación'}</span>
+                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'comparacion_mensual' ? 'Mensual' : tab.id === 'proveedores' ? 'Compras' : tab.id === 'cierre_mes' ? 'Cierre' : tab.id === 'abc' ? 'ABC' : 'Variación'}</span>
               </button>
             )
           })}
@@ -1561,6 +1575,9 @@ export default function EstadisticasPage() {
       ) : activeTab === 'cierre_mes' ? (
         /* ============ TAB CIERRE DE MES ============ */
         <CierreMes />
+      ) : activeTab === 'abc' ? (
+        /* ============ TAB ABC DE INSUMOS ============ */
+        <AbcInsumos />
       ) : null}
     </div>
   )

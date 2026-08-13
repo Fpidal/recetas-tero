@@ -153,6 +153,7 @@ Dashboard analítico en cinco solapas:
 - Comparación mensual
 - Compras por proveedor
 - Variación de precios, con alertas de aumentos
+- **ABC de insumos** — Pareto del gasto: qué insumos son el 80% de las compras (clase A), cuáles el 15% (B) y cuáles el 5% restante (C), con la volatilidad de precio de cada uno. Sirve tanto para saber qué vigilar como para dejar de perder tiempo con lo que no mueve la aguja.
 - **Cierre de mes** — la foto del mes: compras, ventas, incidencia real, cubiertos y ticket promedio contra el mes anterior, más compras por rubro, semana por semana, top 10 de insumos y ventas por servicio. Se baja en un PDF de una carilla.
 
 ### Ventas (`/ventas`)

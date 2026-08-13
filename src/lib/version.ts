@@ -10,6 +10,16 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.28',
+    fecha: '13/08/26',
+    cambios: [
+      'Estadísticas: nueva pestaña "ABC de Insumos" — de más de 300 insumos, te dice cuáles son los 60 que se llevan el 80% del gasto, y cuáles no vale la pena mirar',
+      'ABC: cada insumo muestra si su precio se movió en el período. Un insumo caro con precio estable no necesita atención; uno que además sube, sí',
+      'Carta: nuevo botón para bajar toda la carta en Excel, con una columna que distingue lo que está en carta de lo que quedó afuera',
+      'Estadísticas: al entrar a Cierre de Mes o ABC ya no aparece el filtro de fechas de arriba, que no se usaba en esas pantallas y confundía',
+    ],
+  },
+  {
     version: 'V.27',
     fecha: '13/08/26',
     cambios: [

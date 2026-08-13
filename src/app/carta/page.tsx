@@ -7,7 +7,8 @@ import Link from 'next/link'
 import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
-import { Button, Input, Select, Modal, ClickableItemName } from '@/components/ui'
+import { Button, Input, Select, Modal, ClickableItemName, BotonExportar } from '@/components/ui'
+import { exportarCarta } from '@/lib/exportaciones'
 import { parsearNumero } from '@/lib/formato-numeros'
 
 const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
@@ -847,6 +848,11 @@ export default function CartaPage() {
         <div className="flex items-center gap-2">
           {(tabActiva === 'en_carta' || tabActiva === 'fuera_carta') && (
             <>
+              <BotonExportar
+                onExportar={exportarCarta}
+                titulo="Descargar la carta completa en Excel — lo que está en carta y lo que quedó afuera"
+                className="!py-1.5 !text-xs"
+              />
               <Link href="/carta/menu">
                 <Button
                   variant="secondary"

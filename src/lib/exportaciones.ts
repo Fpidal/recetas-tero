@@ -470,3 +470,116 @@ export async function exportarOrdenesCompra(idsVisibles?: string[]): Promise<voi
     ],
   })
 }
+
+// =====================================================
+// 7 · CARTA
+// =====================================================
+
+/**
+ * Carta completa: lo que está en carta y lo que quedó afuera, en UNA hoja con
+ * una columna "En carta" que dice Sí o No.
+ *
+ * Una hoja con columna en vez de dos hojas separadas, a propósito: con el
+ * autofiltro puesto, filtrar por esa columna te da cualquiera de las dos
+ * vistas, y además se puede ordenar y comparar entre sí. Dos hojas obligan a
+ * elegir de antemano y no dejan cruzar nada.
+ *
+ * El food cost se recalcula con los precios de HOY, igual que hace la pantalla
+ * de Carta. El `food_cost_real` guardado en la tabla puede estar viejo.
+ */
+export async function exportarCarta(): Promise<void> {
+  const [filasCarta, platos, ingredientes, elaboraciones, insumos] = await Promise.all([
+    traerTodo<any>('carta', 'id, plato_id, precio_carta, precio_sugerido, margen_objetivo, activo'),
+    traerTodo<any>('platos', 'id, nombre, seccion, descripcion, rendimiento_porciones', soloActivos),
+    traerTodo<any>('plato_ingredientes', 'plato_id, insumo_id, receta_base_id, cantidad'),
+    traerTodo<any>('recetas_base', 'id, nombre, rendimiento_porciones, costo_por_porcion'),
+    traerTodo<any>(
+      'v_insumos_con_precio',
+      'id, precio_actual, iva_porcentaje, merma_porcentaje',
+      (q: any) => q.eq('activo', true)
+    ),
+  ])
+
+  const costoInsumo = new Map<string, number>(
+    insumos.map((i: any) => [
+      i.id as string,
+      costoFinalInsumo(i.precio_actual, i.iva_porcentaje, i.merma_porcentaje),
+    ])
+  )
+  const costoElaboracion = new Map<string, number>(
+    elaboraciones.map((e: any) => [e.id as string, Number(e.costo_por_porcion) || 0])
+  )
+  const platoPorId = new Map(platos.map((p: any) => [p.id, p]))
+
+  /** Costo por porción del plato, con precios de hoy */
+  const costoPorPorcion = (platoId: string): number => {
+    const p = platoPorId.get(platoId)
+    if (!p) return 0
+    const total = ingredientes
+      .filter((i: any) => i.plato_id === platoId)
+      .reduce((suma: number, ing: any) => {
+        const unitario = ing.insumo_id
+          ? costoInsumo.get(ing.insumo_id) ?? 0
+          : costoElaboracion.get(ing.receta_base_id) ?? 0
+        return suma + Number(ing.cantidad || 0) * unitario
+      }, 0)
+    const rend = p.rendimiento_porciones > 0 ? p.rendimiento_porciones : 1
+    return total / rend
+  }
+
+  const filas = filasCarta
+    .filter((c: any) => platoPorId.has(c.plato_id))
+    .map((c: any) => {
+      const p = platoPorId.get(c.plato_id)
+      const costo = costoPorPorcion(c.plato_id)
+      const precio = Number(c.precio_carta) || 0
+      return {
+        en_carta: c.activo ? 'Sí' : 'No',
+        nombre: p.nombre,
+        seccion: p.seccion,
+        descripcion: p.descripcion,
+        costo,
+        precio,
+        food_cost: precio > 0 ? (costo / precio) * 100 : null,
+        margen_objetivo: Number(c.margen_objetivo) || null,
+        precio_sugerido: Number(c.precio_sugerido) || null,
+        contribucion: precio > 0 ? precio - costo : null,
+        plato_id: c.plato_id,
+      }
+    })
+    // Primero lo que está en carta, y dentro de cada grupo por sección y nombre
+    .sort((a, b) =>
+      a.en_carta !== b.en_carta
+        ? a.en_carta === 'Sí' ? -1 : 1
+        : (a.seccion || '').localeCompare(b.seccion || '', 'es-AR') ||
+          a.nombre.localeCompare(b.nombre, 'es-AR')
+    )
+
+  await descargarExcel({
+    nombreArchivo: `carta_${hoyISO()}`,
+    descripcion: `Carta completa: ${filas.filter((f) => f.en_carta === 'Sí').length} en carta y ${filas.filter((f) => f.en_carta === 'No').length} fuera`,
+    hojas: [
+      {
+        nombre: 'Carta',
+        filas,
+        nota:
+          'Filtrá por la columna "En carta" para ver solo lo vigente o solo lo que quedó afuera. ' +
+          'El costo y el food cost se calculan con los precios de hoy, no con el valor guardado, ' +
+          'que puede estar desactualizado.',
+        columnas: [
+          { titulo: 'En carta', valor: 'en_carta', ancho: 10 },
+          { titulo: 'Plato', valor: 'nombre', ancho: 34 },
+          { titulo: 'Sección', valor: 'seccion', ancho: 16 },
+          { titulo: 'Costo x porción', valor: 'costo', tipo: 'moneda' },
+          { titulo: 'Precio carta', valor: 'precio', tipo: 'moneda' },
+          { titulo: 'Food cost', valor: 'food_cost', tipo: 'porcentaje' },
+          { titulo: 'F.C. objetivo', valor: 'margen_objetivo', tipo: 'porcentaje' },
+          { titulo: 'Precio sugerido', valor: 'precio_sugerido', tipo: 'moneda' },
+          { titulo: 'Contribución', valor: 'contribucion', tipo: 'moneda' },
+          { titulo: 'Descripción', valor: 'descripcion', ancho: 46 },
+          { titulo: 'ID plato', valor: 'plato_id', ancho: 38 },
+        ],
+      },
+    ],
+  })
+}

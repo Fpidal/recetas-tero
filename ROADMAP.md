@@ -45,12 +45,12 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Elaboraciones** | Sub-recetas (bases) que se usan como ingrediente dentro de las recetas |
 | **Recetas** | Platos: ingredientes, costo, margen, precio de venta, foto |
 | **Tragos** | Coctelería con costos y beverage cost |
-| **Carta** | Carta editorial en HTML + QR al menú digital público (`/menu`). Desde acá se llega a Menús ejecutivos y especiales |
+| **Carta** | Carta editorial en HTML + QR al menú digital público (`/menu`). Exporta a Excel lo que está en carta y lo que quedó afuera. Desde acá se llega a Menús ejecutivos y especiales |
 | **Órdenes de Compra** | Pedidos a proveedores, con PDF |
 | **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito. Solapa **Resumen semanal** (V.26): faltantes, cambios de precio, agregados sin pedir y órdenes sin factura, con notas por línea y PDF |
 | **Ventas** | Carga diaria de ventas. **Nivel grueso:** ventas vs compras del período |
 | **Análisis** | Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo |
-| **Estadísticas** | Dashboard consolidado (5 pestañas, con **Cierre de mes** desde V.25) |
+| **Estadísticas** | Dashboard consolidado (6 pestañas: las 4 de compras y precios, más **Cierre de mes** (V.25) y **ABC de insumos** (V.28)) |
 | **Inventario** | Hojas de control de stock. **Pausado a propósito** — ver Decisiones tomadas |
 | **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
 
@@ -88,10 +88,9 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Ahora
 
-- **Informes.** El plan son ocho; van cuatro. Hechos: **Cierre de mes** (V.25) y
-  **Resumen semanal de compras** (V.26–V.27). Quedan por hacer, y los datos ya están:
-  - **ABC de insumos** — casi gratis: `cierre_mes()` ya calcula el top 10, es extenderlo
-    a la curva completa.
+- **Informes.** El plan son ocho; van cinco. Hechos: **Cierre de mes** (V.25),
+  **Resumen semanal de compras** (V.26–V.27) y **ABC de insumos** (V.28). Queda uno con
+  los datos ya disponibles:
   - **Proveedor × variación** — media pantalla ya existe en Estadísticas.
 
   Y tres que **no dependen de programar sino de qué se carga**, así que están bloqueados:

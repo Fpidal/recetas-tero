@@ -82,6 +82,11 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   se contaría dos veces. Para saber cuánto pedir hay que dividir el neto por el factor de
   aprovechamiento — con 25% de merma, 18,40 kg netos son 24,53 kg de compra. Cualquier
   pantalla que sirva para armar pedidos tiene que hacer esa conversión o induce a pedir de menos.
+- **Los invariantes los garantiza la base, no el código.** Un insumo tiene exactamente
+  un precio vigente, y eso lo asegura un índice único parcial, no los triggers. Hasta V.31
+  la única defensa eran los triggers: cuando uno falló, el dato quedó corrupto en silencio
+  y las recetas costearon con un precio viejo durante semanas. Donde haya una regla del
+  tipo "uno solo" o "siempre suma cero", conviene que la base la imponga.
 - **Todo lo que lea muchas filas va paginado.** PostgREST corta en 1000 sin avisar y sin
   error. `factura_items` ya pasó las 2300 y `precios_insumo` las 3500. Ya escondió 63
   variaciones de precio (V.22).

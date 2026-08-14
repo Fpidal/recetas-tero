@@ -54,6 +54,46 @@ el descuento y lo volvía a poner — esas dos operaciones se cancelan.
 Vive en **un solo lugar**: `src/lib/costos.ts` → `costoBotellaVino()`. La usan la
 pantalla de Vinos y la carga de consumo de Análisis. No la copies en una tercera.
 
+### Un insumo, un precio vigente (V.31)
+
+`precios_insumo` puede tener muchas filas por insumo, pero **exactamente una**
+con `es_precio_actual = true`. Desde V.31 lo garantiza un índice:
+
+```sql
+CREATE UNIQUE INDEX precios_insumo_un_vigente_por_insumo
+  ON precios_insumo (insumo_id) WHERE es_precio_actual;
+```
+
+**Por qué importa tanto.** La vista `v_insumos_con_precio` hace un join contra
+esa tabla: con dos vigentes devuelve **dos filas del mismo insumo**. Y las
+pantallas resuelven el precio con `.find(...)` sobre esa lista, o sea que toman
+la primera que llega, sin orden garantizado. El costo de las recetas pasa a
+depender del azar.
+
+**El incidente (14/08/26).** "Queso brie" aparecía tres veces en los buscadores
+con tres precios: $7.840, $17.514 y $17.020. Un solo insumo, tres filas
+vigentes. Insumos mostraba el de junio ($14.066) cuando el real era el de la
+factura del 07/08 ($14.474), así que todas las recetas con brie costeaban 3%
+por debajo — y en la carga siguiente podía tocarle $6.479, la mitad.
+
+**La causa.** Había DOS triggers `BEFORE DELETE` sobre `factura_items` haciendo
+el mismo trabajo: `revertir_precio_item_eliminado` y
+`revertir_precio_al_eliminar_factura`. Los dos buscan "el precio apagado más
+reciente" y lo encienden. Corren en secuencia: el primero enciende uno, el
+segundo lo encuentra ya encendido y enciende el siguiente. Dos vigentes por
+cada borrado. Y **editar una factura borra todos sus ítems y los reinserta**,
+así que corría en cada edición.
+
+Se eliminó el duplicado, y las reversiones ahora **borran antes de encender**
+(la versión vieja encendía primero, dejando un instante con dos vigentes que el
+índice rechazaría).
+
+**La lección, que es la misma de siempre:** los triggers eran la única defensa,
+y cuando uno falló el dato quedó corrupto en silencio durante semanas. Un
+`unique index` convierte eso en un error visible en el momento. Donde exista un
+invariante ("uno solo", "siempre suma cero"), conviene que lo garantice la base
+y no el código que la escribe.
+
 ### La incidencia real vive en UN solo lugar (V.29)
 
 `resumirIncidencias()`, en `src/lib/consumo-queries.ts`. La usan la solapa

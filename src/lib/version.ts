@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.31',
+    fecha: '14/08/26',
+    cambios: [
+      'Se corrigió un problema por el que un insumo podía quedar con varios precios "vigentes" a la vez. El queso brie tenía tres, y las recetas costeaban con el de junio en lugar del de la última factura',
+      'Cuando pasaba, el insumo aparecía repetido en los buscadores, como si fueran productos distintos',
+      'El sistema ahora impide que vuelva a ocurrir: si algo intenta dejar dos precios vigentes, avisa con un error en vez de guardar mal en silencio',
+    ],
+  },
+  {
     version: 'V.30',
     fecha: '14/08/26',
     cambios: [

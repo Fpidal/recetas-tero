@@ -89,7 +89,7 @@ src/
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
 
-## ⚠️ Tres trampas que ya rompieron cosas
+## ⚠️ Cuatro trampas que ya rompieron cosas
 
 **1. `anon` no recibe permisos.** La clave anónima viaja en el bundle público. Hasta el
 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los márgenes—
@@ -102,7 +102,14 @@ vino tiene `insumo_id = null` y `vino_id` cargado. Emparejar por `insumo_id` sol
 de `src/lib/auditoria-semanal.ts`. Ya rompió el semáforo de facturas y la detección de
 comprobantes duplicados.
 
-**3. PostgREST corta en 1000 filas.** Sin error y sin aviso. `factura_items` pasó las 2.300 y
+**3. Un insumo tiene UN precio vigente, y lo garantiza un índice.** `precios_insumo` tiene
+muchas filas por insumo pero solo una con `es_precio_actual = true`. Si hay dos, la vista
+`v_insumos_con_precio` devuelve el insumo duplicado y las pantallas toman "el primero que
+llega": el costo de las recetas queda al azar. Pasó el 14/08/26 con el queso brie —tres
+precios vigentes, costeando con el de junio— por dos triggers que hacían el mismo trabajo.
+Ver `supabase-fix-precio-vigente-unico.sql`.
+
+**4. PostgREST corta en 1000 filas.** Sin error y sin aviso. `factura_items` pasó las 2.300 y
 `precios_insumo` las 3.500. Todo lo que lea muchas filas va paginado con `.range()` — ver
 `obtenerHistorialPrecios()` o `traerTodo()` en `src/lib/exportaciones.ts`. Este corte escondió
 63 variaciones de precio durante semanas (V.22).

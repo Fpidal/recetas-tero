@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.29',
+    fecha: '14/08/26',
+    cambios: [
+      'Análisis → Histórico: se corrigió la incidencia real, que venía más baja que la verdadera. Dividía el costo de los servicios cargados por la venta de TODO el mes, incluyendo días sin consumo cargado',
+      'Los seis meses del gráfico estaban afectados: los valores nuevos son los correctos, no subió nada',
+      'Histórico ahora muestra el muestreo (por ejemplo "9 de 11"), para saber cuán confiable es cada mes',
+    ],
+  },
+  {
     version: 'V.28',
     fecha: '13/08/26',
     cambios: [

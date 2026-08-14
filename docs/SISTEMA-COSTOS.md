@@ -54,6 +54,29 @@ el descuento y lo volvía a poner — esas dos operaciones se cancelan.
 Vive en **un solo lugar**: `src/lib/costos.ts` → `costoBotellaVino()`. La usan la
 pantalla de Vinos y la carga de consumo de Análisis. No la copies en una tercera.
 
+### La incidencia real vive en UN solo lugar (V.29)
+
+`resumirIncidencias()`, en `src/lib/consumo-queries.ts`. La usan la solapa
+**Incidencia**, el **Histórico** y el **Cierre de mes**.
+
+La regla que define: **la incidencia se calcula solo sobre los servicios que
+tienen el consumo cargado**, nunca sobre la venta total del período.
+
+```
+incidencia = costo / venta_de_los_dias_con_costo
+```
+
+La carga de consumo es parcial. Dividir el costo de 9 servicios por el ingreso
+de 11 no da un food cost: da un promedio diluido, más bajo que el real y sin
+significado. Por eso el muestreo (`9 de 11`) va **siempre** al lado del número.
+
+Hasta V.29 el Histórico tenía su propia copia de la cuenta, escrita inline, y
+esa copia dividía por la venta total: mostraba 21,6% donde Incidencia mostraba
+26,3%, con exactamente los mismos datos. **Los seis meses del gráfico estaban
+subestimados.** Tercera vez que el mismo patrón —la misma fórmula copiada en
+dos lados— produce números distintos sin que nadie lo note: primero la merma,
+después el costo de los menús ejecutivos, ahora esto.
+
 ### Otro par que también vive en dos lugares (V.23)
 
 Qué tipos de consumo cuentan como **Barra** y cuáles como **Cocina**:

@@ -12,7 +12,9 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
-import { obtenerIncidenciasMes, formatearMonedaAnalisis } from '@/lib/consumo-queries'
+import { obtenerIncidenciasMes, formatearMonedaAnalisis,
+  resumirIncidencias,
+} from '@/lib/consumo-queries'
 import {
   type Servicio,
   SERVICIO_LABEL,
@@ -31,6 +33,8 @@ interface ResumenMes {
   cubiertos: number
   diasConCarga: number
   incidencia: number
+  /** Denominador del muestreo: sin esto, un mes con 2 días cargados parece comparable a uno con 30 */
+  diasConVenta: number
 }
 
 const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -61,20 +65,22 @@ export default function Historico() {
         const f = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1)
         promesas.push(
           obtenerIncidenciasMes(f.getFullYear(), f.getMonth() + 1, servicio).then((dias) => {
-            const ventas = dias.reduce((a, d) => a + d.venta, 0)
-            const costo = dias.reduce((a, d) => a + d.costo, 0)
-            const cubiertos = dias.reduce((a, d) => a + d.cubiertos, 0)
-            const diasConCarga = dias.filter((d) => d.tiene_consumo).length
-            const incidencia = ventas > 0 ? (costo / ventas) * 100 : 0
+            // Misma cuenta que la solapa Incidencia: la incidencia se calcula
+            // SOLO sobre los días que tienen consumo cargado. Antes acá se
+            // dividía por la venta total del mes, y eso subestimaba el número
+            // —le atribuía a 9 servicios el ingreso de 11— así que las dos
+            // pantallas mostraban porcentajes distintos con los mismos datos.
+            const t = resumirIncidencias(dias)
             return {
               label: `${MESES_LARGO[f.getMonth()]} ${f.getFullYear()}`,
               año: f.getFullYear(),
               mes: f.getMonth() + 1,
-              ventas,
-              costo,
-              cubiertos,
-              diasConCarga,
-              incidencia,
+              ventas: t.venta,
+              costo: t.costo,
+              cubiertos: t.cubiertos,
+              diasConCarga: t.diasConCarga,
+              diasConVenta: t.diasConVenta,
+              incidencia: t.incidencia,
             }
           })
         )
@@ -189,7 +195,7 @@ export default function Historico() {
                     <th className="text-right py-2 px-3 font-medium hidden xs:table-cell">Costo cocina</th>
                     <th className="text-right py-2 px-3 font-medium">Inc. real</th>
                     <th className="text-right py-2 px-3 font-medium hidden sm:table-cell">Cubiertos</th>
-                    <th className="text-right py-2 px-3 font-medium hidden md:table-cell">Días</th>
+                    <th className="text-right py-2 px-3 font-medium hidden md:table-cell">Muestreo</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -218,7 +224,7 @@ export default function Historico() {
                           {r.cubiertos > 0 ? r.cubiertos.toLocaleString('es-AR') : '—'}
                         </td>
                         <td className="text-right px-3 text-gray-500 hidden md:table-cell font-mono">
-                          {r.diasConCarga > 0 ? r.diasConCarga : '—'}
+                          {r.diasConCarga > 0 ? `${r.diasConCarga} de ${r.diasConVenta}` : '—'}
                         </td>
                       </tr>
                     )
@@ -226,6 +232,12 @@ export default function Historico() {
                 </tbody>
               </table>
             </div>
+            <p className="px-4 py-2.5 text-[11px] text-gray-500 bg-gray-50 border-t border-gray-100 leading-snug">
+              La incidencia se calcula solo sobre los servicios que tienen el consumo cargado, no sobre
+              la venta del mes entero: dividir el costo de 9 servicios por el ingreso de 11 daría un
+              número más bajo que el real. Por eso la columna Muestreo va al lado — un mes con pocos
+              servicios cargados no es comparable con uno completo.
+            </p>
           </div>
         </>
       )}

@@ -166,19 +166,27 @@ Carga diaria de ventas y cubiertos, con análisis de incidencia (food cost real)
 **Cálculo de incidencia**: `(suma de facturas activas / ventas totales) × 100`. Objetivo: ≤ 30%. Semáforo: ✅ ≤30% / ⚠️ 31-35% / ❌ >35%.
 
 ### Análisis (`/analisis`)
-Módulo de **food cost real** basado en lo realmente consumido por cocina al final de cada servicio (en vez de lo facturado por proveedores). Vista en 4 solapas:
+Módulo de **food cost real** basado en lo realmente consumido por cocina al final de cada servicio (en vez de lo facturado por proveedores). Vista en 5 solapas:
 
-- **Carga diaria**: cocina carga el consumo real del servicio (mediodía/noche/eventos). Soporta tres tipos de items mezclados:
+- **Carga diaria**: cocina carga el consumo real del servicio (mediodía/noche/eventos). Soporta seis tipos de items mezclados:
   - **Insumos** (pesados sueltos: ej. pollo, papas)
   - **Elaboraciones** (recetas base: ej. salsa criolla, puré)
   - **Recetas** (platos: ej. milanesa, lomo a la parrilla)
+  - **Menús ejecutivos** (un menú = un cubierto)
+  - **Tragos** y **Vinos** (se imputan a Barra, no a Cocina)
 
-  Buscador con autocompletar tipo Recetas, atajos a más usados, todos los costos con IVA incluido.
+  Buscador por fragmentos sueltos e ignorando acentos ("sal res mal" encuentra "Reserva Malbec (Salentein)"), todos los costos con IVA incluido. El costo del servicio se muestra separado en **Cocina** y **Barra**.
 - **Consumo diario**: vista informativa que **desglosa recetas y elaboraciones a nivel insumo** (ej: "12 milanesas + 2,5 kg pollo" → "Bola de lomo: 1,8 kg, Pollo: 2,5 kg, ..."). Botón "Confirmar consumo" como paso previo al descuento de stock.
 - **Incidencia**: carga manual de venta + cubiertos por día/servicio. Cruza automático con el costo de cocina. KPIs: ventas, costo real, **% Incidencia REAL** con semáforo, margen bruto. Detalle día a día.
-- **Histórico**: evolución mensual de la incidencia real (últimos 6 meses) con gráfico de tendencia y línea de objetivo.
+- **Resumen**: consumo de la semana desglosado a nivel insumo y agrupado por rubro, con descarga en PDF (ver abajo).
+- **Histórico**: evolución mensual de la incidencia real (últimos 6 meses) con gráfico de tendencia y línea de objetivo, y el **muestreo** de cada mes.
+
+> **La incidencia real se calcula solo sobre los servicios con consumo cargado**, nunca sobre la venta total del período: dividir el costo de 9 servicios por el ingreso de 11 da un número más bajo que el real. Por eso el muestreo (`9 de 11`) acompaña siempre al porcentaje.
 
 **Diferencia con Ventas**: el módulo Ventas calcula incidencia *teórica* (facturas / ventas). Análisis calcula *real* (consumo cocina / ventas), que es el food cost efectivo del día.
+
+Desde el **Resumen** se baja el consumo de la semana en PDF, agrupado por rubro y pensado como planilla de pedido: incluye una columna **A comprar** que ajusta el consumo neto por la merma de cada insumo, y una columna en blanco para anotar a mano.
+
 
 ### Papelera (`/papelera`)
 Recuperación de items eliminados (soft delete).

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Package, DollarSign, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Package, DollarSign, Calendar, FileDown } from 'lucide-react'
 import {
   desglosarRango,
   getLunesDeSemana,
@@ -10,6 +10,7 @@ import {
   formatearMonedaAnalisis,
 } from '@/lib/consumo-queries'
 import { formatearFecha } from '@/lib/formato-numeros'
+import { generarPDFResumenConsumo } from '@/lib/generar-pdf-resumen-consumo'
 import {
   type ItemDesglosado,
   type Servicio,
@@ -41,6 +42,7 @@ export default function Resumen({ fecha, servicio, setServicio }: Props) {
   const [diasConCarga, setDiasConCarga] = useState(0)
   const [costoTotal, setCostoTotal] = useState(0)
   const [cargando, setCargando] = useState(false)
+  const [generandoPDF, setGenerandoPDF] = useState(false)
 
   const lunes = getLunesDeSemana(fechaRef)
   const domingo = getDomingoDeSemana(fechaRef)
@@ -65,6 +67,26 @@ export default function Resumen({ fecha, servicio, setServicio }: Props) {
       console.error('Error cargando resumen:', e)
     } finally {
       setCargando(false)
+    }
+  }
+
+  async function handlePDF() {
+    if (desglose.length === 0) return
+    try {
+      setGenerandoPDF(true)
+      await generarPDFResumenConsumo({
+        desde: dateToISO(lunes),
+        hasta: dateToISO(domingo),
+        servicio: filtroServicio,
+        desglose,
+        diasConCarga,
+        costoTotal,
+      })
+    } catch (e) {
+      console.error('Error generando PDF:', e)
+      alert('Error al generar el PDF')
+    } finally {
+      setGenerandoPDF(false)
     }
   }
 
@@ -112,6 +134,15 @@ export default function Resumen({ fecha, servicio, setServicio }: Props) {
               className="ml-1 sm:ml-2 px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md border border-gray-300 flex-shrink-0"
             >
               Hoy
+            </button>
+            <button
+              onClick={handlePDF}
+              disabled={desglose.length === 0 || cargando || generandoPDF}
+              title="Descargar el consumo de la semana en PDF, para armar los pedidos"
+              className="ml-1 flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-100 rounded-md border border-gray-300 flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{generandoPDF ? 'Generando...' : 'PDF'}</span>
             </button>
           </div>
 
@@ -289,7 +320,7 @@ function SeccionCategoria({
                   {d.origenes.length > 2 && ` · +${d.origenes.length - 2}`}
                 </td>
                 <td className="text-right px-3 font-medium font-mono">
-                  {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })}{' '}
+                  {d.cantidad_total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
                   {d.unidad}
                 </td>
                 <td className="text-right px-3 text-gray-700 font-mono">
@@ -308,7 +339,7 @@ function SeccionCategoria({
             <div className="flex items-start justify-between mb-1">
               <div className="text-sm font-medium text-gray-900">{d.nombre}</div>
               <div className="text-sm font-semibold text-gray-700 ml-2 font-mono">
-                {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })}{' '}
+                {d.cantidad_total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
                 {d.unidad}
               </div>
             </div>

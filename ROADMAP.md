@@ -49,7 +49,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Órdenes de Compra** | Pedidos a proveedores, con PDF |
 | **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito. Solapa **Resumen semanal** (V.26): faltantes, cambios de precio, agregados sin pedir y órdenes sin factura, con notas por línea y PDF |
 | **Ventas** | Carga diaria de ventas. **Nivel grueso:** ventas vs compras del período |
-| **Análisis** | Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo |
+| **Análisis** | Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo. Desde Resumen se baja la planilla de pedido de la semana, con la cantidad **a comprar** ajustada por merma (V.30) |
 | **Estadísticas** | Dashboard consolidado (6 pestañas: las 4 de compras y precios, más **Cierre de mes** (V.25) y **ABC de insumos** (V.28)) |
 | **Inventario** | Hojas de control de stock. **Pausado a propósito** — ver Decisiones tomadas |
 | **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
@@ -77,6 +77,11 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   solo: `null === null` es verdadero y todos los vinos matchean entre sí. Usar `claveItem()`
   de `src/lib/auditoria-semanal.ts`, que devuelve `i:<uuid>` o `v:<uuid>`. Ya rompió dos
   veces: el semáforo de facturas y la detección de comprobantes duplicados.
+- **La cantidad de una receta es el NETO que va al plato, no lo que hay que comprar.**
+  La merma se aplica al precio (`÷ (1 − merma)`), no a la cantidad: si se aplicara a las dos
+  se contaría dos veces. Para saber cuánto pedir hay que dividir el neto por el factor de
+  aprovechamiento — con 25% de merma, 18,40 kg netos son 24,53 kg de compra. Cualquier
+  pantalla que sirva para armar pedidos tiene que hacer esa conversión o induce a pedir de menos.
 - **Todo lo que lea muchas filas va paginado.** PostgREST corta en 1000 sin avisar y sin
   error. `factura_items` ya pasó las 2300 y `precios_insumo` las 3500. Ya escondió 63
   variaciones de precio (V.22).

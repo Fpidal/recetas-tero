@@ -10,6 +10,16 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.30',
+    fecha: '14/08/26',
+    cambios: [
+      'Análisis → Resumen: nuevo PDF del consumo de la semana, agrupado por rubro (Carnes, Pescados, Verduras…), pensado para armar los pedidos',
+      'Ese PDF trae una columna "A comprar" que ajusta por la merma: si consumiste 18,40 kg de roast beef con 25% de merma, tenés que comprar 24,53 kg. Antes había que hacer esa cuenta a mano, y era fácil pedir de menos',
+      'Trae también una columna en blanco para anotar el pedido a mano mientras se recorre la cocina',
+      'Las cantidades ahora se muestran siempre con dos decimales, así las columnas quedan alineadas y se comparan de un vistazo',
+    ],
+  },
+  {
     version: 'V.29',
     fecha: '14/08/26',
     cambios: [

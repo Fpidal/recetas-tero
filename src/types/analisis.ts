@@ -116,6 +116,13 @@ export interface ItemDesglosado {
   categoria: string
   cantidad_total: number
   costo_total: number
+  /**
+   * Merma del insumo. Hace falta para saber cuánto hay que COMPRAR: la
+   * cantidad de arriba es el neto que va al plato, ya limpio, porque la merma
+   * se aplica al precio y no a la cantidad. Con 25% de merma, 18,40 kg netos
+   * son 24,53 kg de compra.
+   */
+  merma_porcentaje: number
   origenes: string[] // Ej: ["12 milanesas", "carga directa"]
 }
 

@@ -195,7 +195,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
                         {d.origenes.length > 2 && ` · +${d.origenes.length - 2} más`}
                       </td>
                       <td className="text-right px-3 font-medium font-mono">
-                        {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })} {d.unidad}
+                        {d.cantidad_total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {d.unidad}
                       </td>
                       <td className="text-right px-3 text-gray-600 font-mono">
                         {d.costo_total > 0 ? formatearMonedaAnalisis(d.costo_total) : '—'}
@@ -223,7 +223,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
                   <div className="flex items-start justify-between mb-1">
                     <div className="text-sm font-medium text-gray-900">{d.nombre}</div>
                     <div className="text-sm font-semibold text-gray-700 ml-2 font-mono">
-                      {d.cantidad_total.toLocaleString('es-AR', { maximumFractionDigits: 3 })} {d.unidad}
+                      {d.cantidad_total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {d.unidad}
                     </div>
                   </div>
                   <div className="text-[11px] text-gray-500">

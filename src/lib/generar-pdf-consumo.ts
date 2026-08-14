@@ -37,7 +37,7 @@ function fmtMoney(n: number): string {
 }
 
 function fmtCantidad(n: number): string {
-  return Number(n).toLocaleString('es-AR', { maximumFractionDigits: 3 })
+  return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 /** "29/07/2026" a partir de "2026-07-29" (sin pasar por Date, evita corrimiento de zona horaria) */

@@ -476,13 +476,14 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
 
   const infoMap = new Map<
     string,
-    { nombre: string; unidad: string; categoria: string; costo_unit_iva: number }
+    { nombre: string; unidad: string; categoria: string; merma: number; costo_unit_iva: number }
   >()
   for (const i of infoInsumos || []) {
     infoMap.set((i as any).id, {
       nombre: (i as any).nombre,
       unidad: (i as any).unidad_medida,
       categoria: (i as any).categoria || 'Almacen',
+      merma: Number((i as any).merma_porcentaje) || 0,
       costo_unit_iva: costoFinalInsumo(
         Number((i as any).precio_actual || 0),
         Number((i as any).iva_porcentaje || 0),
@@ -591,6 +592,7 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
         nombre: acc.nombre || '(sin nombre)',
         unidad: acc.unidad || 'botella',
         categoria: 'Vinos',
+        merma_porcentaje: 0, // los vinos no tienen merma
       })
       return
     }
@@ -604,6 +606,7 @@ export async function desglosarConsumo(consumoId: string): Promise<ItemDesglosad
       nombre: info.nombre,
       unidad: info.unidad,
       categoria: info.categoria,
+      merma_porcentaje: info.merma,
     })
   })
 

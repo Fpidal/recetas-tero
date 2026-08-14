@@ -22,7 +22,7 @@ const TERRACOTA = [163, 82, 52] as const
 const GRIS_CLARO = [245, 245, 245] as const
 
 const fmt = (n: number) => `$${Math.round(n).toLocaleString('es-AR')}`
-const cant = (n: number) => Number(n).toLocaleString('es-AR', { maximumFractionDigits: 3 })
+const cant = (n: number) => Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fecha = (f: string) => { const [a, m, d] = f.split('-'); return `${d}/${m}` }
 
 async function cargarLogo(): Promise<string | null> {

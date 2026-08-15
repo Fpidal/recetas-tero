@@ -868,7 +868,7 @@ export default function Home() {
   const totalCompras6Meses = data.comprasMensualesData.reduce((s, d) => s + d.valor, 0)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header: eyebrow -> titulo serif -> regla.
           La serif aparece solo en el logo y en los titulos de pagina; si se
           usara tambien en subtitulos dejaria de senalar nada. */}
@@ -885,7 +885,7 @@ export default function Home() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* KPI 1 - Food Cost Promedio */}
         {/* Sin icono a proposito: el numero es el protagonista y el icono compite */}
-        <div className="card p-4">
+        <div className="card p-3.5">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.11em] text-ink-light">Food Cost</p>
           <p className="font-mono text-[25px] font-semibold text-ink tracking-[-0.02em] mt-1.5">
             {isLoading ? '...' : `${data.foodCostPromedio.toFixed(1)}%`}
@@ -894,7 +894,7 @@ export default function Home() {
         </div>
 
         {/* KPI 2 - OC Pendientes de Facturar */}
-        <div className="card p-4">
+        <div className="card p-3.5">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.11em] text-ink-light">OC Pendientes</p>
           <p className="font-mono text-[25px] font-semibold text-ink tracking-[-0.02em] mt-1.5">
             {isLoading ? '...' : formatMoney(data.totalOrdenesSinFacturar)}
@@ -905,7 +905,7 @@ export default function Home() {
         {/* KPI 3 - Mayor Variación de Insumo */}
         {/* Aca el "valor" es un nombre, no una cifra: va en sans y el % debajo,
             para no romper la alineacion de la fila de KPIs */}
-        <div className="card p-4">
+        <div className="card p-3.5">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.11em] text-ink-light">Mayor Variación</p>
           {isLoading ? (
             <p className="text-[19px] font-semibold text-ink mt-1.5">...</p>
@@ -930,7 +930,7 @@ export default function Home() {
         </div>
 
         {/* KPI 4 - Compras Semana Actual */}
-        <div className="card p-4">
+        <div className="card p-3.5">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.11em] text-ink-light">Compras</p>
           <p className="font-mono text-[25px] font-semibold text-ink tracking-[-0.02em] mt-1.5">
             {isLoading ? '...' : formatMoney(data.comprasSemanaActual)}
@@ -950,25 +950,20 @@ export default function Home() {
       </div>
 
       {/* Segunda fila: Alertas + Variación por Categoría */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Panel de Alertas */}
-        <div className="card p-4">
-          <h2 className="text-lg font-semibold text-ink mb-3">Alertas</h2>
+        <div className="card p-3.5">
+          <h2 className="text-base font-semibold text-ink mb-2">Alertas</h2>
           <div className="space-y-2">
             {/* Alerta 1 - Ítems con aumento >7% */}
             <button
               onClick={() => data.itemsConAumento > 0 && setAlertaModal('itemsAumento')}
-              className={`w-full flex items-center justify-between p-3 bg-cream-dark rounded-lg transition-colors ${data.itemsConAumento > 0 ? 'hover:bg-sand cursor-pointer' : ''}`}
+              className={`w-full flex items-center justify-between py-2.5 border-b border-sand-light last:border-0 transition-colors ${data.itemsConAumento > 0 ? 'hover:bg-cream cursor-pointer' : ''}`}
             >
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-full" style={{ backgroundColor: COLORS.dangerBg }}>
-                  <TrendingUp className="w-3.5 h-3.5" style={{ color: COLORS.danger }} />
-                </div>
-                <span className="text-sm text-ink">Ítems con aumento &gt;7%</span>
-              </div>
+              <span className="text-sm text-ink-strong text-left">Ítems con aumento &gt;7%</span>
               <span
-                className="px-2.5 py-1 rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: data.itemsConAumento > 0 ? COLORS.danger : COLORS.success }}
+                className="font-mono text-[22px] font-semibold tracking-[-0.02em]"
+                style={{ color: data.itemsConAumento > 0 ? COLORS.danger : COLORS.success }}
               >
                 {data.itemsConAumento}
               </span>
@@ -977,17 +972,12 @@ export default function Home() {
             {/* Alerta 2 - Ítems con baja de precio */}
             <button
               onClick={() => data.itemsConBaja > 0 && setAlertaModal('itemsBaja')}
-              className={`w-full flex items-center justify-between p-3 bg-cream-dark rounded-lg transition-colors ${data.itemsConBaja > 0 ? 'hover:bg-sand cursor-pointer' : ''}`}
+              className={`w-full flex items-center justify-between py-2.5 border-b border-sand-light last:border-0 transition-colors ${data.itemsConBaja > 0 ? 'hover:bg-cream cursor-pointer' : ''}`}
             >
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-full" style={{ backgroundColor: COLORS.successBg }}>
-                  <TrendingDown className="w-3.5 h-3.5" style={{ color: COLORS.success }} />
-                </div>
-                <span className="text-sm text-ink">Ítems con baja &gt;5%</span>
-              </div>
+              <span className="text-sm text-ink-strong text-left">Ítems con baja &gt;5%</span>
               <span
-                className="px-2.5 py-1 rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: data.itemsConBaja > 0 ? COLORS.success : COLORS.inkMuted }}
+                className="font-mono text-[22px] font-semibold tracking-[-0.02em]"
+                style={{ color: data.itemsConBaja > 0 ? COLORS.success : COLORS.inkMuted }}
               >
                 {data.itemsConBaja}
               </span>
@@ -996,17 +986,12 @@ export default function Home() {
             {/* Alerta 3 - Órdenes sin factura */}
             <button
               onClick={() => data.ordenesSinFactura > 0 && setAlertaModal('ordenesSinFactura')}
-              className={`w-full flex items-center justify-between p-3 bg-cream-dark rounded-lg transition-colors ${data.ordenesSinFactura > 0 ? 'hover:bg-sand cursor-pointer' : ''}`}
+              className={`w-full flex items-center justify-between py-2.5 border-b border-sand-light last:border-0 transition-colors ${data.ordenesSinFactura > 0 ? 'hover:bg-cream cursor-pointer' : ''}`}
             >
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-full" style={{ backgroundColor: COLORS.warningBg }}>
-                  <XCircle className="w-3.5 h-3.5" style={{ color: COLORS.warning }} />
-                </div>
-                <span className="text-sm text-ink">Órdenes sin factura</span>
-              </div>
+              <span className="text-sm text-ink-strong text-left">Órdenes sin factura</span>
               <span
-                className="px-2.5 py-1 rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: data.ordenesSinFactura > 0 ? COLORS.warning : COLORS.success }}
+                className="font-mono text-[22px] font-semibold tracking-[-0.02em]"
+                style={{ color: data.ordenesSinFactura > 0 ? COLORS.warning : COLORS.success }}
               >
                 {data.ordenesSinFactura}
               </span>
@@ -1015,17 +1000,12 @@ export default function Home() {
             {/* Alerta 4 - Platos fuera de rango */}
             <button
               onClick={() => data.platosFueraRango > 0 && setAlertaModal('platosFuera')}
-              className={`w-full flex items-center justify-between p-3 bg-cream-dark rounded-lg transition-colors ${data.platosFueraRango > 0 ? 'hover:bg-sand cursor-pointer' : ''}`}
+              className={`w-full flex items-center justify-between py-2.5 border-b border-sand-light last:border-0 transition-colors ${data.platosFueraRango > 0 ? 'hover:bg-cream cursor-pointer' : ''}`}
             >
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-full" style={{ backgroundColor: COLORS.terracottaBg }}>
-                  <ChefHat className="w-3.5 h-3.5" style={{ color: COLORS.terracotta }} />
-                </div>
-                <span className="text-sm text-ink">Platos fuera de rango</span>
-              </div>
+              <span className="text-sm text-ink-strong text-left">Platos fuera de rango</span>
               <span
-                className="px-2.5 py-1 rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: data.platosFueraRango > 0 ? COLORS.terracotta : COLORS.success }}
+                className="font-mono text-[22px] font-semibold tracking-[-0.02em]"
+                style={{ color: data.platosFueraRango > 0 ? COLORS.terracotta : COLORS.success }}
               >
                 {data.platosFueraRango}
               </span>
@@ -1034,14 +1014,14 @@ export default function Home() {
         </div>
 
         {/* Variación de Precios por Categoría */}
-        <div className="card p-4">
-          <h2 className="text-lg font-semibold text-ink mb-3">Variación Precios por Categoría</h2>
+        <div className="card p-3.5">
+          <h2 className="text-base font-semibold text-ink mb-2">Variación Precios por Categoría</h2>
           {data.variacionCategoriasData.length === 0 ? (
-            <div className="flex items-center justify-center h-40">
+            <div className="flex items-center justify-center h-36">
               <p className="text-sm text-ink-muted">Sin datos</p>
             </div>
           ) : (
-            <div className="h-44">
+            <div className="h-36">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.variacionCategoriasData} margin={{ top: 22, right: 10, left: -15, bottom: 14 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E8E2DA" />
@@ -1085,11 +1065,11 @@ export default function Home() {
       </div>
 
       {/* Tercera fila: Evolución Compras + Distribución */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Evolución Compras */}
-        <div className="card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-ink">Compras</h2>
+        <div className="card p-3.5">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-semibold text-ink">Compras</h2>
             <div className="flex items-center gap-3">
               <span className="font-mono text-sm font-semibold" style={{ color: COLORS.olive }}>
                 {formatMoney(modoCompras === 'semanal' ? totalCompras4Semanas : totalCompras6Meses)}
@@ -1110,14 +1090,14 @@ export default function Home() {
 
             if (comprasData.length === 0) {
               return (
-                <div className="flex items-center justify-center h-48">
+                <div className="flex items-center justify-center h-36">
                   <p className="text-sm text-ink-muted">Sin datos</p>
                 </div>
               )
             }
 
             return (
-              <div className="h-48">
+              <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={comprasData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E8E2DA" />
@@ -1143,9 +1123,9 @@ export default function Home() {
         </div>
 
         {/* Distribución de Compras */}
-        <div className="card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-ink">Distribución Compras</h2>
+        <div className="card p-3.5">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-semibold text-ink">Distribución Compras</h2>
             <select
               value={modoDistribucion}
               onChange={(e) => setModoDistribucion(e.target.value as 'proveedor' | 'categoria')}
@@ -1162,7 +1142,7 @@ export default function Home() {
 
             if (distribucionData.length === 0) {
               return (
-                <div className="flex items-center justify-center h-48">
+                <div className="flex items-center justify-center h-36">
                   <p className="text-sm text-ink-muted">Sin datos</p>
                 </div>
               )
@@ -1170,7 +1150,7 @@ export default function Home() {
 
             return (
               <div className="flex items-center gap-6">
-                <div className="h-48 w-48 flex-shrink-0 flex items-center justify-center">
+                <div className="h-40 w-40 flex-shrink-0 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -1223,10 +1203,10 @@ export default function Home() {
       </div>
 
       {/* Cuarta fila: Compras por Categoría + Cifras del mes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="card p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-ink">Compras por Categoría</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="card p-3.5">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-base font-semibold text-ink">Compras por Categoría</h2>
           <select
             value={modoComprasCat}
             onChange={(e) => setModoComprasCat(e.target.value as 'semanal' | 'mensual')}
@@ -1306,127 +1286,89 @@ export default function Home() {
 
       {/* Cifras del mes: sale de obtenerCierreMes(), la MISMA funcion que usa
           la solapa Cierre de Mes. Si el Dashboard calculara lo suyo, tarde o
-          temprano las dos pantallas dirian numeros distintos. */}
-      <div className="card p-4">
-        <div className="flex items-baseline justify-between mb-3">
-          <div>
-            <h2 className="text-lg font-semibold text-ink">Cifras del mes</h2>
-            <p className="text-xs text-ink-muted mt-0.5">
-              {cierre ? `${nombreMes(cierre.mes)} · contra ${nombreMes(cierre.mesPrevio)}` : 'Cargando...'}
-            </p>
-          </div>
+          temprano las dos pantallas dirian numeros distintos.
+
+          En grilla de 2x3 y no en lista: seis filas de dos lineas hacian esta
+          tarjeta mas alta que el grafico de al lado, y esa altura mandaba la
+          de toda la fila. */}
+      <div className="card p-3.5">
+        <div className="flex items-baseline justify-between mb-2">
+          <h2 className="text-base font-semibold text-ink">Cifras del mes</h2>
+          <p className="text-xs text-ink-light">
+            {cierre ? `${nombreMes(cierre.mes)} · vs ${nombreMes(cierre.mesPrevio)}` : 'Cargando...'}
+          </p>
         </div>
 
-        {cierre && (
-          <div className="divide-y divide-sand-light">
-            {[
-              { label: 'Ventas', valor: cierre.ventas.mes, previo: cierre.ventas.previo, subirEsBueno: true },
-              { label: 'Compras', valor: cierre.compras.mes, previo: cierre.compras.previo, subirEsBueno: false },
-              { label: 'Margen bruto', valor: cierre.incidencia.margen, previo: cierre.incidenciaPrevia.margen, subirEsBueno: true },
-            ].map((f) => {
-              const v = variacion(f.valor, f.previo)
-              const sube = v !== null && v > 0.05
-              const baja = v !== null && v < -0.05
-              const bueno = f.subirEsBueno ? sube : baja
-              const malo = f.subirEsBueno ? baja : sube
-              return (
-                <div key={f.label} className="flex items-center justify-between py-3">
-                  <span className="text-sm text-ink-strong">{f.label}</span>
-                  <div className="text-right">
-                    <div className="font-mono text-[17px] font-semibold text-ink tracking-[-0.01em]">
-                      {formatMoney(f.valor)}
-                    </div>
-                    <div
-                      className="font-mono text-[11px]"
-                      style={{ color: malo ? COLORS.danger : bueno ? COLORS.success : '#9B948C' }}
-                    >
-                      {v === null ? 'sin comparación' : `${sube ? '▲' : baja ? '▼' : ''} ${Math.abs(v).toFixed(1)}%`}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+        {cierre && (() => {
+          const teo = cierre.ventas.mes > 0 ? (cierre.compras.mes / cierre.ventas.mes) * 100 : null
+          const teoPrev = cierre.ventas.previo > 0 ? (cierre.compras.previo / cierre.ventas.previo) * 100 : null
+          const inc = cierre.incidencia
+          const incPrev = cierre.incidenciaPrevia
+          const hayReal = inc.diasConCarga > 0
 
-            {/* Incidencia TEORICA: compras contra ventas del mes.
-                Es la que sale de las facturas y esta disponible siempre.
-                La REAL usa el consumo cargado en Analisis y solo existe si
-                alguien lo carga — por eso van las dos y se muestra el desvio. */}
-            {(() => {
-              const teo = cierre.ventas.mes > 0 ? (cierre.compras.mes / cierre.ventas.mes) * 100 : null
-              const teoPrev = cierre.ventas.previo > 0 ? (cierre.compras.previo / cierre.ventas.previo) * 100 : null
-              const pts = teo !== null && teoPrev !== null ? teo - teoPrev : null
-              return (
-                <div className="flex items-center justify-between py-3">
-                  <span className="text-sm text-ink-strong">
-                    Incidencia teórica
-                    <span className="block text-[11px] text-ink-light">compras sobre ventas</span>
-                  </span>
-                  <div className="text-right">
-                    <div className="font-mono text-[17px] font-semibold text-ink tracking-[-0.01em]">
-                      {teo !== null ? `${teo.toFixed(1)}%` : '—'}
-                    </div>
-                    {pts !== null && (
-                      <div
-                        className="font-mono text-[11px]"
-                        style={{ color: pts > 0.05 ? COLORS.danger : pts < -0.05 ? COLORS.success : '#9B948C' }}
-                      >
-                        {pts > 0 ? '▲' : pts < 0 ? '▼' : ''} {Math.abs(pts).toFixed(1)} pts
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })()}
+          /** Delta en %: rojo si es malo, verde si es bueno */
+          const pct = (v: number, prev: number, subirEsBueno: boolean) => {
+            const d = variacion(v, prev)
+            if (d === null) return { texto: 'sin comparación', color: '#9B948C' }
+            const sube = d > 0.05, baja = d < -0.05
+            const malo = subirEsBueno ? baja : sube
+            const bueno = subirEsBueno ? sube : baja
+            return {
+              texto: `${sube ? '▲' : baja ? '▼' : ''} ${Math.abs(d).toFixed(1)}%`,
+              color: malo ? COLORS.danger : bueno ? COLORS.success : '#9B948C',
+            }
+          }
+          /** La incidencia se compara en PUNTOS, no en porcentaje de porcentaje */
+          const pts = (v: number | null, prev: number | null) => {
+            if (v === null || prev === null) return { texto: 'sin comparación', color: '#9B948C' }
+            const d = v - prev
+            return {
+              texto: `${d > 0 ? '▲' : d < 0 ? '▼' : ''} ${Math.abs(d).toFixed(1)} pts`,
+              color: d > 0.05 ? COLORS.danger : d < -0.05 ? COLORS.success : '#9B948C',
+            }
+          }
 
-            {/* La incidencia se compara en PUNTOS, no en porcentaje de porcentaje */}
-            <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-ink-strong">
-                Incidencia real
-                {cierre.incidencia.diasConCarga > 0 && (
-                  <span className="block text-[11px] text-ink-light font-mono">
-                    muestreo: {cierre.incidencia.diasConCarga} de {cierre.incidencia.diasConVenta} servicios
-                  </span>
-                )}
-              </span>
-              <div className="text-right">
-                <div className="font-mono text-[17px] font-semibold text-ink tracking-[-0.01em]">
-                  {cierre.incidencia.diasConCarga > 0 ? `${cierre.incidencia.incidencia.toFixed(1)}%` : '—'}
-                </div>
-                {cierre.incidencia.diasConCarga > 0 && cierre.incidenciaPrevia.diasConCarga > 0 && (() => {
-                  const pts = cierre.incidencia.incidencia - cierre.incidenciaPrevia.incidencia
-                  return (
-                    <div
-                      className="font-mono text-[11px]"
-                      style={{ color: pts > 0.05 ? COLORS.danger : pts < -0.05 ? COLORS.success : '#9B948C' }}
-                    >
-                      {pts > 0 ? '▲' : pts < 0 ? '▼' : ''} {Math.abs(pts).toFixed(1)} pts
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
+          const celdas = [
+            { label: 'Ventas', valor: formatMoney(cierre.ventas.mes), delta: pct(cierre.ventas.mes, cierre.ventas.previo, true) },
+            { label: 'Compras', valor: formatMoney(cierre.compras.mes), delta: pct(cierre.compras.mes, cierre.compras.previo, false) },
+            { label: 'Margen bruto', valor: formatMoney(inc.margen), delta: pct(inc.margen, incPrev.margen, true) },
+            { label: 'Inc. teórica', valor: teo !== null ? `${teo.toFixed(1)}%` : '—', delta: pts(teo, teoPrev), nota: 'compras s/ventas' },
+            { label: 'Inc. real', valor: hayReal ? `${inc.incidencia.toFixed(1)}%` : '—', delta: hayReal && incPrev.diasConCarga > 0 ? pts(inc.incidencia, incPrev.incidencia) : { texto: `${inc.diasConCarga} de ${inc.diasConVenta} servicios`, color: '#9B948C' }, nota: hayReal ? `muestreo ${inc.diasConCarga}/${inc.diasConVenta}` : undefined },
+            {
+              label: 'Desvío real vs teórica',
+              valor: hayReal && teo !== null ? `${inc.incidencia - teo > 0 ? '+' : ''}${(inc.incidencia - teo).toFixed(1)} pts` : '—',
+              delta: null,
+              color: hayReal && teo !== null ? (Math.abs(inc.incidencia - teo) < 1 ? '#9B948C' : inc.incidencia - teo > 0 ? COLORS.danger : COLORS.success) : undefined,
+            },
+          ]
 
-            {/* El desvio es lo que hace preguntar: si la cocina consume mas de
-                lo que se compro, algo no cierra entre lo comprado y lo usado. */}
-            {cierre.incidencia.diasConCarga > 0 && cierre.ventas.mes > 0 && (() => {
-              const teo = (cierre.compras.mes / cierre.ventas.mes) * 100
-              const desvio = cierre.incidencia.incidencia - teo
-              return (
-                <div className="flex items-center justify-between py-3">
-                  <span className="text-sm text-ink-muted">Desvío real vs teórica</span>
-                  <span
-                    className="font-mono text-sm font-semibold"
-                    style={{ color: Math.abs(desvio) < 1 ? '#9B948C' : desvio > 0 ? COLORS.danger : COLORS.success }}
+          return (
+            <div className="grid grid-cols-3 gap-x-3 gap-y-3">
+              {celdas.map((c) => (
+                <div key={c.label}>
+                  <p className="text-[9.5px] font-bold uppercase tracking-[0.09em] text-ink-light truncate">
+                    {c.label}
+                  </p>
+                  <p
+                    className="font-mono text-[17px] font-semibold tracking-[-0.02em] mt-0.5"
+                    style={{ color: c.color || '#1A1A1A' }}
                   >
-                    {desvio > 0 ? '+' : ''}{desvio.toFixed(1)} pts
-                  </span>
+                    {c.valor}
+                  </p>
+                  {c.delta && (
+                    <p className="font-mono text-[10.5px] mt-0.5" style={{ color: c.delta.color }}>
+                      {c.delta.texto}
+                    </p>
+                  )}
+                  {c.nota && <p className="text-[10px] text-ink-light mt-0.5">{c.nota}</p>}
                 </div>
-              )
-            })()}
-          </div>
-        )}
+              ))}
+            </div>
+          )
+        })()}
       </div>
       </div>
+
 
       {/* Modal de Alertas */}
       {alertaModal && (
@@ -1434,7 +1376,7 @@ export default function Home() {
           <div className="bg-cream-light rounded-card border border-sand shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden">
             {/* Header del modal */}
             <div className="flex items-center justify-between p-4 border-b border-sand">
-              <h3 className="text-lg font-semibold text-ink">
+              <h3 className="text-base font-semibold text-ink">
                 {alertaModal === 'itemsAumento' && 'Ítems con aumento >7%'}
                 {alertaModal === 'itemsBaja' && 'Ítems con baja >5%'}
                 {alertaModal === 'ordenesSinFactura' && 'Órdenes sin factura'}

@@ -18,6 +18,8 @@ export const CHANGELOG: VersionEntry[] = [
       'Dashboard: nueva tarjeta "Cifras del mes" con ventas, compras, margen bruto e incidencia, comparados contra el mes anterior',
       'Dashboard: ahora muestra la incidencia teórica (compras sobre ventas) además de la real, y el desvío entre las dos',
       'Se corrigió el gráfico de variación de precios, donde los porcentajes se encimaban con las barras',
+      'Dashboard: ahora entra completo en una pantalla, sin scroll',
+      'Dashboard: las alertas se leen de un vistazo — el número grande a la derecha, sin iconos ni etiquetas de color',
     ],
   },
   {

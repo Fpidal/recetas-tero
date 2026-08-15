@@ -30,7 +30,7 @@ export default function AnalisisPage() {
     <div className="p-4 lg:p-6 mobile-content-padding">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Análisis</h1>
+        <h1>Análisis</h1>
         <p className="text-sm text-gray-500 mt-1">
           Carga real de cocina, desglose por insumo e incidencia real (food cost)
         </p>

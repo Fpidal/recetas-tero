@@ -838,7 +838,7 @@ export default function CartaPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">Carta</h1>
+          <h1>Carta</h1>
           <p className="text-xs text-gray-600">
             {tabActiva === 'ejecutivos' ? 'Menús del día con composición directa' :
              tabActiva === 'especiales' ? 'Menús con opciones para eventos' :

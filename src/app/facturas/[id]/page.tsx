@@ -381,7 +381,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg lg:text-2xl font-bold text-gray-900 truncate">Factura {factura.numero_factura}</h1>
+          <h1 className="truncate">Factura {factura.numero_factura}</h1>
           <p className="text-xs lg:text-base text-gray-600 truncate">{factura.proveedor_nombre}</p>
         </div>
         <FileText className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400 flex-shrink-0" />

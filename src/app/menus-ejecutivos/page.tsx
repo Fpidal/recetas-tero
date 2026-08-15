@@ -376,7 +376,7 @@ export default function MenusPage() {
     <div className="overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Menús</h1>
+          <h1>Menús</h1>
           <p className="text-xs text-gray-600">
             {activeTab === 'ejecutivos' ? 'Menús del día con composición directa' : 'Menús con opciones para eventos'}
           </p>

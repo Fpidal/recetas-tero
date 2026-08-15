@@ -1,22 +1,29 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, DM_Sans, JetBrains_Mono, Montserrat } from "next/font/google";
+import { Instrument_Serif, Instrument_Sans, IBM_Plex_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { headers } from "next/headers";
 
-const playfair = Playfair_Display({
+// Display: solo el logo, los títulos de página y las cifras hero.
+// En ningún otro lado — si aparece en más lugares deja de destacar nada.
+const serif = Instrument_Serif({
+  weight: "400",
   subsets: ["latin"],
-  variable: "--font-display",
+  variable: "--font-serif",
   display: "swap",
 });
 
-const dmSans = DM_Sans({
+// Todo el resto de la interfaz
+const sans = Instrument_Sans({
   subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-sans",
   display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+// Toda cifra: montos, porcentajes, fechas, cantidades. Sin excepción,
+// incluso dentro de un párrafo. Es la convención del proyecto (580 usos).
+const mono = IBM_Plex_Mono({
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
   variable: "--font-mono",
   display: "swap",
@@ -75,7 +82,7 @@ export default function RootLayout({
   const isFullScreen = pathname === '/login' || pathname === '/menu' || pathname === '/carta/menu'
 
   return (
-    <html lang="es" className={`${playfair.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${montserrat.variable}`}>
+    <html lang="es" className={`${serif.variable} ${sans.variable} ${mono.variable} ${montserrat.variable}`}>
       <head>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
@@ -86,7 +93,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Tero Restó" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-sans antialiased">
         {isFullScreen ? (
           children
         ) : (

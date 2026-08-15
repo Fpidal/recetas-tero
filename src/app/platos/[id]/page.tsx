@@ -724,7 +724,7 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">
+          <h1>
             {isReadOnly ? 'Ver Plato' : 'Editar Plato'}
           </h1>
           {isInPapelera && (

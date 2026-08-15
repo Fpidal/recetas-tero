@@ -504,7 +504,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">No se puede editar</h1>
+            <h1>No se puede editar</h1>
           </div>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">

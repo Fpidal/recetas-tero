@@ -931,7 +931,7 @@ export default function EstadisticasPage() {
     <div className="overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Estadísticas</h1>
+          <h1>Estadísticas</h1>
           <p className="text-sm text-gray-600">
             {tabConFiltroPropio ? (
               activeTab === 'cierre_mes' ? 'La foto del mes, contra el mes anterior' : 'Dónde se va la plata de las compras'

@@ -36,10 +36,9 @@
   --color-danger: #9B2C2C;
   --color-info: #4A6572;
 
-  /* Tipografía */
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* Tipografía: las define next/font en el <html> (ver layout.tsx).
+     No repetirlas acá — :root y la clase de next/font tienen la misma
+     especificidad, así que cuál gana depende del orden de los estilos. */
 }
 
 /* =====================================================
@@ -59,8 +58,11 @@ body {
    TIPOGRAFÍA EDITORIAL
    ===================================================== */
 @layer base {
+  /* Titulo de pagina: serif de trazo fino, como el logo.
+     Instrument Serif solo tiene peso 400 — poner font-bold la sintetiza y
+     ensucia el trazo. El tamano es lo que le da jerarquia, no el grosor. */
   h1 {
-    @apply font-bold text-3xl tracking-tight text-ink;
+    @apply font-serif font-normal text-[34px] leading-none text-ink;
     letter-spacing: -0.02em;
   }
 

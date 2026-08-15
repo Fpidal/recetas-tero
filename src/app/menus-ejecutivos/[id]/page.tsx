@@ -460,7 +460,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1>
             {isReadOnly ? 'Ver Menú Ejecutivo' : 'Editar Menú Ejecutivo'}
           </h1>
           {isReadOnly ? (

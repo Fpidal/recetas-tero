@@ -324,7 +324,7 @@ export default function PapeleraPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Papelera</h1>
+          <h1>Papelera</h1>
           <p className="text-gray-600 text-sm">Elementos eliminados e historial de facturas</p>
         </div>
       </div>

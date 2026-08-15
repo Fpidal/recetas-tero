@@ -10,6 +10,17 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.32',
+    fecha: '15/08/26',
+    cambios: [
+      'Menú lateral reorganizado por áreas: Compras, Cocina, Barra, Operación e Informes. Son los mismos accesos de siempre, agrupados para encontrarlos más rápido',
+      'Nueva tipografía en todo el sistema, más legible en los números de las tablas',
+      'Dashboard: nueva tarjeta "Cifras del mes" con ventas, compras, margen bruto e incidencia, comparados contra el mes anterior',
+      'Dashboard: ahora muestra la incidencia teórica (compras sobre ventas) además de la real, y el desvío entre las dos',
+      'Se corrigió el gráfico de variación de precios, donde los porcentajes se encimaban con las barras',
+    ],
+  },
+  {
     version: 'V.31',
     fecha: '14/08/26',
     cambios: [

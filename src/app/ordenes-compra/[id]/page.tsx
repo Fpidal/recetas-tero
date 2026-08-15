@@ -477,7 +477,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg lg:text-2xl font-bold text-gray-900 truncate">
+          <h1 className="truncate">
             OC{orden.numero ? ` ${orden.numero}` : ''}
           </h1>
           <p className="text-xs lg:text-base text-gray-600 truncate">{orden.proveedor_nombre}</p>

@@ -150,7 +150,7 @@ const cmStyles = `
   margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #1B3A2D;
 }
 .cm-cat {
-  font-family: var(--font-display), serif;
+  font-family: var(--font-serif), serif;
   font-size: 21px; font-weight: 600; color: #1B3A2D; letter-spacing: .3px;
 }
 .cm-cat-line { flex: 1; }
@@ -158,7 +158,7 @@ const cmStyles = `
 .cm-dish:last-child { border-bottom: none; }
 .cm-dish-head { display: flex; align-items: baseline; }
 .cm-dish-name {
-  font-family: var(--font-display), serif;
+  font-family: var(--font-serif), serif;
   font-size: 15.5px; font-weight: 600; color: #1a2a20; line-height: 1.25;
 }
 .cm-dots { flex: 1; border-bottom: 1px dotted #c9b9a0; margin: 0 7px; transform: translateY(-4px); }
@@ -167,7 +167,7 @@ const cmStyles = `
   font-size: 14px; font-weight: 600; color: #1B3A2D; white-space: nowrap;
 }
 .cm-dish-desc {
-  font-family: var(--font-display), serif; font-style: italic;
+  font-family: var(--font-serif), serif; font-style: italic;
   font-size: 12.5px; color: #4a6a54; margin-top: 2px; max-width: 85%; line-height: 1.3;
 }
 .cm-footer {
@@ -179,7 +179,7 @@ const cmStyles = `
   font-family: var(--font-menu-sans), sans-serif;
   font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9a9080;
 }
-.cm-foot-brand { font-family: var(--font-display), serif; font-style: italic; font-size: 14px; text-transform: none; letter-spacing: 0; color: #1B3A2D; }
+.cm-foot-brand { font-family: var(--font-serif), serif; font-style: italic; font-size: 14px; text-transform: none; letter-spacing: 0; color: #1B3A2D; }
 .cm-qr { display: flex; align-items: center; gap: 8px; }
 .cm-qr img { width: 58px; height: 58px; }
 .cm-qr span { font-family: var(--font-menu-sans), sans-serif; font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: #9a9080; line-height: 1.4; }

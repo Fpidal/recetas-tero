@@ -718,7 +718,7 @@ export default function NuevaFacturaPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1>
             {tipoComprobante === 'nota_credito' ? 'Nueva Nota de Crédito' : 'Nueva Factura'}
           </h1>
           <p className="text-gray-600">

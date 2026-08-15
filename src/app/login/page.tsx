@@ -41,7 +41,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mb-4">
             <ChefHat className="w-9 h-9 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Tero Restó</h1>
+          <h1>Tero Restó</h1>
           <p className="text-gray-500 text-sm mt-1">Sistema de gestión gastronómica</p>
         </div>
 

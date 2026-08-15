@@ -29,21 +29,82 @@ import { supabase } from '@/lib/supabase'
 import { APP_VERSION, APP_FECHA, CHANGELOG } from '@/lib/version'
 import Modal from './ui/Modal'
 
-const navigation = [
-  { name: 'Inicio', href: '/', icon: Home },
-  { name: 'Insumos', href: '/insumos', icon: Package },
-  { name: 'Vinos', href: '/vinos', icon: Wine },
-  { name: 'Estadísticas', href: '/estadisticas', icon: BarChart3 },
-  { name: 'Ventas', href: '/ventas', icon: DollarSign },
-  { name: 'Análisis', href: '/analisis', icon: TrendingUp },
-  { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen },
-  { name: 'Recetas', href: '/platos', icon: ChefHat },
-  { name: 'Tragos', href: '/tragos', icon: Martini },
-  { name: 'Carta', href: '/carta', icon: ClipboardList },
-  { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart },
-  { name: 'Facturas', href: '/facturas', icon: FileText },
-  { name: 'Inventario', href: '/inventario', icon: Warehouse },
-  { name: 'Papelera', href: '/papelera', icon: Trash2 },
+/**
+ * Navegación agrupada por lo que estás haciendo, no por tipo de dato.
+ *
+ * Son los MISMOS catorce destinos de antes: no se agregó ni se quitó ninguno,
+ * solo se ordenaron y se les puso un título arriba. Catorce ítems seguidos no
+ * dicen qué hace el sistema; agrupados se pueden escanear.
+ *
+ * POR QUÉ NO ES UN ACORDEÓN: las pantallas tienen 26 solapas entre todas
+ * (Estadísticas 6, Análisis 5, Carta 4…). Desplegarlas acá llevaría el Sidebar
+ * de 14 líneas a 40. Y las solapas comunican algo que el Sidebar no puede:
+ * "estás en el mismo lugar, cambiando el ángulo".
+ *
+ * QUÉ NO ENTRA: Proveedores vive dentro de Insumos y Menús ejecutivos dentro
+ * de Carta. Los dos son importantes pero se tocan poco, y un renglón fijo del
+ * Sidebar se le debe a lo que se usa todos los días.
+ *
+ * Cocina y Barra separadas no es capricho visual: desde V.23 el sistema separa
+ * el costo del servicio en esas dos áreas, así que el menú refleja cómo está
+ * pensado el negocio por dentro.
+ */
+interface ItemNav {
+  name: string
+  href: string
+  icon: any
+}
+
+interface GrupoNav {
+  /** null = sin encabezado, para Inicio y Papelera */
+  titulo: string | null
+  items: ItemNav[]
+}
+
+const navigation: GrupoNav[] = [
+  {
+    titulo: null,
+    items: [{ name: 'Inicio', href: '/', icon: Home }],
+  },
+  {
+    titulo: 'Compras',
+    items: [
+      { name: 'Órdenes de Compra', href: '/ordenes-compra', icon: ShoppingCart },
+      { name: 'Facturas', href: '/facturas', icon: FileText },
+      { name: 'Insumos', href: '/insumos', icon: Package },
+    ],
+  },
+  {
+    titulo: 'Cocina',
+    items: [
+      { name: 'Elaboraciones', href: '/recetas-base', icon: BookOpen },
+      { name: 'Recetas', href: '/platos', icon: ChefHat },
+      { name: 'Carta', href: '/carta', icon: ClipboardList },
+    ],
+  },
+  {
+    titulo: 'Barra',
+    items: [
+      { name: 'Vinos', href: '/vinos', icon: Wine },
+      { name: 'Tragos', href: '/tragos', icon: Martini },
+    ],
+  },
+  {
+    titulo: 'Operación',
+    items: [
+      { name: 'Ventas', href: '/ventas', icon: DollarSign },
+      { name: 'Análisis', href: '/analisis', icon: TrendingUp },
+      { name: 'Inventario', href: '/inventario', icon: Warehouse },
+    ],
+  },
+  {
+    titulo: 'Informes',
+    items: [{ name: 'Estadísticas', href: '/estadisticas', icon: BarChart3 }],
+  },
+  {
+    titulo: null,
+    items: [{ name: 'Papelera', href: '/papelera', icon: Trash2 }],
+  },
 ]
 
 export default function Sidebar() {
@@ -110,15 +171,15 @@ export default function Sidebar() {
   const NavContent = () => (
     <>
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
+      <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/10 px-4">
         <div>
-          <h1 className="font-display text-xl font-bold text-white tracking-tight leading-none">Tero Restó</h1>
+          <h1 className="font-serif text-[20px] text-white tracking-tight leading-none">Tero Restó</h1>
           <button
             onClick={() => setChangelogOpen(true)}
-            className="text-[10px] text-white/40 hover:text-white/80 font-mono mt-0.5 transition-colors cursor-pointer text-left inline-flex items-center gap-1"
+            className="text-[10px] text-white/35 hover:text-white/70 font-mono tracking-wide mt-1 transition-colors cursor-pointer text-left inline-flex items-center gap-1"
             title="Ver novedades"
           >
-            {APP_VERSION} ({APP_FECHA})
+            {APP_VERSION.toLowerCase()} · {APP_FECHA}
             <History className="w-2.5 h-2.5" />
           </button>
         </div>
@@ -132,8 +193,19 @@ export default function Sidebar() {
       </div>
 
       {/* Navegación */}
-      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-        {navigation.map((item) => {
+      {/* min-h-0 es lo que permite que el scroll viva DENTRO del nav.
+          Sin eso, un item flex no baja de la altura de su contenido (min-height:auto),
+          el nav crece con la lista y empuja el bloque del usuario fuera de pantalla. */}
+      <nav className="flex-1 min-h-0 px-3 py-2 overflow-y-auto">
+        {navigation.map((grupo, i) => (
+          <div key={grupo.titulo ?? `sin-titulo-${i}`} className={i > 0 ? 'mt-2.5' : ''}>
+            {grupo.titulo && (
+              <div className="px-3 pb-0.5 text-[9.5px] font-bold uppercase tracking-[0.11em] text-white/30">
+                {grupo.titulo}
+              </div>
+            )}
+            <div className="space-y-0.5">
+        {grupo.items.map((item) => {
           const isActive = pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href))
           const isPapelera = item.href === '/papelera'
@@ -141,15 +213,17 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`group flex items-center rounded-lg px-3 py-3 lg:py-2.5 text-base lg:text-sm font-medium transition-all ${
+              onClick={() => setMobileMenuOpen(false)}
+              className={`group flex items-center rounded-lg px-3 py-2.5 lg:py-[5px] text-base lg:text-[13px] font-medium transition-all ${
                 isActive
-                  ? 'bg-white/10 text-white border-l-4 border-l-terracotta -ml-px'
-                  : 'text-white/70 hover:bg-white/5 hover:text-white'
+                  ? 'bg-white/[0.09] text-white'
+                  : 'text-white/65 hover:bg-white/[0.04] hover:text-white'
               }`}
             >
               <item.icon
-                className={`mr-3 h-5 w-5 flex-shrink-0 transition-colors ${
-                  isActive ? 'text-terracotta' : 'text-olive-light group-hover:text-white/90'
+                strokeWidth={1.5}
+                className={`mr-3 lg:mr-2.5 h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0 transition-colors ${
+                  isActive ? 'text-white' : 'text-white/45 group-hover:text-white/80'
                 }`}
               />
               {item.name}
@@ -161,13 +235,16 @@ export default function Sidebar() {
             </Link>
           )
         })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Usuario y logout */}
       {userName && (
-        <div className="border-t border-white/10 px-3 py-3">
+        <div className="flex-shrink-0 border-t border-white/10 px-3 py-2.5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-terracotta rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 bg-terracotta rounded-full flex items-center justify-center flex-shrink-0">
               <User className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
@@ -203,7 +280,7 @@ export default function Sidebar() {
         >
           <Menu className="h-6 w-6" />
         </button>
-        <h1 className="ml-3 font-display text-lg font-bold text-white tracking-tight">Tero Restó</h1>
+        <h1 className="ml-3 font-serif text-lg text-white tracking-tight">Tero Restó</h1>
       </div>
 
       {/* Overlay para mobile */}

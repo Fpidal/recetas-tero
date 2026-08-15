@@ -376,7 +376,7 @@ export default function OrdenesCompraPage() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Órdenes de Compra</h1>
+          <h1>Órdenes de Compra</h1>
           <p className="text-xs text-gray-600">
             <span className="font-semibold text-gray-900 font-mono">
               {formatearMoneda(totalPendientes)}

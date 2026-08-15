@@ -39,7 +39,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 | Módulo | Para qué sirve |
 |---|---|
-| **Inicio** | Panel de entrada: alertas de variación de precios (últimos 30 días) |
+| **Inicio** | Panel de entrada: KPIs de la semana, alertas de variación de precios, compras por categoría y **Cifras del mes** — ventas, compras, margen bruto e incidencia teórica y real contra el mes anterior (V.32) |
 | **Insumos** | Ingredientes: unidad, categoría, IVA, merma, presentaciones. Acceso a Proveedores y al Comparador de precios |
 | **Vinos** | Carta de vinos con importación de listas de precios desde Excel de bodega (matching por código y cepa) |
 | **Elaboraciones** | Sub-recetas (bases) que se usan como ingrediente dentro de las recetas |
@@ -87,6 +87,12 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   la única defensa eran los triggers: cuando uno falló, el dato quedó corrupto en silencio
   y las recetas costearon con un precio viejo durante semanas. Donde haya una regla del
   tipo "uno solo" o "siempre suma cero", conviene que la base la imponga.
+- **El título de página no lleva clases de tipografía.** Se escribe `<h1>Insumos</h1>` a secas:
+  el estilo vive una sola vez en `globals.css` (Instrument Serif, peso 400, 34px). Antes cada
+  pantalla tenía su propio tamaño y había 34 títulos distintos. Instrument Serif tiene un solo
+  peso, así que `font-bold` la sintetiza y ensucia el trazo — la jerarquía la da el tamaño.
+- **El color no informa, salvo en el semáforo y en los deltas.** Las categorías y los estados
+  se distinguen por tipografía y posición. La terracota queda para alertas y un CTA por pantalla.
 - **Todo lo que lea muchas filas va paginado.** PostgREST corta en 1000 sin avisar y sin
   error. `factura_items` ya pasó las 2300 y `precios_insumo` las 3500. Ya escondió 63
   variaciones de precio (V.22).
@@ -144,6 +150,21 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   los insumos en vez de leer la tabla, así el consumo no hereda el desvío. Falta el arreglo de
   fondo, que es un trigger `plato → menú ejecutivo`, más corregir la lista para que muestre lo
   mismo que la ficha.
+
+- **Sistema visual, por capas.** Hechas: el **Sidebar agrupado** por áreas (Compras, Cocina,
+  Barra, Operación, Informes) y las **tipografías** (Instrument Serif / Instrument Sans /
+  IBM Plex Mono), más el Dashboard como piloto del nuevo formato.
+
+  Falta:
+  - **Limpieza de iconos**: sacar emojis de títulos y estados vacíos, y los iconos decorativos
+    de las tarjetas de KPI, donde compiten con el número.
+  - **Unificar la terracota**: hoy hay tres valores distintos (`#C4704B` en la config,
+    `#A35234` hardcodeado en los PDF, `#B5613E` en el sistema nuevo). Mientras no coincidan,
+    la pantalla y el PDF nunca van a verse igual.
+  - **Migrar la paleta**: los componentes usan `gray-*` y la paleta estándar de Tailwind en el
+    93% de los casos, así que cambiar los tokens de la config no alcanza — hay que reescribir
+    las clases. Conviene por módulo y con la app al lado, no con un reemplazo global,
+    empezando por Análisis y Ventas, que es donde el color decide una lectura.
 
 ### Próximo
 

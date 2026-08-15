@@ -15,7 +15,7 @@ export default function VentasPage() {
     <div className="p-4 lg:p-6 mobile-content-padding">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Ventas e Incidencia</h1>
+        <h1>Ventas e Incidencia</h1>
         <p className="text-sm text-gray-500 mt-1">
           Carga diaria de ventas y análisis de food cost real
         </p>

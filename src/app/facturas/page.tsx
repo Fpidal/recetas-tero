@@ -371,7 +371,7 @@ function FacturasContent() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Facturas</h1>
+          <h1>Facturas</h1>
           <p className="text-xs text-gray-600">Registro de compras a proveedores</p>
         </div>
         <div className="flex items-center gap-4">

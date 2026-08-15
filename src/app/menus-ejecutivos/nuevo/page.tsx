@@ -328,7 +328,7 @@ export default function NuevoMenuEjecutivoPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nuevo Menú Ejecutivo</h1>
+          <h1>Nuevo Menú Ejecutivo</h1>
           <p className="text-gray-600">Creá un menú del día con insumos, recetas base y platos</p>
         </div>
       </div>

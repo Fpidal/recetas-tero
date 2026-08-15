@@ -182,7 +182,7 @@ export default function NuevaRecetaBasePage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Nueva Elaboración</h1>
+          <h1>Nueva Elaboración</h1>
         </div>
       </div>
 

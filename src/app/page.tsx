@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { obtenerCierreMes, variacion, nombreMes, type CierreMes } from '@/lib/cierre-mes-queries'
 import { costoFinalInsumo } from '@/lib/costos'
 import { obtenerHistorialPrecios } from '@/lib/precios-queries'
 import {
@@ -209,9 +210,19 @@ export default function Home() {
   const [modoCompras, setModoCompras] = useState<'semanal' | 'mensual'>('semanal')
   const [modoComprasCat, setModoComprasCat] = useState<'semanal' | 'mensual'>('semanal')
   const [alertaModal, setAlertaModal] = useState<AlertaModal>(null)
+  const [cierre, setCierre] = useState<CierreMes | null>(null)
 
   useEffect(() => {
     fetchDashboardData()
+  }, [])
+
+  // Cifras del mes en curso. Misma fuente que la solapa Cierre de Mes.
+  useEffect(() => {
+    const hoy = new Date()
+    const mes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
+    obtenerCierreMes(mes)
+      .then(setCierre)
+      .catch((e) => console.error('Error cargando cifras del mes:', e))
   }, [])
 
   async function fetchDashboardData() {
@@ -858,84 +869,83 @@ export default function Home() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header: eyebrow -> titulo serif -> regla.
+          La serif aparece solo en el logo y en los titulos de pagina; si se
+          usara tambien en subtitulos dejaria de senalar nada. */}
+      <div className="flex items-end justify-between border-b border-sand-light pb-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Dashboard</h1>
-          <p className="text-sm text-ink-muted mt-0.5">Resumen del sistema</p>
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.11em] text-ink-light">
+            Resumen del sistema
+          </p>
+          <h1 className="mt-1">Dashboard</h1>
         </div>
       </div>
 
       {/* 4 KPIs Superiores */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* KPI 1 - Food Cost Promedio */}
+        {/* Sin icono a proposito: el numero es el protagonista y el icono compite */}
         <div className="card p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: COLORS.oliveBg }}>
-              <ChefHat className="w-4 h-4" style={{ color: COLORS.olive }} />
-            </div>
-            <p className="text-xs text-ink-muted font-medium uppercase tracking-wide">Food Cost</p>
-          </div>
-          <p className="font-mono text-2xl font-semibold text-ink">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.11em] text-ink-light">Food Cost</p>
+          <p className="font-mono text-[25px] font-semibold text-ink tracking-[-0.02em] mt-1.5">
             {isLoading ? '...' : `${data.foodCostPromedio.toFixed(1)}%`}
           </p>
-          <p className="text-xs text-ink-muted mt-1">Promedio carta</p>
+          <p className="text-xs text-ink-muted mt-1.5">Promedio carta</p>
         </div>
 
         {/* KPI 2 - OC Pendientes de Facturar */}
         <div className="card p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: COLORS.warningBg }}>
-              <ShoppingCart className="w-4 h-4" style={{ color: COLORS.warning }} />
-            </div>
-            <p className="text-xs text-ink-muted font-medium uppercase tracking-wide">OC Pendientes</p>
-          </div>
-          <p className="font-mono text-2xl font-semibold text-ink">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.11em] text-ink-light">OC Pendientes</p>
+          <p className="font-mono text-[25px] font-semibold text-ink tracking-[-0.02em] mt-1.5">
             {isLoading ? '...' : formatMoney(data.totalOrdenesSinFacturar)}
           </p>
-          <p className="text-xs text-ink-muted mt-1">{data.ordenesSinFactura} órdenes</p>
+          <p className="text-xs text-ink-muted mt-1.5">{data.ordenesSinFactura} órdenes</p>
         </div>
 
         {/* KPI 3 - Mayor Variación de Insumo */}
+        {/* Aca el "valor" es un nombre, no una cifra: va en sans y el % debajo,
+            para no romper la alineacion de la fila de KPIs */}
         <div className="card p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: COLORS.terracottaBg }}>
-              <TrendingUp className="w-4 h-4" style={{ color: COLORS.terracotta }} />
-            </div>
-            <p className="text-xs text-ink-muted font-medium uppercase tracking-wide">Mayor Variación</p>
-          </div>
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.11em] text-ink-light">Mayor Variación</p>
           {isLoading ? (
-            <p className="text-xl font-semibold text-ink">...</p>
+            <p className="text-[19px] font-semibold text-ink mt-1.5">...</p>
           ) : data.mayorVariacion ? (
-            <p className="text-lg font-semibold text-ink truncate" title={data.mayorVariacion.nombre}>
-              {data.mayorVariacion.nombre.substring(0, 12)}{data.mayorVariacion.nombre.length > 12 ? '...' : ''} <span className="font-mono">{data.mayorVariacion.variacion > 0 ? '+' : ''}{data.mayorVariacion.variacion.toFixed(0)}%</span>
+            <p className="text-[19px] font-semibold text-ink truncate mt-1.5" title={data.mayorVariacion.nombre}>
+              {data.mayorVariacion.nombre}
             </p>
           ) : (
-            <p className="text-lg font-semibold text-ink-muted">Sin datos</p>
+            <p className="text-[19px] font-semibold text-ink-light mt-1.5">Sin datos</p>
           )}
-          <p className="text-xs text-ink-muted mt-1">{data.mayorVariacion?.categoria || '-'}</p>
+          <p className="text-xs text-ink-muted mt-1.5 flex items-center gap-1.5">
+            {data.mayorVariacion && (
+              <span
+                className="font-mono font-semibold"
+                style={{ color: data.mayorVariacion.variacion > 0 ? COLORS.danger : COLORS.success }}
+              >
+                {data.mayorVariacion.variacion > 0 ? '▲' : '▼'} {Math.abs(data.mayorVariacion.variacion).toFixed(1)}%
+              </span>
+            )}
+            {data.mayorVariacion?.categoria || '-'}
+          </p>
         </div>
 
         {/* KPI 4 - Compras Semana Actual */}
         <div className="card p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg" style={{ backgroundColor: COLORS.infoBg }}>
-                <DollarSign className="w-4 h-4" style={{ color: COLORS.info }} />
-              </div>
-              <p className="text-xs text-ink-muted font-medium uppercase tracking-wide">Compras</p>
-            </div>
-            {data.comprasSemanaPasada > 0 && (
-              <span className="flex items-center text-xs font-medium" style={{ color: variacionSemanal < 0 ? COLORS.success : COLORS.danger }}>
-                {variacionSemanal < 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                {variacionSemanal > 0 ? '+' : ''}{variacionSemanal.toFixed(0)}%
-              </span>
-            )}
-          </div>
-          <p className="font-mono text-2xl font-semibold text-ink">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.11em] text-ink-light">Compras</p>
+          <p className="font-mono text-[25px] font-semibold text-ink tracking-[-0.02em] mt-1.5">
             {isLoading ? '...' : formatMoney(data.comprasSemanaActual)}
           </p>
-          <p className="text-xs text-ink-muted mt-1">vs sem. ant: {formatMoney(data.comprasSemanaPasada)}</p>
+          <p className="text-xs text-ink-muted mt-1.5 flex items-center gap-1.5">
+            {data.comprasSemanaPasada > 0 && (
+              <span
+                className="font-mono font-semibold"
+                style={{ color: variacionSemanal < 0 ? COLORS.success : COLORS.danger }}
+              >
+                {variacionSemanal < 0 ? '▼' : '▲'} {Math.abs(variacionSemanal).toFixed(1)}%
+              </span>
+            )}
+            vs sem. anterior
+          </p>
         </div>
       </div>
 
@@ -1033,7 +1043,7 @@ export default function Home() {
           ) : (
             <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.variacionCategoriasData} margin={{ top: 20, right: 10, left: -15, bottom: 0 }}>
+                <BarChart data={data.variacionCategoriasData} margin={{ top: 22, right: 10, left: -15, bottom: 14 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E8E2DA" />
                   <XAxis dataKey="categoria" tick={{ fontSize: 10, fill: '#6B6560' }} />
                   <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10, fill: '#6B6560' }} />
@@ -1045,11 +1055,26 @@ export default function Home() {
                     {data.variacionCategoriasData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={LABEL_COLORES[entry.categoria] || entry.color || '#6B6560'} />
                     ))}
+                    {/* La etiqueta va ARRIBA si la barra sube y ABAJO si baja.
+                        Con position="top" fijo, las barras negativas quedaban
+                        con el numero encimado sobre el eje. */}
                     <LabelList
                       dataKey="variacion"
-                      position="top"
-                      formatter={(v) => `${Number(v).toFixed(1)}%`}
-                      style={{ fontSize: 10, fill: '#1A1A1A' }}
+                      content={(props: any) => {
+                        const { x, y, width, height, value } = props
+                        if (value === undefined || value === null) return null
+                        const sube = Number(value) >= 0
+                        return (
+                          <text
+                            x={Number(x) + Number(width) / 2}
+                            y={sube ? Number(y) - 6 : Number(y) + Number(height) + 12}
+                            textAnchor="middle"
+                            style={{ fontSize: 10, fill: '#4A4744', fontFamily: 'var(--font-mono)' }}
+                          >
+                            {Number(value) > 0 ? '+' : ''}{Number(value).toFixed(1)}%
+                          </text>
+                        )
+                      }}
                     />
                   </Bar>
                 </BarChart>
@@ -1197,7 +1222,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Cuarta fila: Compras por Categoría en el Tiempo */}
+      {/* Cuarta fila: Compras por Categoría + Cifras del mes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-ink">Compras por Categoría</h2>
@@ -1276,6 +1302,130 @@ export default function Home() {
             </>
           )
         })()}
+      </div>
+
+      {/* Cifras del mes: sale de obtenerCierreMes(), la MISMA funcion que usa
+          la solapa Cierre de Mes. Si el Dashboard calculara lo suyo, tarde o
+          temprano las dos pantallas dirian numeros distintos. */}
+      <div className="card p-4">
+        <div className="flex items-baseline justify-between mb-3">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Cifras del mes</h2>
+            <p className="text-xs text-ink-muted mt-0.5">
+              {cierre ? `${nombreMes(cierre.mes)} · contra ${nombreMes(cierre.mesPrevio)}` : 'Cargando...'}
+            </p>
+          </div>
+        </div>
+
+        {cierre && (
+          <div className="divide-y divide-sand-light">
+            {[
+              { label: 'Ventas', valor: cierre.ventas.mes, previo: cierre.ventas.previo, subirEsBueno: true },
+              { label: 'Compras', valor: cierre.compras.mes, previo: cierre.compras.previo, subirEsBueno: false },
+              { label: 'Margen bruto', valor: cierre.incidencia.margen, previo: cierre.incidenciaPrevia.margen, subirEsBueno: true },
+            ].map((f) => {
+              const v = variacion(f.valor, f.previo)
+              const sube = v !== null && v > 0.05
+              const baja = v !== null && v < -0.05
+              const bueno = f.subirEsBueno ? sube : baja
+              const malo = f.subirEsBueno ? baja : sube
+              return (
+                <div key={f.label} className="flex items-center justify-between py-3">
+                  <span className="text-sm text-ink-strong">{f.label}</span>
+                  <div className="text-right">
+                    <div className="font-mono text-[17px] font-semibold text-ink tracking-[-0.01em]">
+                      {formatMoney(f.valor)}
+                    </div>
+                    <div
+                      className="font-mono text-[11px]"
+                      style={{ color: malo ? COLORS.danger : bueno ? COLORS.success : '#9B948C' }}
+                    >
+                      {v === null ? 'sin comparación' : `${sube ? '▲' : baja ? '▼' : ''} ${Math.abs(v).toFixed(1)}%`}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Incidencia TEORICA: compras contra ventas del mes.
+                Es la que sale de las facturas y esta disponible siempre.
+                La REAL usa el consumo cargado en Analisis y solo existe si
+                alguien lo carga — por eso van las dos y se muestra el desvio. */}
+            {(() => {
+              const teo = cierre.ventas.mes > 0 ? (cierre.compras.mes / cierre.ventas.mes) * 100 : null
+              const teoPrev = cierre.ventas.previo > 0 ? (cierre.compras.previo / cierre.ventas.previo) * 100 : null
+              const pts = teo !== null && teoPrev !== null ? teo - teoPrev : null
+              return (
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-sm text-ink-strong">
+                    Incidencia teórica
+                    <span className="block text-[11px] text-ink-light">compras sobre ventas</span>
+                  </span>
+                  <div className="text-right">
+                    <div className="font-mono text-[17px] font-semibold text-ink tracking-[-0.01em]">
+                      {teo !== null ? `${teo.toFixed(1)}%` : '—'}
+                    </div>
+                    {pts !== null && (
+                      <div
+                        className="font-mono text-[11px]"
+                        style={{ color: pts > 0.05 ? COLORS.danger : pts < -0.05 ? COLORS.success : '#9B948C' }}
+                      >
+                        {pts > 0 ? '▲' : pts < 0 ? '▼' : ''} {Math.abs(pts).toFixed(1)} pts
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* La incidencia se compara en PUNTOS, no en porcentaje de porcentaje */}
+            <div className="flex items-center justify-between py-3">
+              <span className="text-sm text-ink-strong">
+                Incidencia real
+                {cierre.incidencia.diasConCarga > 0 && (
+                  <span className="block text-[11px] text-ink-light font-mono">
+                    muestreo: {cierre.incidencia.diasConCarga} de {cierre.incidencia.diasConVenta} servicios
+                  </span>
+                )}
+              </span>
+              <div className="text-right">
+                <div className="font-mono text-[17px] font-semibold text-ink tracking-[-0.01em]">
+                  {cierre.incidencia.diasConCarga > 0 ? `${cierre.incidencia.incidencia.toFixed(1)}%` : '—'}
+                </div>
+                {cierre.incidencia.diasConCarga > 0 && cierre.incidenciaPrevia.diasConCarga > 0 && (() => {
+                  const pts = cierre.incidencia.incidencia - cierre.incidenciaPrevia.incidencia
+                  return (
+                    <div
+                      className="font-mono text-[11px]"
+                      style={{ color: pts > 0.05 ? COLORS.danger : pts < -0.05 ? COLORS.success : '#9B948C' }}
+                    >
+                      {pts > 0 ? '▲' : pts < 0 ? '▼' : ''} {Math.abs(pts).toFixed(1)} pts
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* El desvio es lo que hace preguntar: si la cocina consume mas de
+                lo que se compro, algo no cierra entre lo comprado y lo usado. */}
+            {cierre.incidencia.diasConCarga > 0 && cierre.ventas.mes > 0 && (() => {
+              const teo = (cierre.compras.mes / cierre.ventas.mes) * 100
+              const desvio = cierre.incidencia.incidencia - teo
+              return (
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-sm text-ink-muted">Desvío real vs teórica</span>
+                  <span
+                    className="font-mono text-sm font-semibold"
+                    style={{ color: Math.abs(desvio) < 1 ? '#9B948C' : desvio > 0 ? COLORS.danger : COLORS.success }}
+                  >
+                    {desvio > 0 ? '+' : ''}{desvio.toFixed(1)} pts
+                  </span>
+                </div>
+              )
+            })()}
+          </div>
+        )}
+      </div>
       </div>
 
       {/* Modal de Alertas */}

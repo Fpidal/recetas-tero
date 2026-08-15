@@ -414,7 +414,7 @@ export default function EditarTragoPage({ params }: { params: { id: string } }) 
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">
+          <h1>
             {isReadOnly ? 'Ver Trago' : 'Editar Trago'}
           </h1>
           {isInPapelera && <span className="text-xs text-red-500">En papelera</span>}

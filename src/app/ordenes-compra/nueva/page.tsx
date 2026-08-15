@@ -476,7 +476,7 @@ export default function NuevaOrdenCompraPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
+          <h1>
             Nueva OC{nextNumero ? ` ${nextNumero}` : ''}
           </h1>
           <p className="text-xs sm:text-base text-gray-600">Pedido a proveedor</p>

@@ -307,7 +307,7 @@ export default function NuevoTragoPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Nuevo Trago</h1>
+          <h1>Nuevo Trago</h1>
           <p className="text-xs sm:text-sm text-gray-600">Receta de coctelería con insumos y/o elaboraciones</p>
         </div>
       </div>

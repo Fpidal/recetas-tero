@@ -10,7 +10,7 @@ Sistema de gestión de recetas, costos y menús para restaurante. Permite admini
 | **Lenguaje** | TypeScript 5.5.4 |
 | **Base de datos** | Supabase (PostgreSQL) |
 | **Estilos** | Tailwind CSS 3.4.7 |
-| **Tipografías** | DM Sans, JetBrains Mono, Playfair Display |
+| **Tipografías** | Instrument Sans (interfaz), IBM Plex Mono (cifras), Instrument Serif (logo y títulos) |
 | **Iconos** | Lucide React |
 | **PDF** | jsPDF + jspdf-autotable |
 | **Excel** | ExcelJS (escritura, con estilos) · SheetJS/xlsx (solo lectura de listas de bodegas) |
@@ -21,11 +21,19 @@ Sistema de gestión de recetas, costos y menús para restaurante. Permite admini
 
 ### Tipografía
 
-| Fuente | Uso | Clase CSS |
-|--------|-----|-----------|
-| **DM Sans** | Texto general, UI, labels | `font-sans` (default) |
-| **JetBrains Mono** | Números, montos, porcentajes, cantidades | `font-mono` |
-| **Playfair Display** | Logo "Tero Restó" en sidebar | `font-display` |
+| Rol | Fuente | Dónde |
+|---|---|---|
+| **Display** | Instrument Serif (400) | Logo del sidebar y títulos de página, y nada más |
+| **Interfaz** | Instrument Sans | Todo el resto: navegación, labels, botones, tablas |
+| **Cifras** | IBM Plex Mono | Toda cifra: montos, porcentajes, fechas, cantidades |
+
+Reglas:
+
+- La serif aparece **solo** en el logo y en los títulos de página. Si se usara también en subtítulos o botones dejaría de señalar nada.
+- Instrument Serif tiene un único peso (400). Poner `font-bold` la sintetiza y ensucia el trazo: la jerarquía la da el tamaño.
+- El `<h1>` se estila una sola vez, en `globals.css`. Las páginas escriben `<h1>Insumos</h1>` sin clases de tipografía, así todos los títulos quedan iguales.
+- Todo número lleva `font-mono`, incluso dentro de un párrafo. Las columnas numéricas van alineadas a la derecha.
+
 
 ### Colores
 

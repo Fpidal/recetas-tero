@@ -537,7 +537,7 @@ export default function EditarMenuEspecialPage({ params }: { params: { id: strin
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1>
             {isReadOnly ? 'Ver Menú Especial' : 'Editar Menú Especial'}
           </h1>
           {isReadOnly ? (

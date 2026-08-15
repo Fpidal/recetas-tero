@@ -309,7 +309,7 @@ export default function NuevoPlatoPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Nuevo Plato</h1>
+          <h1>Nuevo Plato</h1>
           <p className="text-xs sm:text-sm text-gray-600">Receta con insumos y/o recetas base</p>
         </div>
       </div>

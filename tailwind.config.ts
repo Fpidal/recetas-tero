@@ -12,9 +12,12 @@ const config: Config = {
         xs: '475px',
       },
       fontFamily: {
-        display: ['var(--font-display)', 'Georgia', 'serif'],
-        body: ['var(--font-body)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'monospace'],
+        // serif → solo logo, títulos de página y cifras hero
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
+        // sans → todo el resto de la interfaz
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        // mono → toda cifra, sin excepción
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
       colors: {
         // Backgrounds

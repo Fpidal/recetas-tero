@@ -312,7 +312,7 @@ export default function MenusEspecialesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Menús Especiales</h1>
+          <h1>Menús Especiales</h1>
           <p className="text-gray-600">Menús con opciones de platos para eventos</p>
         </div>
         <Link href="/menus-especiales/nuevo">

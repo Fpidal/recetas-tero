@@ -720,7 +720,7 @@ export default function VinosPage() {
     <div className="overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Vinos</h1>
+          <h1>Vinos</h1>
           <p className="text-xs text-gray-600">Gestión de vinos por bodega</p>
         </div>
         {activeTab === 'vinos' && (

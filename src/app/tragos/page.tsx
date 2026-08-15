@@ -357,7 +357,7 @@ export default function TragosPage() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Tragos</h1>
+          <h1>Tragos</h1>
           <p className="text-sm text-gray-600">Recetas de coctelería y barra</p>
         </div>
         {tab === 'tragos' && (

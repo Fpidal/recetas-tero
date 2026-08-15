@@ -382,7 +382,7 @@ export default function NuevoMenuEspecialPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nuevo Menú Especial</h1>
+          <h1>Nuevo Menú Especial</h1>
           <p className="text-gray-600">Creá un menú con opciones de platos para eventos</p>
         </div>
       </div>

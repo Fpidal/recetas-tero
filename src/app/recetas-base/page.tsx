@@ -311,7 +311,7 @@ export default function RecetasBasePage() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Elaboraciones</h1>
+          <h1>Elaboraciones</h1>
           <p className="text-sm text-gray-600">Salsas, guarniciones y preparados</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">

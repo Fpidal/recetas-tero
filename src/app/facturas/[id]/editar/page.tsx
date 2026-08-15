@@ -504,7 +504,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-lg lg:text-2xl font-bold text-gray-900">Editar Factura</h1>
+          <h1>Editar Factura</h1>
           <p className="text-xs lg:text-base text-gray-600">Factura {numeroFactura}</p>
         </div>
       </div>

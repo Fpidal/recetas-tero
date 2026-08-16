@@ -14,7 +14,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { obtenerCierreMes, variacion, nombreMes, type CierreMes } from '@/lib/cierre-mes-queries'
+import { obtenerCierreMes, variacion, nombreMes, corteDelMesEnCurso, type CierreMes } from '@/lib/cierre-mes-queries'
+import { lunesDe } from '@/lib/auditoria-semanal'
 import { costoFinalInsumo } from '@/lib/costos'
 import { obtenerHistorialPrecios } from '@/lib/precios-queries'
 import {
@@ -220,7 +221,10 @@ export default function Home() {
   useEffect(() => {
     const hoy = new Date()
     const mes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
-    obtenerCierreMes(mes)
+    // Mientras el mes esta a medias se corta el anterior el mismo dia, si no la
+    // comparacion marca caidas que solo son "todavia no termino el mes".
+    // El ultimo dia del mes ya no corta: van los dos completos.
+    obtenerCierreMes(mes, corteDelMesEnCurso(hoy))
       .then(setCierre)
       .catch((e) => console.error('Error cargando cifras del mes:', e))
   }, [])
@@ -493,9 +497,11 @@ export default function Home() {
 
       // Calcular semanas
       const hoy = new Date()
-      const inicioSemanaActual = new Date(hoy)
-      inicioSemanaActual.setDate(hoy.getDate() - hoy.getDay())
-      inicioSemanaActual.setHours(0, 0, 0, 0)
+      // Semana de LUNES a domingo, como el resto del sistema (auditoria semanal,
+      // ventas, facturas y date_trunc('week') en SQL, que es ISO). Antes acá se
+      // usaba domingo a sabado: los domingos "esta semana" duraba un solo dia y
+      // las compras daban $0 con una caida del 100%.
+      const inicioSemanaActual = lunesDe(hoy)
 
       const inicioSemanaPasada = new Date(inicioSemanaActual)
       inicioSemanaPasada.setDate(inicioSemanaPasada.getDate() - 7)
@@ -1294,8 +1300,16 @@ export default function Home() {
       <div className="card p-3.5">
         <div className="flex items-baseline justify-between mb-2">
           <h2 className="text-base font-semibold text-ink">Cifras del mes</h2>
+          {/* Se aclara el corte: sin eso, un mes en curso comparado contra
+              uno entero parece una caida y no lo es. */}
           <p className="text-xs text-ink-light">
-            {cierre ? `${nombreMes(cierre.mes)} · vs ${nombreMes(cierre.mesPrevio)}` : 'Cargando...'}
+            {cierre
+              ? (() => {
+                  const corte = corteDelMesEnCurso()
+                  const previo = nombreMes(cierre.mesPrevio).split(' ')[0].toLowerCase()
+                  return corte ? `1 al ${corte} · vs ${previo}` : `mes completo · vs ${previo}`
+                })()
+              : 'Cargando...'}
           </p>
         </div>
 

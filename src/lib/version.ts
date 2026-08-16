@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.33',
+    fecha: '16/08/26',
+    cambios: [
+      'Dashboard: las compras de la semana daban $0 los domingos. El sistema contaba la semana de domingo a sábado, distinto al resto de las pantallas — ahora va de lunes a domingo en todos lados',
+      'Cifras del mes: ahora compara el mismo tramo de los dos meses (por ejemplo del 1 al 16 de agosto contra el 1 al 16 de julio). Antes comparaba el mes en curso contra el mes anterior completo, así que siempre parecía que habías comprado y vendido menos',
+      'El último día del mes la comparación pasa sola a mes completo contra mes completo',
+    ],
+  },
+  {
     version: 'V.32',
     fecha: '15/08/26',
     cambios: [

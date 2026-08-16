@@ -101,17 +101,33 @@ function primerDia(mes: string): string {
 }
 
 /** Resume los tres servicios de un mes en un solo número, como hace /analisis */
-async function incidenciaDelMes(anio: number, mes: number): Promise<ResumenIncidencia> {
+async function incidenciaDelMes(
+  anio: number,
+  mes: number,
+  hastaDia?: number
+): Promise<ResumenIncidencia> {
   const porServicio = await Promise.all(
     SERVICIOS.map((s) => obtenerIncidenciasMes(anio, mes, s))
   )
-  return resumirIncidencias(porServicio.flat())
+  const dias = porServicio.flat()
+  // Mismo corte que la función SQL: si se compara un mes en curso, los dos
+  // lados tienen que cubrir la misma cantidad de días.
+  const recortados = hastaDia
+    ? dias.filter((d) => Number(d.fecha.slice(8, 10)) <= hastaDia)
+    : dias
+  return resumirIncidencias(recortados)
 }
 
 /**
  * Trae todo el cierre de un mes. `mes` en formato YYYY-MM.
+ *
+ * @param hastaDia Corta LOS DOS meses el mismo día. Para un mes en curso es
+ * obligatorio: comparar agosto hasta el 16 contra julio entero hace que el mes
+ * actual siempre parezca más bajo, y marca caídas que no existen. Sin este
+ * parámetro se comparan los meses completos, que es lo correcto para un mes ya
+ * cerrado (la solapa Cierre de Mes).
  */
-export async function obtenerCierreMes(mes: string): Promise<CierreMes> {
+export async function obtenerCierreMes(mes: string, hastaDia?: number): Promise<CierreMes> {
   const [anio, mesNum] = mes.split('-').map(Number)
 
   // Mes anterior, cuidando el salto de año
@@ -120,9 +136,9 @@ export async function obtenerCierreMes(mes: string): Promise<CierreMes> {
   const mesPrevioNum = previoDate.getMonth() + 1
 
   const [rpc, incidencia, incidenciaPrevia] = await Promise.all([
-    supabase.rpc('cierre_mes', { p_mes: primerDia(mes) }),
-    incidenciaDelMes(anio, mesNum),
-    incidenciaDelMes(anioPrevio, mesPrevioNum),
+    supabase.rpc('cierre_mes', { p_mes: primerDia(mes), p_hasta_dia: hastaDia ?? null }),
+    incidenciaDelMes(anio, mesNum, hastaDia),
+    incidenciaDelMes(anioPrevio, mesPrevioNum, hastaDia),
   ])
 
   if (rpc.error) throw rpc.error
@@ -162,6 +178,22 @@ export async function obtenerCierreMes(mes: string): Promise<CierreMes> {
     faltaVentas: incidencia.venta === 0,
     faltaConsumo: incidencia.diasConCarga === 0,
   }
+}
+
+/**
+ * Día de corte para comparar el mes EN CURSO contra el anterior.
+ *
+ * Devuelve el día de hoy mientras el mes está a medias, y `undefined` el último
+ * día del mes — ahí el mes ya está completo y corresponde compararlo entero.
+ *
+ * Ese caso importa cuando los meses tienen distinto largo: el 30 de septiembre,
+ * cortar agosto en el día 30 dejaría afuera el 31 y agosto se vería más chico
+ * de lo que fue. Con el mes cerrado, van los dos completos aunque uno tenga un
+ * día más.
+ */
+export function corteDelMesEnCurso(hoy: Date = new Date()): number | undefined {
+  const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate()
+  return hoy.getDate() === ultimoDia ? undefined : hoy.getDate()
 }
 
 /** "2026-07-01" → "Julio 2026" */

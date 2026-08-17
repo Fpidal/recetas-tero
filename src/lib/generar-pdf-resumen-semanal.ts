@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { supabase } from './supabase'
+import { PALETA, rgb } from './colores'
 import {
   UMBRAL_PRECIO, DIAS_SIN_FACTURA, claveNota,
   type AuditoriaSemanal, type BloqueAuditoria, type MapaNotas,
@@ -18,8 +19,8 @@ import {
  * "sin novedades" no se lee.
  */
 
-const TERRACOTA = [163, 82, 52] as const
-const GRIS_CLARO = [245, 245, 245] as const
+const TERRACOTA = rgb(PALETA.terracotta)
+const GRIS_CLARO = rgb(PALETA.creamDark)
 
 const fmt = (n: number) => `$${Math.round(n).toLocaleString('es-AR')}`
 const cant = (n: number) => Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

@@ -18,6 +18,7 @@ import { obtenerCierreMes, variacion, nombreMes, corteDelMesEnCurso, type Cierre
 import { lunesDe } from '@/lib/auditoria-semanal'
 import { costoFinalInsumo } from '@/lib/costos'
 import { obtenerHistorialPrecios } from '@/lib/precios-queries'
+import { PALETA } from '@/lib/colores'
 import {
   LineChart,
   Line,
@@ -36,7 +37,7 @@ import {
 
 // Colores del sistema editorial
 const COLORS = {
-  terracotta: '#C4704B',
+  terracotta: PALETA.terracotta,
   terracottaBg: '#FDF0E6',
   olive: '#5C7A5E',
   oliveBg: '#E8F5EC',
@@ -54,7 +55,7 @@ const COLORS = {
 }
 
 // Colores para el gráfico de torta
-const PIE_COLORS = ['#C4704B', '#5C7A5E', '#4A6572', '#A67B3D', '#8CA88F', '#B5553A']
+const PIE_COLORS = [PALETA.terracotta, '#5C7A5E', '#4A6572', '#A67B3D', '#8CA88F', '#B5553A']
 
 // Las categorías principales para los gráficos
 const CATEGORIAS_GRAFICOS = ['Carnes', 'Pescados_Mariscos', 'Verduras_Frutas', 'Almacen', 'Lacteos_Fiambres', 'Otros']
@@ -66,7 +67,7 @@ const CATEG_COLORES: Record<string, string> = {
   Verduras_Frutas: '#3D8B5E',
   Pescados_Mariscos: '#4A6572',
   Lacteos_Fiambres: '#5C7A5E',
-  Salsas_Recetas: '#C4704B',
+  Salsas_Recetas: PALETA.terracotta,
 }
 
 const CATEG_LABELS: Record<string, string> = {
@@ -85,7 +86,7 @@ const LABEL_COLORES: Record<string, string> = {
   'Verduras': '#3D8B5E',
   'Pescados': '#4A6572',
   'Lácteos': '#5C7A5E',
-  'Salsas': '#C4704B',
+  'Salsas': PALETA.terracotta,
 }
 
 interface DistribucionItem {

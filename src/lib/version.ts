@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.34',
+    fecha: '17/08/26',
+    cambios: [
+      'Los colores de la app, los PDF y los Excel ahora salen del mismo lugar. El naranja de la pantalla y el de los archivos descargados eran distintos entre sí y no coincidían con el de la app',
+      'Gráfico de compras por categoría: cuando había ocho rubros, dos porciones salían del mismo color y no se podían distinguir',
+    ],
+  },
+  {
     version: 'V.33',
     fecha: '16/08/26',
     cambios: [

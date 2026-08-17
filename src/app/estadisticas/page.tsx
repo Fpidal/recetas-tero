@@ -7,6 +7,7 @@ import { Select, Input } from '@/components/ui'
 import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Calendar, CalendarCheck, Layers } from 'lucide-react'
 import CierreMes from './components/CierreMes'
 import AbcInsumos from './components/AbcInsumos'
+import { PALETA } from '@/lib/colores'
 
 // ============ TIPOS ============
 interface Insumo {
@@ -43,7 +44,19 @@ interface FacturaConDetalle {
 }
 
 // ============ CONSTANTES ============
-const COLORES = ['#C4704B', '#5C7A5E', '#4A6572', '#A67B3D', '#9B2C2C', '#3D8B5E', '#8CA88F', '#B5613E']
+// Ocho tonos porque algunas tortas tienen más de cinco rubros. El orden importa:
+// los primeros son los más contrastados, así las porciones grandes se separan bien.
+// El último era terracota repetida y pintaba dos porciones iguales.
+const COLORES = [
+  PALETA.terracotta,
+  PALETA.olive,
+  PALETA.info,
+  PALETA.warning,
+  PALETA.danger,
+  PALETA.success,
+  PALETA.oliveLight,
+  PALETA.forest,
+]
 
 const PERIODOS = [
   { value: 'esta_semana', label: 'Esta semana' },
@@ -122,8 +135,8 @@ const CATEG_COLORES: Record<string, string> = {
   Verduras_Frutas: '#3D8B5E',
   Pescados_Mariscos: '#4A6572',
   Lacteos_Fiambres: '#5C7A5E',
-  Bebidas: '#C4704B',
-  Salsas_Recetas: '#C4704B',
+  Bebidas: PALETA.terracotta,
+  Salsas_Recetas: PALETA.terracotta,
 }
 
 type TabType = 'proveedores' | 'variacion' | 'compras_semanales' | 'comparacion_mensual' | 'cierre_mes' | 'abc'

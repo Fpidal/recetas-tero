@@ -13,6 +13,7 @@ import { exportarInsumos } from '@/lib/exportaciones'
 import { CategoriaInsumo, UnidadMedida } from '@/types/database'
 import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import ComparadorPrecios from '@/components/insumos/ComparadorPrecios'
+import { PALETA } from '@/lib/colores'
 
 interface InsumoCompleto {
   id: string
@@ -991,9 +992,9 @@ export default function InsumosPage() {
                   <Line
                     type="monotone"
                     dataKey="precio"
-                    stroke="#C4704B"
+                    stroke={PALETA.terracotta}
                     strokeWidth={2}
-                    dot={{ fill: '#C4704B', r: 3 }}
+                    dot={{ fill: PALETA.terracotta, r: 3 }}
                     activeDot={{ r: 5 }}
                   />
                 </LineChart>

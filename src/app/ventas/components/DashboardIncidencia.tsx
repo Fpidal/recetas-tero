@@ -22,6 +22,7 @@ import {
   obtenerHistorico,
   formatearMonedaVentas,
 } from '@/lib/ventas-queries'
+import { PALETA } from '@/lib/colores'
 import {
   type ResumenPeriodo,
   type TipoPeriodo,
@@ -32,7 +33,7 @@ import {
 const COLORES_SERVICIO = {
   mediodia: '#A67B3D',
   noche: '#1B3A2D',
-  eventos: '#C4704B',
+  eventos: PALETA.terracotta,
 }
 
 export default function DashboardIncidencia() {

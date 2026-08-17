@@ -9,15 +9,16 @@ import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
+import { PALETA } from '@/lib/colores'
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Carnes': '#9B2C2C',
   'Pescados_Mariscos': '#4A6572',
   'Verduras_Frutas': '#3D8B5E',
   'Lacteos_Fiambres': '#5C7A5E',
-  'Bebidas': '#C4704B',
+  'Bebidas': PALETA.terracotta,
   'Almacen': '#A67B3D',
-  'Elaboracion': '#C4704B',
+  'Elaboracion': PALETA.terracotta,
 }
 
 interface Insumo {

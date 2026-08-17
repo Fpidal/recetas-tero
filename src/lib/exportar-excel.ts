@@ -22,8 +22,10 @@
  * que lo descargue alguien que nunca toca el botón de exportar.
  */
 
-const TERRACOTA = 'A35234'
-const GRIS_FILA = 'F7F7F7'
+import { PALETA, argb } from './colores'
+
+const TERRACOTA = argb(PALETA.terracotta)
+const GRIS_FILA = argb(PALETA.creamDark)
 
 export type TipoColumna =
   | 'texto'

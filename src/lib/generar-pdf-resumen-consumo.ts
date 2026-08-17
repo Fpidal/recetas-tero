@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { supabase } from './supabase'
+import { PALETA, rgb } from './colores'
 import {
   CATEGORIAS_LABEL,
   CATEGORIAS_ORDEN,
@@ -23,8 +24,8 @@ import {
  *   · Una columna vacía "PEDIR" para anotar a mano mientras se recorre.
  */
 
-const TERRACOTA = [163, 82, 52] as const
-const GRIS_CLARO = [245, 245, 245] as const
+const TERRACOTA = rgb(PALETA.terracotta)
+const GRIS_CLARO = rgb(PALETA.creamDark)
 
 const fmt = (n: number) => `$${Math.round(n).toLocaleString('es-AR')}`
 /** Siempre dos decimales: con cantidad variable de decimales la columna queda

@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import { supabase } from './supabase'
+import { PALETA, rgb } from './colores'
 
 interface OrdenPDF {
   id: string
@@ -165,9 +166,9 @@ export async function generarPDFOrden(ordenId: string) {
   const pageHeight = 210
   const margin = 8
   const contentWidth = pageWidth - margin * 2
-  const TERRACOTA = [163, 82, 52] as const
-  const TERRACOTA_LIGHT = [214, 165, 145] as const
-  const GRIS_CLARO = [245, 245, 245] as const
+  const TERRACOTA = rgb(PALETA.terracotta)
+  const TERRACOTA_LIGHT = rgb(PALETA.terracottaLight)
+  const GRIS_CLARO = rgb(PALETA.creamDark)
 
   // Logo desde bucket "fotos platos"
   let logoDataUrl: string | null = null

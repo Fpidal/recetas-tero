@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable'
 import { supabase } from './supabase'
 import { variacion, nombreMes, diaMes, type CierreMes } from './cierre-mes-queries'
 import { CATEGORIAS_LABEL, SERVICIO_LABEL } from '@/types/analisis'
+import { PALETA, rgb } from './colores'
 
 /**
  * PDF del Cierre de Mes — la foto del mes en una carilla A4.
@@ -13,8 +14,8 @@ import { CATEGORIAS_LABEL, SERVICIO_LABEL } from '@/types/analisis'
  * nada reutilizable ahí sin refactorizarlo.
  */
 
-const TERRACOTA = [163, 82, 52] as const
-const GRIS_CLARO = [245, 245, 245] as const
+const TERRACOTA = rgb(PALETA.terracotta)
+const GRIS_CLARO = rgb(PALETA.creamDark)
 
 function fmt(n: number): string {
   return `$${Math.round(n).toLocaleString('es-AR')}`

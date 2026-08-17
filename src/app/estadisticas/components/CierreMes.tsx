@@ -13,6 +13,7 @@ import {
 import { formatearMoneda } from '@/lib/formato-numeros'
 import { generarPDFCierreMes } from '@/lib/generar-pdf-cierre-mes'
 import { SERVICIO_LABEL, SERVICIO_ICON, CATEGORIAS_LABEL } from '@/types/analisis'
+import { PALETA } from '@/lib/colores'
 
 const fmt = (v: number) => formatearMoneda(v, true, 0)
 
@@ -278,7 +279,7 @@ function ComprasSemanales({ data }: { data: CierreMesData }) {
             <XAxis dataKey="etiqueta" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
             <Tooltip formatter={(v: any) => fmt(Number(v))} labelStyle={{ fontSize: 12 }} />
-            <Line type="monotone" dataKey="monto" stroke="#a35234" strokeWidth={2} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="monto" stroke={PALETA.terracotta} strokeWidth={2} dot={{ r: 3 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>

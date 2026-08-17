@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import QRCode from 'qrcode'
 import { ArrowLeft, Download, DollarSign, EyeOff } from 'lucide-react'
 import CartaEditorial from '@/components/CartaEditorial'
+import { PALETA } from '@/lib/colores'
 
 // URL pública del menú digital (a donde apunta el QR)
 const SITE_URL = 'https://recetas-tero.vercel.app'
@@ -88,9 +89,9 @@ export default function CartaMenuImprimirPage() {
         .cm-download {
           display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px;
           font-size: 13px; font-weight: 600; cursor: pointer; border: none;
-          background: #C4704B; color: #fff;
+          background: ${PALETA.terracotta}; color: #fff;
         }
-        .cm-download:hover { background: #B5613E; }
+        .cm-download:hover { background: ${PALETA.terracottaDark}; }
         .cm-hint {
           max-width: 760px; margin: 0 auto 16px; font-size: 12px; color: #8a8278;
           background: #fff8ee; border: 1px solid #f0e4cf; border-radius: 8px; padding: 8px 14px;

@@ -152,19 +152,36 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   mismo que la ficha.
 
 - **Sistema visual, por capas.** Hechas: el **Sidebar agrupado** por áreas (Compras, Cocina,
-  Barra, Operación, Informes) y las **tipografías** (Instrument Serif / Instrument Sans /
-  IBM Plex Mono), más el Dashboard como piloto del nuevo formato.
+  Barra, Operación, Informes), las **tipografías** (Instrument Serif / Instrument Sans /
+  IBM Plex Mono), el Dashboard como piloto del nuevo formato, y el **módulo de colores**
+  (V.34).
+
+  Sobre el módulo de colores, porque la lección no es la que esperábamos: la terracota estaba
+  escrita a mano en ~25 lugares con **cuatro** valores distintos (`#C4704B` en componentes,
+  `#A35234` en los PDF y el Excel, `#B5613E` en la config, y una cuarta copia muerta en las
+  variables CSS de `globals.css`). Ahora sale toda de `src/lib/colores.ts`, que exporta
+  `rgb()` para jsPDF y `argb()` para exceljs, y del que también lee `tailwind.config.ts`.
+  **El cambio no se ve**: la diferencia entre el valor viejo y el nuevo es ΔE 5,7, y en la
+  pantalla la terracota cae sobre bordes de 1px y texto chico. Se nota solo en áreas llenas
+  —el encabezado del Excel, el header del PDF de órdenes—. El valor del módulo es que pantalla
+  y archivo no vuelvan a separarse, no que hoy se vea mejor.
 
   Falta:
-  - **Limpieza de iconos**: sacar emojis de títulos y estados vacíos, y los iconos decorativos
-    de las tarjetas de KPI, donde compiten con el número.
-  - **Unificar la terracota**: hoy hay tres valores distintos (`#C4704B` en la config,
-    `#A35234` hardcodeado en los PDF, `#B5613E` en el sistema nuevo). Mientras no coincidan,
-    la pantalla y el PDF nunca van a verse igual.
+  - **Limpieza de iconos**: 33 usos de emoji, 14 distintos. Los ~21 decorativos
+    (⚠ ✅ ❌ 💡 …) van a Lucide, que ya es dependencia. Los 12 de `SERVICIO_ICON`
+    (🌞🌙🎉) conviene **sacarlos sin reemplazo**: se renderizan como
+    `{SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}`, o sea que la etiqueta ya dice "Mediodía".
   - **Migrar la paleta**: los componentes usan `gray-*` y la paleta estándar de Tailwind en el
     93% de los casos, así que cambiar los tokens de la config no alcanza — hay que reescribir
-    las clases. Conviene por módulo y con la app al lado, no con un reemplazo global,
-    empezando por Análisis y Ventas, que es donde el color decide una lectura.
+    las clases. **Postergado a propósito** (V.34): es el mismo perfil que el módulo de
+    colores —mucho movimiento de archivos, diferencia imperceptible— y no paga sin un motivo
+    concreto. Si se hace, por módulo y con la app al lado, nunca con un reemplazo global.
+  - **Nota**: `colores.ts` y `tailwind.config.ts` todavía discrepan en 7 valores
+    (success, warning, danger, cream, forestLight, inkLight, sand), con ΔE entre 1,9 y 6,5.
+    Se dejó así a propósito: no hay una sola pantalla donde los dos valores convivan
+    —`PALETA.success` solo se usa en `estadisticas/page.tsx`, y `text-success` en `carta`,
+    `Button`, `Input` y `Select`—, así que unificarlos cambiaría colores sin arreglar nada.
+    Si algún día una pantalla usa las dos vías, ahí sí hay que unificar primero.
 
 ### Próximo
 

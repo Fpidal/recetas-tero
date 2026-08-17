@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { supabase } from './supabase'
+import { PALETA, rgb } from './colores'
 import {
   SERVICIO_LABEL,
   TIPO_CONFIG,
@@ -10,8 +11,8 @@ import {
   type TipoConsumoItem,
 } from '@/types/analisis'
 
-const TERRACOTA = [163, 82, 52] as const
-const GRIS_CLARO = [245, 245, 245] as const
+const TERRACOTA = rgb(PALETA.terracotta)
+const GRIS_CLARO = rgb(PALETA.creamDark)
 
 // Orden de las secciones del reporte: primero cocina, después barra.
 // Las secciones vacías no se imprimen.

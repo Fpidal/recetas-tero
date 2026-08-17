@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { obtenerHistorico, formatearMonedaVentas } from '@/lib/ventas-queries'
+import { PALETA } from '@/lib/colores'
 import {
   type ResumenPeriodo,
   type TipoPeriodo,
@@ -108,7 +109,7 @@ export default function Historico() {
                 <Tooltip formatter={(v: any) => formatearMonedaVentas(v || 0)} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="Ventas" fill="#1B3A2D" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Compras" fill="#C4704B" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Compras" fill={PALETA.terracotta} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

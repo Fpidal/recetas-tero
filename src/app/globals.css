@@ -3,43 +3,23 @@
 @tailwind utilities;
 
 /* =====================================================
-   VARIABLES CSS - Paleta Editorial
+   PALETA — no vive acá
+
+   Acá había 18 variables --color-* con toda la paleta escrita a mano.
+   No las usaba nadie: cero referencias a var(--color-*) en todo el repo.
+   Pero seguían desactualizándose, y --color-terracotta guardaba #C4704B,
+   la terracota vieja. El día que alguien escribiera var(--color-terracotta)
+   le iba a compilar bien y salir el color equivocado.
+
+   La paleta es src/lib/colores.ts, y de ahí la toma tailwind.config.ts.
+   Para pintar algo se usan las clases de Tailwind (bg-terracotta, text-ink).
+   Si hiciera falta una variable CSS de verdad, se inyecta desde layout.tsx
+   leyendo PALETA — nunca se vuelve a copiar el hex acá.
+
+   Tipografía: la definen next/font en el <html> (ver layout.tsx). Tampoco
+   van acá — :root y la clase de next/font tienen la misma especificidad,
+   así que cuál gana depende del orden de los estilos.
    ===================================================== */
-:root {
-  /* Backgrounds */
-  --color-cream: #FAF7F2;
-  --color-cream-light: #FEFCF9;
-  --color-cream-dark: #F5F0E8;
-
-  /* Sidebar */
-  --color-forest: #1B3A2D;
-  --color-forest-light: #2A4D3D;
-
-  /* Textos */
-  --color-ink: #1A1A1A;
-  --color-ink-muted: #6B6560;
-  --color-ink-light: #A69E96;
-
-  /* Bordes */
-  --color-sand: #E8E2DA;
-  --color-sand-dark: #E0D9D0;
-
-  /* Acentos */
-  --color-terracotta: #C4704B;
-  --color-terracotta-dark: #B5613E;
-  --color-olive: #5C7A5E;
-  --color-olive-light: #8CA88F;
-
-  /* Funcionales */
-  --color-success: #3D8B5E;
-  --color-warning: #A67B3D;
-  --color-danger: #9B2C2C;
-  --color-info: #4A6572;
-
-  /* Tipografía: las define next/font en el <html> (ver layout.tsx).
-     No repetirlas acá — :root y la clase de next/font tienen la misma
-     especificidad, así que cuál gana depende del orden de los estilos. */
-}
 
 /* =====================================================
    BASE STYLES

@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { PALETA, rgb } from "./src/lib/colores";
 
 const config: Config = {
   content: [
@@ -44,11 +45,14 @@ const config: Config = {
           light: '#F0EBE3',
         },
         // Acentos
+        // Los valores salen de src/lib/colores.ts, que es la fuente única:
+        // la usan también los PDF y el Excel. Si se cambia acá y no allá,
+        // la pantalla y el archivo descargado salen de distinto color.
         terracotta: {
-          DEFAULT: '#C4704B',
-          dark: '#B5613E',
-          light: '#D4856A',
-          bg: '#FDF0E6',
+          DEFAULT: PALETA.terracotta,
+          dark: PALETA.terracottaDark,
+          light: PALETA.terracottaLight,
+          bg: PALETA.terracottaBg,
         },
         olive: {
           DEFAULT: '#5C7A5E',
@@ -93,7 +97,9 @@ const config: Config = {
       boxShadow: {
         'card': '0 1px 3px rgba(0,0,0,0.04)',
         'card-hover': '0 4px 12px rgba(0,0,0,0.06)',
-        'warm': '0 2px 8px rgba(196,112,75,0.08)',
+        // La sombra cálida lleva la terracota en rgba. Sale del módulo para que
+        // no quede como quinta copia del color: hasta hoy tenía la vieja.
+        'warm': `0 2px 8px rgba(${rgb(PALETA.terracotta).join(',')},0.08)`,
       },
       borderRadius: {
         'card': '0.75rem',

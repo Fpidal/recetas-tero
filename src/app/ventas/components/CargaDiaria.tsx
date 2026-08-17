@@ -542,19 +542,19 @@ export default function CargaDiaria() {
                         <div className="grid grid-cols-3 gap-2 mb-3">
                           <ServicioMobile
                             label="Mediodía"
-                            icon="🌞"
+                            icon={<Sun className="w-3 h-3 text-yellow-500" />}
                             venta={v.venta_mediodia}
                             cubiertos={v.cubiertos_mediodia}
                           />
                           <ServicioMobile
                             label="Noche"
-                            icon="🌙"
+                            icon={<Moon className="w-3 h-3 text-slate-700" />}
                             venta={v.venta_noche}
                             cubiertos={v.cubiertos_noche}
                           />
                           <ServicioMobile
                             label="Eventos"
-                            icon="🎉"
+                            icon={<PartyPopper className="w-3 h-3 text-purple-600" />}
                             venta={v.venta_eventos}
                             cubiertos={v.cubiertos_eventos}
                             destacar
@@ -679,7 +679,7 @@ function ServicioMobile({
   destacar,
 }: {
   label: string
-  icon: string
+  icon: React.ReactNode
   venta: number
   cubiertos: number
   destacar?: boolean
@@ -699,7 +699,7 @@ function ServicioMobile({
       }`}
     >
       <div className="flex items-center gap-1 text-[10px] uppercase font-medium text-gray-500 mb-0.5">
-        <span>{icon}</span>
+        {icon}
         {label}
       </div>
       <div
@@ -735,6 +735,8 @@ function CampoServicio({
   onCubiertosChange,
 }: {
   label: string
+  /** El icono acá NO es decoración: son tres campos idénticos que se cargan
+   *  todos los días, y el glifo permite encontrar el que buscás sin leer. */
   icon: React.ReactNode
   monto: string
   onMontoChange: (v: string) => void

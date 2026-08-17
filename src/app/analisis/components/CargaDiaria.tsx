@@ -27,7 +27,6 @@ import {
   type Servicio,
   type TipoConsumoItem,
   SERVICIO_LABEL,
-  SERVICIO_ICON,
   TIPO_CONFIG,
   FK_DE_TIPO,
   areaDeTipo,
@@ -244,19 +243,25 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
             >
               {(['mediodia', 'noche', 'eventos'] as Servicio[]).map((s) => (
                 <option key={s} value={s}>
-                  {SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}
+                  {SERVICIO_LABEL[s]}
                 </option>
               ))}
             </select>
           </div>
           <div className="flex items-end">
-            <span className="text-xs text-gray-500">
-              {consumo
-                ? consumo.confirmado
-                  ? '✅ Confirmado'
-                  : `📝 Borrador · ${items.length} items`
-                : '📭 Sin carga aún'}
-            </span>
+            {/* El estado se distingue por color, no por icono: el texto ya dice
+                cuál es, así que un glifo al lado solo suma ruido. */}
+            {consumo ? (
+              consumo.confirmado ? (
+                <span className="text-xs font-medium text-success">Confirmado</span>
+              ) : (
+                <span className="text-xs text-warning">
+                  Borrador · {items.length} items
+                </span>
+              )
+            ) : (
+              <span className="text-xs text-ink-light">Sin carga aún</span>
+            )}
           </div>
         </div>
       </div>
@@ -394,7 +399,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
             {!seleccionado && !busqueda && masUsados.length > 0 && (
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <div className="text-[10px] uppercase text-gray-400 mb-2 font-semibold">
-                  ⚡ Insumos sugeridos
+                  Insumos sugeridos
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {masUsados.map((o) => (
@@ -421,7 +426,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="px-4 py-3 border-b border-gray-200 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">🍳 Consumo del servicio</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Consumo del servicio</h3>
                 <p className="text-[11px] text-gray-500">
                   {totalItems === 0
                     ? 'Todavía no cargaste items. Empezá usando el buscador de la izquierda.'
@@ -606,7 +611,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
               </div>
             </div>
             <div className="bg-blue-50 rounded-lg border-2 border-blue-300 shadow-sm p-3">
-              <div className="text-[10px] uppercase text-blue-700 font-semibold">💡 Tip</div>
+              <div className="text-[10px] uppercase text-blue-700 font-semibold">Tip</div>
               <div className="text-[11px] text-blue-700 mt-1 leading-tight">
                 Cargá la venta del día en la solapa <strong>Incidencia</strong> para ver tu food cost real
               </div>

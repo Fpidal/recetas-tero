@@ -15,7 +15,6 @@ import {
   type IncidenciaDia,
   type Servicio,
   SERVICIO_LABEL,
-  SERVICIO_ICON,
   OBJETIVO_INCIDENCIA_REAL,
   getEstadoIncidenciaReal,
   getColorEstado,
@@ -131,7 +130,7 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
     <div className="space-y-6">
       {/* ===== CARGA MANUAL DE VENTA DEL DÍA ===== */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">💵 Cargar venta del día</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Cargar venta del día</h3>
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Fecha</label>
@@ -151,7 +150,7 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
             >
               {(['mediodia', 'noche', 'eventos'] as Servicio[]).map((s) => (
                 <option key={s} value={s}>
-                  {SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}
+                  {SERVICIO_LABEL[s]}
                 </option>
               ))}
             </select>
@@ -236,7 +235,7 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              {SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}
+              {SERVICIO_LABEL[s]}
             </button>
           ))}
         </div>
@@ -262,7 +261,7 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
         </div>
         <div className={`rounded-lg border-2 ${colorMes.bg} ${colorMes.border} shadow-sm p-3 sm:p-4`}>
           <div className={`text-[10px] sm:text-xs uppercase font-semibold ${colorMes.text}`}>
-            ⭐ Incidencia REAL
+            Incidencia REAL
           </div>
           <div className={`text-lg sm:text-2xl font-bold mt-1 font-mono ${colorMes.text}`}>
             {totales.diasConCarga > 0 ? `${incidenciaMes.toFixed(1)}%` : '—'}

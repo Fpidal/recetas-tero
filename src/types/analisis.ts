@@ -212,11 +212,10 @@ export const SERVICIO_LABEL: Record<Servicio, string> = {
   eventos: 'Eventos',
 }
 
-export const SERVICIO_ICON: Record<Servicio, string> = {
-  mediodia: '🌞',
-  noche: '🌙',
-  eventos: '🎉',
-}
+// Acá había un SERVICIO_ICON con 🌞 🌙 🎉. Se renderizaba siempre como
+// `{SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}`, o sea "🌞 Mediodía": el emoji al
+// lado de la palabra que ya dice lo mismo. Un icono sirve para reemplazar una
+// palabra, no para acompañarla — ahí solo ensucia. Va SERVICIO_LABEL solo.
 
 // Objetivo de incidencia real (mismo que ventas: 30%)
 export const OBJETIVO_INCIDENCIA_REAL = 30

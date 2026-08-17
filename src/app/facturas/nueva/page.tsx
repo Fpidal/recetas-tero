@@ -1291,7 +1291,7 @@ export default function NuevaFacturaPage() {
       <Modal
         isOpen={showAlertaDiferencia}
         onClose={() => setShowAlertaDiferencia(false)}
-        title="⚠️ Diferencia de precio detectada"
+        title="Diferencia de precio detectada"
         size="md"
       >
         <div className="space-y-4">

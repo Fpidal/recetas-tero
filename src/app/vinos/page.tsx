@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen, FileText, Star, Upload, LineChart as LineChartIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Check, Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen, FileText, Star, Upload, LineChart as LineChartIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Button, Modal } from '@/components/ui'
@@ -1387,7 +1387,9 @@ export default function VinosPage() {
               {mapeoGuardado && !showMapeoEditor && importData.length > 0 && (
                 <div className="flex items-center justify-between">
                   <div className="text-sm">
-                    <span className="text-green-600 font-medium">✓ Mapeo guardado</span>
+                    <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                      <Check className="w-3.5 h-3.5" /> Mapeo guardado
+                    </span>
                     <span className="text-gray-500 ml-2">
                       Código: &quot;{colCodigo}&quot; | Producto: &quot;{colProducto}{colProducto2 ? ` + ${colProducto2}` : ''}&quot; | Precio: &quot;{colPrecio}&quot;
                     </span>

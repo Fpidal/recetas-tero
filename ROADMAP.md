@@ -166,11 +166,33 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   —el encabezado del Excel, el header del PDF de órdenes—. El valor del módulo es que pantalla
   y archivo no vuelvan a separarse, no que hoy se vea mejor.
 
+  **Limpieza de iconos, hecha (V.35).** Cero emojis en la interfaz. La regla que se
+  aplicó, y que conviene mantener: *un icono reemplaza una palabra, no la acompaña.*
+  Casi todos los casos eran del segundo tipo — `{SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}`
+  pintaba "🌞 Mediodía", con el emoji al lado de la palabra que ya lo decía. Se quitó
+  `SERVICIO_ICON` entero (7 pantallas).
+
+  **La excepción, y vale como criterio.** En `ventas/CargaDiaria` los iconos se
+  quitaron primero y se repusieron: son tres campos idénticos que se cargan todos los
+  días, y ahí el glifo deja de ser decoración y pasa a ser marca de posición —
+  encontrás el campo sin leer la etiqueta. La regla completa es entonces: *un icono
+  reemplaza una palabra, o ayuda a ubicarse entre varios elementos iguales; si no hace
+  ninguna de las dos, se va.* Por eso quedaron en el formulario y en las tarjetas de
+  mobile (con Lucide, no con los emojis originales), y NO en la tabla de cubiertos de
+  `DashboardIncidencia`, donde ya se lee la fila entera, ni en los `<select>` de
+  Análisis, donde además no se puede renderizar un icono dentro de un `<option>`.
+  El otro icono que sobrevivió es el `<Check/>` de "Mapeo guardado" en vinos, que
+  confirma un estado en vez de repetir el texto.
+
+  Dos hallazgos del paso: la leyenda del semáforo en los dos `Historico` decía
+  "✅ ≤30% · ⚠️ 31-35% · ❌ >35%" mientras la tabla pintaba badges de color —
+  enseñaba un código que en las filas no existía. Ahora la leyenda usa los mismos
+  badges, y en `ventas/Historico` el mapeo estado→clase quedó en una sola constante
+  (`BADGE_ESTADO`) que leen la leyenda y la columna, para que no se separen.
+  Los `⚠️` de los comentarios de código (`auditoria-semanal.ts`, `exportaciones.ts`,
+  `types/analisis.ts`) se dejaron: no son interfaz y ahí funcionan.
+
   Falta:
-  - **Limpieza de iconos**: 33 usos de emoji, 14 distintos. Los ~21 decorativos
-    (⚠ ✅ ❌ 💡 …) van a Lucide, que ya es dependencia. Los 12 de `SERVICIO_ICON`
-    (🌞🌙🎉) conviene **sacarlos sin reemplazo**: se renderizan como
-    `{SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}`, o sea que la etiqueta ya dice "Mediodía".
   - **Migrar la paleta**: los componentes usan `gray-*` y la paleta estándar de Tailwind en el
     93% de los casos, así que cambiar los tokens de la config no alcanza — hay que reescribir
     las clases. **Postergado a propósito** (V.34): es el mismo perfil que el módulo de

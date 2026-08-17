@@ -330,7 +330,6 @@ export default function DashboardIncidencia() {
                   </thead>
                   <tbody className="text-sm divide-y divide-gray-100">
                     <FilaCubiertos
-                      icono="🌞"
                       nombre="Mediodía"
                       cubiertos={resumen.cubiertosMediodia}
                       ventas={resumen.ventaMediodia}
@@ -338,7 +337,6 @@ export default function DashboardIncidencia() {
                       cubTotal={resumen.cubiertosTotal}
                     />
                     <FilaCubiertos
-                      icono="🌙"
                       nombre="Noche"
                       cubiertos={resumen.cubiertosNoche}
                       ventas={resumen.ventaNoche}
@@ -346,7 +344,6 @@ export default function DashboardIncidencia() {
                       cubTotal={resumen.cubiertosTotal}
                     />
                     <FilaCubiertos
-                      icono="🎉"
                       nombre="Eventos"
                       cubiertos={resumen.cubiertosEventos}
                       ventas={resumen.ventaEventos}
@@ -382,21 +379,18 @@ export default function DashboardIncidencia() {
                 </thead>
                 <tbody className="text-sm divide-y divide-gray-100">
                   <FilaServicio
-                    icono="🌞"
                     nombre="Mediodía"
                     ventas={resumen.ventaMediodia}
                     total={resumen.ventasTotal}
                     dias={resumen.diasConVentas}
                   />
                   <FilaServicio
-                    icono="🌙"
                     nombre="Noche"
                     ventas={resumen.ventaNoche}
                     total={resumen.ventasTotal}
                     dias={resumen.diasConVentas}
                   />
                   <FilaServicio
-                    icono="🎉"
                     nombre="Eventos"
                     ventas={resumen.ventaEventos}
                     total={resumen.ventasTotal}
@@ -493,7 +487,6 @@ function KPIMini({
 }
 
 function FilaCubiertos({
-  icono,
   nombre,
   cubiertos,
   ventas,
@@ -501,7 +494,6 @@ function FilaCubiertos({
   cubTotal,
   destacar,
 }: {
-  icono: string
   nombre: string
   cubiertos: number
   ventas: number
@@ -512,9 +504,7 @@ function FilaCubiertos({
   const porcentaje = cubTotal > 0 ? (cubiertos / cubTotal) * 100 : 0
   return (
     <tr className={destacar && cubiertos > 0 ? 'bg-purple-50/50' : ''}>
-      <td className="py-3 flex items-center gap-2">
-        <span className="text-base">{icono}</span> {nombre}
-      </td>
+      <td className="py-3">{nombre}</td>
       <td className="text-right py-3 font-mono">{cubiertos > 0 ? cubiertos.toLocaleString('es-AR') : '—'}</td>
       <td className="text-right py-3 text-gray-600 font-mono">{cubiertos > 0 ? `${porcentaje.toFixed(1)}%` : '—'}</td>
       <td className="text-right py-3 font-mono">{ventas > 0 ? formatearMonedaVentas(ventas) : '—'}</td>
@@ -526,14 +516,12 @@ function FilaCubiertos({
 }
 
 function FilaServicio({
-  icono,
   nombre,
   ventas,
   total,
   dias,
   destacar,
 }: {
-  icono: string
   nombre: string
   ventas: number
   total: number
@@ -545,9 +533,7 @@ function FilaServicio({
 
   return (
     <tr className={destacar && ventas > 0 ? 'bg-purple-50/50' : ''}>
-      <td className="py-3 flex items-center gap-2">
-        <span className="text-base">{icono}</span> {nombre}
-      </td>
+      <td className="py-3">{nombre}</td>
       <td className="text-right py-3 font-mono">{formatearMonedaVentas(ventas)}</td>
       <td className="text-right py-3 text-gray-600 font-mono">{porcentaje.toFixed(1)}%</td>
       <td className="text-right py-3 hidden sm:table-cell text-gray-600 font-mono">

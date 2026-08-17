@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.35',
+    fecha: '17/08/26',
+    cambios: [
+      'Se sacaron los emojis de toda la app, salvo donde el icono realmente ayuda: en la carga de ventas siguen el sol, la luna y los eventos, porque ahí permiten encontrar el campo sin leer',
+      'La referencia del semáforo en Histórico ahora usa los mismos colores que la tabla. Antes mostraba tildes y cruces que no aparecían en ninguna fila',
+      'Los estados de la carga diaria (Confirmado, Borrador, Sin carga) ahora se distinguen por color',
+    ],
+  },
+  {
     version: 'V.34',
     fecha: '17/08/26',
     cambios: [

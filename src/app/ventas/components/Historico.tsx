@@ -20,6 +20,14 @@ import {
   getEstadoIncidencia,
 } from '@/types/ventas'
 
+/** Badge por estado del semáforo. Lo usan la leyenda y la columna "Incid.":
+ *  si viven separados, un día dicen cosas distintas. */
+const BADGE_ESTADO: Record<'ok' | 'warning' | 'danger', string> = {
+  ok: 'bg-green-100 text-green-800',
+  warning: 'bg-yellow-100 text-yellow-800',
+  danger: 'bg-red-100 text-red-800',
+}
+
 export default function Historico() {
   const [tipo, setTipo] = useState<TipoPeriodo>('mensual')
   const [datos, setDatos] = useState<ResumenPeriodo[]>([])
@@ -120,8 +128,25 @@ export default function Historico() {
               <h3 className="text-sm font-semibold text-gray-900">
                 Detalle por {tipo === 'mensual' ? 'mes' : 'semana'}
               </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Semáforo: ✅ ≤ {OBJETIVO_INCIDENCIA}% · ⚠️ {OBJETIVO_INCIDENCIA + 1}-{OBJETIVO_INCIDENCIA + 5}% · ❌ &gt; {OBJETIVO_INCIDENCIA + 5}%
+              <p className="text-xs mt-0.5">
+                {/* Los mismos badges que la columna "Incid.". Antes la leyenda
+                    decía "✅ ≤30% · ⚠️ … · ❌ …" mientras la tabla pintaba
+                    fondos de color: enseñaba un código que no se usaba. */}
+                <span className="text-gray-500">Semáforo:</span>{' '}
+                {[
+                  { estado: 'ok' as const, rango: `≤ ${OBJETIVO_INCIDENCIA}%` },
+                  { estado: 'warning' as const, rango: `${OBJETIVO_INCIDENCIA + 1}-${OBJETIVO_INCIDENCIA + 5}%` },
+                  { estado: 'danger' as const, rango: `> ${OBJETIVO_INCIDENCIA + 5}%` },
+                ].map(({ estado, rango }, i) => (
+                  <span key={estado}>
+                    {i > 0 && <span className="text-gray-300 mx-1">·</span>}
+                    <span
+                      className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-medium font-mono ${BADGE_ESTADO[estado]}`}
+                    >
+                      {rango}
+                    </span>
+                  </span>
+                ))}
               </p>
             </div>
 
@@ -140,13 +165,7 @@ export default function Historico() {
                 </thead>
                 <tbody className="text-sm divide-y divide-gray-100">
                   {[...datos].reverse().map((p) => {
-                    const estado = getEstadoIncidencia(p.incidencia)
-                    const colorBadge =
-                      estado === 'ok'
-                        ? 'bg-green-100 text-green-800'
-                        : estado === 'warning'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
+                    const colorBadge = BADGE_ESTADO[getEstadoIncidencia(p.incidencia)]
 
                     const sinDatos = p.ventasTotal === 0 && p.compras === 0
                     return (

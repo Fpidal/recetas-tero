@@ -18,7 +18,6 @@ import { obtenerIncidenciasMes, formatearMonedaAnalisis,
 import {
   type Servicio,
   SERVICIO_LABEL,
-  SERVICIO_ICON,
   OBJETIVO_INCIDENCIA_REAL,
   getEstadoIncidenciaReal,
   getColorEstado,
@@ -117,7 +116,7 @@ export default function Historico() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              {SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}
+              {SERVICIO_LABEL[s]}
             </button>
           ))}
         </div>
@@ -181,8 +180,25 @@ export default function Historico() {
             <div className="px-4 py-3 border-b border-gray-200">
               <h3 className="text-sm font-semibold text-gray-900">Detalle mensual</h3>
               <p className="text-xs text-gray-500 mt-0.5">
-                Semáforo: ✅ ≤ {OBJETIVO_INCIDENCIA_REAL}% · ⚠️ {OBJETIVO_INCIDENCIA_REAL + 1}-
-                {OBJETIVO_INCIDENCIA_REAL + 5}% · ❌ &gt; {OBJETIVO_INCIDENCIA_REAL + 5}%
+                {/* La leyenda usa los MISMOS badges que la columna de incidencia.
+                    Antes decía "✅ ≤30% · ⚠️ 31-35% · ❌ >35%", pero la tabla no
+                    pinta emojis: pinta el número sobre un fondo de color. La
+                    leyenda enseñaba un código que en la tabla no existía. */}
+                <span className="text-gray-500">Semáforo:</span>{' '}
+                {[
+                  { estado: 'ok' as const, rango: `≤ ${OBJETIVO_INCIDENCIA_REAL}%` },
+                  { estado: 'warning' as const, rango: `${OBJETIVO_INCIDENCIA_REAL + 1}-${OBJETIVO_INCIDENCIA_REAL + 5}%` },
+                  { estado: 'danger' as const, rango: `> ${OBJETIVO_INCIDENCIA_REAL + 5}%` },
+                ].map(({ estado, rango }, i) => (
+                  <span key={estado}>
+                    {i > 0 && <span className="text-gray-300 mx-1">·</span>}
+                    <span
+                      className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-medium font-mono ${getColorEstado(estado).badge}`}
+                    >
+                      {rango}
+                    </span>
+                  </span>
+                ))}
               </p>
             </div>
 

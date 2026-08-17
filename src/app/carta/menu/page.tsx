@@ -57,7 +57,7 @@ export default function CartaMenuImprimirPage() {
       </div>
 
       <p className="cm-hint no-print">
-        💡 Al tocar Descargar PDF se abre el diálogo de impresión → elegí <b>Guardar como PDF</b>.
+        Al tocar Descargar PDF se abre el diálogo de impresión → elegí <b>Guardar como PDF</b>.
         Activá la opción <b>Gráficos de fondo</b> para que salgan los colores.
       </p>
 

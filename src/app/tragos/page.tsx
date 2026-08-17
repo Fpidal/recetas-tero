@@ -254,7 +254,7 @@ export default function TragosPage() {
     const margen = parsearNumero(margenGlobal) || 25
     if (margen <= 0) { alert('Ingresá un margen objetivo válido'); return }
     if (!confirm(
-      `⚠️ ATENCIÓN: vas a aplicar margen objetivo ${margen}% a ${tragos.length} ` +
+      `ATENCIÓN: vas a aplicar margen objetivo ${margen}% a ${tragos.length} ` +
       `${tragos.length === 1 ? 'trago' : 'tragos'} y SOBRESCRIBIR sus precios de carta con el sugerido.\n\n` +
       `Esta acción no se puede deshacer. ¿Confirmás?`
     )) return

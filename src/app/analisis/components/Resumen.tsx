@@ -15,7 +15,6 @@ import {
   type ItemDesglosado,
   type Servicio,
   SERVICIO_LABEL,
-  SERVICIO_ICON,
   CATEGORIAS_LABEL,
   CATEGORIAS_COLOR,
   CATEGORIAS_ORDEN,
@@ -168,7 +167,7 @@ export default function Resumen({ fecha, servicio, setServicio }: Props) {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}
+                {SERVICIO_LABEL[s]}
               </button>
             ))}
           </div>

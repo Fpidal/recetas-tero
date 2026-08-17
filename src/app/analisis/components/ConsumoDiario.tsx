@@ -15,7 +15,6 @@ import {
   type ItemDesglosado,
   type Servicio,
   SERVICIO_LABEL,
-  SERVICIO_ICON,
 } from '@/types/analisis'
 
 interface Props {
@@ -116,7 +115,7 @@ export default function ConsumoDiario({ fecha, setFecha, servicio, setServicio }
             >
               {(['mediodia', 'noche', 'eventos'] as Servicio[]).map((s) => (
                 <option key={s} value={s}>
-                  {SERVICIO_ICON[s]} {SERVICIO_LABEL[s]}
+                  {SERVICIO_LABEL[s]}
                 </option>
               ))}
             </select>

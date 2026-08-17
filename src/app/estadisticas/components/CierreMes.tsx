@@ -12,7 +12,7 @@ import {
 } from '@/lib/cierre-mes-queries'
 import { formatearMoneda } from '@/lib/formato-numeros'
 import { generarPDFCierreMes } from '@/lib/generar-pdf-cierre-mes'
-import { SERVICIO_LABEL, SERVICIO_ICON, CATEGORIAS_LABEL } from '@/types/analisis'
+import { SERVICIO_LABEL, CATEGORIAS_LABEL } from '@/types/analisis'
 import { PALETA } from '@/lib/colores'
 
 const fmt = (v: number) => formatearMoneda(v, true, 0)
@@ -353,7 +353,7 @@ function VentasPorServicio({ data }: { data: CierreMesData }) {
         {filas.map((v) => (
           <tr key={v.servicio} className="hover:bg-gray-50">
             <td className="py-2 px-3 text-gray-900">
-              {SERVICIO_ICON[v.servicio]} {SERVICIO_LABEL[v.servicio]}
+              {SERVICIO_LABEL[v.servicio]}
             </td>
             <td className="py-2 px-3 text-right font-mono font-medium">{fmt(v.venta)}</td>
             <td className="py-2 px-3 text-right font-mono text-gray-600">

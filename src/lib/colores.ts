@@ -111,3 +111,23 @@ export function rgb(hex: string): [number, number, number] {
 export function argb(hex: string): string {
   return hex.replace('#', '').toUpperCase()
 }
+
+/**
+ * Aclara un color mezclándolo con blanco. `factor` va de 0 (igual) a 1 (blanco).
+ *
+ * Sirve para cuando varias porciones de un gráfico comparten significado y hay
+ * que distinguirlas igual: mismo tono, distinta intensidad. Un menú de parrilla
+ * tiene siete componentes que son todos "principal" — pintarlos del mismo color
+ * exacto deja la torta como un círculo liso.
+ */
+export function aclarar(hex: string, factor: number): string {
+  const f = Math.min(Math.max(factor, 0), 1)
+  const mezclar = (c: number) => Math.round(c + (255 - c) * f)
+  return (
+    '#' +
+    rgb(hex)
+      .map((c) => mezclar(c).toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase()
+  )
+}

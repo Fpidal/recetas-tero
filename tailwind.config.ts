@@ -6,6 +6,15 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    // types/ y lib/ TIENEN que estar acá. Tailwind borra del CSS toda clase
+    // que no encuentre en estas rutas, y varias viven en constantes fuera de
+    // los componentes — TIPO_CONFIG.badgeClass, getColorEstado(), etc.
+    // Sin esta línea, `bg-rose-100` en types/analisis.ts nunca llega al CSS y
+    // el badge sale sin fondo, sin error y sin aviso. Pasó con REC, EJE y TRA:
+    // once clases purgadas, mientras INS y VIN se veían bien solo porque sus
+    // colores aparecían por casualidad en otros componentes.
+    "./src/types/**/*.{js,ts}",
+    "./src/lib/**/*.{js,ts}",
   ],
   theme: {
     extend: {

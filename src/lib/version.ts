@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.36',
+    fecha: '18/08/26',
+    cambios: [
+      'Ficha de un menú ejecutivo: nueva "Composición del costo", con gráfico de torta que muestra cuánto pesa el principal, la entrada y la bebida. Sirve para ver de un vistazo qué componente decide el costo del menú',
+      'En la carga diaria, los tipos Receta, Ejecutivo y Trago aparecían en negro mientras Insumo y Vino tenían color. Ahora los seis tipos se distinguen por color',
+    ],
+  },
+  {
     version: 'V.35',
     fecha: '17/08/26',
     cambios: [

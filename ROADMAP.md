@@ -46,6 +46,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Recetas** | Platos: ingredientes, costo, margen, precio de venta, foto |
 | **Tragos** | Coctelería con costos y beverage cost |
 | **Carta** | Carta editorial en HTML + QR al menú digital público (`/menu`). Exporta a Excel lo que está en carta y lo que quedó afuera. Desde acá se llega a Menús ejecutivos y especiales |
+| **Menús ejecutivos** | Menú del día: entrada + principal + bebida. La ficha muestra la **Composición del costo** (V.36) — torta por componente, coloreada según el papel (principal, entrada, bebida) y con un matiz por porción, porque un menú de parrilla tiene siete componentes que son todos principal. Sirve para ver qué componente decide el costo: en Menu Pescados el salmón es el 75% |
 | **Órdenes de Compra** | Pedidos a proveedores, con PDF |
 | **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito. Solapa **Resumen semanal** (V.26): faltantes, cambios de precio, agregados sin pedir y órdenes sin factura, con notas por línea y PDF |
 | **Ventas** | Carga diaria de ventas. **Nivel grueso:** ventas vs compras del período |
@@ -191,6 +192,13 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   (`BADGE_ESTADO`) que leen la leyenda y la columna, para que no se separen.
   Los `⚠️` de los comentarios de código (`auditoria-semanal.ts`, `exportaciones.ts`,
   `types/analisis.ts`) se dejaron: no son interfaz y ahí funcionan.
+
+  **Los badges de tipo nunca tuvieron color, y no era de diseño (V.36).** `TIPO_CONFIG`
+  define `badgeClass` para los seis tipos desde el principio, pero `tailwind.config.ts`
+  no escaneaba `src/types/`, así que 11 clases se purgaban del CSS. Insumo y Vino se
+  veían bien de casualidad —sus colores aparecen en otros componentes que sí se
+  escaneaban— y Receta, Ejecutivo y Trago salían en negro. Está documentado como la
+  quinta trampa en `CLAUDE.md`, porque es una familia de bug que no da error.
 
   Falta:
   - **Migrar la paleta**: los componentes usan `gray-*` y la paleta estándar de Tailwind en el

@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, Package, BookOpen, ChefHat } from 'lucide-react'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { PALETA, aclarar } from '@/lib/colores'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
@@ -48,6 +50,8 @@ interface ItemMenu {
   costo_unitario: number
   costo_linea: number
   es_bebida: boolean
+  /** Sección del plato (Entradas, Principales, Parrilla…). Solo para tipo 'plato'. */
+  seccion?: string
   isNew?: boolean
 }
 
@@ -178,7 +182,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
           id, tipo, insumo_id, receta_base_id, plato_id, cantidad, es_bebida, costo_linea,
           insumos (nombre, unidad_medida),
           recetas_base (nombre, costo_total, costo_por_porcion, rendimiento_porciones),
-          platos (nombre, costo_total)
+          platos (nombre, costo_total, seccion)
         )
       `)
       .eq('id', id)
@@ -244,6 +248,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
         costo_unitario: costoUnitario,
         costo_linea: cantidad * costoUnitario,
         es_bebida: item.es_bebida,
+        seccion: item.platos?.seccion,
       }
     })
 
@@ -369,6 +374,60 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
   }
 
   const costoTotal = items.reduce((sum, item) => sum + item.costo_linea, 0)
+
+  /**
+   * Qué papel juega cada componente dentro del menú.
+   *
+   * DOS COSAS QUE NO SON OBVIAS:
+   *
+   * 1. `es_bebida` es un checkbox manual que arranca desmarcado, así que está
+   *    puesto en unos menús y en otros no — el mismo "Bebidas menu" figura
+   *    marcado en el de paella y sin marcar en el del salmón. Se respeta cuando
+   *    está, y si no se cae al nombre.
+   *
+   * 2. No todo componente es un plato. Una parrillada se arma con insumos
+   *    sueltos (asado, chorizo, panceta, papas) que SON el plato fuerte del
+   *    menú. Mandarlos a un cajón "Otro" dejaba el 94% de la torta en gris sin
+   *    decir nada. Solo hay tres papeles posibles, y por descarte se es
+   *    principal: los menús son entrada + principal + bebida, no llevan postre.
+   */
+  function papelDe(item: ItemMenu): 'Bebida' | 'Entrada' | 'Principal' {
+    if (item.es_bebida || /bebida/i.test(item.nombre)) return 'Bebida'
+    if (item.tipo === 'plato' && item.seccion === 'Entradas') return 'Entrada'
+    return 'Principal'
+  }
+
+  const COLOR_PAPEL: Record<string, string> = {
+    Principal: PALETA.terracotta,
+    Entrada: PALETA.olive,
+    Bebida: PALETA.info,
+  }
+
+  // Una porción por componente, ordenadas de mayor a menor: lo primero que se
+  // ve es lo que manda el costo del menú.
+  const porcionesTorta = (() => {
+    const base = items
+      .filter((i) => i.costo_linea > 0)
+      .map((i) => ({
+        name: i.nombre,
+        value: i.costo_linea,
+        papel: papelDe(i),
+        porcentaje: costoTotal > 0 ? (i.costo_linea / costoTotal) * 100 : 0,
+      }))
+      .sort((a, b) => b.value - a.value)
+
+    // Mismo papel = mismo tono, pero cada porción un poco más clara que la
+    // anterior. Sin esto una parrillada de siete cortes sale como un círculo
+    // liso: todos son principal y todos del mismo color exacto.
+    const vistos: Record<string, number> = {}
+    return base.map((p) => {
+      const n = vistos[p.papel] ?? 0
+      vistos[p.papel] = n + 1
+      return { ...p, color: aclarar(COLOR_PAPEL[p.papel], Math.min(n * 0.14, 0.62)) }
+    })
+  })()
+
+  const dominante = porcionesTorta[0]
 
   async function handleGuardar() {
     if (!nombre.trim()) {
@@ -665,6 +724,74 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
                 </tfoot>
               </table>
             </div>
+
+            {/* Composición del costo — para qué sirve: en un menú de tres partes,
+                casi siempre una se lleva la mayoría. Saber cuál evita tocar la
+                bebida o la entrada creyendo que mueven el costo cuando no. */}
+            {porcionesTorta.length > 1 && costoTotal > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h4 className="text-sm font-semibold text-gray-700 mb-1">Composición del costo</h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Cuánto pesa cada componente sobre los{' '}
+                  <span className="font-mono">
+                    ${costoTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </span>{' '}
+                  del menú
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  <ResponsiveContainer width="100%" height={170}>
+                    <PieChart>
+                      <Pie
+                        data={porcionesTorta}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={62}
+                        innerRadius={30}
+                        dataKey="value"
+                        stroke="#fff"
+                        strokeWidth={2}
+                      >
+                        {porcionesTorta.map((p, idx) => (
+                          <Cell key={idx} fill={p.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: any, _n: any, props: any) =>
+                          `$${Number(value).toLocaleString('es-AR', { maximumFractionDigits: 0 })} · ${props.payload.porcentaje.toFixed(1)}%`
+                        }
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* Referencia al costado: con nombres de plato, las etiquetas
+                      sobre la torta se pisan entre sí. */}
+                  <ul className="space-y-1.5">
+                    {porcionesTorta.map((p, idx) => (
+                      <li key={idx} className="flex items-center gap-2 text-xs">
+                        <span
+                          className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                          style={{ backgroundColor: p.color }}
+                        />
+                        <span className="text-gray-700 truncate flex-1">{p.name}</span>
+                        <span className="text-gray-400">{p.papel}</span>
+                        <span className="font-mono font-medium text-gray-900 w-12 text-right">
+                          {p.porcentaje.toFixed(1)}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {dominante && dominante.porcentaje >= 50 && (
+                  <p className="text-xs text-gray-600 mt-3 bg-gray-50 border border-gray-100 rounded px-3 py-2">
+                    <span className="font-medium">{dominante.name}</span> es el{' '}
+                    <span className="font-mono">{dominante.porcentaje.toFixed(0)}%</span> del costo.
+                    El resto de los componentes, juntos, no alcanzan a compensar un cambio de precio acá.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 

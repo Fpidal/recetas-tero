@@ -89,7 +89,7 @@ src/
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
 
-## ⚠️ Cuatro trampas que ya rompieron cosas
+## ⚠️ Cinco trampas que ya rompieron cosas
 
 **1. `anon` no recibe permisos.** La clave anónima viaja en el bundle público. Hasta el
 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los márgenes—
@@ -113,6 +113,16 @@ Ver `supabase-fix-precio-vigente-unico.sql`.
 `precios_insumo` las 3.500. Todo lo que lea muchas filas va paginado con `.range()` — ver
 `obtenerHistorialPrecios()` o `traerTodo()` en `src/lib/exportaciones.ts`. Este corte escondió
 63 variaciones de precio durante semanas (V.22).
+
+**5. Tailwind borra las clases que no encuentra escaneando, y no avisa.** El `content` de
+`tailwind.config.ts` define QUÉ archivos se leen para decidir qué CSS generar. Una clase que
+vive en un archivo fuera de esa lista no llega al CSS: el elemento se renderiza sin estilo, sin
+error y sin warning. Hasta V.36 la lista no incluía `src/types/` ni `src/lib/`, donde viven
+varias constantes de estilo (`TIPO_CONFIG.badgeClass`, `getColorEstado()`). Eran 11 clases
+purgadas. Lo que lo volvió difícil de ver: los badges de Insumo y Vino se veían bien **de
+casualidad**, porque `bg-blue-100` y `bg-purple-100` aparecen en otros 15 y 13 componentes que
+sí se escaneaban; Receta, Ejecutivo y Trago usan colores que no figuran en ningún otro lado y
+salían en negro. **Si agregás una carpeta nueva con clases de Tailwind adentro, va al `content`.**
 
 ## Patrones de Código
 

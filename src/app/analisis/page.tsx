@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { ClipboardEdit, Package, Star, History, CalendarRange } from 'lucide-react'
+import { ClipboardEdit, Package, Star, History, CalendarRange, Trophy } from 'lucide-react'
 import CargaDiaria from './components/CargaDiaria'
 import ConsumoDiario from './components/ConsumoDiario'
 import Incidencia from './components/Incidencia'
 import Resumen from './components/Resumen'
 import Historico from './components/Historico'
+import Ranking from './components/Ranking'
 import type { Servicio } from '@/types/analisis'
 
-type Tab = 'carga' | 'consumo' | 'incidencia' | 'resumen' | 'historico'
+type Tab = 'carga' | 'consumo' | 'incidencia' | 'ranking' | 'resumen' | 'historico'
 
 function dateToString(d: Date): string {
   const year = d.getFullYear()
@@ -57,6 +58,12 @@ export default function AnalisisPage() {
           label="Incidencia"
         />
         <TabButton
+          active={tab === 'ranking'}
+          onClick={() => setTab('ranking')}
+          icon={<Trophy className="w-4 h-4" />}
+          label="Ranking"
+        />
+        <TabButton
           active={tab === 'resumen'}
           onClick={() => setTab('resumen')}
           icon={<CalendarRange className="w-4 h-4" />}
@@ -78,6 +85,9 @@ export default function AnalisisPage() {
       )}
       {tab === 'incidencia' && (
         <Incidencia fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
+      )}
+      {tab === 'ranking' && (
+        <Ranking fecha={fecha} servicio={servicio} setServicio={setServicio} />
       )}
       {tab === 'resumen' && (
         <Resumen fecha={fecha} servicio={servicio} setServicio={setServicio} />

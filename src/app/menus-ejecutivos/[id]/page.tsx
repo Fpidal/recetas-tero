@@ -8,7 +8,7 @@ import { PALETA, aclarar } from '@/lib/colores'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
-import { parsearNumero } from '@/lib/formato-numeros'
+import { parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
 
 interface Insumo {
   id: string
@@ -60,6 +60,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
   const router = useRouter()
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [cubiertos, setCubiertos] = useState('1')
   const [items, setItems] = useState<ItemMenu[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -177,7 +178,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
     const { data: menu, error } = await supabase
       .from('menus_ejecutivos')
       .select(`
-        id, nombre, descripcion, costo_total, activo,
+        id, nombre, descripcion, costo_total, activo, cubiertos,
         menu_ejecutivo_items (
           id, tipo, insumo_id, receta_base_id, plato_id, cantidad, es_bebida, costo_linea,
           insumos (nombre, unidad_medida),
@@ -196,6 +197,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
 
     setNombre(menu.nombre)
     setDescripcion(menu.descripcion || '')
+    setCubiertos(String(menu.cubiertos ?? 1).replace('.', ','))
     setIsReadOnly(menu.activo === false)
 
     // Mapear items - calcular costos reales para elaboraciones
@@ -447,6 +449,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
       .update({
         nombre: nombre.trim(),
         descripcion: descripcion.trim() || null,
+        cubiertos: Math.max(parsearNumero(cubiertos) || 1, 0.5),
         costo_total: costoTotal,
       })
       .eq('id', id)
@@ -546,6 +549,37 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
             onChange={(e) => setDescripcion(e.target.value)}
             placeholder="Ej: Entrada + Principal + Postre"
           />
+        </div>
+
+        {/* Cubiertos: sin esto, un menú para dos aparece con el doble de
+            contribución que uno individual y ensucia el ranking de su sección. */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Input
+              label="¿Para cuántas personas?"
+              value={cubiertos}
+              onChange={(e) => setCubiertos(formatearInputNumero(e.target.value))}
+              className="font-mono"
+              placeholder="1"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Dejá <span className="font-mono">1</span> si es individual. Poné{' '}
+              <span className="font-mono">2</span> en una parrillada para dos: se usa para
+              comparar el menú contra los platos de la carta persona por persona.
+            </p>
+          </div>
+          {parsearNumero(cubiertos) > 1 && costoTotal > 0 && (
+            <div className="self-start bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Por persona</div>
+              <div className="font-mono text-lg font-semibold text-gray-900">
+                ${Math.round(costoTotal / parsearNumero(cubiertos)).toLocaleString('es-AR')}
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                de costo · el total es{' '}
+                <span className="font-mono">${Math.round(costoTotal).toLocaleString('es-AR')}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Agregar items */}

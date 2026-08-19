@@ -10,6 +10,17 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.37',
+    fecha: '19/08/26',
+    cambios: [
+      'Nueva pestaña "Ranking" en Análisis: qué se vendió, cuánto dejó cada producto y en qué cuadrante cae dentro de su sección (estrella, caballo, rompecabezas o perro)',
+      'La matriz compara por contribución en pesos, no por food cost. Un plato con 40% de food cost que deja $15.000 rinde más que uno con 20% que deja $3.000',
+      'Cada sección se compara contra sí misma: las entradas y los postres son porciones más chicas y contra los principales siempre saldrían perdiendo',
+      'Los productos sin precio de carta aparecen marcados, así se ve qué falta cargar',
+      'Ficha del menú: nuevo campo "¿Para cuántas personas?". Un menú para dos ahora se compara bien contra los platos individuales',
+    ],
+  },
+  {
     version: 'V.36',
     fecha: '18/08/26',
     cambios: [

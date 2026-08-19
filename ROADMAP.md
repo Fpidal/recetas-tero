@@ -51,6 +51,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito. Solapa **Resumen semanal** (V.26): faltantes, cambios de precio, agregados sin pedir y órdenes sin factura, con notas por línea y PDF |
 | **Ventas** | Carga diaria de ventas. **Nivel grueso:** ventas vs compras del período |
 | **Análisis** | Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo. Desde Resumen se baja la planilla de pedido de la semana, con la cantidad **a comprar** ajustada por merma (V.30) |
+| **Análisis · Ranking** | Ranking de productos vendidos e **ingeniería de menú** (V.37). Unidades, facturación, costo y contribución por producto, con la matriz estrella/caballo/rompecabezas/perro por sección. La contribución va **en pesos, no en food cost**: un plato con 40% de FC que deja $15.000 rinde más que uno con 20% que deja $3.000, y con el eje en porcentaje la matriz recomienda sacar justo lo que más deja |
 | **Estadísticas** | Dashboard consolidado (6 pestañas: las 4 de compras y precios, más **Cierre de mes** (V.25) y **ABC de insumos** (V.28)) |
 | **Inventario** | Hojas de control de stock. **Pausado a propósito** — ver Decisiones tomadas |
 | **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
@@ -223,6 +224,16 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   Costó tres incidentes llegar hasta acá: trigger de vinos, descuento en facturas (V.16) y
   fórmula de merma (V.20). Esta última convirtió un cambio de 10 minutos en una hora, porque
   el repo describía funciones inexistentes.
+
+- **Bebidas en la carta.** El café, las gaseosas y la cerveza se cargan como insumos, así que
+  no son productos vendibles para el sistema: quedan fuera del ranking y su costo cuenta como
+  **Cocina** —$35.426 en el servicio del 8/8—, porque `areaDeTipo` manda a Barra solo `trago` y
+  `vino`. La carta se indexa por `plato_id`, así que meterlas ahí significa crearlas como platos
+  de un solo ingrediente, que el sistema ya soporta. Cambia cómo se cargan (de `Cafe 0,06 kg` a
+  `Café 12 porciones`), y eso es **más fácil**, no menos: hoy hay que estimar gramos de café
+  molido. **Antes hay que consolidar la lista de secciones**, que está escrita a mano en 12
+  lugares de 9 archivos: agregar dos secciones ahí es la misma trampa de la terracota y la
+  merma, y si se escapa un archivo la sección aparece en una pantalla y no en otra.
 
 - **Objetivo de food cost por categoría.** Hoy Análisis dice *cuánto* se consumió, pero no si
   está bien o mal. Definir un target por categoría convierte el dato en alerta accionable.

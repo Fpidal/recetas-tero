@@ -100,6 +100,9 @@ export interface Database {
           nombre: string
           descripcion: string | null
           costo_total: number
+          /** Entradas, Principales, Postres, Parrilla, Pastas y Arroces, Ensaladas */
+          seccion: string | null
+          rendimiento_porciones: number
           activo: boolean
           created_at: string
           updated_at: string
@@ -161,6 +164,8 @@ export interface Database {
           margen_objetivo: number
           precio_sugerido: number
           food_cost_real: number
+          /** A cuántas personas alcanza una unidad. 1 salvo menús para compartir. */
+          cubiertos: number
           activo: boolean
           created_at: string
           updated_at: string

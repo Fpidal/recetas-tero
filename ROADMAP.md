@@ -216,16 +216,6 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Próximo
 
-- **Unificar las policies antes de migrar.** 22 tablas tienen `allow_all` para `public` y 9 tienen
-  `to authenticated`: dos criterios conviviendo. Unificar parece trivial pero **no lo es**: la
-  carta pública (`/menu`, el del QR) lee `carta` con la clave anónima, y funciona justamente
-  porque su policy es `to public`. Pasarla a `authenticated` deja el menú en blanco para los
-  clientes, sin error visible del lado de la app. `carta` y `platos` necesitan una policy propia
-  para `anon`, además del GRANT por columnas de V.24.
-
-  Por eso conviene hacerlo **durante** la migración y no antes: ahí hay que reescribir las 31
-  igual, y las dos excepciones se tratan de una vez.
-
 - **Dónde mirar bebida contra comida (V.38).** Quedaron **dos** números y no miden lo mismo:
 
   El encabezado de Carga diaria abre el total en **Cocina / Bebidas**. Decide por el item

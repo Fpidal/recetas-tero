@@ -14,7 +14,7 @@ export const CHANGELOG: VersionEntry[] = [
     fecha: '19/08/26',
     cambios: [
       'Se sacó la carta para imprimir y el menú digital del QR: la carta la manda a diseñar cada restaurante a su estilo, y el QR estaba atado a ese PDF. La pantalla de Carta sigue igual — platos, precios, food cost y el Excel',
-      'Al no quedar ninguna pantalla que muestre datos sin iniciar sesión, se cerró por completo el acceso público a la base',
+      'Al no quedar ninguna pantalla que muestre datos sin iniciar sesión, se cerró por completo el acceso público a la base, y ahora hacen falta dos errores distintos para que una tabla quede expuesta en vez de uno',
     ],
   },
   {

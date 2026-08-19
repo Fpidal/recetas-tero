@@ -99,6 +99,11 @@ ya no hay ninguna pantalla que muestre datos sin sesión. Si algún día vuelve 
 página pública, se concede **columna por columna** y nunca la tabla entera. Ver
 `supabase-cerrar-anon-total.sql`. Lo verifica `npm run consultar -- anon-sin-permisos`.
 
+Desde V.41 las policies son **todas `to authenticated`** (`supabase-policies-authenticated.sql`).
+Es la segunda pared: el `GRANT` se evalúa antes que la policy, así que ninguno alcanza solo —
+pero con los dos, un `GRANT` concedido por descuido ya no abre la tabla. Antes sí: era el único
+freno, y por eso un solo error dejó 22 tablas legibles.
+
 ⚠️ Ese chequeo lee el **catálogo de Postgres**, no `information_schema`. Esa vista solo muestra
 los permisos que involucran al rol que consulta, así que el rol lector veía cero y el chequeo
 daba verde con `anon` teniendo las 8 columnas concedidas. Un chequeo de seguridad que mira el

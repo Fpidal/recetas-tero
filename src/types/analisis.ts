@@ -16,11 +16,9 @@ export type TipoConsumoItem =
  * de las dos se suma en un solo total, una noche con mucho vino "mejora"
  * la incidencia sin que la cocina haya cambiado nada, y al revés.
  *
- * ⚠️ ESTA CLASIFICACIÓN VIVE EN DOS LUGARES, Y SOLO DOS:
- *      Frontend → TIPOS_BARRA (acá abajo)
- *      Base     → función recalcular_costo_consumo()
- *                 (supabase-analisis-tipos-consumo.sql)
- *    Si se toca una, se toca la otra.
+ * Desde V.38 el tipo no alcanza para decidir: una gaseosa es una receta y un
+ * agua puede ser un insumo suelto, y las dos son barra. La regla completa está
+ * en areaDeItem(), acá abajo. TIPOS_BARRA queda como la parte del tipo.
  */
 export type AreaConsumo = 'cocina' | 'barra'
 
@@ -30,9 +28,54 @@ export function areaDeTipo(tipo: TipoConsumoItem): AreaConsumo {
   return TIPOS_BARRA.includes(tipo) ? 'barra' : 'cocina'
 }
 
+/**
+ * A qué área pertenece un item cargado.
+ *
+ * ⚠️ ESTA REGLA VIVE EN DOS LUGARES, Y SOLO DOS:
+ *
+ *     Base      → `actualizar_costos_consumo()`, que calcula costo_cocina y
+ *                 costo_barra en `consumo_diario`
+ *     Frontend  → esta función
+ *
+ * Si se toca una, se toca la otra. Misma convención que la fórmula del costo
+ * final (ver CLAUDE.md). Los `.sql` versionados están en
+ * supabase-consumo-bebidas-barra.sql.
+ *
+ * POR QUÉ NO ALCANZA EL TIPO: hasta V.38 la regla era "trago o vino va a
+ * barra, el resto a cocina". El agua, la gaseosa, la cerveza y el café no son
+ * ni trago ni vino, así que caían en cocina: en el servicio del 08/08/26 eso
+ * puso $35.426 de bebidas dentro de un costo de cocina de $434.275. La
+ * división existe para mirar bebida y comida por separado, y así no servía.
+ */
+export function areaDeItem(item: {
+  tipo: TipoConsumoItem
+  /** Sección del plato, cuando el item es una receta */
+  seccion?: string | null
+  /** Categoría del insumo, cuando el item es un insumo suelto */
+  categoria?: string | null
+}): AreaConsumo {
+  if (TIPOS_BARRA.includes(item.tipo)) return 'barra'
+  // Lo que viene: las gaseosas y el café ya son recetas de sección Bebidas
+  if (item.tipo === 'receta' && item.seccion === 'Bebidas') return 'barra'
+  // Lo histórico: hasta V.38 las aguas y la cerveza se cargaban como insumo
+  if (item.tipo === 'insumo' && item.categoria === 'Bebidas') return 'barra'
+  return 'cocina'
+}
+
+/**
+ * "Bebidas" y no "Barra" porque el número incluye el agua y la gaseosa que
+ * vienen adentro del menú ejecutivo, que no son una venta de barra. En el
+ * almuerzo del 12/08/26 eran 51 aguas, 26 con gas y 22 gaseosas — $78.111 de
+ * un servicio de $491.792. Llamarlo Barra hacía pensar en vinos y tragos.
+ *
+ * OJO con este número: separa la bebida cargada suelta, pero la que viene
+ * adentro de una promo queda del lado de la comida, porque la promo entra
+ * como una sola línea. Para bebida vs comida bien separadas está el Resumen,
+ * que expande los compuestos hasta el insumo y agrupa por categoría.
+ */
 export const AREA_LABEL: Record<AreaConsumo, string> = {
   cocina: 'Cocina',
-  barra: 'Barra',
+  barra: 'Bebidas',
 }
 
 // Cabecera del consumo de un servicio
@@ -68,6 +111,10 @@ export interface ConsumoItem {
   created_at: string
   // Datos enriquecidos (vienen de joins)
   nombre?: string
+  /** Sección del plato — solo para tipo 'receta'. La usa areaDeItem(). */
+  seccion?: string | null
+  /** Categoría del insumo — solo para tipo 'insumo'. La usa areaDeItem(). */
+  categoria?: string | null
 }
 
 // Para insertar un item nuevo

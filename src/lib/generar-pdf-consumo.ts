@@ -5,7 +5,8 @@ import { PALETA, rgb } from './colores'
 import {
   SERVICIO_LABEL,
   TIPO_CONFIG,
-  areaDeTipo,
+  areaDeItem,
+  AREA_LABEL,
   type ConsumoItem,
   type Servicio,
   type TipoConsumoItem,
@@ -120,10 +121,10 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
   })).filter((c) => c.cantidad > 0)
 
   const costoCocina = items
-    .filter((i) => areaDeTipo(i.tipo) === 'cocina')
+    .filter((i) => areaDeItem(i) === 'cocina')
     .reduce((acc, it) => acc + Number(it.subtotal), 0)
   const costoBarra = totalCosto - costoCocina
-  const hayBarra = items.some((i) => areaDeTipo(i.tipo) === 'barra')
+  const hayBarra = items.some((i) => areaDeItem(i) === 'barra')
 
   const boxHeight = 14
   doc.setFillColor(...GRIS_CLARO)
@@ -168,7 +169,7 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
     doc.setFontSize(7)
     doc.setTextColor(110, 110, 110)
     doc.text(
-      `Cocina ${fmtMoney(costoCocina)}   ·   Barra ${fmtMoney(costoBarra)}`,
+      `${AREA_LABEL.cocina} ${fmtMoney(costoCocina)}   ·   ${AREA_LABEL.barra} ${fmtMoney(costoBarra)}`,
       rightX,
       y + 1,
       { align: 'right' }

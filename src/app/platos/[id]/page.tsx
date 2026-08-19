@@ -10,6 +10,7 @@ import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import { PALETA } from '@/lib/colores'
+import { SECCIONES } from '@/lib/secciones'
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Carnes': '#9B2C2C',
@@ -776,12 +777,9 @@ export default function EditarPlatoPage({ params }: { params: { id: string } }) 
                 disabled={isReadOnly}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 sm:px-2 sm:py-1.5 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
-                <option value="Entradas">Entradas</option>
-                <option value="Principales">Principales</option>
-                <option value="Parrilla">Parrilla</option>
-                <option value="Pastas y Arroces">Pastas y Arroces</option>
-                <option value="Ensaladas">Ensaladas</option>
-                <option value="Postres">Postres</option>
+                {SECCIONES.map((sec) => (
+                  <option key={sec} value={sec}>{sec}</option>
+                ))}
               </select>
             </div>
             <div className="sm:w-16">

@@ -7,8 +7,9 @@ import { costoFinalInsumo } from '@/lib/costos'
 import { Button, ClickableItemName, BotonExportar } from '@/components/ui'
 import { exportarRecetas } from '@/lib/exportaciones'
 import Link from 'next/link'
+import { SECCIONES as SECCIONES_ORDEN } from '@/lib/secciones'
 
-const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
+
 
 interface PlatoConCosto {
   id: string

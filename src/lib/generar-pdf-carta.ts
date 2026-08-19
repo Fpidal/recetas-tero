@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf'
+import { SECCIONES as SECCIONES_ORDEN } from './secciones'
 
 interface CartaItem {
   plato_nombre: string
@@ -6,7 +7,7 @@ interface CartaItem {
   precio_carta: number
 }
 
-const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
+
 
 export function generarPDFCarta(items: CartaItem[], nombreRestaurante: string = 'TERO') {
   const doc = new jsPDF({

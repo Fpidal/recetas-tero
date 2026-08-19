@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.38',
+    fecha: '19/08/26',
+    cambios: [
+      'Nueva sección "Bebidas" en la carta, para el café, las gaseosas, las aguas, las cervezas y el té',
+      'Carga diaria: si elegís un insumo que ya tiene su receta —como el café— ahora te avisa y te ofrece cargar la receta, que es la que hace que la venta figure en el ranking',
+      'El agua, la gaseosa y la cerveza dejaron de contarse como costo de cocina. El total de un servicio ahora se abre en Cocina y Bebidas',
+    ],
+  },
+  {
     version: 'V.37',
     fecha: '19/08/26',
     cambios: [

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { SECCIONES as SECCIONES_ORDEN, esSeccionConocida } from '@/lib/secciones'
 
-const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
+
 
 interface DishItem {
   nombre: string
@@ -56,7 +57,7 @@ export default function CartaEditorial({ showPrices = true, qrDataUrl, tagline =
       }))
     // Secciones que no estén en el orden conocido, al final
     Array.from(map.entries()).forEach(([s, items]) => {
-      if (!SECCIONES_ORDEN.includes(s)) ordered.push({ nombre: s, items })
+      if (!esSeccionConocida(s)) ordered.push({ nombre: s, items })
     })
 
     setSecciones(ordered)

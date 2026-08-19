@@ -9,6 +9,7 @@ import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import { PALETA } from '@/lib/colores'
+import { SECCION_OPCIONES } from '@/lib/secciones'
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Carnes': '#9B2C2C',
@@ -329,14 +330,7 @@ export default function NuevoPlatoPage() {
           <div>
             <Select
               label="Sección *"
-              options={[
-                { value: 'Entradas', label: 'Entradas' },
-                { value: 'Principales', label: 'Principales' },
-                { value: 'Parrilla', label: 'Parrilla' },
-                { value: 'Pastas y Arroces', label: 'Pastas y Arroces' },
-                { value: 'Ensaladas', label: 'Ensaladas' },
-                { value: 'Postres', label: 'Postres' },
-              ]}
+              options={SECCION_OPCIONES}
               value={seccion}
               onChange={(e) => setSeccion(e.target.value)}
             />

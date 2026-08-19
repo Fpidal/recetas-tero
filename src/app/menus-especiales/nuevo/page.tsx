@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Trash2, ChefHat, Calculator } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
+import { seccionesQueAgrupanEn } from '@/lib/secciones'
 
 interface Plato {
   id: string
@@ -36,7 +37,7 @@ interface OpcionMenu {
 // Secciones del menú especial
 const SECCIONES_MENU = [
   { value: 'Entradas', label: 'Entradas', secciones_plato: ['Entradas'], esInsumo: false },
-  { value: 'Principales', label: 'Principales', secciones_plato: ['Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas'], esInsumo: false },
+  { value: 'Principales', label: 'Principales', secciones_plato: seccionesQueAgrupanEn('Principales'), esInsumo: false },
   { value: 'Postres', label: 'Postres', secciones_plato: ['Postres'], esInsumo: false },
   { value: 'Bebidas', label: 'Bebidas', secciones_plato: [], esInsumo: true },
 ]

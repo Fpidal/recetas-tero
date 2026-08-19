@@ -10,8 +10,9 @@ import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select, Modal, ClickableItemName, BotonExportar } from '@/components/ui'
 import { exportarCarta } from '@/lib/exportaciones'
 import { parsearNumero } from '@/lib/formato-numeros'
+import { SECCIONES as SECCIONES_ORDEN, agruparSeccion, margenDeSeccion } from '@/lib/secciones'
 
-const SECCIONES_ORDEN = ['Entradas', 'Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas', 'Postres']
+
 
 interface PlatoConCosto {
   id: string
@@ -81,16 +82,10 @@ interface MenuEjecutivoConCosto extends MenuEjecutivo {
 type TabType = 'en_carta' | 'fuera_carta' | 'ejecutivos' | 'especiales'
 
 // Normalizar tipo_opcion de valores viejos a nuevos
+// El mapeo vive en src/lib/secciones.ts: estaba copiado en cuatro archivos
+// y cualquier sección nueva obligaba a tocarlos todos.
 function normalizarTipoOpcion(tipo: string): string {
-  const mapeo: Record<string, string> = {
-    'entrada': 'Entradas', 'Entrada': 'Entradas',
-    'principal': 'Principales', 'Principal': 'Principales',
-    'Parrilla': 'Principales', 'Pastas y Arroces': 'Principales', 'Ensaladas': 'Principales',
-    'postre': 'Postres', 'Postre': 'Postres',
-    'bebida': 'Bebidas', 'Bebida': 'Bebidas',
-    'guarnicion': 'Principales', 'Guarnición': 'Principales',
-  }
-  return mapeo[tipo] || tipo
+  return agruparSeccion(tipo)
 }
 
 // Helper para obtener ícono según sección/nombre del plato
@@ -325,17 +320,9 @@ export default function CartaPage() {
   }
 
   // Margen objetivo por defecto según sección
-  function getMargenPorSeccion(seccion: string): number {
-    switch (seccion) {
-      case 'Entradas': return 15
-      case 'Principales': return 25
-      case 'Parrilla': return 25
-      case 'Pastas y Arroces': return 20
-      case 'Ensaladas': return 15
-      case 'Postres': return 20
-      default: return 25
-    }
-  }
+  // La tabla vive en src/lib/secciones.ts, junto a la lista de secciones:
+  // agregar una sección sin su margen sugerido dejaba el default de 25.
+  const getMargenPorSeccion = margenDeSeccion
 
   function calcularFoodCost(costo: number, precio: number): number {
     return precio > 0 ? (costo / precio) * 100 : 0

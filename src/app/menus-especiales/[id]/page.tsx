@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Trash2, ChefHat, Calculator } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
+import { agruparSeccion, seccionesQueAgrupanEn } from '@/lib/secciones'
 
 interface Plato {
   id: string
@@ -37,29 +38,16 @@ interface OpcionMenu {
 // Secciones del menú especial
 const SECCIONES_MENU = [
   { value: 'Entradas', label: 'Entradas', secciones_plato: ['Entradas'], esInsumo: false },
-  { value: 'Principales', label: 'Principales', secciones_plato: ['Principales', 'Parrilla', 'Pastas y Arroces', 'Ensaladas'], esInsumo: false },
+  { value: 'Principales', label: 'Principales', secciones_plato: seccionesQueAgrupanEn('Principales'), esInsumo: false },
   { value: 'Postres', label: 'Postres', secciones_plato: ['Postres'], esInsumo: false },
   { value: 'Bebidas', label: 'Bebidas', secciones_plato: [], esInsumo: true },
 ]
 
 // Normalizar tipo_opcion de valores viejos a nuevos
+// El mapeo vive en src/lib/secciones.ts: estaba copiado en cuatro archivos
+// y cualquier sección nueva obligaba a tocarlos todos.
 function normalizarTipoOpcion(tipo: string): string {
-  const mapeo: Record<string, string> = {
-    'entrada': 'Entradas',
-    'Entrada': 'Entradas',
-    'principal': 'Principales',
-    'Principal': 'Principales',
-    'Parrilla': 'Principales',
-    'Pastas y Arroces': 'Principales',
-    'Ensaladas': 'Principales',
-    'postre': 'Postres',
-    'Postre': 'Postres',
-    'bebida': 'Bebidas',
-    'Bebida': 'Bebidas',
-    'guarnicion': 'Principales',
-    'Guarnición': 'Principales',
-  }
-  return mapeo[tipo] || tipo
+  return agruparSeccion(tipo)
 }
 
 export default function EditarMenuEspecialPage({ params }: { params: { id: string } }) {

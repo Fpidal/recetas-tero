@@ -10,6 +10,7 @@ import {
   obtenerTragosBuscador,
   obtenerEjecutivosBuscador,
   obtenerVinosBuscador,
+  obtenerRecetasDeUnIngrediente,
   obtenerOCrearConsumo,
   obtenerConsumo,
   obtenerItemsConsumo,
@@ -29,7 +30,8 @@ import {
   SERVICIO_LABEL,
   TIPO_CONFIG,
   FK_DE_TIPO,
-  areaDeTipo,
+  areaDeItem,
+  AREA_LABEL,
 } from '@/types/analisis'
 
 // Los tipos que se pueden cargar, en el orden en que aparecen los botones:
@@ -65,6 +67,8 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
   const [cantidad, setCantidad] = useState('')
   const [agregando, setAgregando] = useState(false)
   const [generandoPDF, setGenerandoPDF] = useState(false)
+  /** insumo_id -> la receta que lo usa como único ingrediente */
+  const [recetaEquivalente, setRecetaEquivalente] = useState<Map<string, { id: string; nombre: string }>>(new Map())
 
   // Cargar opciones del buscador (1 vez)
   useEffect(() => {
@@ -80,6 +84,10 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
         setOpciones({ insumo, elaboracion, receta, ejecutivo, trago, vino })
       })
       .catch((e) => console.error('Error cargando opciones del buscador:', e))
+
+    obtenerRecetasDeUnIngrediente()
+      .then(setRecetaEquivalente)
+      .catch((e) => console.error('Error cargando recetas equivalentes:', e))
   }, [])
 
   // Cargar consumo del día/servicio cuando cambian
@@ -130,10 +138,10 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
   // Costo separado por área: cocina y barra tienen márgenes distintos,
   // sumadas en un solo número se tapan entre sí.
   const costoCocina = items
-    .filter((i) => areaDeTipo(i.tipo) === 'cocina')
+    .filter((i) => areaDeItem(i) === 'cocina')
     .reduce((acc, it) => acc + Number(it.subtotal), 0)
   const costoBarra = totalCosto - costoCocina
-  const hayBarra = items.some((i) => areaDeTipo(i.tipo) === 'barra')
+  const hayBarra = items.some((i) => areaDeItem(i) === 'barra')
 
   // Cuántos items hay de cada tipo, solo de los que aparecen
   const conteoPorTipo = TIPOS.map((t) => ({
@@ -215,6 +223,20 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
     } finally {
       setGenerandoPDF(false)
     }
+  }
+
+  // Solo cuando se eligió un insumo y existe una receta que es ese mismo insumo
+  const avisoReceta =
+    seleccionado?.tipo === 'insumo' ? recetaEquivalente.get(seleccionado.id) ?? null : null
+
+  /** Cambia la selección del insumo a la receta equivalente */
+  function usarReceta(platoId: string) {
+    const receta = (opciones.receta || []).find((o) => o.id === platoId)
+    if (!receta) return
+    setTipoSeleccionado('receta')
+    setBusqueda('')
+    setSeleccionado(receta)
+    setCantidad('')
   }
 
   const subtotalPreview =
@@ -367,6 +389,27 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                   <div className="text-sm font-medium text-gray-900">{seleccionado.nombre}</div>
                 </div>
 
+                {/* Cargar el insumo cuando existe la receta pierde la venta:
+                    un insumo no tiene precio de carta, así que no entra al
+                    ranking. No se bloquea —el menú del mediodía se carga por
+                    insumo a propósito— pero se avisa en el momento de elegir. */}
+                {avisoReceta && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-2.5">
+                    <p className="text-xs text-gray-700 leading-snug">
+                      Hay una receta <strong className="text-amber-900">{avisoReceta.nombre}</strong>{' '}
+                      que usa solo este insumo, y ya está costeada por porción. Cargando el insumo
+                      suelto la venta no entra al ranking.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => usarReceta(avisoReceta.id)}
+                      className="mt-2 text-xs font-medium text-amber-900 underline underline-offset-2 hover:text-amber-700"
+                    >
+                      Cargar la receta en su lugar
+                    </button>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Cantidad ({seleccionado.unidad})
@@ -508,7 +551,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                           </tr>
                           <tr className="bg-gray-50 text-gray-600">
                             <td colSpan={4} className="pb-1 px-3 text-right text-xs">
-                              Barra:
+                              {AREA_LABEL.barra}:
                             </td>
                             <td className="text-right px-3 pb-1 text-sm font-mono">
                               {formatearMonedaAnalisis(costoBarra)}
@@ -569,7 +612,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
                           <span className="font-mono">{formatearMonedaAnalisis(costoCocina)}</span>
                         </div>
                         <div className="flex justify-between text-xs text-gray-600 pb-1 border-b border-gray-200">
-                          <span>Barra</span>
+                          <span>{AREA_LABEL.barra}</span>
                           <span className="font-mono">{formatearMonedaAnalisis(costoBarra)}</span>
                         </div>
                       </>
@@ -603,7 +646,7 @@ export default function CargaDiaria({ fecha, setFecha, servicio, setServicio }: 
               <div className="text-[11px] text-gray-500">
                 {hayBarra ? (
                   <span className="font-mono">
-                    {formatearMonedaAnalisis(costoCocina)} cocina · {formatearMonedaAnalisis(costoBarra)} barra
+                    {formatearMonedaAnalisis(costoCocina)} {AREA_LABEL.cocina.toLowerCase()} · {formatearMonedaAnalisis(costoBarra)} {AREA_LABEL.barra.toLowerCase()}
                   </span>
                 ) : (
                   'IVA incluido'

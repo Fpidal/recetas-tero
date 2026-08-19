@@ -8,6 +8,7 @@ import { Button, Input } from '@/components/ui'
 import { parsearNumero } from '@/lib/formato-numeros'
 import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import Link from 'next/link'
+import { agruparSeccion } from '@/lib/secciones'
 
 // ============ TIPOS ============
 interface MenuConOpciones extends MenuEspecial {
@@ -27,23 +28,10 @@ interface MenuConOpciones extends MenuEspecial {
 type TabType = 'ejecutivos' | 'especiales'
 
 // Normalizar tipo_opcion de valores viejos a nuevos
+// El mapeo vive en src/lib/secciones.ts: estaba copiado en cuatro archivos
+// y cualquier sección nueva obligaba a tocarlos todos.
 function normalizarTipoOpcion(tipo: string): string {
-  const mapeo: Record<string, string> = {
-    'entrada': 'Entradas',
-    'Entrada': 'Entradas',
-    'principal': 'Principales',
-    'Principal': 'Principales',
-    'Parrilla': 'Principales',
-    'Pastas y Arroces': 'Principales',
-    'Ensaladas': 'Principales',
-    'postre': 'Postres',
-    'Postre': 'Postres',
-    'bebida': 'Bebidas',
-    'Bebida': 'Bebidas',
-    'guarnicion': 'Principales',
-    'Guarnición': 'Principales',
-  }
-  return mapeo[tipo] || tipo
+  return agruparSeccion(tipo)
 }
 
 export default function MenusPage() {

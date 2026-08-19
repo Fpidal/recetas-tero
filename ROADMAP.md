@@ -216,6 +216,29 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Próximo
 
+- **Dónde mirar bebida contra comida (V.38).** Quedaron **dos** números y no miden lo mismo:
+
+  El encabezado de Carga diaria abre el total en **Cocina / Bebidas**. Decide por el item
+  cargado: `trago`, `vino`, receta de sección Bebidas, o insumo de categoría Bebidas. Es rápido
+  pero **la bebida que viene adentro de una promo queda del lado de la comida**, porque la promo
+  entra como una sola línea de tipo `ejecutivo`.
+
+  **El Resumen es el bueno.** Expande todos los compuestos hasta el insumo y agrupa por
+  categoría, así que el agua de adentro del Menu Pescados aparece en Bebidas donde corresponde.
+
+  Se dejó así a propósito: para que el encabezado sea exacto habría que expandir compuestos
+  dentro del trigger, y es mucho trabajo para duplicar peor algo que el Resumen ya hace bien.
+
+- **Las columnas `costo_cocina` y `costo_barra` no las lee nadie.** El trigger las mantiene, pero
+  las dos pantallas que muestran el split lo calculan en vivo desde los items. Por eso en V.38 se
+  actualizó la función (`supabase-consumo-bebidas-barra.sql`) pero **no se recalcularon** los
+  ~110 servicios históricos: habría cambiado columnas invisibles. Si alguna pantalla empieza a
+  leerlas, ahí hay que correr el backfill del paso 2 de ese archivo.
+
+- **Las servilletas están en el food cost.** Detectado el 19/08/26 mirando el almuerzo del 12/08:
+  101 servilletas, $10.747 sobre $491.792 — un 2% del costo de cocina que no es comida. Mismo
+  problema que las bebidas, con otro tipo de artículo. Sin resolver.
+
 - **Blindar los triggers de Supabase.** *Primer paso hecho en V.20:* el sistema de costeo
   quedó documentado en `docs/SISTEMA-COSTOS.md` sobre el estado real de la base, la fórmula
   vive en un solo lugar por capa, y `supabase-trigger-actualizar-costos.sql` está marcado
@@ -224,16 +247,6 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   Costó tres incidentes llegar hasta acá: trigger de vinos, descuento en facturas (V.16) y
   fórmula de merma (V.20). Esta última convirtió un cambio de 10 minutos en una hora, porque
   el repo describía funciones inexistentes.
-
-- **Bebidas en la carta.** El café, las gaseosas y la cerveza se cargan como insumos, así que
-  no son productos vendibles para el sistema: quedan fuera del ranking y su costo cuenta como
-  **Cocina** —$35.426 en el servicio del 8/8—, porque `areaDeTipo` manda a Barra solo `trago` y
-  `vino`. La carta se indexa por `plato_id`, así que meterlas ahí significa crearlas como platos
-  de un solo ingrediente, que el sistema ya soporta. Cambia cómo se cargan (de `Cafe 0,06 kg` a
-  `Café 12 porciones`), y eso es **más fácil**, no menos: hoy hay que estimar gramos de café
-  molido. **Antes hay que consolidar la lista de secciones**, que está escrita a mano en 12
-  lugares de 9 archivos: agregar dos secciones ahí es la misma trampa de la terracota y la
-  merma, y si se escapa un archivo la sección aparece en una pantalla y no en otra.
 
 - **Objetivo de food cost por categoría.** Hoy Análisis dice *cuánto* se consumió, pero no si
   está bien o mal. Definir un target por categoría convierte el dato en alerta accionable.

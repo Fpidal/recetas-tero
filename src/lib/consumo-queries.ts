@@ -290,9 +290,9 @@ export async function obtenerItemsConsumo(consumoId: string): Promise<ConsumoIte
     .from('consumo_items')
     .select(`
       *,
-      insumos:insumo_id (nombre),
+      insumos:insumo_id (nombre, categoria),
       recetas_base:receta_base_id (nombre),
-      platos:plato_id (nombre),
+      platos:plato_id (nombre, seccion),
       tragos:trago_id (nombre),
       menus_ejecutivos:menu_ejecutivo_id (nombre),
       vinos:vino_id (nombre, bodega, cepa)
@@ -312,6 +312,9 @@ export async function obtenerItemsConsumo(consumoId: string): Promise<ConsumoIte
       item.menus_ejecutivos?.nombre ||
       (item.vinos ? nombreVino(item.vinos) : null) ||
       '(sin nombre)',
+    // Para areaDeItem(): decide si va a Cocina o a Barra
+    seccion: item.platos?.seccion ?? null,
+    categoria: item.insumos?.categoria ?? null,
   }))
 }
 
@@ -985,4 +988,50 @@ export async function obtenerIncidenciasMes(
       tiene_venta: venta > 0,
     }
   })
+}
+
+/**
+ * Recetas que tienen UN SOLO ingrediente, indexadas por ese insumo.
+ *
+ * PARA QUÉ: el buscador ofrece cargar un insumo o una receta, y las presenta
+ * como equivalentes. Para el café, las aguas o la cerveza son la misma cosa —
+ * hay una receta con la porción ya costeada— pero cargar el insumo suelto
+ * pierde toda la lectura de venta: un insumo no tiene precio de carta, así que
+ * no entra al ranking ni suma facturación.
+ *
+ * Pasó el 08/08/26: se cargaron $39.122 de café, agua y cerveza como insumo.
+ * El costo quedó bien; las 30 aguas vendidas no figuran en ningún lado.
+ *
+ * La condición es EXACTAMENTE un ingrediente a propósito. Si fuera "el insumo
+ * aparece en alguna receta", saltaría con el tomate, que está en veinte
+ * recetas de varios ingredientes, y el aviso se volvería ruido que se ignora.
+ */
+export async function obtenerRecetasDeUnIngrediente(): Promise<Map<string, { id: string; nombre: string }>> {
+  const [platosRes, ingredientesRes] = await Promise.all([
+    supabase.from('platos').select('id, nombre').eq('activo', true),
+    supabase.from('plato_ingredientes').select('plato_id, insumo_id, receta_base_id'),
+  ])
+  if (platosRes.error) throw platosRes.error
+  if (ingredientesRes.error) throw ingredientesRes.error
+
+  const activos = new Map((platosRes.data || []).map((p: any) => [p.id, p.nombre]))
+
+  // Cuántas líneas tiene cada plato, y cuál es su insumo si tiene una sola
+  const porPlato = new Map<string, { n: number; insumoId: string | null }>()
+  for (const ing of ingredientesRes.data || []) {
+    const acc = porPlato.get(ing.plato_id) || { n: 0, insumoId: null }
+    acc.n += 1
+    // Una línea con receta_base_id no es un insumo directo: descalifica el caso
+    acc.insumoId = acc.n === 1 && ing.insumo_id ? ing.insumo_id : null
+    porPlato.set(ing.plato_id, acc)
+  }
+
+  const mapa = new Map<string, { id: string; nombre: string }>()
+  Array.from(porPlato.entries()).forEach(([platoId, { n, insumoId }]) => {
+    const nombre = activos.get(platoId)
+    if (n === 1 && insumoId && nombre) {
+      mapa.set(insumoId, { id: platoId, nombre })
+    }
+  })
+  return mapa
 }

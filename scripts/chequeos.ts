@@ -1,0 +1,188 @@
+/**
+ * Invariantes de la base — las cosas que tienen que ser ciertas siempre.
+ *
+ * CADA UNO SALE DE ALGO QUE YA SE ROMPIÓ. No son chequeos hipotéticos: son las
+ * trampas documentadas en CLAUDE.md, convertidas en algo que se puede correr en
+ * diez segundos en vez de descubrirlo cuando un número sale raro.
+ *
+ * La idea es correr `npm run consultar -- chequeos` antes de un push que toque
+ * datos, y después de correr cualquier `.sql` en Supabase.
+ *
+ * Para agregar uno: que `problemaSi` devuelva true SOLO cuando hay algo mal.
+ * Un chequeo que grita seguido se ignora a la semana.
+ */
+
+export interface Chequeo {
+  nombre: string
+  descripcion: string
+  sql: string
+  /** true si el resultado indica un problema */
+  problemaSi: (filas: any[]) => boolean
+  /** Qué hacer si salta */
+  queSignifica: string
+  /**
+   * Cuántas filas mira este chequeo. Tiene que devolver una columna `n`.
+   *
+   * POR QUÉ EXISTE: un chequeo que busca anomalías da verde de dos formas —
+   * porque no hay anomalías, o porque no vio ningún dato. Las dos se ven
+   * idénticas y la segunda es una mentira peligrosa.
+   *
+   * Pasó el 19/08/26, la primera vez que se corrió esto: el rol de lectura no
+   * podía ver `consumo_diario` ni `ventas_diarias` porque sus policies son
+   * `to authenticated` y el rol no lo es. Postgres devolvía cero filas sin
+   * error, y los siete chequeos dieron verde sobre tablas vacías.
+   */
+  universo: string
+}
+
+export const CHEQUEOS: Chequeo[] = [
+  {
+    nombre: 'precios-vigentes',
+    universo: `SELECT COUNT(*) AS n FROM precios_insumo WHERE es_precio_actual`,
+    descripcion: 'Un insumo, un solo precio vigente',
+    sql: `
+      SELECT i.nombre, COUNT(*) AS precios_vigentes
+        FROM precios_insumo p
+        JOIN insumos i ON i.id = p.insumo_id
+       WHERE p.es_precio_actual
+       GROUP BY i.id, i.nombre
+      HAVING COUNT(*) > 1
+       ORDER BY COUNT(*) DESC, i.nombre
+    `,
+    problemaSi: (f) => f.length > 0,
+    queSignifica:
+      'La vista v_insumos_con_precio devuelve el insumo duplicado y las pantallas toman "el ' +
+      'primero que llega": el costo de las recetas queda al azar. Pasó el 14/08/26 con el queso ' +
+      'brie, costeando con un precio de junio. Ver supabase-fix-precio-vigente-unico.sql.',
+  },
+
+  {
+    nombre: 'consumo-cuadra',
+    universo: `SELECT COUNT(*) AS n FROM consumo_diario`,
+    descripcion: 'cocina + bebidas = total, en cada servicio',
+    sql: `
+      SELECT fecha, servicio,
+             costo_cocina, costo_barra, costo_total,
+             ROUND(costo_cocina + costo_barra - costo_total, 2) AS diferencia
+        FROM consumo_diario
+       WHERE ROUND(costo_cocina + costo_barra, 2) <> ROUND(costo_total, 2)
+       ORDER BY fecha DESC
+       LIMIT 20
+    `,
+    problemaSi: (f) => f.length > 0,
+    queSignifica:
+      'Hay items que no entraron en ninguno de los dos lados. La causa típica es una comparación ' +
+      'con NULL en la función actualizar_costos_consumo(): `p.seccion = \'Bebidas\'` no da falso ' +
+      'cuando la sección es NULL, da NULL, y la fila se cae de las dos sumas.',
+  },
+
+  {
+    nombre: 'facturas-duplicadas',
+    universo: `SELECT COUNT(*) AS n FROM facturas_proveedor WHERE activo`,
+    descripcion: 'Un comprobante por proveedor',
+    sql: `
+      SELECT p.nombre AS proveedor, f.numero_factura, COUNT(*) AS veces
+        FROM facturas_proveedor f
+        JOIN proveedores p ON p.id = f.proveedor_id
+       WHERE f.activo
+         AND f.numero_factura IS NOT NULL
+         AND TRIM(f.numero_factura) <> ''
+       GROUP BY p.id, p.nombre, f.numero_factura
+      HAVING COUNT(*) > 1
+       ORDER BY COUNT(*) DESC
+    `,
+    problemaSi: (f) => f.length > 0,
+    queSignifica:
+      'La misma factura cargada dos veces infla las compras y el food cost del período. Hay un ' +
+      'índice único que lo impide (supabase-factura-unica-por-proveedor.sql); si aparecen filas ' +
+      'acá, el índice no está.',
+  },
+
+  {
+    nombre: 'items-sin-fk',
+    universo: `SELECT COUNT(*) AS n FROM consumo_items`,
+    descripcion: 'Cada item de consumo apunta a algo que existe',
+    sql: `
+      SELECT ci.tipo, COUNT(*) AS huerfanos
+        FROM consumo_items ci
+        LEFT JOIN insumos          i  ON i.id  = ci.insumo_id
+        LEFT JOIN recetas_base     rb ON rb.id = ci.receta_base_id
+        LEFT JOIN platos           p  ON p.id  = ci.plato_id
+        LEFT JOIN tragos           t  ON t.id  = ci.trago_id
+        LEFT JOIN menus_ejecutivos m  ON m.id  = ci.menu_ejecutivo_id
+        LEFT JOIN vinos            v  ON v.id  = ci.vino_id
+       WHERE (ci.insumo_id          IS NOT NULL AND i.id  IS NULL)
+          OR (ci.receta_base_id     IS NOT NULL AND rb.id IS NULL)
+          OR (ci.plato_id           IS NOT NULL AND p.id  IS NULL)
+          OR (ci.trago_id           IS NOT NULL AND t.id  IS NULL)
+          OR (ci.menu_ejecutivo_id  IS NOT NULL AND m.id  IS NULL)
+          OR (ci.vino_id            IS NOT NULL AND v.id  IS NULL)
+       GROUP BY ci.tipo
+    `,
+    problemaSi: (f) => f.length > 0,
+    queSignifica:
+      'Hay consumo cargado contra un item que ya no existe. Esas líneas desaparecen del desglose ' +
+      'pero siguen sumando en el costo total, así que el desglose no cierra contra el encabezado.',
+  },
+
+  {
+    nombre: 'carta-sin-precio',
+    universo: `SELECT COUNT(*) AS n FROM carta WHERE activo`,
+    descripcion: 'Los platos de la carta tienen precio',
+    sql: `
+      SELECT p.seccion, p.nombre
+        FROM carta c
+        JOIN platos p ON p.id = c.plato_id
+       WHERE c.activo
+         AND (c.precio_carta IS NULL OR c.precio_carta <= 0)
+       ORDER BY p.seccion, p.nombre
+    `,
+    problemaSi: (f) => f.length > 0,
+    queSignifica:
+      'Sin precio no hay facturación ni contribución: el producto aparece en el Ranking como ' +
+      '"Sin precio" y queda afuera de la matriz de ingeniería de menú.',
+  },
+
+  {
+    nombre: 'anon-sin-permisos',
+    universo: `SELECT COUNT(*) AS n FROM information_schema.column_privileges WHERE table_schema='public'`,
+    descripcion: 'La clave pública sigue sin acceso a datos privados',
+    sql: `
+      SELECT table_name, privilege_type, STRING_AGG(DISTINCT column_name, ', ') AS columnas
+        FROM information_schema.column_privileges
+       WHERE grantee = 'anon'
+         AND table_schema = 'public'
+         AND NOT (
+           (table_name = 'platos' AND column_name IN ('id','nombre','seccion','descripcion'))
+           OR (table_name = 'carta' AND column_name IN ('id','plato_id','precio_carta','activo'))
+         )
+       GROUP BY table_name, privilege_type
+       ORDER BY table_name
+    `,
+    problemaSi: (f) => f.length > 0,
+    queSignifica:
+      'La clave anónima viaja dentro del JavaScript público, así que cualquiera la saca del ' +
+      'navegador. Hasta el 13/08/26 había 22 tablas legibles sin login — 3.539 precios, 476 ' +
+      'facturas, los márgenes. Solo deben figurar las 8 columnas que necesita la carta pública. ' +
+      'Ver supabase-cerrar-acceso-anonimo.sql.',
+  },
+
+  {
+    nombre: 'tablas-sin-rls',
+    universo: `SELECT COUNT(*) AS n FROM pg_tables WHERE schemaname='public'`,
+    descripcion: 'Toda tabla de public tiene RLS activa',
+    sql: `
+      SELECT tablename
+        FROM pg_tables
+       WHERE schemaname = 'public'
+         AND NOT rowsecurity
+       ORDER BY tablename
+    `,
+    problemaSi: (f) => f.length > 0,
+    queSignifica:
+      'Una tabla sin RLS queda expuesta a cualquiera que tenga el GRANT. Es la convención ' +
+      'obligatoria para tablas nuevas: GRANT + RLS + policy, los tres. Y va a importar mucho más ' +
+      'cuando el sistema pase a multiusuario, porque ahí una tabla sin RLS mezcla datos de dos ' +
+      'restaurantes.',
+  },
+]

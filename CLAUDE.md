@@ -124,6 +124,23 @@ casualidad**, porque `bg-blue-100` y `bg-purple-100` aparecen en otros 15 y 13 c
 sí se escaneaban; Receta, Ejecutivo y Trago usan colores que no figuran en ningún otro lado y
 salían en negro. **Si agregás una carpeta nueva con clases de Tailwind adentro, va al `content`.**
 
+## Consultar la base (solo lectura)
+
+```bash
+npm run consultar -- chequeos            # los invariantes de las trampas de arriba
+npm run consultar -- --sql "SELECT ..."  # consulta libre
+```
+
+Se conecta con el rol `lector_analisis`, que **solo tiene SELECT** — cualquier escritura la
+rechaza Postgres, no una convención. Los cambios en la base los corre el usuario. Ver
+`supabase-rol-lectura.sql`.
+
+**Un chequeo que da verde puede estar mintiendo.** Por eso cada uno informa sobre cuántas filas
+corrió, y si no ve ninguna marca `⊘` en vez de `✓`. Pasó el 19/08/26: el rol no veía
+`consumo_diario` ni `ventas_diarias` —sus policies son `to authenticated` y el rol no lo es— y
+los siete chequeos dieron verde sobre tablas vacías. Se arregló con `ALTER ROLE ... BYPASSRLS`,
+que deja leer todas las filas sin dar permiso de escritura.
+
 ## Patrones de Código
 
 ### Queries a Supabase

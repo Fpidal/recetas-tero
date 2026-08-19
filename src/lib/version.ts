@@ -10,6 +10,13 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.39',
+    fecha: '19/08/26',
+    cambios: [
+      'Herramienta interna para revisar la base: verifica que no haya insumos con dos precios vigentes, facturas cargadas dos veces, platos en carta sin precio, ni tablas desprotegidas',
+    ],
+  },
+  {
     version: 'V.38',
     fecha: '19/08/26',
     cambios: [

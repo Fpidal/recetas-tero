@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { getNextOCNumber } from '@/lib/oc-numero'
 import { Button, Input, Select, Modal } from '@/components/ui'
 import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero, formatearFecha } from '@/lib/formato-numeros'
+import { TIPOS_PERCEPCION, calcularPercepcion, tipoPorNombre } from '@/lib/percepciones'
 
 interface Proveedor {
   id: string
@@ -81,10 +82,13 @@ export default function NuevaFacturaPage() {
   const [isModalOrdenOpen, setIsModalOrdenOpen] = useState(false)
 
   // Percepciones (objetos independientes)
+  // `calculado` distingue el monto que puso el sistema del que escribió el
+  // usuario. Sin eso, agregar un ítem después de elegir la percepción deja el
+  // monto viejo (y sería mal) o pisa el que se corrigió a mano (peor).
   const [percepciones, setPercepciones] = useState(() => [
-    { nombre: '', porcentaje: '', valor: '' },
-    { nombre: '', porcentaje: '', valor: '' },
-    { nombre: '', porcentaje: '', valor: '' },
+    { nombre: '', porcentaje: '', valor: '', calculado: false },
+    { nombre: '', porcentaje: '', valor: '', calculado: false },
+    { nombre: '', porcentaje: '', valor: '', calculado: false },
   ])
 
   // Modal nuevo insumo
@@ -430,6 +434,25 @@ export default function NuevaFacturaPage() {
   const totalIva105 = items.filter(i => i.iva_porcentaje === 10.5).reduce((sum, item) => sum + item.iva_monto, 0)
   const totalIva0 = items.filter(i => i.iva_porcentaje === 0).reduce((sum, item) => sum + item.subtotal, 0)
   const totalIva = items.reduce((sum, item) => sum + item.iva_monto, 0)
+  // Si cambia el neto —se agregó un ítem, se corrigió una cantidad— las
+  // percepciones que puso el sistema se recalculan solas. Las editadas a mano
+  // no se tocan: si el papel dice otro número, manda el papel.
+  useEffect(() => {
+    setPercepciones((prev) => {
+      let cambio = false
+      const siguiente = prev.map((p) => {
+        if (!p.calculado || !p.porcentaje) return p
+        const esperado = formatearInputNumero(
+          calcularPercepcion(subtotalNeto, Number(p.porcentaje)).toFixed(2).replace('.', ',')
+        )
+        if (esperado === p.valor) return p
+        cambio = true
+        return { ...p, valor: esperado }
+      })
+      return cambio ? siguiente : prev
+    })
+  }, [subtotalNeto])
+
   const totalPercepciones = percepciones.reduce((sum, p) => sum + parsearNumero(p.valor), 0)
   const total = subtotalNeto + totalIva + totalPercepciones
 
@@ -1093,30 +1116,43 @@ export default function NuevaFacturaPage() {
               <p className="text-xs font-medium text-gray-700 mb-1">Percepciones</p>
               {percepciones.map((p, idx) => (
                 <div key={idx} className="flex gap-1 items-center">
-                  <input
-                    type="text"
+                  {/* Elegir el tipo completa el % y calcula el monto sobre el
+                      neto. Queda editable: si la factura trae otro número
+                      —redondeo del proveedor, alícuota distinta— manda el papel. */}
+                  <select
                     value={p.nombre}
                     onChange={(e) => {
-                      const newPerc = percepciones.map((perc, i) =>
-                        i === idx ? { ...perc, nombre: e.target.value } : perc
-                      )
-                      setPercepciones(newPerc)
+                      const nombre = e.target.value
+                      const tipo = tipoPorNombre(nombre)
+                      setPercepciones(percepciones.map((perc, i) =>
+                        i !== idx ? perc : {
+                          nombre,
+                          porcentaje: tipo ? String(tipo.porcentaje) : '',
+                          valor: tipo
+                            ? formatearInputNumero(
+                                calcularPercepcion(subtotalNeto, tipo.porcentaje)
+                                  .toFixed(2).replace('.', ',')
+                              )
+                            : '',
+                          calculado: !!tipo,
+                        }
+                      ))
                     }}
-                    placeholder="Percepción"
-                    className="w-32 rounded border border-gray-300 px-2 py-1 text-xs placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                  <input
-                    type="text"
-                    value={p.porcentaje}
-                    onChange={(e) => {
-                      const newPerc = percepciones.map((perc, i) =>
-                        i === idx ? { ...perc, porcentaje: e.target.value } : perc
-                      )
-                      setPercepciones(newPerc)
-                    }}
-                    placeholder="%"
-                    className="w-14 rounded border border-gray-300 px-2 py-1 text-xs text-center placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
+                    className="w-40 rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="">Sin percepción</option>
+                    {TIPOS_PERCEPCION.map((t) => (
+                      <option key={t.nombre} value={t.nombre}>{t.etiqueta}</option>
+                    ))}
+                    {/* Una percepción vieja escrita a mano no debe desaparecer
+                        del desplegable al abrir la factura */}
+                    {p.nombre && !tipoPorNombre(p.nombre) && (
+                      <option value={p.nombre}>{p.nombre}</option>
+                    )}
+                  </select>
+                  <span className="w-12 text-xs text-center text-gray-500 font-mono">
+                    {p.porcentaje ? `${p.porcentaje}%` : ''}
+                  </span>
                   <span className="text-xs text-gray-400">$</span>
                   <input
                     type="text"
@@ -1124,7 +1160,9 @@ export default function NuevaFacturaPage() {
                     value={p.valor}
                     onChange={(e) => {
                       const newPerc = percepciones.map((perc, i) =>
-                        i === idx ? { ...perc, valor: formatearInputNumero(e.target.value) } : perc
+                        i === idx
+                          ? { ...perc, valor: formatearInputNumero(e.target.value), calculado: false }
+                          : perc
                       )
                       setPercepciones(newPerc)
                     }}

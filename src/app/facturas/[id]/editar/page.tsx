@@ -6,6 +6,7 @@ import { Plus, Trash2, ArrowLeft, Save, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
 import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
+import { TIPOS_PERCEPCION, calcularPercepcion, tipoPorNombre } from '@/lib/percepciones'
 
 interface Proveedor {
   id: string
@@ -63,10 +64,13 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
   const [editingField, setEditingField] = useState<{ id: string; field: CampoEditable; valor: string } | null>(null)
 
   // Percepciones (objetos independientes)
+  // `calculado` marca el monto que puso el sistema. Al abrir una factura ya
+  // guardada arranca en false: lo que está en la base es lo que decía el papel,
+  // y recalcularlo al abrir sería pisar el dato real con una estimación.
   const [percepciones, setPercepciones] = useState(() => [
-    { nombre: '', porcentaje: '', valor: '' },
-    { nombre: '', porcentaje: '', valor: '' },
-    { nombre: '', porcentaje: '', valor: '' },
+    { nombre: '', porcentaje: '', valor: '', calculado: false },
+    { nombre: '', porcentaje: '', valor: '', calculado: false },
+    { nombre: '', porcentaje: '', valor: '', calculado: false },
   ])
 
   useEffect(() => {
@@ -116,10 +120,11 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
           percPadded.push({
             nombre: percLoaded[i].nombre || '',
             porcentaje: percLoaded[i].porcentaje || '',
-            valor: percLoaded[i].valor?.toString() || ''
+            valor: percLoaded[i].valor?.toString() || '',
+            calculado: false,
           })
         } else {
-          percPadded.push({ nombre: '', porcentaje: '', valor: '' })
+          percPadded.push({ nombre: '', porcentaje: '', valor: '', calculado: false })
         }
       }
       setPercepciones(percPadded)
@@ -897,30 +902,38 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
               <p className="text-xs font-medium text-gray-700 mb-1">Percepciones</p>
               {percepciones.map((p, idx) => (
                 <div key={idx} className="flex gap-1 items-center">
-                  <input
-                    type="text"
+                  <select
                     value={p.nombre}
                     onChange={(e) => {
-                      const newPerc = percepciones.map((perc, i) =>
-                        i === idx ? { ...perc, nombre: e.target.value } : perc
-                      )
-                      setPercepciones(newPerc)
+                      const nombre = e.target.value
+                      const tipo = tipoPorNombre(nombre)
+                      setPercepciones(percepciones.map((perc, i) =>
+                        i !== idx ? perc : {
+                          nombre,
+                          porcentaje: tipo ? String(tipo.porcentaje) : '',
+                          valor: tipo
+                            ? formatearInputNumero(
+                                calcularPercepcion(subtotalNeto, tipo.porcentaje)
+                                  .toFixed(2).replace('.', ',')
+                              )
+                            : '',
+                          calculado: !!tipo,
+                        }
+                      ))
                     }}
-                    placeholder="Percepción"
-                    className="flex-1 lg:w-32 lg:flex-none rounded border border-gray-300 px-2 py-1 text-xs placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                  <input
-                    type="text"
-                    value={p.porcentaje}
-                    onChange={(e) => {
-                      const newPerc = percepciones.map((perc, i) =>
-                        i === idx ? { ...perc, porcentaje: e.target.value } : perc
-                      )
-                      setPercepciones(newPerc)
-                    }}
-                    placeholder="%"
-                    className="w-12 lg:w-14 rounded border border-gray-300 px-2 py-1 text-xs text-center placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
+                    className="flex-1 lg:w-40 lg:flex-none rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="">Sin percepción</option>
+                    {TIPOS_PERCEPCION.map((t) => (
+                      <option key={t.nombre} value={t.nombre}>{t.etiqueta}</option>
+                    ))}
+                    {p.nombre && !tipoPorNombre(p.nombre) && (
+                      <option value={p.nombre}>{p.nombre}</option>
+                    )}
+                  </select>
+                  <span className="w-12 text-xs text-center text-gray-500 font-mono">
+                    {p.porcentaje ? `${p.porcentaje}%` : ''}
+                  </span>
                   <span className="text-xs text-gray-400">$</span>
                   <input
                     type="text"
@@ -928,7 +941,9 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                     value={p.valor}
                     onChange={(e) => {
                       const newPerc = percepciones.map((perc, i) =>
-                        i === idx ? { ...perc, valor: formatearInputNumero(e.target.value) } : perc
+                        i === idx
+                          ? { ...perc, valor: formatearInputNumero(e.target.value), calculado: false }
+                          : perc
                       )
                       setPercepciones(newPerc)
                     }}

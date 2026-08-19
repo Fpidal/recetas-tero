@@ -91,10 +91,18 @@ src/
 
 ## ⚠️ Cinco trampas que ya rompieron cosas
 
-**1. `anon` no recibe permisos.** La clave anónima viaja en el bundle público. Hasta el
-13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los márgenes—
-porque la plantilla de tabla nueva incluía `grant select ... to anon`. Si una página pública
-necesita datos, se concede **columna por columna**. Ver `supabase-cerrar-acceso-anonimo.sql`.
+**1. `anon` no recibe permisos — hoy, ninguno.** La clave anónima viaja en el bundle público.
+Hasta el 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los
+márgenes— porque la plantilla de tabla nueva incluía `grant select ... to anon`. Se cerró todo
+salvo 8 columnas para el menú del QR, y en V.41, al sacarse ese menú, **también esas ocho**:
+ya no hay ninguna pantalla que muestre datos sin sesión. Si algún día vuelve a hacer falta una
+página pública, se concede **columna por columna** y nunca la tabla entera. Ver
+`supabase-cerrar-anon-total.sql`. Lo verifica `npm run consultar -- anon-sin-permisos`.
+
+⚠️ Ese chequeo lee el **catálogo de Postgres**, no `information_schema`. Esa vista solo muestra
+los permisos que involucran al rol que consulta, así que el rol lector veía cero y el chequeo
+daba verde con `anon` teniendo las 8 columnas concedidas. Un chequeo de seguridad que mira el
+lugar equivocado es peor que no tenerlo.
 
 **2. Insumos y vinos comparten las líneas.** En `factura_items` y `orden_compra_items`, un
 vino tiene `insumo_id = null` y `vino_id` cargado. Emparejar por `insumo_id` solo hace que

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, FileDown, Eye, ExternalLink, LayoutGrid, Users, Calculator, type LucideIcon } from 'lucide-react'
+import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, Eye, ExternalLink, LayoutGrid, Users, Calculator, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import { supabase } from '@/lib/supabase'
@@ -840,16 +840,6 @@ export default function CartaPage() {
                 titulo="Descargar la carta completa en Excel — lo que está en carta y lo que quedó afuera"
                 className="!py-1.5 !text-xs"
               />
-              <Link href="/carta/menu">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  title="Diseñar e imprimir la carta (estilo editorial + QR)"
-                >
-                  <FileDown className="w-3.5 h-3.5 mr-1" />
-                  Carta / Menú
-                </Button>
-              </Link>
               <Button onClick={() => setIsModalOpen(true)} disabled={platosDisponibles.length === 0} size="sm">
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Agregar

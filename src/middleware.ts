@@ -33,10 +33,10 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Rutas públicas (sin login): login y el menú digital (QR para clientes)
-  const esRutaPublica =
-    request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/menu')
+  // Ruta pública: solo el login. El menú digital del QR se sacó en V.41, así
+  // que ya NO hay ninguna pantalla que muestre datos sin sesión — y por eso se
+  // le pudieron revocar a `anon` las 8 columnas que le quedaban.
+  const esRutaPublica = request.nextUrl.pathname.startsWith('/login')
 
   // Si no hay usuario y no es ruta pública, redirigir a login
   if (!user && !esRutaPublica) {

@@ -145,26 +145,34 @@ export const CHEQUEOS: Chequeo[] = [
 
   {
     nombre: 'anon-sin-permisos',
-    universo: `SELECT COUNT(*) AS n FROM information_schema.column_privileges WHERE table_schema='public'`,
-    descripcion: 'La clave pública sigue sin acceso a datos privados',
+    universo: `SELECT COUNT(*) AS n FROM pg_class c
+                 JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relkind = 'r'`,
+    descripcion: 'La clave pública no tiene acceso a NADA',
     sql: `
-      SELECT table_name, privilege_type, STRING_AGG(DISTINCT column_name, ', ') AS columnas
-        FROM information_schema.column_privileges
-       WHERE grantee = 'anon'
-         AND table_schema = 'public'
-         AND NOT (
-           (table_name = 'platos' AND column_name IN ('id','nombre','seccion','descripcion'))
-           OR (table_name = 'carta' AND column_name IN ('id','plato_id','precio_carta','activo'))
-         )
-       GROUP BY table_name, privilege_type
-       ORDER BY table_name
+      -- Del CATÁLOGO, no de information_schema: esa vista solo muestra los
+      -- permisos que involucran al rol que consulta, así que el rol lector veía
+      -- CERO y el chequeo daba verde con anon teniendo 8 columnas concedidas.
+      -- Un chequeo de seguridad que mira el lugar equivocado es peor que
+      -- ninguno. (Encontrado el 19/08/26.)
+      SELECT c.relname AS tabla,
+             COALESCE(a.attname, '(toda la tabla)') AS columna,
+             acl.privilege_type
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0
+        CROSS JOIN LATERAL aclexplode(COALESCE(a.attacl, c.relacl)) acl
+        JOIN pg_roles r ON r.oid = acl.grantee
+       WHERE n.nspname = 'public' AND r.rolname = 'anon'
+       ORDER BY c.relname, columna
     `,
     problemaSi: (f) => f.length > 0,
     queSignifica:
       'La clave anónima viaja dentro del JavaScript público, así que cualquiera la saca del ' +
       'navegador. Hasta el 13/08/26 había 22 tablas legibles sin login — 3.539 precios, 476 ' +
-      'facturas, los márgenes. Solo deben figurar las 8 columnas que necesita la carta pública. ' +
-      'Ver supabase-cerrar-acceso-anonimo.sql.',
+      'facturas, los márgenes. Desde V.41 no debe tener NI UNA columna: al sacarse el menú del ' +
+      'QR no quedó ninguna pantalla que muestre datos sin sesión. Ver ' +
+      'supabase-cerrar-anon-total.sql.',
   },
 
   {

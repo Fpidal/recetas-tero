@@ -78,8 +78,10 @@ export default function RootLayout({
 }>) {
   const headersList = headers()
   const pathname = headersList.get('x-next-pathname') || ''
-  // Páginas a pantalla completa (sin sidebar): login, menú público e impresión de carta
-  const isFullScreen = pathname === '/login' || pathname === '/menu' || pathname === '/carta/menu'
+  // Páginas a pantalla completa (sin sidebar). Hasta V.41 también estaban el
+  // menú público del QR y la carta para imprimir, que se sacaron: la carta
+  // impresa la diseña cada restaurante a su estilo, no el sistema.
+  const isFullScreen = pathname === '/login'
 
   return (
     <html lang="es" className={`${serif.variable} ${sans.variable} ${mono.variable} ${montserrat.variable}`}>

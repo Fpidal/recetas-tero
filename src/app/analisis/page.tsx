@@ -1,16 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { ClipboardEdit, Package, Star, History, CalendarRange, Trophy } from 'lucide-react'
+import { ClipboardEdit, Package, Star, History, CalendarRange, Trophy, Users } from 'lucide-react'
 import CargaDiaria from './components/CargaDiaria'
 import ConsumoDiario from './components/ConsumoDiario'
 import Incidencia from './components/Incidencia'
 import Resumen from './components/Resumen'
 import Historico from './components/Historico'
 import Ranking from './components/Ranking'
+import PorCubierto from './components/PorCubierto'
 import type { Servicio } from '@/types/analisis'
 
-type Tab = 'carga' | 'consumo' | 'incidencia' | 'ranking' | 'resumen' | 'historico'
+type Tab = 'carga' | 'consumo' | 'incidencia' | 'ranking' | 'resumen' | 'porcubierto' | 'historico'
 
 function dateToString(d: Date): string {
   const year = d.getFullYear()
@@ -70,6 +71,12 @@ export default function AnalisisPage() {
           label="Resumen"
         />
         <TabButton
+          active={tab === 'porcubierto'}
+          onClick={() => setTab('porcubierto')}
+          icon={<Users className="w-4 h-4" />}
+          label="Por cubierto"
+        />
+        <TabButton
           active={tab === 'historico'}
           onClick={() => setTab('historico')}
           icon={<History className="w-4 h-4" />}
@@ -91,6 +98,9 @@ export default function AnalisisPage() {
       )}
       {tab === 'resumen' && (
         <Resumen fecha={fecha} servicio={servicio} setServicio={setServicio} />
+      )}
+      {tab === 'porcubierto' && (
+        <PorCubierto fecha={fecha} servicio={servicio} setServicio={setServicio} />
       )}
       {tab === 'historico' && <Historico />}
     </div>

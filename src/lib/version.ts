@@ -10,6 +10,13 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.40',
+    fecha: '19/08/26',
+    cambios: [
+      'Análisis: nueva pestaña "Por cubierto" — cuánto consume cada persona que se sienta, comparado contra el período anterior. Sirve para ver si algo cambió sin que haya cambiado la venta: el pan viene entre 30 y 39 gramos por persona desde abril',
+    ],
+  },
+  {
     version: 'V.39',
     fecha: '19/08/26',
     cambios: [

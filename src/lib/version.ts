@@ -13,6 +13,7 @@ export const CHANGELOG: VersionEntry[] = [
     version: 'V.42',
     fecha: '19/08/26',
     cambios: [
+      'Ranking: la matriz de Promociones no se dibujaba nunca, porque pedía 5 productos y las promos son 4. Ahora se dibuja desde 3, avisando cuando la sección es chica',
       'Carta: nueva fila de secciones para filtrar de un clic. Con 44 platos, llegar a Bebidas obligaba a colapsar las secciones de arriba una por una',
       'Facturas: las percepciones se eligen de una lista (PERC IVA 3%, PERC IIBB BS AS 4%) y el monto se calcula solo sobre el subtotal neto. Sigue siendo editable si el proveedor redondeó distinto',
       'Si agregás ítems después de elegir la percepción, el monto se actualiza solo — salvo que lo hayas corregido a mano',

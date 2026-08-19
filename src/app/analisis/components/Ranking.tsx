@@ -9,6 +9,7 @@ import {
   armarMatriz,
   seccionesDe,
   MINIMO_PARA_MATRIZ,
+  POCOS_PARA_MATRIZ,
   CUADRANTE_LABEL,
   CUADRANTE_AYUDA,
   type RankingPeriodo,
@@ -291,6 +292,14 @@ export default function Ranking({ fecha, servicio, setServicio }: Props) {
           </div>
         ) : matriz ? (
           <>
+            {matriz.items.length < POCOS_PARA_MATRIZ && (
+              <div className="bg-slate-50 border border-gray-200 border-l-[3px] border-l-slate-500 rounded-lg px-4 py-2.5 text-sm text-gray-700 mb-4">
+                <span className="font-medium">{seccionActiva}</span> tiene{' '}
+                <span className="font-mono">{matriz.items.length}</span> productos. Los cuadrantes
+                sirven igual, pero con tan pocos, un solo producto mueve los umbrales de toda la
+                sección — leelos como una orientación, no como un veredicto.
+              </div>
+            )}
             <Matriz matriz={matriz} />
             <div className="mt-5">
               <LeyendaCuadrantes />

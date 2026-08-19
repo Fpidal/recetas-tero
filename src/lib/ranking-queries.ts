@@ -407,11 +407,25 @@ export function seccionesDe(productos: ProductoRanking[]): string[] {
 }
 
 /**
- * Con pocos productos los cuadrantes son decorativos: el umbral del 70% deja
- * de discriminar y cualquiera cae en cualquier lado. Debajo de esto se muestra
- * la tabla y se explica por qué no hay matriz.
+ * Mínimo de productos para que la matriz signifique algo.
+ *
+ * Estuvo en 5 y era un número puesto a ojo, con una consecuencia que no vi:
+ * Promociones tiene 4 productos y nunca va a tener más, así que esa sección
+ * quedaba con la matriz bloqueada para siempre.
+ *
+ * Donde el método realmente se rompe es con uno o dos. Con un solo producto,
+ * ese producto es el 100% de las unidades Y su propio promedio de
+ * contribución: cae siempre en el mismo cuadrante por construcción. Con cuatro,
+ * en cambio, el umbral de popularidad da 17,5% de las unidades y discrimina
+ * bien.
  */
-export const MINIMO_PARA_MATRIZ = 5
+export const MINIMO_PARA_MATRIZ = 3
+
+/**
+ * Debajo de esto la matriz se dibuja igual, pero avisando: con pocos productos
+ * un solo dato mueve los umbrales, y conviene leerla sabiéndolo.
+ */
+export const POCOS_PARA_MATRIZ = 6
 
 /**
  * Último día con consumo cargado.

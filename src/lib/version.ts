@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.42',
+    fecha: '19/08/26',
+    cambios: [
+      'Se arregló el comentario por ítem en la ficha de factura, que fallaba siempre desde que se agregó en V.27. La base no reconocía ese tipo de nota',
+      'Cuando una nota no se puede guardar, el mensaje ahora dice el motivo real en vez de suponer que falta la tabla',
+    ],
+  },
+  {
     version: 'V.41',
     fecha: '19/08/26',
     cambios: [

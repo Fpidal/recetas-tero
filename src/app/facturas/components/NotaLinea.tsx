@@ -41,9 +41,20 @@ export default function NotaLinea({ valor, onGuardar, placeholder = 'Agregar una
       setGuardando(true)
       await onGuardar(texto)
       setEditando(false)
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error guardando la nota:', e)
-      alert('No se pudo guardar la nota. Puede faltar crear la tabla notas_auditoria.')
+      // El mensaje anterior decía "puede faltar crear la tabla", y mandaba a
+      // buscar al lugar equivocado: lo que falla casi siempre es el CHECK de
+      // `bloque`, que quedó sin el valor nuevo cuando se agregó un tipo de nota.
+      // Pasó con 'item_factura' en V.27 y estuvo roto hasta el 19/08/26.
+      const detalle = String(e?.message || e)
+      alert(
+        detalle.includes('bloque_check')
+          ? 'No se pudo guardar: la base no reconoce este tipo de nota.\n\n' +
+            'Falta agregar el valor al CHECK de notas_auditoria.bloque — ver ' +
+            'supabase-notas-auditoria.sql.'
+          : `No se pudo guardar la nota.\n\n${detalle}`
+      )
     } finally {
       setGuardando(false)
     }

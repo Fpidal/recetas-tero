@@ -20,9 +20,14 @@ CREATE TABLE IF NOT EXISTS public.notas_auditoria (
   -- Lunes de la semana del informe
   semana_desde DATE NOT NULL,
   -- Qué sección del informe
+  -- ⚠️ SI SE AGREGA UN BLOQUE EN BloqueAuditoria (src/lib/auditoria-semanal.ts)
+  --    HAY QUE AGREGARLO ACÁ. El CHECK no lo sabe solo: rechaza el INSERT y la
+  --    pantalla solo dice "no se pudo guardar". Paso con 'item_factura', que se
+  --    agrego en V.27 y quedo roto hasta el 19/08/26 — tres meses en los que
+  --    comentar un item de factura fallaba siempre.
   bloque       TEXT NOT NULL CHECK (bloque IN (
                  'faltante', 'cambio_precio', 'precio_distinto',
-                 'agregado', 'orden_sin_factura'
+                 'agregado', 'orden_sin_factura', 'item_factura'
                )),
   -- Identifica la línea dentro del bloque. La arma el frontend
   -- (referenciaDe() en src/lib/auditoria-semanal.ts) para que sea estable

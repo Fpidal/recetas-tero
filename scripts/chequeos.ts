@@ -230,4 +230,30 @@ export const CHEQUEOS: Chequeo[] = [
       'para medir el avance, y el objetivo es que llegue a cero antes de dar de alta al segundo ' +
       'cliente.',
   },
+
+  {
+    nombre: 'notas-bloques',
+    universo: `SELECT COUNT(*) AS n FROM pg_constraint
+                WHERE conrelid = 'public.notas_auditoria'::regclass AND contype = 'c'`,
+    descripcion: 'La base acepta todos los tipos de nota que usa el código',
+    sql: `
+      -- Los valores salen del type BloqueAuditoria en src/lib/auditoria-semanal.ts.
+      -- Si se agrega uno allá y no acá, el INSERT lo rechaza y la pantalla solo
+      -- dice "no se pudo guardar".
+      SELECT b AS bloque_que_falta
+        FROM unnest(ARRAY['faltante', 'cambio_precio', 'precio_distinto', 'agregado', 'orden_sin_factura', 'item_factura']) AS b
+       WHERE NOT EXISTS (
+         SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'public.notas_auditoria'::regclass
+            AND contype = 'c'
+            AND pg_get_constraintdef(oid) LIKE '%' || b || '%'
+       )
+    `,
+    problemaSi: (f) => f.length > 0,
+    queSignifica:
+      'El código puede mandar estos bloques y el CHECK de notas_auditoria no los acepta: ' +
+      'guardar la nota falla siempre. Pasó con `item_factura`, que se agregó en V.27 y quedó ' +
+      'roto tres meses — lo encontró el usuario intentando comentar una factura, no un test. ' +
+      'Ver supabase-notas-item-factura.sql.',
+  },
 ]

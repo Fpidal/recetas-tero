@@ -13,6 +13,7 @@ export const CHANGELOG: VersionEntry[] = [
     version: 'V.42',
     fecha: '19/08/26',
     cambios: [
+      'Carta: nueva fila de secciones para filtrar de un clic. Con 44 platos, llegar a Bebidas obligaba a colapsar las secciones de arriba una por una',
       'Facturas: las percepciones se eligen de una lista (PERC IVA 3%, PERC IIBB BS AS 4%) y el monto se calcula solo sobre el subtotal neto. Sigue siendo editable si el proveedor redondeó distinto',
       'Si agregás ítems después de elegir la percepción, el monto se actualiza solo — salvo que lo hayas corregido a mano',
       'Se arregló el comentario por ítem en la ficha de factura, que fallaba siempre desde que se agregó en V.27. La base no reconocía ese tipo de nota',

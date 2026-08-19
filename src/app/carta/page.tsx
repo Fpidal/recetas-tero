@@ -113,6 +113,12 @@ export default function CartaPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [seccionesExpandidas, setSeccionesExpandidas] = useState<Set<string>>(new Set(SECCIONES_ORDEN))
+  /**
+   * Filtro por sección. Con 44 platos en siete secciones, llegar a Bebidas
+   * —que va última— obligaba a colapsar las de arriba una por una. Un clic
+   * acá deja la lista en esa sección sola.
+   */
+  const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null)
   const [tabActiva, setTabActiva] = useState<TabType>(() => {
     // Leer tab inicial desde query param
     const tabParam = searchParams.get('tab')
@@ -811,6 +817,12 @@ export default function CartaPage() {
       items: itemsActuales.filter(i => i.plato_seccion === seccion).sort((a, b) => a.plato_nombre.localeCompare(b.plato_nombre)),
     }))
     .filter(grupo => grupo.items.length > 0)
+    .filter(grupo => !seccionFiltro || grupo.seccion === seccionFiltro)
+
+  // Cuántos hay en cada sección, ya contando la pestaña y la búsqueda activas
+  const conteoPorSeccion = SECCIONES_ORDEN
+    .map(seccion => ({ seccion, n: itemsActuales.filter(i => i.plato_seccion === seccion).length }))
+    .filter(s => s.n > 0)
 
   // Preview al agregar
   const platoPreview = platosDisponibles.find(p => p.id === selectedPlato)
@@ -902,7 +914,7 @@ export default function CartaPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div className="flex gap-1 border-b sm:border-b-0">
           <button
-            onClick={() => setTabActiva('en_carta')}
+            onClick={() => { setTabActiva('en_carta'); setSeccionFiltro(null) }}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               tabActiva === 'en_carta'
                 ? 'border-primary-600 text-primary-600'
@@ -912,7 +924,7 @@ export default function CartaPage() {
             En Carta (<span className="font-mono">{items.length}</span>)
           </button>
           <button
-            onClick={() => setTabActiva('fuera_carta')}
+            onClick={() => { setTabActiva('fuera_carta'); setSeccionFiltro(null) }}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               tabActiva === 'fuera_carta'
                 ? 'border-primary-600 text-primary-600'
@@ -922,7 +934,7 @@ export default function CartaPage() {
             Fuera de Carta (<span className="font-mono">{itemsFueraCarta.length}</span>)
           </button>
           <button
-            onClick={() => setTabActiva('ejecutivos')}
+            onClick={() => { setTabActiva('ejecutivos'); setSeccionFiltro(null) }}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
               tabActiva === 'ejecutivos'
                 ? 'border-teal-500 text-teal-600'
@@ -933,7 +945,7 @@ export default function CartaPage() {
             Ejecutivos (<span className="font-mono">{menusEjecutivos.length}</span>)
           </button>
           <button
-            onClick={() => setTabActiva('especiales')}
+            onClick={() => { setTabActiva('especiales'); setSeccionFiltro(null) }}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
               tabActiva === 'especiales'
                 ? 'border-pink-500 text-pink-600'
@@ -955,6 +967,42 @@ export default function CartaPage() {
           />
         </div>
       </div>
+
+      {/* Acceso directo por sección. Filtra en vez de saltar: con la lista
+          reducida a una sección, el food cost de ese grupo se compara de un
+          vistazo, que es para lo que se entra a esta pantalla. */}
+      {(tabActiva === 'en_carta' || tabActiva === 'fuera_carta') && conteoPorSeccion.length > 1 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          <button
+            onClick={() => setSeccionFiltro(null)}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+              seccionFiltro === null
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Todas <span className="font-mono">({itemsActuales.length})</span>
+          </button>
+          {conteoPorSeccion.map(({ seccion, n }) => (
+            <button
+              key={seccion}
+              onClick={() => {
+                setSeccionFiltro(seccion === seccionFiltro ? null : seccion)
+                // Al elegir una sección se abre: caer en una colapsada haría
+                // parecer que el filtro no hizo nada.
+                setSeccionesExpandidas(prev => new Set(prev).add(seccion))
+              }}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                seccionFiltro === seccion
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {seccion} <span className="font-mono">({n})</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Contenido Carta */}
       {(tabActiva === 'en_carta' || tabActiva === 'fuera_carta') && (

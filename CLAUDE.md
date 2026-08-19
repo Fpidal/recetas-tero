@@ -26,6 +26,20 @@ npm run lint       # Linter
 npm run seed-demo  # Cargar datos de demo
 ```
 
+⚠️ **Después de un build, verificar que las fuentes hayan bajado:**
+
+```bash
+find .next -name "*.woff2" | wc -l     # tienen que ser ~24, no 0
+```
+
+`next/font/google` descarga Instrument Serif, Instrument Sans e IBM Plex Mono **durante el
+build**. Si la red falla en ese momento, no bajan y Next cae a las tipografías del sistema
+**en silencio**: el build igual dice `✓ Compiled successfully`. Pasó el 19/08/26 —la red estuvo
+intermitente todo el día— y se descubrió recién cuando el usuario vio que las letras habían
+cambiado. Se arregla borrando `.next` y reconstruyendo con red.
+
+No afecta a producción: Vercel construye con su propia red y las baja siempre.
+
 ⚠️ **Nunca correr `npm run build` con el dev server levantado:** los dos escriben en `.next`
 y el build le pisa los archivos al server en caliente. Bajar el dev primero.
 

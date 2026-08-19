@@ -253,6 +253,42 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Más adelante
 
+- **Multiusuario.** Mapeado el 19/08/26 con `npm run consultar -- aislado-por-cliente`.
+
+  **No son tablas separadas por cliente.** Son las mismas tablas con una columna `restaurante_id`,
+  y la RLS haciendo de pared. O sea que la RLS deja de ser una formalidad y pasa a ser lo único
+  que separa un restaurante de otro.
+
+  **El punto de partida: 31 de 32 tablas no filtran por dueño.** La única preparada es `perfiles`,
+  con `auth.uid() = id`. Las otras se reparten en dos grupos, y los dos fallan igual con dos
+  clientes:
+
+  | | tablas | policy |
+  |---|---|---|
+  | `public` sin filtro | 22 | `USING (true)` — incluye `insumos`, `precios_insumo`, `facturas_proveedor`, `proveedores`, `platos`, `carta`, `vinos` |
+  | `authenticated` sin filtro | 9 | `USING (true)` — `consumo_diario`, `consumo_items`, `ventas_diarias`, `tragos` |
+
+  Hoy no pasa nada porque `anon` no tiene GRANT (V.24). Pero la policy sigue diciendo "todos ven
+  todo": lo único que protege es que nadie tiene la llave. Es una puerta sin cerradura con un
+  guardia en la entrada.
+
+  **El chequeo `aislado-por-cliente` va a estar en rojo hasta terminar**, y sirve para medir el
+  avance. El objetivo es cero antes de dar de alta al segundo cliente.
+
+- **Venta por planes (básico / medio / completo).** Es un eje DISTINTO del multiusuario y se
+  resuelve en otro lado:
+
+  *De quién es el dato* → `restaurante_id` + RLS. Es seguridad: si falla, un cliente ve datos de
+  otro. Va en **todas** las tablas, sin excepción.
+
+  *Qué puede usar* → el plan contratado. Es comercial: si falla, alguien usa un módulo que no
+  pagó. Se puede controlar en la pantalla, salvo donde el dato en sí sea el producto.
+
+  Y hay una complicación práctica: **los módulos comparten tablas.** Facturas alimenta
+  `precios_insumo`, que es de donde sale el costo de las recetas; Ventas necesita `platos`. Así
+  que un plan "básico con facturas pero sin recetario" igual necesita `insumos` y
+  `precios_insumo`. **No se puede cortar por tabla: hay que cortar por pantalla.**
+
 - **Inventario conectado al consumo.** Reactivar cuando haya suficiente carga de datos de venta
   para que el stock se concilie contra el consumo real. *Condición de disparo: varios meses de
   ventas y consumo cargados de forma consistente.*

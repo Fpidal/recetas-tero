@@ -185,4 +185,41 @@ export const CHEQUEOS: Chequeo[] = [
       'cuando el sistema pase a multiusuario, porque ahí una tabla sin RLS mezcla datos de dos ' +
       'restaurantes.',
   },
+
+  {
+    nombre: 'aislado-por-cliente',
+    universo: `SELECT COUNT(*) AS n FROM pg_tables WHERE schemaname='public'`,
+    descripcion: 'Cada tabla filtra por restaurante (para el multiusuario)',
+    sql: `
+      SELECT t.tablename,
+             COALESCE(
+               STRING_AGG(DISTINCT p.roles::text, ', '),
+               'SIN POLICY'
+             ) AS para_quien,
+             COUNT(p.policyname) FILTER (
+               WHERE COALESCE(p.qual, '') ILIKE '%restaurante%'
+                  OR COALESCE(p.qual, '') ILIKE '%tenant%'
+                  OR COALESCE(p.qual, '') ILIKE '%auth.uid()%'
+             ) AS policies_que_filtran
+        FROM pg_tables t
+        LEFT JOIN pg_policies p
+               ON p.schemaname = t.schemaname AND p.tablename = t.tablename
+       WHERE t.schemaname = 'public'
+       GROUP BY t.tablename
+      HAVING COUNT(p.policyname) FILTER (
+               WHERE COALESCE(p.qual, '') ILIKE '%restaurante%'
+                  OR COALESCE(p.qual, '') ILIKE '%tenant%'
+                  OR COALESCE(p.qual, '') ILIKE '%auth.uid()%'
+             ) = 0
+       ORDER BY t.tablename
+    `,
+    problemaSi: (f) => f.length > 0,
+    queSignifica:
+      'Estas tablas no filtran por dueño: sus policies dicen USING (true), o sea "todos ven ' +
+      'todo". Con un solo restaurante no molesta —todos sos vos— pero el día que haya dos, cada ' +
+      'una de estas es una tabla donde uno ve los datos del otro. Al 19/08/26 son 31 de 32; la ' +
+      'única preparada es `perfiles`. ESTE CHEQUEO VA A ESTAR EN ROJO HASTA LA MIGRACIÓN: sirve ' +
+      'para medir el avance, y el objetivo es que llegue a cero antes de dar de alta al segundo ' +
+      'cliente.',
+  },
 ]

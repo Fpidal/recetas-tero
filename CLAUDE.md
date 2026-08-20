@@ -103,7 +103,7 @@ src/
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
 
-## ⚠️ Cinco trampas que ya rompieron cosas
+## ⚠️ Seis trampas que ya rompieron cosas
 
 **1. `anon` no recibe permisos — hoy, ninguno.** La clave anónima viaja en el bundle público.
 Hasta el 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los
@@ -150,6 +150,14 @@ purgadas. Lo que lo volvió difícil de ver: los badges de Insumo y Vino se veí
 casualidad**, porque `bg-blue-100` y `bg-purple-100` aparecen en otros 15 y 13 componentes que
 sí se escaneaban; Receta, Ejecutivo y Trago usan colores que no figuran en ningún otro lado y
 salían en negro. **Si agregás una carpeta nueva con clases de Tailwind adentro, va al `content`.**
+
+**6. `ordenes_compra.total` guarda el NETO, y ninguna pantalla lo usa.** Todas calculan el IVA
+en vivo a partir del `iva_porcentaje` de cada insumo (ver `calcularTotalConIva` en
+`ordenes-compra/page.tsx`). Así que el número que ve el usuario **siempre tiene IVA** aunque la
+columna diga otra cosa. Comparar `ordenes_compra.total` contra `facturas_proveedor.total` —que sí
+incluye IVA y percepciones— da una diferencia del 21,9% que parece un problema de compras y es
+solo el impuesto: contra el neto de la factura, la diferencia real entre lo pedido y lo entregado
+es 3,4%. Pasó el 20/08/26 al armar el objetivo de compras.
 
 ## Consultar la base (solo lectura)
 

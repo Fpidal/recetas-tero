@@ -10,6 +10,16 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.43',
+    fecha: '20/08/26',
+    cambios: [
+      'Órdenes de Compra: nuevo objetivo de compras semanal. Muestra cuánto se pidió en la semana, cuánto llegó, cuánto falta y cuánto queda del objetivo — así se puede frenar a tiempo en vez de enterarse después',
+      'La barra avisa desde el 85% del objetivo, no al pasarse: enterarse cuando ya está comprado no deja hacer nada',
+      'Nueva solapa "Historial" con el objetivo contra lo real de las últimas 12 semanas, y el desvío de cada una',
+      'Los vinos no cuentan contra el objetivo — se compran por caja cuando hay oferta, no semana a semana — pero se muestran aparte',
+    ],
+  },
+  {
     version: 'V.42',
     fecha: '19/08/26',
     cambios: [

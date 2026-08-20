@@ -9,6 +9,8 @@ import { Button, Select, Table, BotonExportar } from '@/components/ui'
 import { exportarOrdenesCompra } from '@/lib/exportaciones'
 import Link from 'next/link'
 import { formatearMoneda, formatearFecha } from '@/lib/formato-numeros'
+import ObjetivoSemana from './components/ObjetivoSemana'
+import HistorialObjetivos from './components/HistorialObjetivos'
 
 interface OrdenConProveedor {
   id: string
@@ -110,7 +112,7 @@ const CATEGORIAS = [
 export default function OrdenesCompraPage() {
   const [ordenes, setOrdenes] = useState<OrdenConProveedor[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [tabActiva, setTabActiva] = useState<'pendientes' | 'recibidas'>('pendientes')
+  const [tabActiva, setTabActiva] = useState<'pendientes' | 'recibidas' | 'historial'>('pendientes')
 
   // Filtros
   const [filtroFechaDesde, setFiltroFechaDesde] = useState('')
@@ -399,6 +401,10 @@ export default function OrdenesCompraPage() {
         </div>
       </div>
 
+      {/* Cómo viene la semana contra el objetivo. Va arriba porque la pregunta
+          "¿puedo pedir esto?" se hace antes de armar la orden, no después. */}
+      <ObjetivoSemana recargar={ordenes.length} />
+
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-3">
         <button
@@ -431,7 +437,24 @@ export default function OrdenesCompraPage() {
             {ordenesRecibidas.length}
           </span>
         </button>
+        <button
+          onClick={() => setTabActiva('historial')}
+          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+            tabActiva === 'historial'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          Historial
+        </button>
       </div>
+
+      {/* El historial no usa los filtros de fecha ni proveedor: muestra semanas
+          completas contra su objetivo, así que esos controles solo confundirían. */}
+      {tabActiva === 'historial' ? (
+        <HistorialObjetivos />
+      ) : (
+      <>
 
       {/* Barra de filtros */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2.5 sm:p-3 mb-3">
@@ -519,6 +542,8 @@ export default function OrdenesCompraPage() {
       <p className="text-xs text-gray-400 mt-3">
         Observaciones: mercadería sujeta a control de calidad al recibir.
       </p>
+      </>
+      )}
     </div>
   )
 }

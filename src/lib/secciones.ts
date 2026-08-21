@@ -22,6 +22,12 @@ export const SECCIONES = [
   'Ensaladas',
   'Postres',
   'Bebidas',
+  // Va última y a propósito: es lo que se cobra pero no se elige de la carta.
+  // El "Cubierto" vive acá — como receta arrastra la servilleta, el pan y el
+  // aceite de mesa, pero con 55 unidades por servicio aplastaba la matriz de
+  // Entradas, donde estaba antes: se llevaba el 90% de las unidades y dejaba a
+  // todas las entradas reales por debajo del umbral de popularidad.
+  'Otros',
 ] as const
 
 export type Seccion = (typeof SECCIONES)[number]
@@ -54,6 +60,8 @@ export const SECCION_AGRUPADA: Record<string, string> = {
   bebida: 'Bebidas',
   Bebida: 'Bebidas',
   Bebidas: 'Bebidas',
+  // No agrupa en ninguna parte de un menú: el cubierto no es un plato del menú
+  Otros: 'Otros',
 }
 
 export function agruparSeccion(seccion: string | null | undefined): string {
@@ -77,6 +85,7 @@ export const MARGEN_POR_SECCION: Record<string, number> = {
   Ensaladas: 15,
   Postres: 20,
   Bebidas: 20,
+  Otros: 30,
 }
 
 export function margenDeSeccion(seccion: string): number {

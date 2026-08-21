@@ -13,6 +13,7 @@ export const CHANGELOG: VersionEntry[] = [
     version: 'V.44',
     fecha: '21/08/26',
     cambios: [
+      'Nueva sección "Otros" en la carta, para lo que se cobra pero no se elige del menú. El Cubierto vive ahí: en Entradas se llevaba el 90% de las unidades y dejaba a todas las entradas reales fuera del análisis',
       'Análisis: nueva pestaña "Importar" para subir el informe del sistema de ventas. En vez de tipear 45 renglones, se sube el Excel y se revisa',
       'De un solo archivo salen la venta del turno, los cubiertos y el consumo de cada producto. El costo sigue saliendo de las recetas',
       'Los productos se enlazan una sola vez con los del recetario y quedan guardados: la próxima importación reconoce todo solo',

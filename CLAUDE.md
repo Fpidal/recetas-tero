@@ -103,7 +103,7 @@ src/
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
 
-## ⚠️ Seis trampas que ya rompieron cosas
+## ⚠️ Siete trampas que ya rompieron cosas
 
 **1. `anon` no recibe permisos — hoy, ninguno.** La clave anónima viaja en el bundle público.
 Hasta el 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los
@@ -158,6 +158,12 @@ columna diga otra cosa. Comparar `ordenes_compra.total` contra `facturas_proveed
 incluye IVA y percepciones— da una diferencia del 21,9% que parece un problema de compras y es
 solo el impuesto: contra el neto de la factura, la diferencia real entre lo pedido y lo entregado
 es 3,4%. Pasó el 20/08/26 al armar el objetivo de compras.
+
+**7. `plato_ingredientes` no acepta vino.** Solo tiene `insumo_id` y `receta_base_id`, así que una
+receta no puede llevar una copa de vino. Cuando haga falta relacionar un vino con una venta
+fraccionada —una copa es 0,333 de botella— se usa el `factor` de `mapeo_ventas`, que guarda la
+equivalencia sin duplicar el vino como insumo. Duplicarlo dejaría dos precios que mantener, y el
+día que llegue una factura de esa bodega se actualiza uno solo, sin que nada avise.
 
 ## Consultar la base (solo lectura)
 

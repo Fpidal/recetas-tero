@@ -216,6 +216,22 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Próximo
 
+- **El "Cubierto" distorsiona la matriz de Entradas.** Se creó como receta (V.44) para que la
+  servilleta, el pan y el aceite de mesa entren solos con los cubiertos — y para eso funciona.
+  Pero quedó en la sección **Entradas** porque no hay una sección para él, y con 55 unidades por
+  servicio se lleva el **90% de las unidades** de esa sección. Medido en la noche del 24/07:
+  Cubierto 55, Gambas 2, y el resto 1 cada uno. El umbral de popularidad sube a 11,7% y **todas
+  las entradas reales caen debajo**, así que la matriz dice que ninguna se vende.
+
+  El arreglo es agregar una sección propia —`Cubierto` o `Servicio`— y desde que las secciones se
+  consolidaron en `src/lib/secciones.ts` (V.38) eso es **una línea**. Se dejó así a pedido del
+  usuario, para no acumular cambios mientras se probaba la importación.
+
+- **La copa de vino dentro de los menús puede no estar costeada.** El informe del 24/07 trae
+  `M. Copa Tinto` con 9 unidades en $0, o sea nueve copas servidas dentro de menús. Si la
+  elaboración "Bebidas menu" solo tiene gaseosa y agua, ese vino no está en el costo de ningún
+  lado. Conviene revisar la composición de los menús que incluyen vino.
+
 - **Dónde mirar bebida contra comida (V.38).** Quedaron **dos** números y no miden lo mismo:
 
   El encabezado de Carga diaria abre el total en **Cocina / Bebidas**. Decide por el item

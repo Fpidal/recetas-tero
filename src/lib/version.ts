@@ -10,6 +10,17 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.44',
+    fecha: '21/08/26',
+    cambios: [
+      'Análisis: nueva pestaña "Importar" para subir el informe del sistema de ventas. En vez de tipear 45 renglones, se sube el Excel y se revisa',
+      'De un solo archivo salen la venta del turno, los cubiertos y el consumo de cada producto. El costo sigue saliendo de las recetas',
+      'Los productos se enlazan una sola vez con los del recetario y quedan guardados: la próxima importación reconoce todo solo',
+      'Lo que viene incluido en un menú no se carga dos veces — el sistema de ventas ya lo marca en $0',
+      'La copa de vino se puede enlazar con su botella indicando qué fracción es, sin tener que crear un producto aparte',
+    ],
+  },
+  {
     version: 'V.43',
     fecha: '20/08/26',
     cambios: [

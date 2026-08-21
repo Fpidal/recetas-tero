@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ClipboardEdit, Package, Star, History, CalendarRange, Trophy, Users } from 'lucide-react'
+import { ClipboardEdit, Package, Star, History, CalendarRange, Trophy, Users, Upload } from 'lucide-react'
 import CargaDiaria from './components/CargaDiaria'
 import ConsumoDiario from './components/ConsumoDiario'
 import Incidencia from './components/Incidencia'
@@ -9,9 +9,10 @@ import Resumen from './components/Resumen'
 import Historico from './components/Historico'
 import Ranking from './components/Ranking'
 import PorCubierto from './components/PorCubierto'
+import ImportarVentas from './components/ImportarVentas'
 import type { Servicio } from '@/types/analisis'
 
-type Tab = 'carga' | 'consumo' | 'incidencia' | 'ranking' | 'resumen' | 'porcubierto' | 'historico'
+type Tab = 'carga' | 'importar' | 'consumo' | 'incidencia' | 'ranking' | 'resumen' | 'porcubierto' | 'historico'
 
 function dateToString(d: Date): string {
   const year = d.getFullYear()
@@ -45,6 +46,12 @@ export default function AnalisisPage() {
           onClick={() => setTab('carga')}
           icon={<ClipboardEdit className="w-4 h-4" />}
           label="Carga diaria"
+        />
+        <TabButton
+          active={tab === 'importar'}
+          onClick={() => setTab('importar')}
+          icon={<Upload className="w-4 h-4" />}
+          label="Importar"
         />
         <TabButton
           active={tab === 'consumo'}
@@ -86,6 +93,9 @@ export default function AnalisisPage() {
 
       {tab === 'carga' && (
         <CargaDiaria fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
+      )}
+      {tab === 'importar' && (
+        <ImportarVentas fecha={fecha} servicio={servicio} />
       )}
       {tab === 'consumo' && (
         <ConsumoDiario fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />

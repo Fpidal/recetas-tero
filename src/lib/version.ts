@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.46',
+    fecha: '25/08/26',
+    cambios: [
+      'Dashboard: los gráficos de compras por semana y por categoría muestran 8 semanas en vez de 4. Con dos meses a la vista se ve una tendencia; con cuatro puntos la línea era casi un segmento',
+      'Dashboard: nuevos colores en el gráfico de categorías. Verduras y Lácteos eran los dos verdes y Pescados un gris azulado — no se distinguían a simple vista. Lácteos pasa a violeta y los cinco quedaron medidos, también para daltonismo',
+    ],
+  },
+  {
     version: 'V.45',
     fecha: '24/08/26',
     cambios: [

@@ -87,6 +87,34 @@ export const SERIE_GRAFICOS = [
 ] as const
 
 /**
+ * Colores de las categorías de compra, para los gráficos del dashboard.
+ *
+ * NO son elegidos a ojo: salen del validador de paletas (OKLab), que mide si
+ * dos colores se distinguen —también con daltonismo— sobre el fondo crema.
+ * Los anteriores no pasaban: Verduras (#3D8B5E) y Lácteos (#5C7A5E) eran los
+ * dos verdes, con una separación de 5,8 sobre un piso de 15 para visión
+ * normal; y Pescados, Almacén y Lácteos tenían tan poco croma que leían como
+ * gris. En líneas de 2px el color es lo ÚNICO que separa una serie de otra.
+ *
+ * ⚠️ EL ORDEN DE ABAJO ES PARTE DEL ARREGLO, no es alfabético ni por tamaño.
+ * El validador mide los pares vecinos, así que Verduras va entre Carnes y
+ * Pescados para separar el verde del ámbar de Almacén: juntos daban 5,2 con
+ * protanopia, y separados el peor par queda en 8,2. Si se reordenan las líneas
+ * del gráfico, hay que volver a validar.
+ *
+ * Los cinco pasan las cinco comprobaciones (banda de luminosidad, croma,
+ * daltonismo, visión normal y contraste sobre el fondo).
+ */
+export const CATEG_COLORES: Record<string, string> = {
+  Carnes: '#A32E2E',            // rojo
+  Verduras_Frutas: '#2E8B57',   // verde
+  Pescados_Mariscos: '#2F6FA8', // azul
+  Almacen: '#B07E28',           // ámbar
+  Lacteos_Fiambres: '#7B4EA8',  // violeta
+  Salsas_Recetas: PALETA.terracotta,
+}
+
+/**
  * Semáforo de incidencia — el ÚNICO lugar donde el color decide una lectura.
  * Los tres comparten luminosidad para que ninguno grite más que otro, y pasan
  * contraste AA sobre su propio fondo.

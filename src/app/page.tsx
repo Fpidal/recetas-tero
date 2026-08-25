@@ -18,7 +18,7 @@ import { obtenerCierreMes, variacion, nombreMes, corteDelMesEnCurso, type Cierre
 import { lunesDe } from '@/lib/auditoria-semanal'
 import { costoFinalInsumo } from '@/lib/costos'
 import { obtenerHistorialPrecios } from '@/lib/precios-queries'
-import { PALETA } from '@/lib/colores'
+import { PALETA, CATEG_COLORES } from '@/lib/colores'
 import {
   LineChart,
   Line,
@@ -61,15 +61,6 @@ const PIE_COLORS = [PALETA.terracotta, '#5C7A5E', '#4A6572', '#A67B3D', '#8CA88F
 // Las categorías principales para los gráficos
 const CATEGORIAS_GRAFICOS = ['Carnes', 'Pescados_Mariscos', 'Verduras_Frutas', 'Almacen', 'Lacteos_Fiambres', 'Otros']
 
-// Colores por categoría para el gráfico de barras (por key interna)
-const CATEG_COLORES: Record<string, string> = {
-  Carnes: '#9B2C2C',
-  Almacen: '#A67B3D',
-  Verduras_Frutas: '#3D8B5E',
-  Pescados_Mariscos: '#4A6572',
-  Lacteos_Fiambres: '#5C7A5E',
-  Salsas_Recetas: PALETA.terracotta,
-}
 
 const CATEG_LABELS: Record<string, string> = {
   Carnes: 'Carnes',
@@ -554,7 +545,7 @@ export default function Home() {
 
       const comprasSemanalesData = Array.from(semanasMap.entries())
         .reverse()
-        .slice(-4)
+        .slice(-8)
         .map(([semana, valor]) => ({ semana, valor }))
 
       // ===== COMPRAS MENSUALES =====
@@ -681,7 +672,7 @@ export default function Home() {
         })
       })
 
-      const comprasPorCategoriaSemanales = Array.from(semanasCategMap.values()).reverse().slice(-4)
+      const comprasPorCategoriaSemanales = Array.from(semanasCategMap.values()).reverse().slice(-8)
       const comprasPorCategoriaMensuales = Array.from(mesesCategMap.values())
 
       // ===== VARIACIÓN POR CATEGORÍA =====
@@ -1261,9 +1252,11 @@ export default function Home() {
                       formatter={(value, name) => [formatMoney(Number(value)), name]}
                       contentStyle={{ borderRadius: 8, border: '1px solid #E8E2DA', fontSize: 12, backgroundColor: '#FEFCF9' }}
                     />
+                    {/* El orden es el que validó la paleta: Verduras entre Carnes y
+                        Pescados separa el verde del ámbar. Ver CATEG_COLORES. */}
                     <Line type="monotone" dataKey="Carnes" stroke={CATEG_COLORES.Carnes} strokeWidth={2} dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="Pescados" stroke={CATEG_COLORES.Pescados_Mariscos} strokeWidth={2} dot={{ r: 3 }} />
                     <Line type="monotone" dataKey="Verduras" stroke={CATEG_COLORES.Verduras_Frutas} strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Pescados" stroke={CATEG_COLORES.Pescados_Mariscos} strokeWidth={2} dot={{ r: 3 }} />
                     <Line type="monotone" dataKey="Almacen" stroke={CATEG_COLORES.Almacen} strokeWidth={2} dot={{ r: 3 }} />
                     <Line type="monotone" dataKey="Lacteos" stroke={CATEG_COLORES.Lacteos_Fiambres} strokeWidth={2} dot={{ r: 3 }} />
                   </LineChart>
@@ -1275,10 +1268,10 @@ export default function Home() {
                   <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Carnes }} /> Carnes ({pct(totales.Carnes)}%)
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-ink-muted">
-                  <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Pescados_Mariscos }} /> Pescados ({pct(totales.Pescados)}%)
+                  <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Verduras_Frutas }} /> Verduras ({pct(totales.Verduras)}%)
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-ink-muted">
-                  <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Verduras_Frutas }} /> Verduras ({pct(totales.Verduras)}%)
+                  <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Pescados_Mariscos }} /> Pescados ({pct(totales.Pescados)}%)
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-ink-muted">
                   <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: CATEG_COLORES.Almacen }} /> Almacén ({pct(totales.Almacen)}%)

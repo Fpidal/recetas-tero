@@ -20,6 +20,7 @@ interface OrdenPDF {
     unidad_medida: string
     unidad_display: string // Unidad visual para el proveedor
     cantidad: number // Cantidad pedida (OC)
+    unidades?: number | null // Bultos pedidos: informativo, no entra en el subtotal
     cantidad_recibida?: number // Cantidad según factura
     precio_unitario: number // Precio del pedido (OC)
     precio_factura?: number // Precio según factura
@@ -48,7 +49,7 @@ export async function generarPDFOrden(ordenId: string) {
       id, numero, fecha, notas, estado,
       proveedores (nombre, contacto, telefono, email, direccion),
       orden_compra_items (
-        insumo_id, vino_id, cantidad, precio_unitario, subtotal, unidad_display,
+        insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display,
         insumos (nombre, unidad_medida, iva_porcentaje),
         vinos (bodega, nombre, cepa)
       )
@@ -109,6 +110,7 @@ export async function generarPDFOrden(ordenId: string) {
         unidad_medida: unidadMedida,
         unidad_display: item.unidad_display || unidadMedida,
         cantidad: parseFloat(item.cantidad),
+        unidades: item.unidades != null ? parseFloat(item.unidades) : null,
         cantidad_recibida: cantidadRecibida,
         precio_unitario: parseFloat(item.precio_unitario),
         precio_factura: precioFactura,
@@ -322,6 +324,14 @@ export async function generarPDFOrden(ordenId: string) {
   // === TABLA CON PAGINACIÓN ===
   const esParcialORecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
   const esRecibidaCompleta = orden.tieneFactura && orden.estado === 'recibida'
+
+  /**
+   * ¿Alguna línea se pide por bultos? Si no, la columna no se dibuja y el PDF
+   * sale exactamente como salía. La mayoría de las órdenes van todas por kg
+   * —la de Morres del 23/08, por ejemplo— y ahí una columna de unos no le dice
+   * nada al proveedor y le come ancho a la fila del insumo.
+   */
+  const hayUnidades = orden.items.some((i) => i.unidades != null)
   const rowH = esRecibidaCompleta ? 9 : 7 // Más alto para OC Recibida (tiene 2 líneas de precio)
 
   // Constantes de paginación
@@ -349,6 +359,18 @@ export async function generarPDFOrden(ordenId: string) {
     recibidoRight: margin + contentWidth * 0.55,
     faltanteRight: margin + contentWidth * 0.65,
     unidad: margin + contentWidth * 0.67,
+    precioRight: margin + contentWidth * 0.82,
+    subtotalRight: pageWidth - margin - 3,
+  } : hayUnidades ? {
+    // El layout del pedido CON bultos: entra UNID, pegada a CANT, así se lee
+    // "1 · 7 kg". Las otras dos variantes (recibida y parcial) son de control
+    // interno y ya muestran la comparación contra la factura: no se tocan.
+    num: margin + 2,
+    insumo: margin + 8,
+    ivaRight: margin + contentWidth * 0.46,
+    unidadesRight: margin + contentWidth * 0.56,
+    cantRight: margin + contentWidth * 0.66,
+    unidad: margin + contentWidth * 0.68,
     precioRight: margin + contentWidth * 0.82,
     subtotalRight: pageWidth - margin - 3,
   } : {
@@ -389,6 +411,7 @@ export async function generarPDFOrden(ordenId: string) {
       doc.text('SUBTOTAL', colX.subtotalRight, hTextY, { align: 'right' })
     } else {
       doc.text('IVA', (colX as any).ivaRight, hTextY, { align: 'right' })
+      if (hayUnidades) doc.text('UNID', (colX as any).unidadesRight, hTextY, { align: 'right' })
       doc.text('CANT', (colX as any).cantRight, hTextY, { align: 'right' })
       doc.text('UN', colX.unidad, hTextY)
       doc.text('PRECIO', colX.precioRight, hTextY, { align: 'right' })
@@ -582,6 +605,19 @@ export async function generarPDFOrden(ordenId: string) {
       const ivaStr = item.iva_porcentaje === 10.5 ? '10,5%' : item.iva_porcentaje === 0 ? '0%' : '21%'
       doc.text(ivaStr, (colX as any).ivaRight, textY, { align: 'right' })
       doc.setFontSize(6.5)
+
+      // Bultos. Las líneas que se piden a granel no lo llevan: va un guión,
+      // no un 1 que nadie cargó.
+      if (hayUnidades) {
+        doc.setTextColor(50, 50, 50)
+        const unidadesStr =
+          item.unidades == null
+            ? '-'
+            : item.unidades % 1 === 0
+              ? item.unidades.toFixed(0)
+              : item.unidades.toFixed(2).replace('.', ',')
+        doc.text(unidadesStr, (colX as any).unidadesRight, textY, { align: 'right' })
+      }
 
       doc.setTextColor(50, 50, 50)
       const cantStr = item.cantidad % 1 === 0 ? item.cantidad.toFixed(0) : item.cantidad.toFixed(2).replace('.', ',')

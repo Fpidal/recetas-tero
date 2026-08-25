@@ -40,6 +40,8 @@ interface ItemOrden {
   insumo_nombre: string
   unidad_medida: string
   unidad_display: string
+  /** Bultos pedidos. Para el proveedor: no entra en el subtotal. */
+  unidades: number | null
   contenido: number
   cantidad: number
   precio_unitario: number
@@ -72,7 +74,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
   const [tieneFactura, setTieneFactura] = useState(false)
 
   // Estado temporal para edición de inputs (permite escribir coma sin perderla)
-  const [editingField, setEditingField] = useState<{id: string, field: 'cantidad' | 'precio', valor: string} | null>(null)
+  const [editingField, setEditingField] = useState<{id: string, field: 'cantidad' | 'precio' | 'unidades', valor: string} | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -103,7 +105,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         .select(`
           id, proveedor_id, notas, estado,
           orden_compra_items (
-            id, insumo_id, vino_id, cantidad, precio_unitario, subtotal, unidad_display,
+            id, insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display,
             insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete),
             vinos (bodega, nombre, cepa)
           )
@@ -145,6 +147,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
           unidad_display: item.unidad_display || unidadMedida,
           contenido,
           cantidad: parseFloat(item.cantidad),
+          unidades: item.unidades != null ? parseFloat(item.unidades) : null,
           precio_unitario: parseFloat(item.precio_unitario),
           subtotal,
           iva_porcentaje: ivaPorcentaje,
@@ -240,6 +243,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         insumo_nombre: `${vino.nombre} (${vino.cepa})`,
         unidad_medida: 'caja',
         unidad_display: 'caja',
+        unidades: null,
         contenido: vino.unidades_caja,
         cantidad: cantidadNum,
         precio_unitario: precioNum,
@@ -268,6 +272,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         insumo_nombre: insumo.nombre,
         unidad_medida: insumo.unidad_medida,
         unidad_display: insumo.unidad_medida,
+        unidades: null,
         contenido,
         cantidad: cantidadNum,
         precio_unitario: precioNum,
@@ -353,8 +358,8 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
   }
 
   // Helpers para edición de campos con soporte de coma
-  function startEditing(id: string, field: 'cantidad' | 'precio', valorActual: number) {
-    setEditingField({ id, field, valor: String(valorActual).replace('.', ',') })
+  function startEditing(id: string, field: 'cantidad' | 'precio' | 'unidades', valorActual: number | null) {
+    setEditingField({ id, field, valor: valorActual == null ? '' : String(valorActual).replace('.', ',') })
   }
 
   function updateEditingValue(valor: string) {
@@ -367,6 +372,8 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     if (editingField) {
       if (editingField.field === 'cantidad') {
         handleCantidadChange(editingField.id, editingField.valor)
+      } else if (editingField.field === 'unidades') {
+        handleUnidadesChange(editingField.id, editingField.valor)
       } else {
         handlePrecioChange(editingField.id, editingField.valor)
       }
@@ -374,10 +381,24 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
     }
   }
 
-  function getFieldValue(id: string, field: 'cantidad' | 'precio', valorActual: number): string {
+  /**
+   * Solo cambia el dato del proveedor: no toca cantidad, precio ni subtotal.
+   *
+   * Vaciarlo deja la línea SIN dato, y eso es lo que decide si la columna sale
+   * en el PDF. Un default de 1 la habría hecho aparecer siempre, llena de unos
+   * en las órdenes que van todas por kg — que son la mayoría.
+   */
+  function handleUnidadesChange(id: string, valor: string) {
+    const n = parsearNumero(valor)
+    setItems(items.map((item) => (item.id === id ? { ...item, unidades: valor.trim() === '' || n <= 0 ? null : n } : item)))
+  }
+
+  function getFieldValue(id: string, field: 'cantidad' | 'precio' | 'unidades', valorActual: number | null): string {
     if (editingField?.id === id && editingField?.field === field) {
       return editingField.valor
     }
+    // null es "sin cargar": el input queda vacío y muestra su placeholder
+    if (valorActual == null) return ''
     return String(valorActual).replace('.', ',')
   }
 
@@ -448,6 +469,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         .from('orden_compra_items')
         .update({
           cantidad: item.cantidad,
+          unidades: item.unidades,
           precio_unitario: item.precio_unitario,
           unidad_display: item.unidad_display,
         })
@@ -466,6 +488,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         insumo_id: item.insumo_id,
         vino_id: item.vino_id,
         cantidad: item.cantidad,
+        unidades: item.unidades,
         precio_unitario: item.precio_unitario,
         unidad_display: item.unidad_display,
       }))
@@ -853,7 +876,20 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         <Trash2 className="w-4 h-4 text-red-500" />
                       </Button>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500">Unid.</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={getFieldValue(item.id, 'unidades', item.unidades)}
+                          placeholder="—"
+                          onFocus={() => startEditing(item.id, 'unidades', item.unidades)}
+                          onChange={(e) => updateEditingValue(e.target.value)}
+                          onBlur={finishEditing}
+                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm font-mono"
+                        />
+                      </div>
                       <div>
                         <label className="text-[10px] text-gray-500">Cantidad</label>
                         <div className="flex items-center gap-1">
@@ -950,6 +986,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-2/5">Insumo</th>
+                      <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-16">Unid.</th>
                       <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-24">Cant.</th>
                       <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Precio Unit.</th>
                       <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase w-14">IVA</th>
@@ -975,6 +1012,20 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                               <span className="text-[10px] text-green-600">(nuevo)</span>
                             )}
                           </div>
+                        </td>
+                        {/* Bultos para el proveedor. No entra en el subtotal:
+                            ver supabase-oc-unidades.sql */}
+                        <td className="px-2 py-2">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={getFieldValue(item.id, 'unidades', item.unidades)}
+                            placeholder="—"
+                            onFocus={() => startEditing(item.id, 'unidades', item.unidades)}
+                            onChange={(e) => updateEditingValue(e.target.value)}
+                            onBlur={finishEditing}
+                            className="w-11 h-7 rounded border border-gray-300 px-1.5 text-xs font-mono"
+                          />
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-1">

@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.47',
+    fecha: '25/08/26',
+    cambios: [
+      'Órdenes de compra: nueva columna de unidades, para pedir por pieza sin perder el peso. Una horma de reggianito son 7 kg y dos bifes de chorizo son 10: ahora el proveedor ve cuántos bultos preparar y el precio se sigue calculando sobre los kilos',
+      'Antes, elegir "unidad" en el pedido solo cambiaba la etiqueta: pedir 2 bifes a $21.000 el kilo dejaba una orden de $42.000 en vez de $210.000, y el objetivo de compras semanal quedaba más holgado de lo que era',
+      'En el PDF, la columna aparece solo si alguna línea se pide por bultos. Una orden que va toda por kg sale igual que siempre',
+    ],
+  },
+  {
     version: 'V.46',
     fecha: '25/08/26',
     cambios: [

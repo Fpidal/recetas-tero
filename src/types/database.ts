@@ -248,6 +248,8 @@ export interface Database {
           insumo_id: string | null
           vino_id: string | null
           cantidad: number
+          /** Bultos pedidos (1 horma, 2 bifes). Informativo: no entra en el subtotal. */
+          unidades: number | null
           precio_unitario: number
           subtotal: number
           created_at: string

@@ -31,6 +31,8 @@ interface OrdenDetalle {
     unidad_medida: string
     unidad_display: string
     contenido: number
+    /** Bultos pedidos. Informativo: el subtotal sale de cantidad × precio. */
+    unidades: number | null
     cantidad: number
     precio_unitario: number
     subtotal: number
@@ -61,6 +63,20 @@ const estadoLabels: Record<string, string> = {
   recibida: 'Recibida',
   cancelada: 'Cancelada',
   parcialmente_recibida: 'Parcial',
+}
+
+/**
+ * "2 un. · " delante de la cantidad, cuando el pedido va por bultos.
+ *
+ * Solo aparece si la cantidad está en otra unidad —2 bifes que pesan 10 kg—,
+ * que es el caso que el número solo no cuenta. Si el insumo ya se pide por
+ * unidad, repetirlo sería decir dos veces lo mismo. Las OC anteriores a esta
+ * columna tienen `unidades` en null y se ven como siempre.
+ */
+function prefijoUnidades(item: { unidades: number | null; unidad_display: string }) {
+  if (item.unidades == null || item.unidad_display === 'unidad') return null
+  const n = item.unidades
+  return `${n % 1 === 0 ? n : n.toLocaleString('es-AR')} un. · `
 }
 
 export default function VerOrdenCompraPage({ params }: { params: { id: string } }) {
@@ -99,6 +115,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           insumo_id,
           vino_id,
           cantidad,
+          unidades,
           precio_unitario,
           subtotal,
           unidad_display,
@@ -149,6 +166,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           unidad_medida: unidadMedida,
           unidad_display: item.unidad_display || unidadMedida,
           contenido,
+          unidades: item.unidades != null ? parseFloat(item.unidades) : null,
           cantidad: parseFloat(item.cantidad),
           precio_unitario: parseFloat(item.precio_unitario),
           subtotal,
@@ -605,6 +623,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                   )}
                   <div className="flex justify-between items-center text-sm">
                     <span className={`font-mono ${esCompleto ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {prefijoUnidades(item)}
                       {cantidadMostrar % 1 === 0 ? cantidadMostrar : cantidadMostrar.toLocaleString('es-AR')} {item.unidad_display} ×
                     </span>
                     <div className="flex items-center gap-2">
@@ -706,6 +725,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                         </div>
                       </td>
                       <td className={`px-4 py-3 text-sm font-mono ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+                        {prefijoUnidades(item)}
                         {cantidadMostrar % 1 === 0 ? cantidadMostrar : cantidadMostrar.toLocaleString('es-AR')} {item.unidad_display}
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-600">

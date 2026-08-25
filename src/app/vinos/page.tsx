@@ -10,6 +10,7 @@ import { costoBotellaVino } from '@/lib/costos'
 import { Vino, CartaVino, ProveedorMapeoExcel } from '@/types/database'
 import { generarPDFCartaVinos } from '@/lib/generar-pdf-carta-vinos'
 import * as XLSX from 'xlsx'
+import { hoyISO } from '@/lib/fechas'
 
 const CATEGORIAS_VINO = ['Tintos', 'Blancos', 'Espumantes']
 
@@ -583,7 +584,7 @@ export default function VinosPage() {
     setIsImporting(true)
     let actualizados = 0
     let codigosGuardados = 0
-    const fechaPrecio = importFechaLista || new Date().toISOString().split('T')[0]
+    const fechaPrecio = importFechaLista || hoyISO()
 
     for (const item of itemsToUpdate) {
       const vinoId = item.vinoId!

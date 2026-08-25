@@ -2,6 +2,7 @@
 // Sigue el patrón del proyecto: cliente browser de Supabase
 
 import { supabase } from './supabase'
+import { dateToString } from './fechas'
 import { formatearMoneda } from './formato-numeros'
 import type { VentaDiaria, VentaDiariaInput, ResumenPeriodo, TipoPeriodo } from '@/types/ventas'
 
@@ -38,15 +39,10 @@ export function getDomingo(fecha: Date): Date {
   return domingo
 }
 
-/**
- * Convierte Date a string YYYY-MM-DD (sin timezone)
- */
-export function dateToString(d: Date): string {
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+// Vive en `@/lib/fechas` y se reexporta acá para no tocar a quien ya la
+// importaba de este módulo. Tenerla escrita en dos lados fue el problema: la
+// copia de la pantalla de Análisis nunca se enteraba de un arreglo hecho acá.
+export { dateToString } from './fechas'
 
 /**
  * Convierte string YYYY-MM-DD a Date (sin timezone)

@@ -14,6 +14,24 @@ import { CategoriaInsumo, UnidadMedida } from '@/types/database'
 import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import ComparadorPrecios from '@/components/insumos/ComparadorPrecios'
 import { PALETA } from '@/lib/colores'
+import { hoyISO } from '@/lib/fechas'
+
+/**
+ * Cuánto se tiene que apartar un precio nuevo del vigente para que el sistema
+ * pida una segunda mirada, en %.
+ *
+ * Está para atajar el error de tipeo, no el aumento. El 16/08/26 el asado a 5
+ * costillas se guardó en $243 en vez de $24.300: se corrigió a los 23 segundos,
+ * pero en el medio costeó recetas, y la fila falsa dejó un "+9900%" en el
+ * resumen semanal. Buscando en el historial aparecen unos ocho casos parecidos
+ * —Hígado de pollo, Queso reggianito, Ricota— siempre con la misma forma: un
+ * factor de 10 o más, corregido en minutos.
+ *
+ * 50% es alto a propósito. Con la inflación de acá, subas del 20 o 30% entre
+ * facturas son normales; avisar por esas convierte el aviso en algo que se
+ * saltea sin leer, que es justo lo que no queremos.
+ */
+const UMBRAL_AVISO_PRECIO = 50 // %
 
 interface InsumoCompleto {
   id: string
@@ -118,6 +136,16 @@ export default function InsumosPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<InsumoForm>(initialForm)
   const [isSaving, setIsSaving] = useState(false)
+  // Precio que se está por guardar y se apartó del vigente. Guarda el valor
+  // exacto que se mostró: si después se corrige el campo, el aviso se vuelve a
+  // calcular en vez de dar por visto un número que ya no es el que está.
+  const [avisoPrecio, setAvisoPrecio] = useState<{
+    vigenteUnitario: number
+    nuevoUnitario: number
+    nuevoPaquete: number
+    cantPaq: number
+    variacion: number
+  } | null>(null)
   const [filtroCategoria, setFiltroCategoria] = useState<string>('')
   const [filtroProveedor, setFiltroProveedor] = useState<string>('')
   const [filtroVariacion, setFiltroVariacion] = useState<string>('')
@@ -227,6 +255,7 @@ export default function InsumosPage() {
       setEditingId(null)
       setForm(initialForm)
     }
+    setAvisoPrecio(null)
     setIsModalOpen(true)
   }
 
@@ -234,11 +263,11 @@ export default function InsumosPage() {
     setIsModalOpen(false)
     setEditingId(null)
     setForm(initialForm)
+    setAvisoPrecio(null)
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setIsSaving(true)
 
     const ivaValue = parseFloat(form.iva_porcentaje)
     const cant = parsearNumero(form.cantidad) || 1
@@ -256,6 +285,30 @@ export default function InsumosPage() {
     const precioPaquete = parsearNumero(form.precio)
     const precio = precioPaquete > 0 ? precioPaquete / cantPaq : 0
     const proveedorId = form.proveedor_id
+
+    // ¿El precio nuevo se va lejos del que está? Se pregunta ANTES de escribir:
+    // una vez guardado, el precio malo ya costeó recetas y dejó su fila en el
+    // historial, y sacarlo de ahí es a mano y en la base.
+    const vigente = editingId
+      ? insumos.find((i) => i.id === editingId)?.precio_actual ?? 0
+      : 0
+    if (editingId && vigente > 0 && precio > 0) {
+      const variacion = ((precio - vigente) / vigente) * 100
+      const yaLoVio = avisoPrecio && avisoPrecio.nuevoUnitario === precio
+      if (Math.abs(variacion) >= UMBRAL_AVISO_PRECIO && !yaLoVio) {
+        setAvisoPrecio({
+          vigenteUnitario: vigente,
+          nuevoUnitario: precio,
+          nuevoPaquete: precioPaquete,
+          cantPaq,
+          variacion,
+        })
+        setIsSaving(false)
+        return
+      }
+    }
+
+    setIsSaving(true)
 
     if (editingId) {
       const { error } = await supabase
@@ -291,7 +344,7 @@ export default function InsumosPage() {
             insumo_id: editingId,
             proveedor_id: proveedorId || null,
             precio: precio,
-            fecha: new Date().toISOString().split('T')[0],
+            fecha: hoyISO(),
             es_precio_actual: true,
           })
       }
@@ -327,7 +380,7 @@ export default function InsumosPage() {
             insumo_id: newInsumo.id,
             proveedor_id: proveedorId || null,
             precio: precio,
-            fecha: new Date().toISOString().split('T')[0],
+            fecha: hoyISO(),
             es_precio_actual: true,
           })
       }
@@ -953,12 +1006,59 @@ export default function InsumosPage() {
             </div>
           )}
 
+          {/* El aviso va acá abajo y no en un modal aparte: el campo del precio
+              queda a la vista, así corregir el número no obliga a cerrar nada.
+              El primer clic en Guardar muestra esto; el segundo guarda. */}
+          {avisoPrecio && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
+              <p className="text-sm font-semibold text-amber-900 mb-2">
+                Revisá el precio antes de guardar
+              </p>
+              <div className="flex items-baseline gap-2 text-sm text-gray-800 flex-wrap">
+                <span className="font-mono line-through text-gray-500">
+                  {formatCurrencyDecimal(avisoPrecio.vigenteUnitario)}
+                </span>
+                <span className="text-gray-400">→</span>
+                <span className="font-mono font-semibold text-amber-900">
+                  {formatCurrencyDecimal(avisoPrecio.nuevoUnitario)}
+                </span>
+                <span className="font-mono text-xs font-semibold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">
+                  {avisoPrecio.variacion > 0 ? '+' : ''}
+                  {formatearCantidad(avisoPrecio.variacion, 1)}%
+                </span>
+                <span className="text-xs text-gray-500">por {form.unidad_medida}</span>
+              </div>
+              {avisoPrecio.cantPaq > 1 && (
+                <p className="text-xs text-gray-600 mt-1.5">
+                  Estás cargando{' '}
+                  <span className="font-mono">{formatCurrencyDecimal(avisoPrecio.nuevoPaquete)}</span>{' '}
+                  por paquete de{' '}
+                  <span className="font-mono">
+                    {formatearCantidad(avisoPrecio.cantPaq, avisoPrecio.cantPaq % 1 === 0 ? 0 : 2)}
+                  </span>{' '}
+                  {form.unidad_medida}.
+                </p>
+              )}
+              <p className="text-xs text-gray-600 mt-2">
+                Si el número es correcto, volvé a apretar Guardar. Si no, corregilo
+                arriba: una vez guardado, el precio pasa a costear todas las recetas
+                que llevan este insumo.
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="secondary" onClick={handleCloseModal} className="w-full sm:w-auto">
               Cancelar
             </Button>
             <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
-              {isSaving ? 'Guardando...' : editingId ? 'Actualizar' : 'Crear'}
+              {isSaving
+                ? 'Guardando...'
+                : avisoPrecio
+                  ? 'Guardar igual'
+                  : editingId
+                    ? 'Actualizar'
+                    : 'Crear'}
             </Button>
           </div>
         </form>

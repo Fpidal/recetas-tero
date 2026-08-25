@@ -34,6 +34,7 @@ import {
   ResponsiveContainer,
   LabelList,
 } from 'recharts'
+import { dateToString } from '@/lib/fechas'
 
 // Colores del sistema editorial
 const COLORS = {
@@ -406,7 +407,7 @@ export default function Home() {
         // Fecha límite: últimos 30 días
         const hace30Dias = new Date()
         hace30Dias.setDate(hace30Dias.getDate() - 30)
-        const fechaLimite = hace30Dias.toISOString().split('T')[0]
+        const fechaLimite = dateToString(hace30Dias)
 
         insumos.forEach((insumo: any) => {
           // Precio actual = el que marca el sistema (el mismo que usa la receta / food cost)
@@ -744,7 +745,7 @@ export default function Home() {
           factura_items (cantidad, precio_unitario, insumos (iva_porcentaje))
         `)
         .neq('activo', false)
-        .gte('fecha', fecha30DiasAtras.toISOString().split('T')[0])
+        .gte('fecha', dateToString(fecha30DiasAtras))
 
       const facturasConProveedor = facturasProveedorRes.data as any[] | null
 
@@ -796,7 +797,7 @@ export default function Home() {
           )
         `)
         .neq('activo', false)
-        .gte('fecha', fecha30DiasAtras.toISOString().split('T')[0])
+        .gte('fecha', dateToString(fecha30DiasAtras))
 
       const categoriaTotales = new Map<string, number>()
 

@@ -22,7 +22,9 @@ import { SERVICIO_LABEL, TIPO_CONFIG, type OpcionBuscador, type Servicio, type T
 
 interface Props {
   fecha: string
+  setFecha: (f: string) => void
   servicio: Servicio
+  setServicio: (s: Servicio) => void
   onImportado?: () => void
 }
 
@@ -58,7 +60,7 @@ function estadoDe(m: Mapeo, sug: Producto | null): Estado {
   return sug ? 'sugerido' : 'sin-mapear'
 }
 
-export default function ImportarVentas({ fecha, servicio, onImportado }: Props) {
+export default function ImportarVentas({ fecha, setFecha, servicio, setServicio, onImportado }: Props) {
   const [archivo, setArchivo] = useState<{ nombre: string; datos: ArchivoVentas } | null>(null)
   const [lineas, setLineas] = useState<Linea[]>([])
   const [catalogo, setCatalogo] = useState<Producto[]>([])
@@ -83,6 +85,18 @@ export default function ImportarVentas({ fecha, servicio, onImportado }: Props) 
         setCostos(new Map(ops.map((o) => [`${o.tipo}:${o.id}`, o.costo_unitario]))))
       .catch(console.error)
   }, [])
+
+  // Al cambiar de día o de turno con el archivo abierto hay que volver a mirar
+  // qué venta hay cargada: el cartel de "difiere de lo cargado a mano" compara
+  // contra ESE turno, y si no se refresca queda comparando contra el anterior.
+  useEffect(() => {
+    if (!archivo) return
+    let vigente = true
+    ventaCargada(fecha, servicio)
+      .then((c) => { if (vigente) setYaCargado(c) })
+      .catch(console.error)
+    return () => { vigente = false }
+  }, [fecha, servicio, archivo])
 
   async function onArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -204,6 +218,7 @@ export default function ImportarVentas({ fecha, servicio, onImportado }: Props) 
   if (!archivo) {
     return (
       <div className="space-y-4">
+        <SelectorDia fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
         {resultado && (
           <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-gray-800">
             <span className="font-semibold text-green-800">Importado.</span> {resultado}
@@ -218,10 +233,7 @@ export default function ImportarVentas({ fecha, servicio, onImportado }: Props) 
         <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
           <Upload className="w-8 h-8 mx-auto text-gray-300 mb-3" />
           <p className="text-sm text-gray-700 mb-1">Subí el informe del sistema de ventas</p>
-          <p className="text-xs text-gray-500 mb-4">
-            Para <span className="font-medium">{fecha.split('-').reverse().join('/')}</span>,{' '}
-            <span className="font-medium">{SERVICIO_LABEL[servicio]}</span> · archivo .xls o .xlsx
-          </p>
+          <p className="text-xs text-gray-500 mb-4">Archivo .xls o .xlsx</p>
           <input ref={inputRef} type="file" accept=".xls,.xlsx" onChange={onArchivo} className="hidden" />
           <Button onClick={() => inputRef.current?.click()}>Elegir archivo</Button>
           <p className="text-xs text-gray-400 mt-4 max-w-md mx-auto">
@@ -240,6 +252,8 @@ export default function ImportarVentas({ fecha, servicio, onImportado }: Props) 
 
   return (
     <div className="space-y-4">
+      <SelectorDia fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <span className="font-mono text-sm text-gray-900">{archivo.nombre}</span>
@@ -376,6 +390,54 @@ export default function ImportarVentas({ fecha, servicio, onImportado }: Props) 
         <Button onClick={aplicar} disabled={aplicando || pendientes > 0}>
           {aplicando ? 'Importando…' : `Importar ${conteo.listo} productos`}
         </Button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Adónde va la importación: día y turno.
+ *
+ * Es el mismo estado que usan las demás solapas —se elige acá y sigue elegido
+ * en Carga diaria o en Consumo—, así que se puede subir el archivo del turno de
+ * anoche sin volver al principio. Se muestra siempre, también con el archivo ya
+ * abierto: el destino se puede corregir hasta el momento de importar.
+ */
+function SelectorDia({
+  fecha, setFecha, servicio, setServicio,
+}: {
+  fecha: string; setFecha: (f: string) => void
+  servicio: Servicio; setServicio: (s: Servicio) => void
+}) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Fecha</label>
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Servicio</label>
+          <select
+            value={servicio}
+            onChange={(e) => setServicio(e.target.value as Servicio)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+          >
+            {(['mediodia', 'noche', 'eventos'] as Servicio[]).map((s) => (
+              <option key={s} value={s}>{SERVICIO_LABEL[s]}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-end">
+          <span className="text-xs text-gray-500">
+            La importación se carga en este día y turno.
+          </span>
+        </div>
       </div>
     </div>
   )

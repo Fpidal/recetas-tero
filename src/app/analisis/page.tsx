@@ -11,15 +11,9 @@ import Ranking from './components/Ranking'
 import PorCubierto from './components/PorCubierto'
 import ImportarVentas from './components/ImportarVentas'
 import type { Servicio } from '@/types/analisis'
+import { dateToString } from '@/lib/fechas'
 
 type Tab = 'carga' | 'importar' | 'consumo' | 'incidencia' | 'ranking' | 'resumen' | 'porcubierto' | 'historico'
-
-function dateToString(d: Date): string {
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 export default function AnalisisPage() {
   const [tab, setTab] = useState<Tab>('carga')
@@ -95,7 +89,7 @@ export default function AnalisisPage() {
         <CargaDiaria fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
       )}
       {tab === 'importar' && (
-        <ImportarVentas fecha={fecha} servicio={servicio} />
+        <ImportarVentas fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />
       )}
       {tab === 'consumo' && (
         <ConsumoDiario fecha={fecha} setFecha={setFecha} servicio={servicio} setServicio={setServicio} />

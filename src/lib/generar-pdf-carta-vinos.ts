@@ -2,6 +2,7 @@ import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
 import { supabase } from './supabase'
 import { PlayfairDisplayBold } from './fonts/playfair-display'
+import { hoyISO } from './fechas'
 
 interface VinoEnCarta {
   id: string
@@ -443,6 +444,6 @@ export async function generarPDFCartaVinos() {
   }
 
   // Guardar PDF
-  const fecha = new Date().toISOString().split('T')[0]
+  const fecha = hoyISO()
   doc.save(`Carta_Vinos_Tero_${fecha}.pdf`)
 }

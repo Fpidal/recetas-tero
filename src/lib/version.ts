@@ -10,6 +10,18 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.45',
+    fecha: '24/08/26',
+    cambios: [
+      'Importar ventas: ahora la fecha y el turno se eligen en la misma pestaña. Antes había que ir a Carga diaria a cambiarlos y volver, y no se veía claro a qué turno iba el archivo',
+      'Ventas: al pararse en un día sin cargar quedaban a la vista los montos del día anterior, y Guardar los escribía en el día vacío sin avisar. Ahora el formulario muestra siempre el día que dice la fecha',
+      'Ventas: el botón "Cancelar" volvía al día de hoy con todo en blanco, como si se hubieran borrado los datos. Ahora dice "Descartar cambios", vuelve a mostrar lo guardado de ese mismo día, y solo aparece si hay algo sin guardar',
+      'Ventas: la fecha se puede cambiar también estando parado en un día ya cargado. Antes quedaba bloqueada y había que buscar el día en la lista de abajo',
+      'Los precios y las facturas cargados después de las 21:00 quedaban fechados al día siguiente. Un precio cargado un domingo a la noche caía en la semana siguiente y aparecía en el informe equivocado',
+      'Insumos: al guardar un precio que se aparta más de 50% del que está, el sistema muestra los dos números y pide apretar Guardar otra vez. Es para atajar el error de tipeo —el asado a $243 en vez de $24.300— antes de que el precio equivocado empiece a costear recetas',
+    ],
+  },
+  {
     version: 'V.44',
     fecha: '21/08/26',
     cambios: [

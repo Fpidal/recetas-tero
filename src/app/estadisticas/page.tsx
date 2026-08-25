@@ -8,6 +8,7 @@ import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRig
 import CierreMes from './components/CierreMes'
 import AbcInsumos from './components/AbcInsumos'
 import { PALETA } from '@/lib/colores'
+import { dateToString } from '@/lib/fechas'
 
 // ============ TIPOS ============
 interface Insumo {
@@ -114,8 +115,8 @@ function calcularRangoFechas(periodo: string): { desde: string; hasta: string } 
   }
 
   return {
-    desde: desde.toISOString().split('T')[0],
-    hasta: hasta.toISOString().split('T')[0],
+    desde: dateToString(desde),
+    hasta: dateToString(hasta),
   }
 }
 
@@ -219,8 +220,8 @@ function generarOpcionesSemanas(): SemanaOption[] {
     const domingo = new Date(lunes)
     domingo.setDate(domingo.getDate() + 6)
 
-    const desdeStr = lunes.toISOString().split('T')[0]
-    const hastaStr = domingo.toISOString().split('T')[0]
+    const desdeStr = dateToString(lunes)
+    const hastaStr = dateToString(domingo)
 
     const label = i === 0
       ? 'Esta semana'
@@ -281,7 +282,7 @@ export default function EstadisticasPage() {
     const hace6Meses = new Date()
     hace6Meses.setDate(1) // Usar día 1 para evitar problemas con meses cortos (ej: 30 marzo - 1 mes = 2 marzo, no febrero)
     hace6Meses.setMonth(hace6Meses.getMonth() - 6)
-    const desde6Meses = hace6Meses.toISOString().split('T')[0]
+    const desde6Meses = dateToString(hace6Meses)
 
     const [insumosRes, facturasRes, facturasAnterioresRes, facturas6MesesRes] = await Promise.all([
       supabase.from('insumos').select('id, nombre, categoria').eq('activo', true),
@@ -648,7 +649,7 @@ export default function EstadisticasPage() {
     // Fecha de hace 30 días
     const hace30Dias = new Date()
     hace30Dias.setDate(hace30Dias.getDate() - 30)
-    const fechaLimite = hace30Dias.toISOString().split('T')[0]
+    const fechaLimite = dateToString(hace30Dias)
 
     // Agrupar precios por insumo y proveedor
     const preciosPorInsumoProveedor = new Map<string, typeof todosLosPrecios>()

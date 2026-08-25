@@ -18,6 +18,22 @@ import {
 import { formatearFecha, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import type { VentaDiaria } from '@/types/ventas'
 
+/** Los campos del formulario, para comparar lo tipeado contra lo guardado */
+interface Campos {
+  mediodia: string
+  cubiertosMediodia: string
+  noche: string
+  cubiertosNoche: string
+  eventos: string
+  cubiertosEventos: string
+  notas: string
+}
+
+const CAMPOS_VACIOS: Campos = {
+  mediodia: '', cubiertosMediodia: '', noche: '', cubiertosNoche: '',
+  eventos: '', cubiertosEventos: '', notas: '',
+}
+
 export default function CargaDiaria() {
   // Form state
   const [fecha, setFecha] = useState(dateToString(new Date()))
@@ -34,6 +50,12 @@ export default function CargaDiaria() {
   const [diasLista, setDiasLista] = useState<DiaCalendario[]>([])
   const [cargandoLista, setCargandoLista] = useState(true)
   const [editandoId, setEditandoId] = useState<string | null>(null)
+  // Se incrementa para releer el día actual cuando cambió en la base
+  const [recargaDia, setRecargaDia] = useState(0)
+  // Lo último que se leyó de la base para este día. Sirve para saber si hay
+  // algo sin guardar: sin esto, el botón de descartar no puede saber si hay
+  // qué descartar y se muestra siempre, aunque no se haya tocado nada.
+  const [guardado, setGuardado] = useState<Campos>(CAMPOS_VACIOS)
   const [filtro, setFiltro] = useState<FiltroVentas>('mes')
   const [modoFiltro, setModoFiltro] = useState<'mes' | 'ultimos30' | 'seleccionar'>('mes')
   const [mesSeleccionado, setMesSeleccionado] = useState<OpcionMes | null>(null)
@@ -67,6 +89,30 @@ export default function CargaDiaria() {
     cargarDias()
   }, [filtro])
 
+  /**
+   * El formulario muestra SIEMPRE el día que dice la fecha.
+   *
+   * Antes cada clic llenaba los campos por su cuenta, y el clic en un día sin
+   * datos solo cambiaba la fecha: quedaban a la vista los montos del día
+   * anterior. No era solo visual — quedaba también el `editandoId` del otro
+   * día, así que Guardar escribía esos montos en el día vacío y ni siquiera
+   * aparecía el aviso de reemplazo, porque para el formulario eso era "seguir
+   * editando". Ahora se vacía primero y se llena con lo que devuelve la base.
+   */
+  useEffect(() => {
+    if (!fecha) return
+    let vigente = true
+    vaciarCampos()
+    obtenerVentaPorFecha(fecha)
+      .then((v) => {
+        // Cambiar de día rápido dispara varias consultas: solo vale la última,
+        // o una respuesta lenta de un día anterior pisa la que ya se mostró.
+        if (vigente && v) llenarCampos(v)
+      })
+      .catch((e) => console.error('Error cargando el día:', e))
+    return () => { vigente = false }
+  }, [fecha, recargaDia])
+
   // Cerrar menú al hacer click afuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -92,14 +138,22 @@ export default function CargaDiaria() {
     }
   }
 
+  const enPantalla: Campos = {
+    mediodia, cubiertosMediodia, noche, cubiertosNoche, eventos, cubiertosEventos, notas,
+  }
+  const hayCambios = (Object.keys(enPantalla) as (keyof Campos)[])
+    .some((k) => enPantalla[k] !== guardado[k])
+
   // Total calculado
   const totalDia =
     parsearNumero(mediodia || '0') +
     parsearNumero(noche || '0') +
     parsearNumero(eventos || '0')
 
-  function limpiarForm() {
-    setFecha(dateToString(new Date()))
+  /**
+   * Vacía los campos SIN tocar la fecha: el día elegido sigue siendo el elegido.
+   */
+  function vaciarCampos() {
     setMediodia('')
     setCubiertosMediodia('')
     setNoche('')
@@ -108,18 +162,41 @@ export default function CargaDiaria() {
     setCubiertosEventos('')
     setNotas('')
     setEditandoId(null)
+    setGuardado(CAMPOS_VACIOS)
   }
 
-  function cargarParaEditar(v: VentaDiaria) {
-    setFecha(v.fecha)
-    setMediodia(v.venta_mediodia ? formatearInputNumero(String(v.venta_mediodia).replace('.', ',')) : '')
-    setCubiertosMediodia(v.cubiertos_mediodia ? String(v.cubiertos_mediodia) : '')
-    setNoche(v.venta_noche ? formatearInputNumero(String(v.venta_noche).replace('.', ',')) : '')
-    setCubiertosNoche(v.cubiertos_noche ? String(v.cubiertos_noche) : '')
-    setEventos(v.venta_eventos ? formatearInputNumero(String(v.venta_eventos).replace('.', ',')) : '')
-    setCubiertosEventos(v.cubiertos_eventos ? String(v.cubiertos_eventos) : '')
-    setNotas(v.notas || '')
+  function limpiarForm() {
+    setFecha(dateToString(new Date()))
+    vaciarCampos()
+  }
+
+  /** Pone en el formulario lo que hay guardado de un día */
+  function llenarCampos(v: VentaDiaria) {
+    const monto = (n: any) => (n ? formatearInputNumero(String(n).replace('.', ',')) : '')
+    const cub = (n: any) => (n ? String(n) : '')
+    const campos: Campos = {
+      mediodia: monto(v.venta_mediodia),
+      cubiertosMediodia: cub(v.cubiertos_mediodia),
+      noche: monto(v.venta_noche),
+      cubiertosNoche: cub(v.cubiertos_noche),
+      eventos: monto(v.venta_eventos),
+      cubiertosEventos: cub(v.cubiertos_eventos),
+      notas: v.notas || '',
+    }
+    setMediodia(campos.mediodia)
+    setCubiertosMediodia(campos.cubiertosMediodia)
+    setNoche(campos.noche)
+    setCubiertosNoche(campos.cubiertosNoche)
+    setEventos(campos.eventos)
+    setCubiertosEventos(campos.cubiertosEventos)
+    setNotas(campos.notas)
     setEditandoId(v.id)
+    setGuardado(campos)
+  }
+
+  /** Ir a un día. Lo que se muestre lo decide el efecto de abajo, no el clic. */
+  function irADia(f: string) {
+    setFecha(f)
     // Scroll arriba en mobile
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -156,6 +233,7 @@ export default function CargaDiaria() {
         notas: notas.trim() || null,
       })
       limpiarForm()
+      setRecargaDia((n) => n + 1)
       await cargarDias()
       setModalReemplazo({ abierto: false, existente: null })
     } catch (e) {
@@ -172,6 +250,7 @@ export default function CargaDiaria() {
       await eliminarVenta(modalEliminar.venta.id)
       setModalEliminar({ abierto: false, venta: null })
       if (editandoId === modalEliminar.venta.id) limpiarForm()
+      setRecargaDia((n) => n + 1)
       await cargarDias()
     } catch (e) {
       console.error('Error eliminando:', e)
@@ -194,23 +273,30 @@ export default function CargaDiaria() {
                   {editandoId ? 'Modificá los valores' : 'Ingresá los totales del día'}
                 </p>
               </div>
-              {editandoId && (
+              {/* Antes decía "Cancelar" y volvía a hoy con todo en blanco: en un
+                  día ya cargado parecía que se habían borrado los datos. Ahora
+                  descarta lo tipeado y vuelve a mostrar lo que está guardado de
+                  ESTE día, y solo aparece si hay algo que descartar. */}
+              {hayCambios && (
                 <button
-                  onClick={limpiarForm}
-                  className="text-xs text-gray-500 hover:text-gray-700 underline"
+                  onClick={() => setRecargaDia((n) => n + 1)}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline whitespace-nowrap"
                 >
-                  Cancelar
+                  Descartar cambios
                 </button>
               )}
             </div>
 
             <div className="space-y-4">
+              {/* Cambiar la fecha es MOVERSE de día, no renombrar lo cargado.
+                  Estaba bloqueada mientras se editaba, y ahora pararse en
+                  cualquier día ya cargado cuenta como editar: dejarla bloqueada
+                  obligaría a buscar el día en la lista de abajo para salir. */}
               <Input
                 type="date"
                 label="Fecha"
                 value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                disabled={!!editandoId}
+                onChange={(e) => irADia(e.target.value)}
               />
 
               <CampoServicio
@@ -383,10 +469,7 @@ export default function CargaDiaria() {
                             <tr
                               key={dia.fecha}
                               className="bg-gray-50/50 hover:bg-gray-100 cursor-pointer"
-                              onClick={() => {
-                                setFecha(dia.fecha)
-                                window.scrollTo({ top: 0, behavior: 'smooth' })
-                              }}
+                              onClick={() => irADia(dia.fecha)}
                             >
                               <td className="py-3 px-3 text-gray-400">
                                 {formatearFecha(dia.fecha)}{' '}
@@ -414,7 +497,7 @@ export default function CargaDiaria() {
                             className={`hover:bg-gray-50 cursor-pointer ${
                               tieneEventos ? 'bg-purple-50/50' : ''
                             } ${esEditando ? 'ring-2 ring-primary-500 ring-inset' : ''}`}
-                            onClick={() => cargarParaEditar(v)}
+                            onClick={() => irADia(v.fecha)}
                           >
                             <td className="py-3 px-3 text-gray-900">
                               {formatearFecha(v.fecha)}{' '}
@@ -444,7 +527,7 @@ export default function CargaDiaria() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    cargarParaEditar(v)
+                                    irADia(v.fecha)
                                   }}
                                   className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded"
                                   title="Editar"
@@ -481,10 +564,7 @@ export default function CargaDiaria() {
                         <div
                           key={dia.fecha}
                           className="p-4 bg-gray-50/50"
-                          onClick={() => {
-                            setFecha(dia.fecha)
-                            window.scrollTo({ top: 0, behavior: 'smooth' })
-                          }}
+                          onClick={() => irADia(dia.fecha)}
                         >
                           <div className="flex items-center justify-between">
                             <div>
@@ -516,7 +596,7 @@ export default function CargaDiaria() {
                         className={`p-4 ${tieneEventos ? 'bg-purple-50/50' : ''} ${
                           esEditando ? 'ring-2 ring-primary-500 ring-inset' : ''
                         }`}
-                        onClick={() => cargarParaEditar(v)}
+                        onClick={() => irADia(v.fecha)}
                       >
                         {/* Header card: fecha + total + acciones */}
                         <div className="flex items-start justify-between mb-3">
@@ -566,7 +646,7 @@ export default function CargaDiaria() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              cargarParaEditar(v)
+                              irADia(v.fecha)
                             }}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-md font-medium"
                           >

@@ -8,6 +8,7 @@ import { getNextOCNumber } from '@/lib/oc-numero'
 import { Button, Input, Select, Modal } from '@/components/ui'
 import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero, formatearFecha } from '@/lib/formato-numeros'
 import { TIPOS_PERCEPCION, calcularPercepcion, tipoPorNombre } from '@/lib/percepciones'
+import { hoyISO } from '@/lib/fechas'
 
 interface Proveedor {
   id: string
@@ -640,7 +641,7 @@ export default function NuevaFacturaPage() {
           .from('ordenes_compra')
           .insert({
             proveedor_id: selectedOrden.proveedor_id,
-            fecha: new Date().toISOString().split('T')[0],
+            fecha: hoyISO(),
             estado: 'borrador',
             total: 0,
             notas: `Faltante de OC del ${fechaOC} – Factura ${numeroFactura.trim()}`,

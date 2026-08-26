@@ -19,8 +19,14 @@ import { descargarExcel, hoyISO, type Hoja } from './exportar-excel'
 const TAMANO_PAGINA = 1000
 const MAX_PAGINAS = 100
 
-/** Trae una tabla entera, de a 1000, aplicando los filtros que se le pasen. */
-async function traerTodo<T = any>(
+/**
+ * Trae una tabla entera, de a 1000, aplicando los filtros que se le pasen.
+ *
+ * Exportada porque el inventario la necesita por el mismo motivo: lee
+ * `factura_items` y `consumo_items`, las dos tablas que ya pasaron las 2.300
+ * filas. Antes vivía privada acá y duplicarla habría dejado dos paginadores.
+ */
+export async function traerTodo<T = any>(
   tabla: string,
   select: string,
   filtros?: (q: any) => any

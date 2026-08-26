@@ -125,6 +125,9 @@ export default function InsumosPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
+  // Id que llega desde otra pantalla para abrir su ficha directo (hoy: el
+  // nombre del insumo en Inventario). Sin esto había que venir acá y buscarlo.
+  const editarParam = searchParams.get('editar')
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (tabParam === 'comparador') return 'comparador'
     return 'insumos'
@@ -232,6 +235,16 @@ export default function InsumosPage() {
     setIsLoading(false)
   }
 
+  // Se espera a que la lista esté cargada: el modal se llena con los datos del
+  // insumo, y antes de eso no hay de dónde sacarlos.
+  useEffect(() => {
+    if (!editarParam || isLoading) return
+    const insumo = insumos.find((i) => i.id === editarParam)
+    if (insumo) handleOpenModal(insumo)
+    // Una sola vez: si se cierra el modal, no se vuelve a abrir solo
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editarParam, isLoading])
+
   function handleOpenModal(insumo?: InsumoCompleto) {
     if (insumo) {
       setEditingId(insumo.id)
@@ -264,6 +277,11 @@ export default function InsumosPage() {
     setEditingId(null)
     setForm(initialForm)
     setAvisoPrecio(null)
+    // Si se llegó acá desde otra pantalla —el nombre del insumo en Inventario—
+    // al cerrar se vuelve a esa pantalla, tanto si se guardó como si no. Sin
+    // esto quedabas en Insumos, y encima el `?editar=` de la URL seguía ahí y
+    // el efecto de arriba volvía a abrir la ficha.
+    if (editarParam) router.back()
   }
 
   async function handleSubmit(e: React.FormEvent) {

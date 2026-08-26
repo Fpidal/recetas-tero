@@ -10,6 +10,19 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.48',
+    fecha: '26/08/26',
+    cambios: [
+      'Inventario: el stock ahora se calcula. Es lo último que contaste, más lo que entró por facturas, menos lo que salió por Análisis. Antes mostraba la suma de todas las compras desde enero sin restar nada: decía 616 kg de bola de lomo y $60 millones de mercadería que no estaba',
+      'Nueva solapa para contar: cargás sólo los insumos que contaste, y donde no coincide se elige el motivo. Lo que dejás vacío no se toca',
+      'Nueva solapa de diferencias: dónde se repite el faltante y cuánto de eso quedó sin explicación, que es el número que importa mirar',
+      'Lo que sale de la cámara se descuenta en bruto: una receta que pide 7 kg de cebolla pelada saca 7,78 del cajón, que es lo que vas a contar',
+      'Las bebidas se compran por caja y se sirven por botella: el sistema convierte solo y muestra la equivalencia al lado',
+      'Un insumo que nunca se contó, o que no se cuenta hace más de 30 días, aparece marcado — su número existe pero no se da por bueno',
+      'Desde el inventario se abre la ficha de cualquier insumo con un clic, y al guardar volvés donde estabas',
+    ],
+  },
+  {
     version: 'V.47',
     fecha: '25/08/26',
     cambios: [

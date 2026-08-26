@@ -93,8 +93,15 @@ src/
 - **comparacion_items**: Items con precios de cada proveedor
 - **menus_ejecutivos**: Menús del día
 - **menus_especiales**: Menús para eventos
-- **inventario_stock**: Stock actual
-- **hojas_control_inventario**: Control diario de inventario
+- **inventario_conteos**: Cada vez que se cuenta la cámara
+- **inventario_conteo_items**: Lo contado de cada insumo, contra lo que decía el sistema
+
+> ⚠️ `inventario_stock` y `hojas_control_inventario` figuraban acá hasta el
+> 26/08/26 y **nunca existieron en la base**. La pantalla de Inventario no las
+> usaba: mostraba como "stock" la suma de TODAS las facturas desde el origen sin
+> restar una sola salida — 616 kg de bola de lomo, $60 millones de mercadería
+> imaginaria. Vale como recordatorio de que este archivo también miente si no se
+> actualiza.
 
 ### Convenciones
 
@@ -103,7 +110,7 @@ src/
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
 
-## ⚠️ Siete trampas que ya rompieron cosas
+## ⚠️ Ocho trampas que ya rompieron cosas
 
 **1. `anon` no recibe permisos — hoy, ninguno.** La clave anónima viaja en el bundle público.
 Hasta el 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los
@@ -164,6 +171,15 @@ receta no puede llevar una copa de vino. Cuando haga falta relacionar un vino co
 fraccionada —una copa es 0,333 de botella— se usa el `factor` de `mapeo_ventas`, que guarda la
 equivalencia sin duplicar el vino como insumo. Duplicarlo dejaría dos precios que mantener, y el
 día que llegue una factura de esa bodega se actualiza uno solo, sin que nada avise.
+
+**8. El inventario descuenta en BRUTO, y el stock no se guarda en ningún lado.** La receta
+guarda el NETO que va al plato —7 kg de cebolla pelada— pero de la cámara salieron
+7 ÷ (1 − merma) = 7,78 kg con cáscara. Descontar el neto haría que el conteo nunca cierre,
+porque lo que se cuenta son cebollas enteras. Y las compras van al revés: la factura carga
+30 **cajas** de agua y el salón sirve botellas, así que se multiplican por
+`insumos.cantidad_por_paquete` (agua 12, gaseosa 350 24). Sin ese factor el agua da −447.
+El stock sale siempre de la cuenta —último conteo + compras − consumo— en `src/lib/inventario.ts`;
+no hay tabla de stock que pueda quedar desfasada.
 
 ## Consultar la base (solo lectura)
 

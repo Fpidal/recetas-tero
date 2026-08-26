@@ -53,7 +53,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Análisis** | **Importación del informe de ventas** (V.44): un Excel del salón carga la venta del turno, los cubiertos y el consumo producto por producto. Los enlaces se resuelven una vez y quedan guardados. Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo. Desde Resumen se baja la planilla de pedido de la semana, con la cantidad **a comprar** ajustada por merma (V.30) |
 | **Análisis · Ranking** | Ranking de productos vendidos e **ingeniería de menú** (V.37). Unidades, facturación, costo y contribución por producto, con la matriz estrella/caballo/rompecabezas/perro por sección. La contribución va **en pesos, no en food cost**: un plato con 40% de FC que deja $15.000 rinde más que uno con 20% que deja $3.000, y con el eje en porcentaje la matriz recomienda sacar justo lo que más deja |
 | **Estadísticas** | Dashboard consolidado (6 pestañas: las 4 de compras y precios, más **Cierre de mes** (V.25) y **ABC de insumos** (V.28)) |
-| **Inventario** | Hojas de control de stock. **Pausado a propósito** — ver Decisiones tomadas |
+| **Inventario** | Stock calculado: último conteo + compras − consumo, sin tabla de stock que se desfase (V.48). Cuatro solapas: existencias, conteo con ajuste y motivo, estadística de diferencias, y las hojas para contar a mano. Descuenta **en bruto** —7 kg de cebolla pelada son 7,78 de la cámara— y convierte las compras por caja a unidades sueltas |
 | **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
 
 ### Convenciones que no se negocian
@@ -298,9 +298,6 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   que un plan "básico con facturas pero sin recetario" igual necesita `insumos` y
   `precios_insumo`. **No se puede cortar por tabla: hay que cortar por pantalla.**
 
-- **Inventario conectado al consumo.** Reactivar cuando haya suficiente carga de datos de venta
-  para que el stock se concilie contra el consumo real. *Condición de disparo: varios meses de
-  ventas y consumo cargados de forma consistente.*
 - **Mobile para cocina.** La carga de consumo se hace parada en la cocina, con el celular.
 - **Nombre clickeable en las tarjetas de celular** de Recetas y Elaboraciones. En V.19 se aplicó
   solo a las tablas (escritorio): en touch no hay hover, así que el nombre no daría ninguna
@@ -319,8 +316,24 @@ Registradas para no volver a discutirlas.
   Ventas es la foto gruesa (ventas vs compras), Análisis es el detalle fino (consumo real de
   cocina vs ventas, insumo por insumo). Que ambos hablen de food cost no los hace redundantes.
 
-- **Inventario está pausado a propósito**, no abandonado. Espera masa crítica de datos de venta
-  para que la conciliación con el consumo tenga sentido.
+- **El inventario se reactivó el 26/08/26**, cuando se cumplió su condición de disparo: 122
+  servicios de consumo cargados desde el 01/04 y 197 días de ventas. Estuvo pausado esperando
+  eso, no abandonado.
+
+- **El ajuste de inventario NO entra al food cost.** Si el food cost se calcula sobre compras,
+  la mercadería que desapareció ya está contada —se pagó, está en la factura— y sumarle el
+  ajuste sería contarla dos veces. El sistema muestra hoy el food cost **teórico**
+  (`costo / ventaConCosto`, sobre el consumo cargado), así que la brecha entre ese número y el
+  de compras es exactamente lo que el inventario mide. Ponerle nombre a esa diferencia es su
+  trabajo; no cambiar el food cost.
+
+- **La merma variable por receta se descartó (26/08/26).** El roast beef pierde 25% cocido
+  entero y 0% picado en el relleno de empanada, que cuesta $3.680 de más sobre $26.508. Se
+  evaluó una columna `merma_porcentaje` por línea de receta —con `COALESCE(línea, insumo)` en
+  `actualizar_costos_recetas_base()`— y el usuario prefirió no tocar la fórmula del costeo por
+  dos casos: se resuelve creando un insumo aparte y manteniéndolo a mano. La distinción que
+  quedó clara y vale para el futuro: la merma de **limpieza** (cebolla 10%, se pela igual para
+  todo) es del insumo; la de **cocción** depende de la receta.
 
 - **La factura 00004-00118609 (El triunfo, 26/01/26) queda con sus items duplicados.**
   Enero fue el mes de arranque del sistema y esas cargas fueron de prueba. Es la única

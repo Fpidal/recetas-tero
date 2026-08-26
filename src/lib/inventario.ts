@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { expandirCompuestos, type LineaInsumo } from './desglose-compuestos'
 import { traerTodo } from './exportaciones'
+import { costoFinalInsumo } from './costos'
 
 /**
  * Inventario: cuánto entró, cuánto salió y qué diferencia hay.
@@ -56,6 +57,10 @@ export interface MovimientoInsumo {
   stock: number
   /** Días desde el último conteo. null = nunca se contó */
   diasDesdeConteo: number | null
+  /** Costo final de una unidad: lo que vale un kilo/unidad de este stock */
+  precioConIva: number
+  /** El stock valorizado a costo final */
+  valor: number
   /**
    * Hay un conteo y es reciente. Sin conteo el número arrastra todo el
    * histórico; con uno viejo arrastra todo lo que pasó desde entonces sin que
@@ -81,6 +86,9 @@ interface DatosInsumo {
   categoria: string
   merma: number
   porPaquete: number
+  /** Precio de compra de una unidad, sin IVA */
+  precio: number
+  iva: number
 }
 
 /**
@@ -95,16 +103,49 @@ export function aBruto(neto: number, mermaPorcentaje: number): number {
   return neto / (1 - m / 100)
 }
 
+/**
+ * Cuánto vale una cantidad de stock, a COSTO FINAL.
+ *
+ * Es la política del resto del sistema: no se lleva IVA compras contra IVA
+ * ventas, todo se evalúa sobre el costo final. Se usa `costoFinalInsumo()` —la
+ * única fórmula del costo, ver docs/SISTEMA-COSTOS.md— y no una cuenta escrita
+ * acá, para que el día que cambie, cambie en un solo lado.
+ *
+ * ⚠️ EL COSTO FINAL SE APLICA SOBRE LA CANTIDAD ÚTIL, NO SOBRE LA BRUTA. El
+ * C. Final divide por (1 − merma) para dar el costo del kilo que llega al plato,
+ * y el stock está en BRUTO, con cáscara. Multiplicar los dos contaría la merma
+ * dos veces: 11% de más con la cebolla al 10%, 33% con el limón al 40%.
+ *
+ * Llevado a la cantidad útil, el factor se cancela y da exactamente lo pagado:
+ *
+ *   costo_final × útiles
+ *     = [precio × (1+iva) / (1−merma)] × [brutos × (1−merma)]
+ *     = brutos × precio × (1+iva)
+ */
+export function valorizar(cantidadBruta: number, precio: number, iva: number, merma: number): number {
+  const m = Math.min(Math.max(merma || 0, 0), 99)
+  const util = cantidadBruta * (1 - m / 100)
+  return util * costoFinalInsumo(precio, iva, m)
+}
+
 async function datosDeInsumos(): Promise<Map<string, DatosInsumo>> {
-  const { data, error } = await supabase
-    .from('insumos')
-    .select('id, nombre, unidad_medida, categoria, merma_porcentaje, cantidad_por_paquete, inventario')
-    .eq('activo', true)
-    .eq('inventario', true)
-  if (error) throw error
+  const [insumosRes, preciosRes] = await Promise.all([
+    supabase
+      .from('insumos')
+      .select('id, nombre, unidad_medida, categoria, merma_porcentaje, cantidad_por_paquete, iva_porcentaje')
+      .eq('activo', true)
+      .eq('inventario', true),
+    supabase.from('precios_insumo').select('insumo_id, precio').eq('es_precio_actual', true),
+  ])
+  if (insumosRes.error) throw insumosRes.error
+  if (preciosRes.error) throw preciosRes.error
+
+  const precios = new Map(
+    (preciosRes.data || []).map((p: any) => [p.insumo_id, Number(p.precio) || 0])
+  )
 
   return new Map(
-    (data || []).map((i: any) => [
+    (insumosRes.data || []).map((i: any) => [
       i.id,
       {
         nombre: i.nombre,
@@ -112,6 +153,8 @@ async function datosDeInsumos(): Promise<Map<string, DatosInsumo>> {
         categoria: i.categoria || '',
         merma: Number(i.merma_porcentaje) || 0,
         porPaquete: Number(i.cantidad_por_paquete) || 1,
+        precio: precios.get(i.id) || 0,
+        iva: Number(i.iva_porcentaje) || 0,
       },
     ])
   )
@@ -295,6 +338,8 @@ export async function obtenerMovimientos(): Promise<MovimientoInsumo[]> {
       salio: mov.salio,
       stock: base + mov.entro - mov.salio,
       diasDesdeConteo: dias,
+      precioConIva: costoFinalInsumo(info.precio, info.iva, info.merma),
+      valor: valorizar(base + mov.entro - mov.salio, info.precio, info.iva, info.merma),
       confiable: dias !== null && dias <= DIAS_CONTEO_VIGENTE,
     })
   }
@@ -353,7 +398,8 @@ export interface AjusteAcumulado {
   /** De esas, cuántas dieron distinto */
   conDiferencia: number
   ajusteTotal: number
-  sinExplicacion: number
+  /** ajusteTotal en pesos, con IVA */
+  valor: number
 }
 
 /**
@@ -363,16 +409,25 @@ export interface AjusteAcumulado {
  * ajusta mucho pero siempre por consumo sin cargar es un problema de rutina;
  * uno que ajusta sin motivo, mes tras mes, es otra cosa.
  */
-export async function obtenerAjustes(desde: string): Promise<AjusteAcumulado[]> {
-  const { data, error } = await supabase
+export async function obtenerAjustes(desde: string, hasta?: string): Promise<AjusteAcumulado[]> {
+  const insumos = await datosDeInsumos()
+
+  let q = supabase
     .from('inventario_conteo_items')
     .select('insumo_id, diferencia, motivo, insumos (nombre, unidad_medida), inventario_conteos!inner (fecha)')
     .gte('inventario_conteos.fecha', desde)
+  if (hasta) q = q.lte('inventario_conteos.fecha', hasta)
+
+  const { data, error } = await q
   if (error) throw error
 
   const mapa = new Map<string, AjusteAcumulado>()
   for (const f of (data || []) as any[]) {
     const dif = Number(f.diferencia) || 0
+    // El primer conteo de un insumo es una carga, no un ajuste: si contara,
+    // el arranque del 31/07 metería 47 líneas que no son diferencias.
+    if (f.motivo === MOTIVO_INICIAL) continue
+
     const actual = mapa.get(f.insumo_id) || {
       insumo_id: f.insumo_id,
       nombre: f.insumos?.nombre ?? '(sin nombre)',
@@ -380,28 +435,67 @@ export async function obtenerAjustes(desde: string): Promise<AjusteAcumulado[]> 
       conteos: 0,
       conDiferencia: 0,
       ajusteTotal: 0,
-      sinExplicacion: 0,
+      valor: 0,
     }
     actual.conteos++
     if (Math.abs(dif) > 0.001) {
       actual.conDiferencia++
       actual.ajusteTotal += dif
-      if (!f.motivo || f.motivo === 'sin_explicacion') actual.sinExplicacion += dif
     }
     mapa.set(f.insumo_id, actual)
   }
 
-  // Un conteo que dio exacto no es una diferencia: no tiene nada que explicar y
-  // llena el cuadro de ceros. El arranque en cero deja 47 líneas así de una.
-  // Se cuenta por VECES con diferencia, no por el total: un +5 y un −5 suman
-  // cero y sin embargo pasó dos veces.
+  // Un conteo que dio exacto no es una diferencia: no tiene nada que explicar
+  // y llena el cuadro de ceros. Se cuenta por VECES con diferencia, no por el
+  // total: un +5 y un −5 suman cero y sin embargo pasó dos veces.
+  // El orden es por PLATA, que es lo que decide si vale la pena ir a mirar.
   return Array.from(mapa.values())
     .filter((a) => a.conDiferencia > 0)
-    .sort((a, b) => Math.abs(b.sinExplicacion) - Math.abs(a.sinExplicacion))
+    .map((a) => {
+      const i = insumos.get(a.insumo_id)
+      return { ...a, valor: i ? valorizar(a.ajusteTotal, i.precio, i.iva, i.merma) : 0 }
+    })
+    .sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor))
+}
+
+/** Los conteos de UN insumo, del más reciente al más viejo */
+export interface LineaHistorial {
+  fecha: string
+  teorico: number
+  contado: number
+  diferencia: number
+  valor: number
+  motivo: string | null
+}
+
+export async function obtenerHistorial(insumoId: string): Promise<LineaHistorial[]> {
+  const insumos = await datosDeInsumos()
+  const info = insumos.get(insumoId)
+
+  const { data, error } = await supabase
+    .from('inventario_conteo_items')
+    .select('cantidad_teorica, cantidad_contada, diferencia, motivo, inventario_conteos!inner (fecha)')
+    .eq('insumo_id', insumoId)
+  if (error) throw error
+
+  return ((data || []) as any[])
+    .map((f) => ({
+      fecha: f.inventario_conteos?.fecha ?? '',
+      teorico: Number(f.cantidad_teorica) || 0,
+      contado: Number(f.cantidad_contada) || 0,
+      diferencia: Number(f.diferencia) || 0,
+      valor: info ? valorizar(Number(f.diferencia) || 0, info.precio, info.iva, info.merma) : 0,
+      motivo: f.motivo,
+    }))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha))
 }
 
 /** Los motivos que ofrece la pantalla. Texto en la base: agregar uno no es migration. */
+/** Se propone solo cuando es el primer conteo del insumo. No es un ajuste. */
+export const MOTIVO_INICIAL = 'stock_inicial'
+
 export const MOTIVOS: { valor: string; label: string; ayuda: string }[] = [
+  { valor: MOTIVO_INICIAL, label: 'Stock inicial', ayuda: 'Primera vez que se cuenta: es una carga, no una diferencia' },
   { valor: 'falta_registrar', label: 'Consumo sin cargar', ayuda: 'Salió de la cámara y nadie lo cargó en Análisis — eventos, por ejemplo' },
   { valor: 'merma_de_mas', label: 'Merma cobrada de más', ayuda: 'El sistema descontó una merma que no ocurrió. Sobra stock' },
   { valor: 'rotura', label: 'Rotura o vencimiento', ayuda: 'Se descartó mercadería' },

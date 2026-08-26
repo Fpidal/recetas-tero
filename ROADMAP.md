@@ -41,7 +41,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 |---|---|
 | **Inicio** | Panel de entrada: KPIs de la semana, alertas de variación de precios, compras por categoría y **Cifras del mes** — ventas, compras, margen bruto e incidencia teórica y real contra el mes anterior (V.32) |
 | **Insumos** | Ingredientes: unidad, categoría, IVA, merma, presentaciones. Acceso a Proveedores y al Comparador de precios |
-| **Vinos** | Carta de vinos con importación de listas de precios desde Excel de bodega (matching por código y cepa) |
+| **Vinos** | Carta de vinos con importación de listas de precios desde Excel de bodega (matching por código y cepa). Buscador por fragmentos: `sal re mal` encuentra el Salentein Reserva Malbec entre ocho "Salentein Reserva" que sólo difieren en la cepa (V.49). Debajo del costo, el **P.P** — lo pagado en la última factura, sólo como referencia |
 | **Elaboraciones** | Sub-recetas (bases) que se usan como ingrediente dentro de las recetas |
 | **Recetas** | Platos: ingredientes, costo, margen, precio de venta, foto |
 | **Tragos** | Coctelería con costos y beverage cost |
@@ -53,7 +53,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Análisis** | **Importación del informe de ventas** (V.44): un Excel del salón carga la venta del turno, los cubiertos y el consumo producto por producto. Los enlaces se resuelven una vez y quedan guardados. Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo. Desde Resumen se baja la planilla de pedido de la semana, con la cantidad **a comprar** ajustada por merma (V.30) |
 | **Análisis · Ranking** | Ranking de productos vendidos e **ingeniería de menú** (V.37). Unidades, facturación, costo y contribución por producto, con la matriz estrella/caballo/rompecabezas/perro por sección. La contribución va **en pesos, no en food cost**: un plato con 40% de FC que deja $15.000 rinde más que uno con 20% que deja $3.000, y con el eje en porcentaje la matriz recomienda sacar justo lo que más deja |
 | **Estadísticas** | Dashboard consolidado (6 pestañas: las 4 de compras y precios, más **Cierre de mes** (V.25) y **ABC de insumos** (V.28)) |
-| **Inventario** | Stock calculado: último conteo + compras − consumo, sin tabla de stock que se desfase (V.48). Cuatro solapas: existencias, conteo con ajuste y motivo, estadística de diferencias, y las hojas para contar a mano. Descuenta **en bruto** —7 kg de cebolla pelada son 7,78 de la cámara— y convierte las compras por caja a unidades sueltas |
+| **Inventario** | Stock calculado: último conteo + compras − consumo, sin tabla de stock que se desfase (V.48). Cuatro solapas: existencias, conteo con ajuste y motivo, estadística de diferencias, y las hojas para contar a mano. Descuenta **en bruto** —7 kg de cebolla pelada son 7,78 de la cámara— y convierte las compras por caja a unidades sueltas. Todo **valorizado a costo final** (V.49), que es lo que permite ordenar por plata: 200 g de reggianito y 200 g de salmón no son lo mismo |
 | **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
 
 ### Convenciones que no se negocian
@@ -319,6 +319,14 @@ Registradas para no volver a discutirlas.
 - **El inventario se reactivó el 26/08/26**, cuando se cumplió su condición de disparo: 122
   servicios de consumo cargados desde el 01/04 y 197 días de ventas. Estuvo pausado esperando
   eso, no abandonado.
+
+- **El costo del vino sale de la lista de la bodega, no de la factura** (26/08/26). Es la
+  excepción a la regla de oro del sistema, y es deliberada: el negocio se maneja con la lista
+  del proveedor. Una promo no mueve el costo — el 25/08 entraron 12 cajas de Salentein Reserva
+  pagando 10 al 50% y 2 sin cargo, la botella salió $6.387 y sigue costeando a $7.665. Esa
+  diferencia se muestra como **P.P** en la pantalla de Vinos, como referencia y sin tocar
+  ningún costo. Si algún día se quiere que la factura mande, hay que registrar la bonificación
+  en la línea (hoy se prorratea a mano) y decidir que ese costo reemplace al de la lista.
 
 - **El ajuste de inventario NO entra al food cost.** Si el food cost se calcula sobre compras,
   la mercadería que desapareció ya está contada —se pagó, está en la factura— y sumarle el

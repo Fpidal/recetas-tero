@@ -499,6 +499,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insumo</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Desc.</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
                 </tr>
@@ -531,6 +532,18 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {getPrecioConComparacion(item)}
+                    </td>
+                    {/* El descuento SIEMPRE estuvo guardado y nunca se mostró: se
+                        veía "12 × $63.347" y un subtotal que era la mitad, sin
+                        nada que lo explicara. Quien lee la factura no lo entiende. */}
+                    <td className="px-4 py-3 text-center">
+                      {item.descuento > 0 ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono bg-amber-100 text-amber-800">
+                          −{formatearCantidad(item.descuento, item.descuento % 1 === 0 ? 0 : 1)}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${
@@ -573,13 +586,14 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-400">—</td>
                     <td className="px-4 py-3 text-center text-gray-400">—</td>
+                    <td className="px-4 py-3 text-center text-gray-400">—</td>
                     <td className="px-4 py-3 text-sm text-right text-gray-400">—</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-gray-50">
                 <tr>
-                  <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-600">
+                  <td colSpan={5} className="px-4 py-2 text-right text-sm text-gray-600">
                     Subtotal Neto:
                   </td>
                   <td className="px-4 py-2 text-right text-sm text-gray-900 font-mono">
@@ -588,7 +602,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                 </tr>
                 {totalIva21 > 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                    <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
                       IVA 21%:
                     </td>
                     <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
@@ -598,7 +612,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                 )}
                 {totalIva105 > 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                    <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
                       IVA 10.5%:
                     </td>
                     <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
@@ -610,7 +624,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                   <>
                     {factura.percepciones.filter(p => p.nombre && parseFloat(p.valor) > 0).map((p, idx) => (
                       <tr key={idx}>
-                        <td colSpan={4} className="px-4 py-1 text-right text-sm text-gray-600">
+                        <td colSpan={5} className="px-4 py-1 text-right text-sm text-gray-600">
                           {p.nombre}{p.porcentaje ? ` (${p.porcentaje}%)` : ''}:
                         </td>
                         <td className="px-4 py-1 text-right text-sm text-gray-900 font-mono">
@@ -621,7 +635,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                   </>
                 )}
                 <tr className="border-t border-gray-300">
-                  <td colSpan={4} className="px-4 py-3 text-right font-medium text-gray-900">
+                  <td colSpan={5} className="px-4 py-3 text-right font-medium text-gray-900">
                     Total:
                   </td>
                   <td className="px-4 py-3 text-right text-lg font-bold text-green-600 font-mono">
@@ -630,7 +644,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                 </tr>
                 {diferenciaOC && (
                   <tr className={diferenciaOC.subio ? 'bg-red-50' : 'bg-green-50'}>
-                    <td colSpan={4} className={`px-4 py-2 text-right text-sm ${diferenciaOC.subio ? 'text-red-600' : 'text-green-600'}`}>
+                    <td colSpan={5} className={`px-4 py-2 text-right text-sm ${diferenciaOC.subio ? 'text-red-600' : 'text-green-600'}`}>
                       Diferencia vs OC:
                     </td>
                     <td className={`px-4 py-2 text-right text-sm font-bold font-mono ${diferenciaOC.subio ? 'text-red-600' : 'text-green-600'}`}>

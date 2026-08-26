@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Warehouse, ClipboardList, ClipboardCheck, TrendingDown, AlertTriangle } from 'lucide-react'
-import { Button, ClickableItemName } from '@/components/ui'
-import { formatearCantidad, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
-import { hoyISO } from '@/lib/fechas'
+import { Warehouse, ClipboardList, ClipboardCheck, TrendingDown, AlertTriangle, Eye } from 'lucide-react'
+import { Button, ClickableItemName, Modal } from '@/components/ui'
+import { formatearCantidad, formatearInputNumero, parsearNumero, formatearMoneda } from '@/lib/formato-numeros'
+import { hoyISO, dateToString } from '@/lib/fechas'
 import {
-  obtenerMovimientos, guardarConteo, obtenerAjustes, MOTIVOS, DIAS_CONTEO_VIGENTE,
-  type MovimientoInsumo, type AjusteAcumulado, type LineaConteo,
+  obtenerMovimientos, guardarConteo, obtenerAjustes, obtenerHistorial,
+  MOTIVOS, MOTIVO_INICIAL, DIAS_CONTEO_VIGENTE,
+  type MovimientoInsumo, type AjusteAcumulado, type LineaConteo, type LineaHistorial,
 } from '@/lib/inventario'
 import HojasControl from '@/components/inventario/HojasControl'
 
@@ -57,6 +58,34 @@ export default function InventarioPage() {
 
   // Diferencias
   const [ajustes, setAjustes] = useState<AjusteAcumulado[]>([])
+  const [mes, setMes] = useState('todo')
+
+  // Historial de un insumo
+  const [historial, setHistorial] = useState<{ nombre: string; unidad: string; lineas: LineaHistorial[] } | null>(null)
+
+  async function abrirHistorial(m: MovimientoInsumo) {
+    try {
+      const lineas = await obtenerHistorial(m.insumo_id)
+      setHistorial({ nombre: m.nombre, unidad: m.unidad, lineas })
+    } catch (e) {
+      console.error('Error cargando el historial:', e)
+    }
+  }
+
+  /** Los últimos seis meses, más "todo". El stock es de hoy; el ajuste, de un período. */
+  const meses = useMemo(() => {
+    const nombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    const lista: { valor: string; label: string }[] = [{ valor: 'todo', label: 'Todo' }]
+    const hoy = new Date()
+    for (let i = 0; i < 6; i++) {
+      const f = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1)
+      lista.push({
+        valor: `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}`,
+        label: nombres[f.getMonth()],
+      })
+    }
+    return lista
+  }, [])
 
   useEffect(() => {
     cargar()
@@ -64,12 +93,18 @@ export default function InventarioPage() {
 
   useEffect(() => {
     if (activeTab !== 'diferencias') return
-    const desde = new Date()
-    desde.setDate(desde.getDate() - 90)
-    obtenerAjustes(desde.toISOString().slice(0, 10))
+    let desde = '2026-01-01'
+    let hasta: string | undefined
+    if (mes !== 'todo') {
+      const [a, m] = mes.split('-').map(Number)
+      desde = `${mes}-01`
+      // Día 0 del mes siguiente = último día de este
+      hasta = dateToString(new Date(a, m, 0))
+    }
+    obtenerAjustes(desde, hasta)
       .then(setAjustes)
       .catch((e) => console.error('Error cargando ajustes:', e))
-  }, [activeTab])
+  }, [activeTab, mes])
 
   async function cargar() {
     try {
@@ -210,7 +245,13 @@ export default function InventarioPage() {
           <p className="text-sm text-gray-500">Calculando…</p>
         </div>
       ) : activeTab === 'stock' ? (
-        <Stock movimientos={movimientos} nunca={nunca} vencidos={vencidos} onContar={() => setActiveTab('conteo')} />
+        <Stock
+          movimientos={movimientos}
+          nunca={nunca}
+          vencidos={vencidos}
+          onContar={() => setActiveTab('conteo')}
+          onHistorial={abrirHistorial}
+        />
       ) : activeTab === 'conteo' ? (
         <Contar
           movimientos={movimientos}
@@ -225,10 +266,71 @@ export default function InventarioPage() {
           onConfirmar={confirmar}
         />
       ) : activeTab === 'diferencias' ? (
-        <Diferencias ajustes={ajustes} />
+        <Diferencias ajustes={ajustes} mes={mes} setMes={setMes} meses={meses} />
       ) : (
         <HojasControl />
       )}
+
+      <Modal
+        isOpen={!!historial}
+        onClose={() => setHistorial(null)}
+        title={`Conteos — ${historial?.nombre ?? ''}`}
+      >
+        {historial && historial.lineas.length === 0 ? (
+          <p className="text-sm text-gray-500">Todavía no se contó este insumo.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[420px]">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left text-[10px] uppercase tracking-wider text-gray-400 font-medium px-2 py-2">Fecha</th>
+                  <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-2 py-2">Debería</th>
+                  <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-2 py-2">Contado</th>
+                  <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-2 py-2">Dif.</th>
+                  <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-2 py-2">En plata</th>
+                  <th className="text-left text-[10px] uppercase tracking-wider text-gray-400 font-medium px-2 py-2">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(historial?.lineas ?? []).map((l, i) => {
+                  const esInicial = l.motivo === MOTIVO_INICIAL
+                  const label = MOTIVOS.find((m) => m.valor === l.motivo)?.label
+                  return (
+                    <tr key={i} className="border-b border-gray-100 last:border-0">
+                      <td className="px-2 py-2 font-mono text-gray-700">
+                        {l.fecha.split('-').reverse().join('/')}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono text-gray-500">
+                        {esInicial ? '—' : formatearCantidad(l.teorico, 1)}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono text-gray-900">
+                        {formatearCantidad(l.contado, 1)}
+                      </td>
+                      <td className={`px-2 py-2 text-right font-mono ${
+                        esInicial ? 'text-gray-300' : l.diferencia < 0 ? 'text-red-700' : 'text-gray-700'
+                      }`}>
+                        {esInicial ? '—' : `${l.diferencia > 0 ? '+' : ''}${formatearCantidad(l.diferencia, 1)}`}
+                      </td>
+                      <td className={`px-2 py-2 text-right font-mono ${
+                        esInicial ? 'text-gray-300' : l.valor < 0 ? 'text-red-700 font-semibold' : 'text-gray-700'
+                      }`}>
+                        {esInicial ? '—' : formatearMoneda(l.valor)}
+                      </td>
+                      <td className="px-2 py-2 text-xs text-gray-500">
+                        {esInicial ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                            Stock inicial
+                          </span>
+                        ) : label || '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
@@ -238,12 +340,13 @@ export default function InventarioPage() {
 // =====================================================
 
 function Stock({
-  movimientos, nunca, vencidos, onContar,
+  movimientos, nunca, vencidos, onContar, onHistorial,
 }: {
   movimientos: MovimientoInsumo[]
   nunca: number
   vencidos: number
   onContar: () => void
+  onHistorial: (m: MovimientoInsumo) => void
 }) {
   const router = useRouter()
   const [categoria, setCategoria] = useState<string>('todas')
@@ -325,6 +428,7 @@ function Stock({
               <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Entró</th>
               <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Salió</th>
               <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Debería haber</th>
+              <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Vale</th>
             </tr>
           </thead>
           <tbody>
@@ -339,6 +443,18 @@ function Stock({
                     title="Abrir la ficha del insumo"
                     onClick={() => router.push(`/insumos?editar=${m.insumo_id}`)}
                   />
+                  {/* Mismo ojo que el nombre pero en gris: el nombre lleva a la
+                      ficha del insumo, esto a sus conteos. Dos destinos, un
+                      lenguaje visual. */}
+                  {m.fechaConteo && (
+                    <button
+                      onClick={() => onHistorial(m)}
+                      title="Ver los conteos de este insumo"
+                      className="ml-1.5 align-middle text-gray-300 hover:text-gray-600"
+                    >
+                      <Eye className="w-3.5 h-3.5 inline" />
+                    </button>
+                  )}
                   {/* Tres estados distintos, no dos: nunca contado, contado hace
                       mucho, y al día. El del medio tiene número pero envejecido. */}
                   {m.fechaConteo === null ? (
@@ -381,6 +497,13 @@ function Stock({
                   {formatearCantidad(m.stock, 1)}{' '}
                   <span className="text-[10px] text-gray-400 font-normal">{m.unidad}</span>
                 </td>
+                {/* Con IVA, la política del resto del sistema. La merma ya está
+                    adentro: ver valorizar() en lib/inventario.ts */}
+                <td className={`px-3 py-2 text-right font-mono ${
+                  !m.confiable ? 'text-gray-300' : m.valor < 0 ? 'text-red-700' : 'text-gray-900 font-semibold'
+                }`}>
+                  {formatearMoneda(m.valor)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -388,7 +511,7 @@ function Stock({
       </div>
 
       <p className="text-xs text-gray-500 max-w-2xl">
-        Lo que salió está en bruto: una receta que pide 7 kg de cebolla pelada descuenta 7,78 de
+        Valorizado con IVA, la misma política del resto del sistema. Lo que salió está en bruto: una receta que pide 7 kg de cebolla pelada descuenta 7,78 de
         la cámara, porque es lo que hay que agarrar del cajón. Las compras por caja se
         convierten a unidades sueltas.
       </p>
@@ -538,70 +661,84 @@ function Contar({
 // DIFERENCIAS
 // =====================================================
 
-function Diferencias({ ajustes }: { ajustes: AjusteAcumulado[] }) {
-  if (ajustes.length === 0) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-        <TrendingDown className="w-8 h-8 mx-auto text-gray-300 mb-3" />
-        <p className="text-sm text-gray-700">Ningún conteo dio diferencia en los últimos 90 días.</p>
-        <p className="text-xs text-gray-500 mt-1">
-          Acá aparecen sólo los insumos donde lo contado no coincidió. Los que dan exacto no
-          tienen nada que explicar.
-        </p>
-      </div>
-    )
-  }
-
-  const peor = Math.max(...ajustes.map((a) => Math.abs(a.sinExplicacion)), 1)
+function Diferencias({
+  ajustes, mes, setMes, meses,
+}: {
+  ajustes: AjusteAcumulado[]
+  mes: string
+  setMes: (m: string) => void
+  meses: { valor: string; label: string }[]
+}) {
+  const total = ajustes.reduce((s, a) => s + a.valor, 0)
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
-        <table className="w-full text-sm min-w-[620px]">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Insumo</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Difirió</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Ajuste total</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Sin explicación</th>
-              <th className="text-left text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5 w-32">Peso</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ajustes.map((a) => (
-              <tr key={a.insumo_id} className="border-b border-gray-100 last:border-0">
-                <td className="px-3 py-2 text-gray-900">{a.nombre}</td>
-                <td className="px-3 py-2 text-right font-mono text-gray-600">
-                  {a.conDiferencia}<span className="text-gray-300"> / {a.conteos}</span>
-                </td>
-                <td className={`px-3 py-2 text-right font-mono ${a.ajusteTotal < 0 ? 'text-red-700' : 'text-gray-700'}`}>
-                  {a.ajusteTotal > 0 ? '+' : ''}{formatearCantidad(a.ajusteTotal, 1)}{' '}
-                  <span className="text-[10px] text-gray-400">{a.unidad}</span>
-                </td>
-                <td className={`px-3 py-2 text-right font-mono font-semibold ${
-                  Math.abs(a.sinExplicacion) > 0.001 ? 'text-red-700' : 'text-gray-400'
-                }`}>
-                  {a.sinExplicacion > 0 ? '+' : ''}{formatearCantidad(a.sinExplicacion, 1)}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-red-600 rounded-full"
-                      style={{ width: `${Math.min((Math.abs(a.sinExplicacion) / peor) * 100, 100)}%` }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex flex-wrap gap-1.5">
+        {meses.map((m) => (
+          <button
+            key={m.valor}
+            onClick={() => setMes(m.valor)}
+            className={`text-xs px-2.5 py-1 rounded-full border ${
+              mes === m.valor
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
       </div>
 
-      <p className="text-xs text-gray-500 max-w-2xl">
-        Lo que importa es la columna <span className="font-medium">Sin explicación</span>. Un
-        insumo que ajusta mucho pero siempre por consumo sin cargar es un problema de rutina; uno
-        que ajusta sin motivo mes tras mes es otra cosa.
-      </p>
+      {ajustes.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+          <TrendingDown className="w-8 h-8 mx-auto text-gray-300 mb-3" />
+          <p className="text-sm text-gray-700">Ningún conteo dio diferencia en este período.</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Acá aparecen sólo los insumos donde lo contado no coincidió. El primer conteo de un
+            insumo no cuenta: es una carga, no una diferencia.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+          <table className="w-full text-sm min-w-[560px]">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Insumo</th>
+                <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Difirió</th>
+                <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">Ajuste</th>
+                <th className="text-right text-[10px] uppercase tracking-wider text-gray-400 font-medium px-3 py-2.5">En plata</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ajustes.map((a) => (
+                <tr key={a.insumo_id} className="border-b border-gray-100 last:border-0">
+                  <td className="px-3 py-2 text-gray-900">{a.nombre}</td>
+                  <td className="px-3 py-2 text-right font-mono text-gray-600">
+                    {a.conDiferencia}<span className="text-gray-300"> / {a.conteos}</span>
+                  </td>
+                  <td className={`px-3 py-2 text-right font-mono ${a.ajusteTotal < 0 ? 'text-red-700' : 'text-gray-700'}`}>
+                    {a.ajusteTotal > 0 ? '+' : ''}{formatearCantidad(a.ajusteTotal, 1)}{' '}
+                    <span className="text-[10px] text-gray-400">{a.unidad}</span>
+                  </td>
+                  {/* La plata decide si vale la pena ir a mirar: 200 g de reggianito
+                      y 200 g de salmón no son lo mismo. Por eso también ordena. */}
+                  <td className={`px-3 py-2 text-right font-mono font-semibold ${a.valor < 0 ? 'text-red-700' : 'text-gray-900'}`}>
+                    {a.valor > 0 ? '+' : ''}{formatearMoneda(a.valor)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-gray-300">
+                <td className="px-3 py-2.5 text-xs text-gray-500" colSpan={3}>Ajustado en el período</td>
+                <td className={`px-3 py-2.5 text-right font-mono font-semibold ${total < 0 ? 'text-red-700' : 'text-gray-900'}`}>
+                  {total > 0 ? '+' : ''}{formatearMoneda(total)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

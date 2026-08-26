@@ -11,6 +11,7 @@ import { Vino, CartaVino, ProveedorMapeoExcel } from '@/types/database'
 import { generarPDFCartaVinos } from '@/lib/generar-pdf-carta-vinos'
 import * as XLSX from 'xlsx'
 import { hoyISO } from '@/lib/fechas'
+import { coincideBusqueda } from '@/lib/buscar'
 
 const CATEGORIAS_VINO = ['Tintos', 'Blancos', 'Espumantes']
 
@@ -67,6 +68,8 @@ export default function VinosPage() {
   const [bodegas, setBodegas] = useState<Bodega[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
+  /** vino_id → lo pagado en su última factura. Sólo referencia, no costea. */
+  const [ultimasCompras, setUltimasCompras] = useState<Map<string, { netoPorCaja: number; iva: number; fecha: string }>>(new Map())
   const [filtroBodega, setFiltroBodega] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const [filtroCepa, setFiltroCepa] = useState('')
@@ -121,6 +124,7 @@ export default function VinosPage() {
   useEffect(() => {
     fetchVinos()
     fetchBodegas()
+    fetchUltimasCompras()
   }, [])
 
   useEffect(() => {
@@ -150,6 +154,40 @@ export default function VinosPage() {
 
     if (!error) setVinos(data || [])
     setIsLoading(false)
+  }
+
+  /**
+   * La última factura de cada vino, para el P.P.
+   *
+   * Se queda con la más reciente por vino. `subtotal` ya viene con el descuento
+   * aplicado, así que dividirlo por la cantidad da lo que efectivamente se pagó
+   * por caja — incluidas las bonificadas, si se cargaron prorrateadas.
+   */
+  async function fetchUltimasCompras() {
+    const { data, error } = await supabase
+      .from('factura_items')
+      .select('vino_id, cantidad, subtotal, iva_porcentaje, facturas_proveedor!inner (fecha, activo)')
+      .not('vino_id', 'is', null)
+      .neq('facturas_proveedor.activo', false)
+    if (error) {
+      console.error('Error cargando últimas compras de vino:', error)
+      return
+    }
+
+    const mapa = new Map<string, { netoPorCaja: number; iva: number; fecha: string }>()
+    for (const f of (data || []) as any[]) {
+      const fecha = f.facturas_proveedor?.fecha
+      const cantidad = Number(f.cantidad) || 0
+      if (!fecha || cantidad <= 0) continue
+      const previo = mapa.get(f.vino_id)
+      if (previo && previo.fecha >= fecha) continue
+      mapa.set(f.vino_id, {
+        netoPorCaja: (Number(f.subtotal) || 0) / cantidad,
+        iva: Number(f.iva_porcentaje) ?? 21,
+        fecha,
+      })
+    }
+    setUltimasCompras(mapa)
   }
 
   async function fetchVinosConCarta() {
@@ -684,6 +722,22 @@ export default function VinosPage() {
     }
   }
 
+  /**
+   * Lo que REALMENTE se pagó en la última factura de cada vino.
+   *
+   * Es sólo referencia: el costo del vino sigue saliendo de la lista de la
+   * bodega (`precio_caja` × descuento ÷ unidades), que es como se maneja el
+   * negocio. Pero cuando hay una promo —10 cajas al 50% y 2 sin cargo— lo
+   * pagado y lo listado se separan, y hasta ahora esa diferencia no se veía en
+   * ningún lado. En la factura del 25/08 el Salentein Reserva salió $6.387 la
+   * botella contra los $7.665 de la lista: 20% menos.
+   */
+  const ppDe = (vinoId: string, unidadesCaja: number): { porBotella: number; fecha: string } | null => {
+    const c = ultimasCompras.get(vinoId)
+    if (!c || unidadesCaja <= 0) return null
+    return { porBotella: (c.netoPorCaja * (1 + c.iva / 100)) / unidadesCaja, fecha: c.fecha }
+  }
+
   const fmt = (v: number) => `$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
   const fmtDec = (v: number) => `$${v.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   const pct = (v: number) => `${v.toFixed(1)}%`
@@ -693,21 +747,26 @@ export default function VinosPage() {
   const cepasUnicas = Array.from(new Set(vinos.map(v => v.cepa))).sort()
   const zonasUnicas = Array.from(new Set(vinos.map(v => v.zona).filter((z): z is string => Boolean(z)))).sort()
 
-  const vinosFiltrados = vinos.filter(v => {
-    const matchSearch = search === '' || v.bodega.toLowerCase().includes(search.toLowerCase()) ||
-      v.nombre.toLowerCase().includes(search.toLowerCase()) || v.cepa.toLowerCase().includes(search.toLowerCase())
-    return matchSearch && (filtroBodega === '' || v.bodega === filtroBodega) &&
-      (filtroCategoria === '' || v.categoria === filtroCategoria) &&
-      (filtroCepa === '' || v.cepa === filtroCepa) && (filtroZona === '' || v.zona === filtroZona)
-  })
+  /**
+   * Bodega, nombre y cepa como UN solo texto.
+   *
+   * Antes se buscaba con `includes` campo por campo, así que "sal re mal" no
+   * encontraba nada: los tres fragmentos viven en campos distintos —Salentein
+   * es la bodega, Reserva el nombre, Malbec la cepa— y ninguno los tenía a los
+   * tres. Obligaba a tipear el nombre casi entero.
+   */
+  const textoDe = (v: { bodega: string; nombre: string; cepa: string }) =>
+    `${v.bodega} ${v.nombre} ${v.cepa}`
 
-  const vinosCartaFiltrados = vinosConCarta.filter(v => {
-    const matchSearch = search === '' || v.bodega.toLowerCase().includes(search.toLowerCase()) ||
-      v.nombre.toLowerCase().includes(search.toLowerCase()) || v.cepa.toLowerCase().includes(search.toLowerCase())
-    return matchSearch && (filtroBodega === '' || v.bodega === filtroBodega) &&
-      (filtroCategoria === '' || v.categoria === filtroCategoria) &&
-      (filtroCepa === '' || v.cepa === filtroCepa) && (filtroZona === '' || v.zona === filtroZona)
-  })
+  const pasaFiltros = (v: any) =>
+    coincideBusqueda(textoDe(v), search) &&
+    (filtroBodega === '' || v.bodega === filtroBodega) &&
+    (filtroCategoria === '' || v.categoria === filtroCategoria) &&
+    (filtroCepa === '' || v.cepa === filtroCepa) &&
+    (filtroZona === '' || v.zona === filtroZona)
+
+  const vinosFiltrados = vinos.filter(pasaFiltros)
+  const vinosCartaFiltrados = vinosConCarta.filter(pasaFiltros)
 
   // Agrupar por categoría para carta
   const vinosPorCategoria = vinosCartaFiltrados.reduce((acc, v) => {
@@ -873,6 +932,11 @@ export default function VinosPage() {
                       <div className="bg-green-100 rounded -m-1.5 p-1.5">
                         <p className="text-[9px] text-green-700">Final</p>
                         <p className="text-[10px] font-bold text-green-700 font-mono">{fmt(unidadFinal)}</p>
+                        {(() => {
+                          const pp = ppDe(vino.id, vino.unidades_caja)
+                          if (!pp) return null
+                          return <p className="text-[9px] text-gray-500 font-mono leading-tight">P.P {fmt(pp.porBotella)}</p>
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -908,7 +972,24 @@ export default function VinosPage() {
                         <td className="px-2 py-1.5 text-xs text-center text-gray-600 font-mono">{vino.unidades_caja}</td>
                         <td className="px-2 py-1.5 text-xs text-center text-gray-600 font-mono">{vino.descuento_porcentaje}%</td>
                         <td className="px-2 py-1.5 text-right"><span className="text-xs font-medium text-gray-900 font-mono">{fmt(cajaFinal)}</span></td>
-                        <td className="px-2 py-1.5 text-right bg-green-50"><span className="text-xs font-bold text-green-700 font-mono">{fmt(unidadFinal)}</span></td>
+                        {/* Debajo del final, el P.P: lo que se pagó de verdad en la
+                            última factura. Sólo referencia — el costo lo sigue
+                            dando la lista de la bodega. */}
+                        <td className="px-2 py-1.5 text-right bg-green-50">
+                          <span className="text-xs font-bold text-green-700 font-mono block">{fmt(unidadFinal)}</span>
+                          {(() => {
+                            const pp = ppDe(vino.id, vino.unidades_caja)
+                            if (!pp) return null
+                            return (
+                              <span
+                                className="text-[9px] text-gray-500 font-mono block leading-tight"
+                                title={`Precio promo: lo pagado en la factura del ${pp.fecha.split('-').reverse().join('/')}. No afecta el costo.`}
+                              >
+                                P.P {fmt(pp.porBotella)}
+                              </span>
+                            )
+                          })()}
+                        </td>
                         <td className="px-1 py-1.5">
                           <div className="flex justify-end gap-0.5">
                             <button onClick={() => fetchHistorialVino(vino)} className="p-1 hover:bg-gray-100 rounded" title="Historial de precios">

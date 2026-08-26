@@ -110,7 +110,7 @@ src/
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
 
-## ⚠️ Ocho trampas que ya rompieron cosas
+## ⚠️ Nueve trampas que ya rompieron cosas
 
 **1. `anon` no recibe permisos — hoy, ninguno.** La clave anónima viaja en el bundle público.
 Hasta el 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los
@@ -180,6 +180,15 @@ porque lo que se cuenta son cebollas enteras. Y las compras van al revés: la fa
 `insumos.cantidad_por_paquete` (agua 12, gaseosa 350 24). Sin ese factor el agua da −447.
 El stock sale siempre de la cuenta —último conteo + compras − consumo— en `src/lib/inventario.ts`;
 no hay tabla de stock que pueda quedar desfasada.
+
+**9. El precio de un vino NO sale de la factura: sale de la lista de la bodega.** Es la
+excepción a la regla de oro del sistema. El costo de una botella es
+`precio_caja ÷ unidades_caja × (1 − descuento)` con `costoBotellaVino()`, y `precios_vino`
+se carga al **importar la lista** —el 01/08/26 entraron 80 vinos de una— no al facturar.
+Consecuencia: una promo no mueve el costo. El 25/08 entraron 12 cajas de Salentein Reserva
+pagando 10 al 50% y 2 sin cargo: la botella salió $6.387 y el sistema la sigue costeando a
+$7.665, los de la lista. La pantalla de Vinos muestra ese precio real como **P.P**, sólo como
+referencia. Es una decisión, no un bug: el negocio se maneja con la lista del proveedor.
 
 ## Consultar la base (solo lectura)
 

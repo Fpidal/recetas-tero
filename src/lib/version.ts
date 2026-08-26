@@ -10,6 +10,18 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.49',
+    fecha: '26/08/26',
+    cambios: [
+      'Inventario: el stock y las diferencias ahora se ven en pesos, a costo final. Que falten 200 g de reggianito no es lo mismo que falten 200 g de salmón, y en kilos las dos cosas se leen igual',
+      'Inventario: el primer conteo de un insumo se marca como "stock inicial" y no cuenta como diferencia — es una carga, no un faltante',
+      'Inventario: las diferencias se pueden filtrar por mes, y el ojo al lado de cada insumo abre todos sus conteos anteriores',
+      'Facturas: se muestra el descuento de cada línea. Antes se veía "12 × $63.347" con un total que era la mitad y nada que lo explicara',
+      'Vinos: el buscador encuentra por partes. Escribiendo "sal re mal" aparece el Salentein Reserva Malbec, sin tener que tipear el nombre entero',
+      'Vinos: debajo del costo aparece el P.P, lo que se pagó de verdad en la última factura. Cuando hay promo o cajas bonificadas, ahí se ve la diferencia contra la lista. Es sólo referencia: el costo lo sigue dando la lista de la bodega',
+    ],
+  },
+  {
     version: 'V.48',
     fecha: '26/08/26',
     cambios: [

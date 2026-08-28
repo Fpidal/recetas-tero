@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Button, Modal, Input } from '@/components/ui'
 import { formatearMoneda, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import { generarPDFComparacion } from '@/lib/generar-pdf-comparacion'
+import { coincideBusqueda } from '@/lib/buscar'
 
 interface Comparacion {
   id: string
@@ -525,7 +526,7 @@ export default function ComparadorPrecios() {
     if (!activeComparacion) return []
     return allInsumos
       .filter(i => i.categoria === activeComparacion.categoria)
-      .filter(i => !busquedaInsumo || i.nombre.toLowerCase().includes(busquedaInsumo.toLowerCase()))
+      .filter(i => coincideBusqueda(i.nombre, busquedaInsumo))
   }, [allInsumos, activeComparacion, busquedaInsumo])
 
   // Calcular mejor precio por fila

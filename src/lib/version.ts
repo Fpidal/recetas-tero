@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.50',
+    fecha: '27/08/26',
+    cambios: [
+      'Todos los buscadores del sistema encuentran por partes. Escribiendo "ace oli" aparece el Aceite de oliva, y "mar dam" el proveedor Marilu Damiano, sin tipear el nombre entero ni respetar el orden',
+      'Funciona en Insumos, Comparador de precios, Recetas, Elaboraciones, Tragos, Carta, Proveedores e Inventario. Vinos ya lo tenía',
+      'Tampoco hacen falta los acentos: "angelica" encuentra Angélica Zapata',
+    ],
+  },
+  {
     version: 'V.49',
     fecha: '26/08/26',
     cambios: [

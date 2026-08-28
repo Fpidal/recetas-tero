@@ -8,6 +8,7 @@ import { Button, ClickableItemName, BotonExportar } from '@/components/ui'
 import { exportarRecetas } from '@/lib/exportaciones'
 import Link from 'next/link'
 import { SECCIONES as SECCIONES_ORDEN } from '@/lib/secciones'
+import { coincideBusqueda } from '@/lib/buscar'
 
 
 
@@ -371,7 +372,7 @@ export default function PlatosPage() {
   }
 
   const platosFiltrados = busqueda
-    ? platos.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    ? platos.filter(p => coincideBusqueda(p.nombre, busqueda))
     : platos
 
   const platosPorSeccion = SECCIONES_ORDEN
@@ -444,7 +445,7 @@ export default function PlatosPage() {
 
   // Filtrar insumos por búsqueda
   const insumosFiltrados = busquedaInsumos
-    ? insumosEnRecetas.filter(i => i.nombre.toLowerCase().includes(busquedaInsumos.toLowerCase()))
+    ? insumosEnRecetas.filter(i => coincideBusqueda(i.nombre, busquedaInsumos))
     : insumosEnRecetas
 
   return (

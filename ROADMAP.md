@@ -66,6 +66,14 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   número del estado, la coma se borra sola al escribirla y no se pueden cargar decimales.
   Ya pasó dos veces (editar OC en mayo, editar factura en V.18) — revisar esto en cualquier
   pantalla nueva con cantidades o precios editables.
+- **Los buscadores van por fragmentos, nunca por `includes`.** Se usa
+  `coincideBusqueda()` de `src/lib/buscar.ts`, que parte la búsqueda en pedazos y los pide
+  TODOS en cualquier orden, ignorando acentos: `sal re mal` encuentra el Salentein Reserva
+  Malbec, `ace oli` el Aceite de oliva. Con `includes` había que tipear el nombre casi entero
+  y en el orden exacto — y peor, comparando campo por campo un fragmento en la bodega y otro
+  en la cepa no matcheaban nunca. En V.50 se unificaron los once buscadores del sistema. Si un
+  buscador mira varios campos, se los concatena y se busca sobre el texto entero.
+
 - **Nombre de ítem clickeable:** en las tablas, el nombre abre la vista de detalle (verde +
   subrayado en hover, ojo al costado). Usar el componente `ClickableItemName` de
   `src/components/ui/` — no reescribir la lógica inline. Ya se usa en En Carta, Recetas y

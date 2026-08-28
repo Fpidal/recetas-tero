@@ -11,6 +11,7 @@ import { Button, Input, Select, Modal, ClickableItemName, BotonExportar } from '
 import { exportarCarta } from '@/lib/exportaciones'
 import { parsearNumero } from '@/lib/formato-numeros'
 import { SECCIONES as SECCIONES_ORDEN, agruparSeccion, margenDeSeccion } from '@/lib/secciones'
+import { coincideBusqueda } from '@/lib/buscar'
 
 
 
@@ -810,7 +811,7 @@ export default function CartaPage() {
 
   // Agrupar items por sección según tab activa y búsqueda
   const itemsActuales = (tabActiva === 'en_carta' ? items : itemsFueraCarta)
-    .filter(i => !busqueda || i.plato_nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    .filter(i => coincideBusqueda(i.plato_nombre, busqueda))
   const itemsPorSeccion = SECCIONES_ORDEN
     .map(seccion => ({
       seccion,

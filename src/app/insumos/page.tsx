@@ -15,6 +15,7 @@ import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero
 import ComparadorPrecios from '@/components/insumos/ComparadorPrecios'
 import { PALETA } from '@/lib/colores'
 import { hoyISO } from '@/lib/fechas'
+import { coincideBusqueda } from '@/lib/buscar'
 
 /**
  * Cuánto se tiene que apartar un precio nuevo del vigente para que el sistema
@@ -484,7 +485,9 @@ export default function InsumosPage() {
       if (filtroVariacion === 'sin_cambio') return variacion === null || variacion === 0
       return true
     })
-    .filter((i) => !busqueda || i.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    // Por fragmentos, igual que Vinos y Análisis: "ace oli" encuentra "Aceite
+    // de oliva" sin tipear el nombre entero ni respetar el orden. Ver lib/buscar.
+    .filter((i) => coincideBusqueda(i.nombre, busqueda))
     .sort((a, b) => {
       if (!filtroCategoria) return a.nombre.localeCompare(b.nombre, 'es')
       return 0

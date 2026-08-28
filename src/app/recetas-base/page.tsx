@@ -7,6 +7,7 @@ import { costoFinalInsumo } from '@/lib/costos'
 import { Button, ClickableItemName, BotonExportar } from '@/components/ui'
 import { exportarElaboraciones } from '@/lib/exportaciones'
 import Link from 'next/link'
+import { coincideBusqueda } from '@/lib/buscar'
 
 interface InsumoEnElaboraciones {
   id: string
@@ -247,11 +248,11 @@ export default function RecetasBasePage() {
   }
 
   const recetasFiltradas = busqueda
-    ? recetas.filter(r => r.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    ? recetas.filter(r => coincideBusqueda(r.nombre, busqueda))
     : recetas
 
   const insumosFiltrados = busquedaInsumos
-    ? insumosEnElaboraciones.filter(i => i.nombre.toLowerCase().includes(busquedaInsumos.toLowerCase()))
+    ? insumosEnElaboraciones.filter(i => coincideBusqueda(i.nombre, busquedaInsumos))
     : insumosEnElaboraciones
 
   // Card component for mobile

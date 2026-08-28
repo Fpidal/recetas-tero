@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { Button, Input, Select, Modal, Table, BotonExportar } from '@/components/ui'
 import { exportarProveedores } from '@/lib/exportaciones'
 import { Proveedor } from '@/types/database'
+import { coincideBusqueda } from '@/lib/buscar'
 
 const CATEGORIAS = [
   { value: '', label: 'Seleccionar...' },
@@ -337,17 +338,14 @@ export default function ProveedoresPage() {
     // Filtro por categoría
     if (filtroCategoria && p.categoria !== filtroCategoria) return false
 
-    // Filtro por búsqueda
-    if (!busqueda.trim()) return true
-    const term = busqueda.toLowerCase()
-    return (
-      p.nombre.toLowerCase().includes(term) ||
-      (p.contacto && p.contacto.toLowerCase().includes(term)) ||
-      (p.categoria && p.categoria.toLowerCase().includes(term)) ||
-      (p.celular && p.celular.includes(term)) ||
-      (p.telefono && p.telefono.includes(term)) ||
-      (p.cuit && p.cuit.includes(term)) ||
-      (p.email && p.email.toLowerCase().includes(term))
+    // Todos los campos como un solo texto, para buscar por fragmentos: "mar dam"
+    // encuentra a Marilu Damiano. Buscar campo por campo obligaba a que los
+    // fragmentos estuvieran todos en el MISMO campo. Ver lib/buscar.
+    return coincideBusqueda(
+      [p.nombre, p.contacto, p.categoria, p.celular, p.telefono, p.cuit, p.email]
+        .filter(Boolean)
+        .join(' '),
+      busqueda
     )
   })
 

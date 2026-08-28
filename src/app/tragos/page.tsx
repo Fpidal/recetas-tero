@@ -7,6 +7,7 @@ import { costoFinalInsumo } from '@/lib/costos'
 import { Button } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import Link from 'next/link'
+import { coincideBusqueda } from '@/lib/buscar'
 
 interface TragoConCosto {
   id: string
@@ -269,11 +270,11 @@ export default function TragosPage() {
   }
 
   const tragosFiltrados = busqueda
-    ? tragos.filter(t => t.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    ? tragos.filter(t => coincideBusqueda(t.nombre, busqueda))
     : tragos
 
   const insumosFiltrados = busquedaInsumos
-    ? insumosEnTragos.filter(i => i.nombre.toLowerCase().includes(busquedaInsumos.toLowerCase()))
+    ? insumosEnTragos.filter(i => coincideBusqueda(i.nombre, busquedaInsumos))
     : insumosEnTragos
 
   function bcDe(t: TragoConCosto): number {

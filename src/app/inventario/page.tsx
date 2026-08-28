@@ -6,6 +6,7 @@ import { Warehouse, ClipboardList, ClipboardCheck, TrendingDown, AlertTriangle, 
 import { Button, ClickableItemName, Modal } from '@/components/ui'
 import { formatearCantidad, formatearInputNumero, parsearNumero, formatearMoneda } from '@/lib/formato-numeros'
 import { hoyISO, dateToString } from '@/lib/fechas'
+import { coincideBusqueda } from '@/lib/buscar'
 import {
   obtenerMovimientos, guardarConteo, obtenerAjustes, obtenerHistorial,
   MOTIVOS, MOTIVO_INICIAL, DIAS_CONTEO_VIGENTE,
@@ -539,11 +540,10 @@ function Contar({
 }) {
   const [busqueda, setBusqueda] = useState('')
 
-  const visibles = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    if (!q) return movimientos
-    return movimientos.filter((m) => m.nombre.toLowerCase().includes(q))
-  }, [movimientos, busqueda])
+  const visibles = useMemo(
+    () => movimientos.filter((m) => coincideBusqueda(m.nombre, busqueda)),
+    [movimientos, busqueda]
+  )
 
   return (
     <div className="space-y-4">

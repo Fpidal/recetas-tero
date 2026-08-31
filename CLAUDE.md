@@ -110,7 +110,7 @@ src/
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
 
-## ⚠️ Nueve trampas que ya rompieron cosas
+## ⚠️ Once trampas que ya rompieron cosas
 
 **1. `anon` no recibe permisos — hoy, ninguno.** La clave anónima viaja en el bundle público.
 Hasta el 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los
@@ -189,6 +189,21 @@ Consecuencia: una promo no mueve el costo. El 25/08 entraron 12 cajas de Salente
 pagando 10 al 50% y 2 sin cargo: la botella salió $6.387 y el sistema la sigue costeando a
 $7.665, los de la lista. La pantalla de Vinos muestra ese precio real como **P.P**, sólo como
 referencia. Es una decisión, no un bug: el negocio se maneja con la lista del proveedor.
+
+**10. Comparar OC contra factura es NETO contra NETO.** El precio de la orden ya viene con el
+descuento pactado; el de la factura es de lista. Compararlos directo inventa una suba igual al
+descuento: los 25 ítems de El triunfo (3%) salían todos con un falso `+3,1%`, y el Salentein
+Reserva con `+70,2%` cuando se pagó 14,9% MENOS. Ya se corrigió DOS veces, en dos lugares
+distintos —`facturas/[id]/page.tsx` en su momento y `auditoria-semanal.ts` en V.51— porque la
+misma cuenta vivía en los dos y sólo se arregló uno. Si aparece un tercer lugar que compare
+pedido contra facturado, va con el descuento aplicado.
+
+**11. `precios_insumo` se ordena por `fecha` Y `created_at`.** Dos precios del mismo día —un
+tipeo y su corrección 23 segundos después— quedan en orden arbitrario si sólo se ordena por
+fecha, y el "precio anterior" puede terminar siendo el erróneo. El asado a 5 costillas mostraba
+`$243 → $24.301 (+9900%)` dos semanas después del error, cuando el cambio real de esa semana era
+de un peso. También inflaba el contador de "N° suba en 2 meses", que cuenta sobre la lista
+ordenada.
 
 ## Consultar la base (solo lectura)
 

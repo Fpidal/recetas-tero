@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.51',
+    fecha: '31/08/26',
+    cambios: [
+      'Resumen semanal: el descuento del proveedor se estaba leyendo como un aumento. Los 16 renglones de El triunfo con "+3,1%" eran su descuento del 3%, y el vino Salentein figuraba con +70% cuando en realidad se pagó 15% MENOS de lo pedido',
+      'Resumen semanal: un precio corregido el mismo día que se cargó mal podía tomarse como el precio anterior. Por eso el asado a 5 costillas seguía apareciendo con "+9900%" dos semanas después: el cambio real de esa semana era de un peso',
+    ],
+  },
+  {
     version: 'V.50',
     fecha: '27/08/26',
     cambios: [

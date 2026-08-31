@@ -244,7 +244,14 @@ export async function auditarSemana(desde: string, hasta: string): Promise<Audit
         if (!k) continue
         const prev = m.get(k)
         const cant = Number(it.cantidad) || 0
-        const precio = Number(it.precio_unitario) || 0
+        // NETO, con el descuento aplicado. El precio de la OC ya viene neto, así
+        // que comparar contra el precio de lista de la factura inventa una suba
+        // igual al descuento: los 25 ítems de El triunfo (3%) aparecían todos
+        // con un falso "+3,1%", y el Salentein Reserva con "+70,2%" cuando en
+        // realidad se pagó 14,9% MENOS de lo pedido. La OC no tiene descuento
+        // por línea, por eso el campo se lee con `?? 0`.
+        const descuento = Number(it.descuento) || 0
+        const precio = (Number(it.precio_unitario) || 0) * (1 - descuento / 100)
         // Si se repite, se suman cantidades y se toma el último precio
         m.set(k, { cantidad: (prev?.cantidad ?? 0) + cant, precio })
       }
@@ -312,8 +319,17 @@ export async function auditarSemana(desde: string, hasta: string): Promise<Audit
 
   const precios = await traerTodo<any>(
     'precios_insumo',
-    'insumo_id, proveedor_id, precio, fecha',
-    (q: any) => q.gte('fecha', aISO(hace60)).gt('precio', 0).order('fecha', { ascending: true })
+    'insumo_id, proveedor_id, precio, fecha, created_at',
+    // ⚠️ El desempate por created_at NO es cosmético. Dos precios del mismo día
+    // —un tipeo y su corrección 23 segundos después— quedaban en orden
+    // arbitrario, y el "precio anterior" podía terminar siendo el erróneo. El
+    // asado a 5 costillas mostró "$243 → $24.301, +9900%" en la semana del
+    // 24/08 cuando el cambio real era 24.300 → 24.301: +0,004%. Y de paso
+    // inventaba subas al contar `subasEnDosMeses` sobre una lista desordenada.
+    (q: any) =>
+      q.gte('fecha', aISO(hace60)).gt('precio', 0)
+        .order('fecha', { ascending: true })
+        .order('created_at', { ascending: true })
   )
 
   const porInsumo = new Map<string, any[]>()

@@ -1016,13 +1016,13 @@ export default function Home() {
         <div className="card p-3.5">
           <h2 className="text-base font-semibold text-ink mb-2">Variación Precios por Categoría</h2>
           {data.variacionCategoriasData.length === 0 ? (
-            <div className="flex items-center justify-center h-36">
+            <div className="flex items-center justify-center h-52">
               <p className="text-sm text-ink-muted">Sin datos</p>
             </div>
           ) : (
-            <div className="h-36">
+            <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.variacionCategoriasData} margin={{ top: 22, right: 10, left: -15, bottom: 14 }}>
+                <BarChart data={data.variacionCategoriasData} margin={{ top: 30, right: 10, left: -15, bottom: 22 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E8E2DA" />
                   <XAxis dataKey="categoria" tick={{ fontSize: 10, fill: '#6B6560' }} />
                   <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10, fill: '#6B6560' }} />
@@ -1046,7 +1046,7 @@ export default function Home() {
                         return (
                           <text
                             x={Number(x) + Number(width) / 2}
-                            y={sube ? Number(y) - 6 : Number(y) + Number(height) + 12}
+                            y={sube ? Number(y) - 9 : Number(y) + Number(height) + 15}
                             textAnchor="middle"
                             style={{ fontSize: 10, fill: '#4A4744', fontFamily: 'var(--font-mono)' }}
                           >

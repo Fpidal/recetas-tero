@@ -110,7 +110,7 @@ src/
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
 
-## ⚠️ Once trampas que ya rompieron cosas
+## ⚠️ Doce trampas que ya rompieron cosas
 
 **1. `anon` no recibe permisos — hoy, ninguno.** La clave anónima viaja en el bundle público.
 Hasta el 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los
@@ -204,6 +204,27 @@ fecha, y el "precio anterior" puede terminar siendo el erróneo. El asado a 5 co
 `$243 → $24.301 (+9900%)` dos semanas después del error, cuando el cambio real de esa semana era
 de un peso. También inflaba el contador de "N° suba en 2 meses", que cuenta sobre la lista
 ordenada.
+
+**12. La clave nueva no echa a nadie: las sesiones son un segundo candado.** Cambiar
+`encrypted_password` no toca las sesiones ya abiertas — se renuevan solas y su `not_after` viene
+en `null`, así que **no vencen nunca**. Dar de baja un acceso son dos pasos, y en este orden:
+primero la clave, después `delete from auth.sessions where user_id = ...`. Al revés, el que sabe
+la clave vieja vuelve a entrar antes de que termines. El 07/09/26 se fue un empleado que usaba
+el admin compartido: la ficha del dashboard decía "último login 30/07" y parecía una cuenta
+dormida, pero tenía **cuatro sesiones vivas** abiertas en junio y julio, tres con actividad esa
+misma semana y una esa mañana a las 10:21. `last_sign_in_at` se mueve sólo cuando alguien tipea
+la contraseña; la renovación automática del token no lo toca, así que ese campo no dice si hay
+alguien adentro — eso lo dice `auth.sessions`. Que cerró de verdad se verifica con
+`auth.refresh_tokens` filtrando `revoked = false`: tiene que dar 0.
+
+Alrededor de eso hay tres cosas que conviene saber antes de necesitarlas. La app no tiene
+pantalla de cambio de clave —el único formulario es `src/app/login/page.tsx`— así que todo pasa
+por el SQL Editor; el `service_role` no está en `.env.local` a propósito, y sin esa clave no se
+pueden tocar usuarios desde el código. El rol lector tampoco ve el schema `auth`: los `GRANT`
+que se le dieron ese día son columna por columna y dejan afuera `encrypted_password`. Y el
+último eslabón no es técnico: el "olvidé mi contraseña" manda un mail a la casilla del usuario,
+así que quien lea ese buzón entra sin saber ninguna clave. La de `admin@cantaelgallo.net` la
+leen el dueño y la encargada.
 
 ## Consultar la base (solo lectura)
 

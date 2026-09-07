@@ -10,10 +10,17 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.53',
+    fecha: '07/09/26',
+    cambios: [
+      'Variación de precios por categoría: los porcentajes de las categorías que bajaron se dibujaban ENCIMA de la barra, sobre el color, y no se leían. Ahora van debajo, igual que los que suben van arriba',
+    ],
+  },
+  {
     version: 'V.52',
     fecha: '07/09/26',
     cambios: [
-      'Variación de precios por categoría: el gráfico se agrandó y los porcentajes dejaron de encimarse. Con categorías que suben y otras que bajan, los números quedaban apretados contra las barras y no se leían',
+      'Variación de precios por categoría: el gráfico se agrandó para darle aire a los números',
     ],
   },
   {

@@ -292,6 +292,16 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   **El chequeo `aislado-por-cliente` va a estar en rojo hasta terminar**, y sirve para medir el
   avance. El objetivo es cero antes de dar de alta al segundo cliente.
 
+  **Y el ciclo de vida de los accesos, que hoy no existe.** El 07/09/26 se fue un empleado y
+  darle de baja el acceso fueron dos pasos a mano en el SQL Editor: cambiar `encrypted_password`
+  y borrar `auth.sessions`. Ahí se vio que las sesiones tienen `not_after` en `null` —no vencen
+  nunca— y que el admin compartido tenía cuatro vivas, abiertas en junio y julio, una con
+  actividad esa misma mañana. Con un usuario por persona esto se repite cada vez que alguien
+  entra o sale, así que el multiusuario necesita tres cosas más: sesiones con vencimiento, una
+  pantalla para dar de alta y de baja sin tocar SQL, y que el `rol` de `perfiles` —hoy sólo un
+  texto debajo del nombre en el Sidebar, que no limita nada— efectivamente corte algo. Ver
+  trampa 12 del CLAUDE.md.
+
 - **Venta por planes (básico / medio / completo).** Es un eje DISTINTO del multiusuario y se
   resuelve en otro lado:
 

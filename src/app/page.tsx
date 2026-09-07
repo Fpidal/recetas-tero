@@ -1034,26 +1034,25 @@ export default function Home() {
                     {data.variacionCategoriasData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={LABEL_COLORES[entry.categoria] || entry.color || '#6B6560'} />
                     ))}
-                    {/* La etiqueta va ARRIBA si la barra sube y ABAJO si baja.
-                        Con position="top" fijo, las barras negativas quedaban
-                        con el numero encimado sobre el eje. */}
+                    {/* La etiqueta va ARRIBA si la barra sube y ABAJO si baja, con
+                        dos LabelList y la posicion que calcula Recharts. Antes se
+                        hacia a mano con `y + height` y el numero de las barras
+                        negativas terminaba DENTRO de la barra, encimado al color. */}
                     <LabelList
                       dataKey="variacion"
-                      content={(props: any) => {
-                        const { x, y, width, height, value } = props
-                        if (value === undefined || value === null) return null
-                        const sube = Number(value) >= 0
-                        return (
-                          <text
-                            x={Number(x) + Number(width) / 2}
-                            y={sube ? Number(y) - 9 : Number(y) + Number(height) + 15}
-                            textAnchor="middle"
-                            style={{ fontSize: 10, fill: '#4A4744', fontFamily: 'var(--font-mono)' }}
-                          >
-                            {Number(value) > 0 ? '+' : ''}{Number(value).toFixed(1)}%
-                          </text>
-                        )
-                      }}
+                      position="top"
+                      offset={8}
+                      formatter={(v: any) =>
+                        Number(v) >= 0 ? `${Number(v) > 0 ? '+' : ''}${Number(v).toFixed(1)}%` : ''
+                      }
+                      style={{ fontSize: 10, fill: '#4A4744', fontFamily: 'var(--font-mono)' }}
+                    />
+                    <LabelList
+                      dataKey="variacion"
+                      position="bottom"
+                      offset={8}
+                      formatter={(v: any) => (Number(v) < 0 ? `${Number(v).toFixed(1)}%` : '')}
+                      style={{ fontSize: 10, fill: '#4A4744', fontFamily: 'var(--font-mono)' }}
                     />
                   </Bar>
                 </BarChart>

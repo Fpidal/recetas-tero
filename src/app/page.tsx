@@ -35,6 +35,7 @@ import {
   LabelList,
 } from 'recharts'
 import { dateToString } from '@/lib/fechas'
+import { ivaLineaOrden } from '@/lib/iva'
 
 // Colores del sistema editorial
 const COLORS = {
@@ -241,7 +242,7 @@ export default function Home() {
         .from('ordenes_compra')
         .select(`
           id, numero, total,
-          orden_compra_items (cantidad, precio_unitario, insumos (iva_porcentaje)),
+          orden_compra_items (cantidad, precio_unitario, iva_porcentaje, insumos (iva_porcentaje)),
           facturas_proveedor (id),
           proveedores (nombre)
         `)
@@ -257,7 +258,7 @@ export default function Home() {
         if (!orden.orden_compra_items || orden.orden_compra_items.length === 0) return orden.total || 0
         return orden.orden_compra_items.reduce((sum: number, item: any) => {
           const subtotal = item.cantidad * item.precio_unitario
-          const iva = subtotal * ((item.insumos?.iva_porcentaje ?? 21) / 100)
+          const iva = subtotal * (ivaLineaOrden(item) / 100)
           return sum + subtotal + iva
         }, 0)
       }

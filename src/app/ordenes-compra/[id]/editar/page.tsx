@@ -6,6 +6,7 @@ import { Plus, Trash2, ArrowLeft, Save, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
 import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
+import { ivaLineaOrden } from '@/lib/iva'
 
 interface Proveedor {
   id: string
@@ -105,7 +106,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         .select(`
           id, proveedor_id, notas, estado,
           orden_compra_items (
-            id, insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display,
+            id, insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display, iva_porcentaje,
             insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete),
             vinos (bodega, nombre, cepa)
           )
@@ -125,7 +126,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
       const itemsData: ItemOrden[] = (ordenRes.data.orden_compra_items as any[]).map((item: any) => {
         const subtotal = parseFloat(item.subtotal)
         const isVino = !!item.vino_id
-        const ivaPorcentaje = isVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
+        const ivaPorcentaje = ivaLineaOrden(item)
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
         const contenido = isVino ? 1 : (item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1)
         const unidadMedida = isVino ? 'caja' : (item.insumos?.unidad_medida || '')
@@ -471,6 +472,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
           cantidad: item.cantidad,
           unidades: item.unidades,
           precio_unitario: item.precio_unitario,
+          iva_porcentaje: item.iva_porcentaje,
           unidad_display: item.unidad_display,
         })
         .eq('id', item.id)
@@ -490,6 +492,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         cantidad: item.cantidad,
         unidades: item.unidades,
         precio_unitario: item.precio_unitario,
+        iva_porcentaje: item.iva_porcentaje,
         unidad_display: item.unidad_display,
       }))
 

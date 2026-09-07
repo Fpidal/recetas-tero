@@ -251,6 +251,8 @@ export interface Database {
           /** Bultos pedidos (1 horma, 2 bifes). Informativo: no entra en el subtotal. */
           unidades: number | null
           precio_unitario: number
+          /** IVA pactado para esta linea. NULL en las ordenes previas al 07/09/26. */
+          iva_porcentaje: number | null
           subtotal: number
           created_at: string
         }

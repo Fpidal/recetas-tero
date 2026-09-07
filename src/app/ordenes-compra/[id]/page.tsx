@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { Button, Select } from '@/components/ui'
 import { getNextOCNumber } from '@/lib/oc-numero'
 import { formatearMoneda, formatearFecha } from '@/lib/formato-numeros'
+import { ivaLineaOrden } from '@/lib/iva'
 
 interface OrdenDetalle {
   id: string
@@ -117,6 +118,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           cantidad,
           unidades,
           precio_unitario,
+          iva_porcentaje,
           subtotal,
           unidad_display,
           insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete),
@@ -151,7 +153,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
       items: (data.orden_compra_items as any[]).map((item: any) => {
         const subtotal = parseFloat(item.subtotal)
         const esVino = !!item.vino_id
-        const ivaPorcentaje = esVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
+        const ivaPorcentaje = ivaLineaOrden(item)
         const ivaMonto = subtotal * (ivaPorcentaje / 100)
         const contenido = esVino ? 1 : (item.insumos?.cantidad_por_paquete ? Number(item.insumos.cantidad_por_paquete) : 1)
         const unidadMedida = esVino ? 'caja' : (item.insumos?.unidad_medida || '')

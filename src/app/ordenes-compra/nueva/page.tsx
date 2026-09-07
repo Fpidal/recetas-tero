@@ -470,6 +470,9 @@ export default function NuevaOrdenCompraPage() {
       cantidad: item.cantidad,
       unidades: item.unidades,
       precio_unitario: item.precio_unitario,
+      // El IVA pactado para ESTA linea. Antes no se guardaba y al reabrir la
+      // orden se releia el del insumo, perdiendo lo que el usuario habia elegido.
+      iva_porcentaje: item.iva_porcentaje,
       unidad_display: item.unidad_display !== item.unidad_medida ? item.unidad_display : null,
     }))
 

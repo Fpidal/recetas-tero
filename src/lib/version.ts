@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.54',
+    fecha: '07/09/26',
+    cambios: [
+      'Órdenes de compra: el IVA que se elige en cada renglón ahora queda guardado. Antes se podía cambiar y los totales se veían bien mientras se cargaba, pero al guardar la orden volvía al IVA que tiene el insumo, sin avisar nada. Pasaba, por ejemplo, con la bondiola: está cargada en 0% y a Avicola del Norte se le compra con 21%',
+      'El IVA elegido también se guarda al editar una orden ya hecha, así se pueden corregir las anteriores',
+      'Las órdenes cargadas hasta hoy no cambian: siguen calculando con el IVA del insumo, igual que siempre',
+    ],
+  },
+  {
     version: 'V.53',
     fecha: '07/09/26',
     cambios: [

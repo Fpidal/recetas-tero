@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import { supabase } from './supabase'
 import { PALETA, rgb } from './colores'
+import { ivaLineaOrden } from '@/lib/iva'
 
 interface OrdenPDF {
   id: string
@@ -49,7 +50,7 @@ export async function generarPDFOrden(ordenId: string) {
       id, numero, fecha, notas, estado,
       proveedores (nombre, contacto, telefono, email, direccion),
       orden_compra_items (
-        insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display,
+        insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display, iva_porcentaje,
         insumos (nombre, unidad_medida, iva_porcentaje),
         vinos (bodega, nombre, cepa)
       )
@@ -88,7 +89,7 @@ export async function generarPDFOrden(ordenId: string) {
     items: (data.orden_compra_items as any[]).map((item: any) => {
       const subtotal = parseFloat(item.subtotal)
       const esVino = !!item.vino_id
-      const ivaPorcentaje = esVino ? 21 : (item.insumos?.iva_porcentaje ?? 21)
+      const ivaPorcentaje = ivaLineaOrden(item)
       const ivaMonto = subtotal * (ivaPorcentaje / 100)
       const unidadMedida = esVino ? 'caja' : (item.insumos?.unidad_medida || '')
       const nombreItem = esVino

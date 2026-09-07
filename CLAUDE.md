@@ -159,12 +159,24 @@ sí se escaneaban; Receta, Ejecutivo y Trago usan colores que no figuran en ning
 salían en negro. **Si agregás una carpeta nueva con clases de Tailwind adentro, va al `content`.**
 
 **6. `ordenes_compra.total` guarda el NETO, y ninguna pantalla lo usa.** Todas calculan el IVA
-en vivo a partir del `iva_porcentaje` de cada insumo (ver `calcularTotalConIva` en
+en vivo, con `ivaLineaOrden()` de `src/lib/iva.ts` (ver `calcularTotalConIva` en
 `ordenes-compra/page.tsx`). Así que el número que ve el usuario **siempre tiene IVA** aunque la
-columna diga otra cosa. Comparar `ordenes_compra.total` contra `facturas_proveedor.total` —que sí
+columna diga otra cosa.
+
+Comparar `ordenes_compra.total` contra `facturas_proveedor.total` —que sí
 incluye IVA y percepciones— da una diferencia del 21,9% que parece un problema de compras y es
 solo el impuesto: contra el neto de la factura, la diferencia real entre lo pedido y lo entregado
 es 3,4%. Pasó el 20/08/26 al armar el objetivo de compras.
+
+Desde el 07/09/26 ese IVA sale de la **línea** de la orden, no del insumo. `orden_compra_items`
+tiene su propio `iva_porcentaje` —igual que `factura_items`— porque el mismo insumo se compra
+con distinto IVA según el proveedor: la bondiola figura al 0% en `insumos` y a Avicola del Norte
+se le compra al 21%. Antes la pantalla de carga te dejaba elegir el porcentaje y recalculaba los
+totales en vivo, pero el INSERT no lo guardaba y al reabrir la orden se releía el del insumo: el
+valor elegido se perdía **sin un error ni un aviso**. Las órdenes anteriores a esa fecha tienen
+la columna en NULL y siguen cayendo al insumo, así que sus totales no se movieron. La cuenta
+estaba copiada en siete pantallas y ahora vive sólo en `ivaLineaOrden()`; ver
+`supabase-oc-iva-por-linea.sql`.
 
 **7. `plato_ingredientes` no acepta vino.** Solo tiene `insumo_id` y `receta_base_id`, así que una
 receta no puede llevar una copa de vino. Cuando haga falta relacionar un vino con una venta

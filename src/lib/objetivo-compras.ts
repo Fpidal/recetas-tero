@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { ivaLineaOrden } from '@/lib/iva'
 
 /**
  * Objetivo de compras semanal, y cómo viene la semana contra él.
@@ -111,7 +112,7 @@ function totalizar(o: FilaOC): { sinVinos: number; vinos: number } {
     const neto = Number(it.cantidad) * Number(it.precio_unitario)
     // Los vinos van al 21%; el resto toma el IVA de su insumo. Sin insumo
     // —un item huérfano— se asume 21%, que es el caso más común.
-    const iva = it.vino_id ? 21 : it.insumos?.iva_porcentaje ?? 21
+    const iva = ivaLineaOrden(it)
     const conIva = neto * (1 + iva / 100)
     if (it.vino_id) vinos += conIva
     else sinVinos += conIva
@@ -127,7 +128,7 @@ export async function obtenerEstadoSemana(semanaDesde: string): Promise<EstadoSe
       .from('ordenes_compra')
       .select(`
         id, fecha, estado,
-        orden_compra_items ( cantidad, precio_unitario, vino_id, insumos ( iva_porcentaje ) )
+        orden_compra_items ( cantidad, precio_unitario, vino_id, iva_porcentaje, insumos ( iva_porcentaje ) )
       `)
       .gte('fecha', semanaDesde)
       .lte('fecha', semanaHasta)

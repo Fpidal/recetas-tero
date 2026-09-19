@@ -184,6 +184,20 @@ fraccionada —una copa es 0,333 de botella— se usa el `factor` de `mapeo_vent
 equivalencia sin duplicar el vino como insumo. Duplicarlo dejaría dos precios que mantener, y el
 día que llegue una factura de esa bodega se actualiza uno solo, sin que nada avise.
 
+`menu_ejecutivo_items` tampoco lo acepta, y eso deja un agujero propio: la copa de vino que va
+DENTRO de un menú no puede estar en su composición. Al importar ventas, una fila en $0 se propone
+ignorar —suele ser un componente ya incluido en un menú costeado, como la ensalada del Menú
+Pescado— pero con el vino esa regla falla, porque el menú no lo contiene. Hasta el 07/09/26
+`M. Copa Tinto` y `M. Copa Blanco Chard` estaban ignoradas y salían en $0.
+
+**El `factor` describe UNA copa, no la venta.** Se multiplica por las unidades del informe
+(`cantidad = unidades * factor`, `importar-ventas.ts:322`), así que cuántas se vendieron ya viene
+por otro lado; poner ahí el total multiplica dos veces. `C. Copa Vino Tinto` tenía 1,00 —cada copa
+descontaba una botella entera— y el sábado 5 sus 3 copas entraron como 3 botellas de Salentein
+Reserva Malbec: 8 registradas contra 6 servidas, $15.330 de más en un solo servicio. El blanco
+fallaba al revés, con 0,25 (copa de 187cc). Las cuatro quedaron en 0,333 —botella de 750, copa de
+250— y así no se tocan nunca más. Ver `supabase-mapeo-copas-vino.sql`.
+
 **8. El inventario descuenta en BRUTO, y el stock no se guarda en ningún lado.** La receta
 guarda el NETO que va al plato —7 kg de cebolla pelada— pero de la cámara salieron
 7 ÷ (1 − merma) = 7,78 kg con cáscara. Descontar el neto haría que el conteo nunca cierre,

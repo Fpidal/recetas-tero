@@ -228,11 +228,6 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   precio, así que el Ranking las muestra como "Sin precio" y su venta queda sin atribuir. No son
   menores: en la noche del 24/07 fueron 51 y 26 unidades, lo más vendido del turno.
 
-- **La copa de vino dentro de los menús puede no estar costeada.** El informe del 24/07 trae
-  `M. Copa Tinto` con 9 unidades en $0, o sea nueve copas servidas dentro de menús. Si la
-  elaboración "Bebidas menu" solo tiene gaseosa y agua, ese vino no está en el costo de ningún
-  lado. Conviene revisar la composición de los menús que incluyen vino.
-
 - **Dónde mirar bebida contra comida (V.38).** Quedaron **dos** números y no miden lo mismo:
 
   El encabezado de Carga diaria abre el total en **Cocina / Bebidas**. Decide por el item
@@ -329,6 +324,18 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 3. Decisiones tomadas
 
 Registradas para no volver a discutirlas.
+
+- **La copa de vino de los menús se costea por `mapeo_ventas`, no metiéndola en el menú**
+  (07/09/26). Se confirmó lo que estaba anotado como sospecha: "Bebidas menu" tiene sólo media
+  agua y media gaseosa, y `menu_ejecutivo_items` no acepta `vino_id`, así que la copa no podía
+  estar en la composición ni queriendo. En vez de agregar la columna, se mapearon `M. Copa Tinto`
+  y `M. Copa Blanco Chard` al vino con `factor` 0,333 — el mismo mecanismo que ya usaban las
+  copas de la carta, sin duplicar el vino como insumo.
+
+  De paso se corrigió el factor de las copas de la carta, que describía la venta en vez de una
+  copa: `C. Copa Vino Tinto` estaba en 1,00 y cada copa descontaba una botella entera. El sábado
+  5 eso registró 8 botellas de Malbec donde salieron 6. Ver `supabase-mapeo-copas-vino.sql` y la
+  trampa 7 del CLAUDE.md.
 
 - **Ventas y Análisis no se unifican.** Son dos niveles de zoom sobre el mismo negocio:
   Ventas es la foto gruesa (ventas vs compras), Análisis es el detalle fino (consumo real de

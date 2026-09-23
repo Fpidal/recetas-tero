@@ -13,11 +13,16 @@ import * as XLSX from 'xlsx'
 import { hoyISO } from '@/lib/fechas'
 import { coincideBusqueda } from '@/lib/buscar'
 
-const CATEGORIAS_VINO = ['Tintos', 'Blancos', 'Espumantes']
+// La carta impresa arma una sección por categoría. Rosados y Dulces existen
+// porque hasta ahora el rosado figuraba entre los tintos y el Late Harvest
+// entre los blancos, y así salían impresos.
+const CATEGORIAS_VINO = ['Tintos', 'Blancos', 'Rosados', 'Espumantes', 'Dulces']
 
 const CEPAS = [
   'Malbec', 'Cabernet Sauvignon', 'Cabernet Franc', 'Cabernet Merlot', 'Cabernet Malbec',
-  'Pinot Noir', 'Merlot', 'Syrah', 'Syrah Syrah', 'Blend', 'Chardonnay', 'Sauvignon Blanc',
+  // 'Syrah Syrah' estuvo en esta lista y por eso hay un vino cargado así: no fue
+  // un tipeo, era una opción elegible del desplegable. Se imprimía en la carta.
+  'Pinot Noir', 'Merlot', 'Syrah', 'Blend', 'Chardonnay', 'Sauvignon Blanc',
   'Torrontés', 'Petit Verdot', 'Tannat', 'Bonarda', 'Tempranillo', 'Rosé',
   'Brut Nature', 'Extra Brut', 'Blanc de Blanc', 'Otra'
 ]
@@ -245,9 +250,12 @@ export default function VinosPage() {
 
     setIsSaving(true)
     const descuentoValue = parsearNumero(form.descuento_porcentaje)
+    // Colapsa los espacios de más, no sólo los de las puntas: un doble espacio
+    // en el medio del nombre deja un hueco visible en la carta impresa.
+    const limpiar = (texto: string) => texto.replace(/\s+/g, ' ').trim()
     const vinoData = {
-      bodega: form.bodega.trim(), nombre: form.nombre.trim(),
-      codigo_proveedor: form.codigo_proveedor.trim() || null,
+      bodega: limpiar(form.bodega), nombre: limpiar(form.nombre),
+      codigo_proveedor: limpiar(form.codigo_proveedor) || null,
       categoria: form.categoria, cepa: form.cepa, zona: form.zona || null,
       precio_caja: parsearNumero(form.precio_caja),
       unidades_caja: parseInt(form.unidades_caja) || 6,
@@ -321,8 +329,8 @@ export default function VinosPage() {
     fetchVinosConCarta()
   }
 
-  async function handleDescargarPDF() {
-    await generarPDFCartaVinos()
+  async function handleDescargarPDF(conPrecios: boolean) {
+    await generarPDFCartaVinos({ conPrecios })
   }
 
   async function fetchHistorialVino(vino: Vino) {
@@ -866,10 +874,20 @@ export default function VinosPage() {
           </button>
         )}
         {activeTab === 'carta' && (
-          <button onClick={handleDescargarPDF} className="px-2 py-1 border border-gray-300 rounded text-[10px] text-gray-600 hover:bg-gray-50 flex items-center gap-1">
-            <FileText className="w-3 h-3" />
-            Carta de Vinos
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => handleDescargarPDF(true)}
+              title="PDF de la carta con el precio de cada botella"
+              className="px-2 py-1 border border-gray-300 rounded text-[10px] text-gray-600 hover:bg-gray-50 flex items-center gap-1">
+              <FileText className="w-3 h-3" />
+              Carta con precios
+            </button>
+            <button onClick={() => handleDescargarPDF(false)}
+              title="La misma carta, sin los precios"
+              className="px-2 py-1 border border-gray-300 rounded text-[10px] text-gray-600 hover:bg-gray-50 flex items-center gap-1">
+              <FileText className="w-3 h-3" />
+              Sin precios
+            </button>
+          </div>
         )}
       </div>
 

@@ -10,6 +10,21 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.55',
+    fecha: '23/09/26',
+    cambios: [
+      'Carta de vinos en PDF rediseñada: ahora lleva el precio de cada botella y el logo de Tero, sobre fondo blanco',
+      'Los vinos salen ordenados del más caro al más barato dentro de cada sección',
+      'Se agregaron las secciones Rosados y Dulces. El rosado salía impreso entre los tintos y el Late Harvest entre los blancos',
+      'La carta ya no pierde vinos al final de la hoja: antes los últimos Malbec se escribían encima del pie de página y, pasada la hoja, directamente no se imprimían sin avisar nada',
+      'Se sacó el código QR, que llevaba a la pantalla del sistema y pedía usuario y contraseña',
+      'Ahora se puede bajar la carta con precios o sin precios, con dos botones separados',
+      'En la ficha del vino ya se puede elegir Rosados o Dulces como categoría',
+      'Se sacó "Syrah Syrah" de la lista de cepas: estaba entre las opciones para elegir y por eso había un vino cargado así',
+      'Al guardar un vino se limpian los espacios de más del nombre, que en la carta impresa dejaban un hueco en el medio',
+    ],
+  },
+  {
     version: 'V.54',
     fecha: '07/09/26',
     cambios: [

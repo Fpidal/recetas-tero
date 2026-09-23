@@ -120,6 +120,16 @@ CRUD de proveedores con datos de contacto, situación IVA, condiciones de pago, 
 ### Vinos (`/vinos`)
 Gestión especializada de vinos con bodega, varietal, precio lista y descuentos.
 
+**Carta de vinos en PDF** (V.55), en dos versiones: *con precios* y *sin precios*. Fondo blanco,
+el logo de Tero como cabecera, precio por botella, y los vinos ordenados de mayor a menor precio
+dentro de cada sección. Las secciones salen de la **categoría de la ficha** del vino (Tintos,
+Blancos, Rosados, Espumantes, Dulces) y de nada más: si un vino aparece donde no va, se corrige
+la categoría en la pantalla, nunca en el generador.
+
+> El costo de la botella sale de la **lista de la bodega**, no de la factura (ver `CLAUDE.md`,
+> trampa 9). El precio que se imprime en la carta es otra cosa: `carta_vinos.precio_carta`, que
+> es lo que se le cobra al cliente.
+
 ### Recetas Base (`/recetas-base`)
 Sub-recetas reutilizables (salsas, guarniciones). Cálculo automático de costo por porción.
 
@@ -154,6 +164,12 @@ Dos solapas:
 
 ### Inventario (`/inventario`)
 Control de stock con hojas de control diario. Las NC restan del inventario automáticamente.
+
+> **No hay tabla de stock.** El stock sale siempre de la cuenta *último conteo + compras −
+> consumo* (`src/lib/inventario.ts`), justamente para que no pueda quedar desfasado. Este README
+> listó `inventario_stock` y `hojas_control_inventario` como tablas hasta el 23/09/26 y **nunca
+> existieron**: la misma invención que tenía `CLAUDE.md` y que costó $60 millones de mercadería
+> imaginaria en pantalla.
 
 ### Estadísticas (`/estadisticas`)
 Dashboard analítico en cinco solapas:
@@ -210,7 +226,7 @@ Recuperación de items eliminados (soft delete).
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/tu-usuario/recetas-tero.git
+git clone git@github.com:Fpidal/recetas-tero.git
 cd recetas-tero
 
 # Instalar dependencias
@@ -235,6 +251,13 @@ npm run start      # Iniciar servidor de producción
 npm run lint       # Ejecutar ESLint
 npm run seed-demo  # Cargar datos de demostración
 npm run dev:demo   # Desarrollo contra la BASE DE DEMO (puerto 3001)
+npm run consultar  # Consultar la base en SOLO LECTURA (rol lector_analisis)
+```
+
+```bash
+npm run consultar -- chequeos            # los invariantes del sistema
+npm run consultar -- --sql "SELECT ..."  # consulta libre
+npm run consultar -- --sql "..." --json  # salida JSON
 ```
 
 > `dev:demo` reemplaza temporalmente `.env.local` por `.env.demo` y lo restaura al salir.
@@ -281,7 +304,10 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 | `orden_compra_items` | Items de cada OC |
 | `menus_ejecutivos` | Menús del día |
 | `menus_especiales` | Menús para eventos |
-| `inventario_stock` | Stock actual |
+| `vinos` | Vinos: bodega, cepa, zona, categoría, precio de caja y descuento |
+| `carta_vinos` | Qué vinos están en carta, con su `precio_carta` y si son recomendados |
+| `inventario_conteos` | Cada vez que se cuenta la cámara |
+| `inventario_conteo_items` | Lo contado de cada insumo, contra lo que decía el sistema |
 | `ventas_diarias` | Ventas y cubiertos por día (mediodía/noche/eventos) |
 | `consumo_diario` | Cabecera de carga de consumo real por día/servicio |
 | `consumo_items` | Items consumidos (insumo/elaboración/receta) con costo IVA inc. |
@@ -334,14 +360,47 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 - **Formato de fechas**: DD/MM/YYYY
 - **Variables de dominio**: En español (`precioVenta`, `costoInsumo`)
 - **Lógica técnica**: En inglés
-- **Tipografía numérica**: Todos los valores numéricos usan `font-mono` (JetBrains Mono)
+- **Tipografía numérica**: Todos los valores numéricos usan `font-mono` (IBM Plex Mono)
 
 ## Deploy
 
-El proyecto está configurado para deploy automático en Vercel:
+Vercel deploya solo desde `main` en GitHub. **El push es el deploy**: no hay que tocar nada en el panel.
 
 ```bash
-git push origin main  # Auto-deploy a producción
+git push origin main
+```
+
+### El remote va por SSH, y conviene que siga así
+
+```
+origin  git@github.com:Fpidal/recetas-tero.git
+```
+
+**No pasarlo a HTTPS.** Por HTTPS el push tiene que sacar un token del llavero de macOS, y
+cualquier proceso sin terminal interactiva —un agente, un script, un hook de CI— muere con
+`could not read Username for 'https://github.com'`. El commit queda en local y nadie se entera.
+
+Lo traicionero es que **el `pull` sigue andando igual**: el repo es público, así que leer es
+anónimo y sólo escribir pide credenciales. No aparece ningún error, todo parece normal, y el
+trabajo simplemente no llega a GitHub.
+
+Pasó el 23/09/26. El push falló por credenciales, el `pull` del arranque había funcionado sin
+problema, y se le dio "Redeploy" a Vercel tres veces sobre el mismo código de siempre,
+buscando el error en el deploy. Nunca estuvo ahí: los commits no habían salido de la máquina.
+
+**Si un cambio no aparece en producción, verificar esto ANTES de mirar Vercel:**
+
+```bash
+git status -sb          # "[ahead N]" = nunca salió. El problema es acá.
+git log origin/main -1  # el commit que GitHub tiene de verdad
+git remote -v           # tiene que decir git@github.com, no https://
+```
+
+Si el remote quedó en HTTPS, se vuelve a SSH con:
+
+```bash
+git remote set-url origin git@github.com:Fpidal/recetas-tero.git
+ssh -T git@github.com   # tiene que responder "Hi Fpidal!"
 ```
 
 ## Licencia

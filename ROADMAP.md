@@ -41,11 +41,11 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 |---|---|
 | **Inicio** | Panel de entrada: KPIs de la semana, alertas de variación de precios, compras por categoría y **Cifras del mes** — ventas, compras, margen bruto e incidencia teórica y real contra el mes anterior (V.32) |
 | **Insumos** | Ingredientes: unidad, categoría, IVA, merma, presentaciones. Acceso a Proveedores y al Comparador de precios |
-| **Vinos** | Carta de vinos con importación de listas de precios desde Excel de bodega (matching por código y cepa). Buscador por fragmentos: `sal re mal` encuentra el Salentein Reserva Malbec entre ocho "Salentein Reserva" que sólo difieren en la cepa (V.49). Debajo del costo, el **P.P** — lo pagado en la última factura, sólo como referencia |
+| **Vinos** | Carta de vinos con importación de listas de precios desde Excel de bodega (matching por código y cepa). Buscador por fragmentos: `sal re mal` encuentra el Salentein Reserva Malbec entre ocho "Salentein Reserva" que sólo difieren en la cepa (V.49). Debajo del costo, el **P.P** — lo pagado en la última factura, sólo como referencia. **Carta de vinos en PDF** (V.55), con precios o sin precios, ordenada de mayor a menor dentro de cada sección |
 | **Elaboraciones** | Sub-recetas (bases) que se usan como ingrediente dentro de las recetas |
 | **Recetas** | Platos: ingredientes, costo, margen, precio de venta, foto |
 | **Tragos** | Coctelería con costos y beverage cost |
-| **Carta** | Carta editorial en HTML + QR al menú digital público (`/menu`). Exporta a Excel lo que está en carta y lo que quedó afuera. Desde acá se llega a Menús ejecutivos y especiales |
+| **Carta** | Carta editorial en HTML. Exporta a Excel lo que está en carta y lo que quedó afuera. Desde acá se llega a Menús ejecutivos y especiales. **El menú digital público (`/menu`) y su QR se sacaron en V.41**: hoy no hay ninguna pantalla que muestre datos sin sesión, y por eso se le pudieron revocar a `anon` las 8 columnas que le quedaban |
 | **Menús ejecutivos** | Menú del día: entrada + principal + bebida. La ficha muestra la **Composición del costo** (V.36) — torta por componente, coloreada según el papel (principal, entrada, bebida) y con un matiz por porción, porque un menú de parrilla tiene siete componentes que son todos principal. Sirve para ver qué componente decide el costo: en Menu Pescados el salmón es el 75% |
 | **Órdenes de Compra** | Pedidos a proveedores, con PDF. **Objetivo de compras semanal** (V.43): lo pedido en la semana contra un objetivo editable, con solapa de historial. Se cuenta por **fecha de pedido** —medido sobre 104 facturas, ninguna tardó más de 7 días desde su OC— y **con IVA**, que es como se ven los totales en pantalla |
 | **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito. Solapa **Resumen semanal** (V.26): faltantes, cambios de precio, agregados sin pedir y órdenes sin factura, con notas por línea y PDF |
@@ -59,7 +59,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ### Convenciones que no se negocian
 
 - Soft delete con campo `activo`, nunca borrado físico.
-- Números siempre con `font-mono` (JetBrains Mono) para alineación tabular.
+- Números siempre con `font-mono` (IBM Plex Mono) para alineación tabular.
 - Formato argentino: `1.234,56` y fechas `DD/MM/YYYY`.
 - **Inputs numéricos editables:** mientras el campo está en foco debe mostrar el *texto* que se
   está tipeando, y recién convertir a número en el `blur`. Si el input muestra directamente el
@@ -106,6 +106,27 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 - **Todo lo que lea muchas filas va paginado.** PostgREST corta en 1000 sin avisar y sin
   error. `factura_items` ya pasó las 2300 y `precios_insumo` las 3500. Ya escondió 63
   variaciones de precio (V.22).
+- **Nada se dibuja en un PDF sin medirse antes.** El generador de la carta de vinos acumulaba
+  una `y` y escribía donde cayera: los últimos Malbec se imprimían encima del pie de página y
+  todo lo que pasaba los 297 mm jsPDF lo descartaba **sin error**. O sea que agregar vinos los
+  hacía desaparecer de la carta en silencio. Desde V.55 cada bloque se mide contra el tope de su
+  columna y salta a la columna o a la carilla siguiente; se verifica generando la carta
+  duplicada y triplicada y contando que salgan todos. Cualquier PDF que arme listas largas
+  —`generar-pdf-carta.ts`, `generar-pdf-stock.ts`, `generar-pdf-oc.ts`— tiene el mismo riesgo.
+
+- **El push va por SSH, y el `pull` andando no prueba nada.** El remote es
+  `git@github.com:Fpidal/recetas-tero.git`. Por HTTPS el push necesita el llavero de macOS y
+  cualquier proceso sin terminal interactiva falla con `could not read Username`. Como el repo
+  es público, **leer es anónimo**: el `pull` funciona igual, no hay ningún error, y el commit se
+  queda en local. El 23/09/26 se redeployó Vercel tres veces sobre el mismo código buscando el
+  problema en el deploy. Antes de culpar a Vercel: `git status -sb` — si dice `[ahead N]`,
+  nunca salió.
+
+- **Una regla escondida en el generador pisa lo que se elige en la pantalla.** En V.55 el PDF de
+  vinos forzaba el Late Harvest a Dulces y el rosado a Rosados porque estaban mal categorizados.
+  Se sacó a propósito: mientras existiera, cambiar la categoría en la ficha no iba a tener
+  ningún efecto sobre la carta y nadie iba a entender por qué. El dato se corrige donde se carga.
+
 - Antes de cada push: changelog → build → diff → confirmación.
 
 ---
@@ -224,6 +245,23 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Próximo
 
+- **Pasar el repositorio a privado.** Hoy `Fpidal/recetas-tero` es **público**: lo confirmamos el
+  23/09/26 al diagnosticar por qué fallaba el push (el `pull` anónimo funcionaba justamente
+  porque cualquiera puede leerlo). No hay una urgencia —se revisó y **no hay secretos
+  versionados**: `.env*.local` está en `.gitignore`, el único `.env` trackeado es `.env.demo`,
+  que apunta a la base de **demo** (distinta de producción) con una clave `sb_publishable_…`,
+  que por diseño viaja en el bundle del navegador; el `service_role` no está en el repo ni en
+  `.env.local`, a propósito (trampa 12)— pero lo que sí está a la vista es el **modelo de
+  negocio entero**: los `supabase-*.sql` con el esquema, el costeo en `docs/SISTEMA-COSTOS.md`,
+  y las trampas del `CLAUDE.md` con cifras reales del restaurante.
+
+  Tres cosas a tener en cuenta cuando se haga:
+  - **Vercel sigue funcionando** — la integración ya está autorizada, no hay que reconectar nada.
+  - **El `pull` deja de ser anónimo.** Como el remote ya está en SSH, no cambia nada en esta
+    máquina; en cualquier otra hay que tener la clave cargada.
+  - **Pasar a privado no borra el historial.** Lo que estuvo público, estuvo. Por eso importa
+    que la revisión de secretos haya dado limpia: no hay nada que rotar.
+
 - **Faltan precios de carta en dos bebidas.** `Aguas` y `Agua premium` están como receta pero sin
   precio, así que el Ranking las muestra como "Sin precio" y su venta queda sin atribuir. No son
   menores: en la noche del 24/07 fueron 51 y 26 unidades, lo más vendido del turno.
@@ -324,6 +362,28 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 3. Decisiones tomadas
 
 Registradas para no volver a discutirlas.
+
+- **La carta de vinos lleva precios, y el QR se sacó** (23/09/26). El QR apuntaba a
+  `recetas-tero.vercel.app/carta`, que desde V.41 es la pantalla **interna** de costos y
+  márgenes: el cliente que lo escaneaba en la mesa veía el login del sistema de gestión. Y el
+  pie de las dos carillas prometía "consultar precios actualizados escaneando el QR" mientras
+  la carta no mostraba ninguno —estando los 49 cargados en `carta_vinos.precio_carta`—. Se
+  resolvió al revés de como estaba: **el precio va impreso** y el QR se fue. Queda la versión
+  *sin precios* como segundo botón, para cuando haga falta.
+
+  Lo demás del rediseño: fondo blanco, el logo de Tero como cabecera (en negro), orden por
+  precio de mayor a menor, y secciones propias para **Rosados** y **Dulces**. La jerarquía de
+  cada línea es *etiqueta en negro, todo lo demás en gris*: la etiqueta es lo que el cliente
+  pide y lo que el mozo canta, no la bodega. La cepa quedó como lo que distingue a los vinos
+  porque **30 de los 49 comparten bodega y nombre con otro** —hay cuatro "Salentein Reserva"
+  distintos—, y hasta V.55 lo único que los separaba era una línea gris de 8,5 pt.
+
+- **Los desplegables también cargan datos mal, y no dejan rastro de quién fue** (23/09/26).
+  `Syrah Syrah` no fue un tipeo: era una opción elegible de la lista `CEPAS`, en el código, y
+  por eso había un vino cargado así que se imprimía en la carta. Lo mismo la ficha, que guardaba
+  con `.trim()` —limpia las puntas pero no el medio— y dejaba pasar `DV  Tinto Histórico` con
+  doble espacio, que en el papel deja un hueco. Cuando un dato sale mal, conviene revisar si la
+  pantalla lo permite antes de corregir la fila: si no, vuelve.
 
 - **La copa de vino de los menús se costea por `mapeo_ventas`, no metiéndola en el menú**
   (07/09/26). Se confirmó lo que estaba anotado como sospecha: "Bebidas menu" tiene sólo media

@@ -66,3 +66,45 @@ export function costoBotellaVino(
   const descuento = Math.min(Math.max(Number(descuentoPorcentaje) || 0, 0), 100)
   return (caja / unidades) * (1 - descuento / 100)
 }
+
+/**
+ * Precio por unidad base de una línea de factura: lo que queda guardado en
+ * `precios_insumo`. Es la MISMA cuenta que el trigger `actualizar_precio_desde_factura`
+ * (ver `supabase-fix-contenido-linea-factura.sql`); si se toca una, se toca la otra.
+ *
+ * `contenido` es lo que trae cada unidad facturada: una bolsa de arroz de 5 kg → 5;
+ * el mismo arroz vendido suelto por kilo → 1. Sale de la LÍNEA, no del insumo,
+ * porque el mismo insumo se compra en bolsa a un proveedor y suelto a otro.
+ * Hasta el 26/09/26 el trigger ignoraba el de la línea y dividía siempre por el
+ * del insumo: la yerba de Blancaluna, facturada por kg, quedó a 1/5 de su precio.
+ */
+export function precioPorUnidadBase(
+  precioUnitario: number | null | undefined,
+  descuentoPorcentaje: number | null | undefined,
+  contenido: number | null | undefined
+): number {
+  const p = Number(precioUnitario) || 0
+  const d = Number(descuentoPorcentaje) || 0
+  const c = Number(contenido) > 0 ? Number(contenido) : 1
+  return (p * (1 - d / 100)) / c
+}
+
+/**
+ * Contenido con el que se calculó el precio que hoy tiene la línea.
+ * Se deduce del precio guardado y no de `contenido_override`, porque hasta el
+ * 26/09/26 el trigger ignoraba esa columna: hay líneas con 1 que en realidad se
+ * dividieron por 5. Así, guardar una factura vieja no le cambia el precio.
+ */
+export function contenidoDeLinea(item: {
+  precio_unitario: number | string
+  descuento?: number | string | null
+  contenido_override?: number | string | null
+  precios_insumo?: { precio: number | string } | { precio: number | string }[] | null
+}): number | null {
+  // PostgREST lo devuelve como objeto o como lista según detecte la relación
+  const precio = Array.isArray(item.precios_insumo) ? item.precios_insumo[0] : item.precios_insumo
+  const guardado = Number(precio?.precio)
+  const neto = Number(item.precio_unitario) * (1 - (Number(item.descuento) || 0) / 100)
+  if (guardado > 0 && neto > 0) return Math.round((neto / guardado) * 1000) / 1000
+  return item.contenido_override != null ? Number(item.contenido_override) : null
+}

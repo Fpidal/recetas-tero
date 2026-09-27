@@ -14,7 +14,7 @@ import { CategoriaInsumo, UnidadMedida } from '@/types/database'
 import { formatearMoneda, formatearCantidad, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import ComparadorPrecios from '@/components/insumos/ComparadorPrecios'
 import { PALETA } from '@/lib/colores'
-import { hoyISO } from '@/lib/fechas'
+import { hoyISO, formatearFechaCorta } from '@/lib/fechas'
 import { coincideBusqueda } from '@/lib/buscar'
 
 /**
@@ -451,7 +451,7 @@ export default function InsumosPage() {
       const ivaPorcentaje = insumo.iva_porcentaje || 0
       setHistorialData(
         data.map((d: any) => ({
-          fecha: new Date(d.facturas_proveedor.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+          fecha: formatearFechaCorta(d.facturas_proveedor.fecha),
           precio: Math.round(d.precio_unitario * (1 + ivaPorcentaje / 100)), // Precio con IVA incluido, sin decimales
           proveedor: d.facturas_proveedor.proveedores?.nombre || '-',
           cantidad: d.cantidad,
@@ -494,8 +494,8 @@ export default function InsumosPage() {
     })
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-'
-    return new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+    // Sin new Date(): una fecha sola se toma como UTC y en Argentina retrocede un día
+    return formatearFechaCorta(dateStr)
   }
 
   const formatCurrency = (value: number | null) => {

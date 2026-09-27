@@ -9,6 +9,7 @@ import { Button, Input, Select, Modal } from '@/components/ui'
 import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero, formatearFecha } from '@/lib/formato-numeros'
 import { TIPOS_PERCEPCION, calcularPercepcion, tipoPorNombre } from '@/lib/percepciones'
 import { hoyISO } from '@/lib/fechas'
+import { precioPorUnidadBase } from '@/lib/costos'
 
 interface Proveedor {
   id: string
@@ -57,6 +58,15 @@ interface ItemFactura {
   iva_porcentaje: number
   iva_monto: number
   diferencia?: 'precio' | 'cantidad' | 'nuevo' | null
+}
+
+/** Los campos editables viven como string mientras se tipean. */
+function aNumero(valor: number | string): number {
+  return typeof valor === 'string' ? parsearNumero(valor) : valor
+}
+
+function abreviarUnidad(unidad: string): string {
+  return unidad === 'unidad' ? 'un' : unidad
 }
 
 export default function NuevaFacturaPage() {
@@ -268,16 +278,15 @@ export default function NuevaFacturaPage() {
         const descuentoNum = typeof item.descuento === 'string' ? parsearNumero(item.descuento) : item.descuento
         // Detectar diferencia con orden original
         let diferencia = item.diferencia
-        // Resetear contenido a 1 si cambia la cantidad (usuario probablemente cambió de unidades a kg)
-        let nuevoContenido = item.contenido
         if (selectedOrden && diferencia !== 'nuevo') {
           const itemOrden = selectedOrden.items.find(i =>
             item.vino_id ? i.vino_id === item.vino_id : i.insumo_id === item.insumo_id
           )
           if (itemOrden && cantidadNum !== itemOrden.cantidad) {
+            // El contenido NO se toca: que lleguen 3 bolsas en vez de 2 no cambia lo que
+            // trae cada bolsa. Antes se ponía en 1 solo, y hoy el trigger lo usa para
+            // el precio por kg: 3 bidones de 5 lt se habrían guardado como de 1 lt.
             diferencia = 'cantidad'
-            // Si la cantidad cambió, resetear contenido a 1 (el precio ya viene por unidad base)
-            nuevoContenido = 1
           } else if (itemOrden && precioNum !== itemOrden.precio_unitario) {
             diferencia = 'precio'
           } else {
@@ -289,7 +298,6 @@ export default function NuevaFacturaPage() {
         return {
           ...item,
           cantidad: nuevaCantidad, // Mantener como string mientras edita
-          contenido: nuevoContenido,
           subtotal,
           iva_monto: ivaMonto,
           diferencia,
@@ -587,7 +595,7 @@ export default function NuevaFacturaPage() {
         precio_unitario: typeof item.precio_unitario === 'string' ? parsearNumero(item.precio_unitario) : item.precio_unitario,
         descuento: typeof item.descuento === 'string' ? parsearNumero(item.descuento) : (item.descuento || 0),
         iva_porcentaje: item.iva_porcentaje,
-        // Solo enviar contenido_override si es diferente a 1 (para que el trigger lo use)
+        // El trigger divide el precio por este contenido para guardar el precio por kg/lt/unidad
         contenido_override: contenidoNum > 0 ? contenidoNum : null,
       }
     })
@@ -950,8 +958,8 @@ export default function NuevaFacturaPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Insumo</th>
-                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-14">Cont.</th>
                     <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-24">Cantidad</th>
+                    <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase w-28" title="Lo que trae cada unidad facturada: bolsa de 5 kg → 5; suelto por kg → 1">× Contenido</th>
                     <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Precio</th>
                     <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase w-14">Dto%</th>
                     <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase w-14">IVA</th>
@@ -970,20 +978,6 @@ export default function NuevaFacturaPage() {
                         </div>
                       </td>
                       <td className="px-2 py-2">
-                        {!item.vino_id ? (
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={typeof item.contenido === 'string' ? item.contenido : String(item.contenido).replace('.', ',')}
-                            onChange={(e) => handleContenidoChange(item.id, formatearInputNumero(e.target.value))}
-                            className="w-10 h-7 rounded border border-gray-300 px-1 text-xs font-mono text-center"
-                            title="Contenido del paquete"
-                          />
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
                         <div className="flex items-center gap-1">
                           <input
                             type="text"
@@ -992,8 +986,35 @@ export default function NuevaFacturaPage() {
                             onChange={(e) => handleCantidadChange(item.id, formatearInputNumero(e.target.value))}
                             className="w-12 h-7 rounded border border-gray-300 px-1.5 text-xs font-mono"
                           />
-                          <span className="text-xs text-gray-500">{item.unidad_medida === 'unidad' ? 'un' : item.unidad_medida}</span>
+                          <span className="text-xs text-gray-500">
+                            {item.vino_id ? item.unidad_medida : aNumero(item.contenido) !== 1 ? 'paq.' : abreviarUnidad(item.unidad_medida)}
+                          </span>
                         </div>
+                      </td>
+                      <td className="px-2 py-2">
+                        {!item.vino_id ? (
+                          <div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-400">×</span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={typeof item.contenido === 'string' ? item.contenido : String(item.contenido).replace('.', ',')}
+                                onChange={(e) => handleContenidoChange(item.id, formatearInputNumero(e.target.value))}
+                                className="w-12 h-7 rounded border border-gray-300 px-1 text-xs font-mono text-center"
+                                title="Lo que trae cada unidad facturada: bolsa de 5 kg → 5; suelto por kg → 1"
+                              />
+                              <span className="text-xs text-gray-500">{abreviarUnidad(item.unidad_medida)}</span>
+                            </div>
+                            {aNumero(item.contenido) !== 1 && (
+                              <div className="text-[10px] text-gray-500 font-mono mt-0.5">
+                                = {formatearCantidad(aNumero(item.cantidad) * aNumero(item.contenido), 2)} {abreviarUnidad(item.unidad_medida)}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <div className="flex items-center">
@@ -1006,6 +1027,11 @@ export default function NuevaFacturaPage() {
                             className="w-20 h-7 rounded border border-gray-300 px-1.5 text-xs font-mono"
                           />
                         </div>
+                        {!item.vino_id && (
+                          <div className="text-[10px] text-gray-500 font-mono mt-0.5" title="Precio que va a quedar en el insumo y que usan las recetas">
+                            → {formatearMoneda(precioPorUnidadBase(aNumero(item.precio_unitario), aNumero(item.descuento), aNumero(item.contenido)))}/{abreviarUnidad(item.unidad_medida)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-center">
                         <input

@@ -110,7 +110,7 @@ src/
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
 
-## ⚠️ Doce trampas que ya rompieron cosas
+## ⚠️ Trece trampas que ya rompieron cosas
 
 **1. `anon` no recibe permisos — hoy, ninguno.** La clave anónima viaja en el bundle público.
 Hasta el 13/08/26 había 22 tablas legibles sin login —3.539 precios, 476 facturas, los
@@ -251,6 +251,19 @@ que se le dieron ese día son columna por columna y dejan afuera `encrypted_pass
 último eslabón no es técnico: el "olvidé mi contraseña" manda un mail a la casilla del usuario,
 así que quien lea ese buzón entra sin saber ninguna clave. La de `admin@cantaelgallo.net` la
 leen el dueño y la encargada.
+
+**13. El precio por kilo usa el contenido de la LÍNEA, y una fecha sola no va a `new Date()`.**
+`factura_items.contenido_override` dice cuánto trae cada unidad facturada (bolsa de 5 kg → 5;
+suelto → 1). Hasta el 26/09/26 el trigger lo ignoraba y dividía siempre por
+`insumos.cantidad_por_paquete`: la yerba facturada por kg quedó a 1/5 de su precio. La cuenta
+vive en `precioPorUnidadBase()` (`src/lib/costos.ts`) y en `actualizar_precio_desde_factura()`
+— ver `supabase-fix-contenido-linea-factura.sql`. Ojo con las líneas **viejas**: muchas tienen 1
+en esa columna aunque se dividieron por 5, porque la pantalla lo ponía sola; para saber con qué
+se calculó un precio, `contenidoDeLinea()` lo deduce del precio guardado.
+
+Aparte: `new Date('2026-09-26')` es medianoche UTC, o sea el 25/09 a las 21:00 acá. Para mostrar
+una columna `date` va `formatearFecha()` / `formatearFechaCorta()`, y para operar con ella
+`parseFechaLocal()`. La lista de Insumos mostraba las facturas un día antes.
 
 ## Consultar la base (solo lectura)
 

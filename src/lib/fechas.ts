@@ -25,3 +25,24 @@ export function dateToString(d: Date): string {
 export function hoyISO(): string {
   return dateToString(new Date())
 }
+
+/**
+ * Convierte una fecha YYYY-MM-DD de la base en un Date a la medianoche LOCAL.
+ *
+ * ⚠️ `new Date('2026-09-26')` la interpreta como medianoche UTC, que en Argentina
+ * son las 21:00 del día ANTERIOR: la lista de Insumos mostraba 25/09 para una
+ * factura del 26/09, y el PDF de la OC salía fechado un día antes.
+ * Con timestamps completos (`created_at`) no hace falta: esos traen la hora.
+ */
+export function parseFechaLocal(fecha: string): Date {
+  const [y, m, d] = fecha.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+/** YYYY-MM-DD → DD/MM/YY, sin pasar por UTC */
+export function formatearFechaCorta(fecha: string | null | undefined): string {
+  if (!fecha) return '-'
+  const [y, m, d] = fecha.slice(0, 10).split('-')
+  if (!y || !m || !d) return fecha
+  return `${d}/${m}/${y.slice(2)}`
+}

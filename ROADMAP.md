@@ -245,6 +245,14 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Próximo
 
+- **Fechas que retroceden un día en cálculos.** `new Date('2026-09-26')` se interpreta como
+  medianoche UTC —el 25/09 a las 21:00 en Argentina—. En V.56 se arreglaron las fechas que
+  se **muestran** (Insumos, historial de precios, PDF de la OC) con `formatearFechaCorta()` y
+  `parseFechaLocal()` de `src/lib/fechas.ts`. Quedan usos que **calculan** con fechas así:
+  dashboard (`page.tsx`), Estadísticas, el lunes de la semana en Facturas, auditoría semanal
+  y las queries de ventas y consumo. No se tocaron sin revisar uno por uno: algunos pueden
+  estar compensando el corrimiento, y "arreglarlos" movería un informe de semana.
+
 - **Pasar el repositorio a privado.** Hoy `Fpidal/recetas-tero` es **público**: lo confirmamos el
   23/09/26 al diagnosticar por qué fallaba el push (el `pull` anónimo funcionaba justamente
   porque cualquiera puede leerlo). No hay una urgencia —se revisó y **no hay secretos
@@ -362,6 +370,29 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 3. Decisiones tomadas
 
 Registradas para no volver a discutirlas.
+
+- **El precio por kilo sale del contenido de la LÍNEA de factura, no del insumo** (26/09/26).
+  El mismo arroz se compra en bolsa de 5 kg a El Triunfo y suelto por kilo a otro proveedor;
+  un contenido fijo en `insumos` no puede describir las dos compras. La columna
+  `factura_items.contenido_override` existía desde antes y la pantalla la dejaba editar,
+  pero el trigger la **ignoraba**: la yerba de Blancaluna, facturada por kg con contenido 1,
+  quedó a $737,84 en vez de $3.689,20, y el queso crema 44% a la mitad. Ahora el trigger usa
+  el de la línea y, si no viene, el del insumo (`supabase-fix-contenido-linea-factura.sql`).
+
+  Dos cosas que se cuidaron para no mover costos de hoy:
+  - La pantalla ponía el contenido en **1 sola** cuando la cantidad de la factura difería de
+    la OC. Con el trigger nuevo eso habría guardado un bidón de 5 lt como si fuera de 1 lt;
+    se sacó. Por eso el orden fue: primero el push, después el SQL.
+  - Guardar una factura **borra y reinserta** sus líneas, y el trigger recalcula. La edición
+    ahora conserva el contenido *con el que se calculó* el precio (deducido del precio
+    guardado, `contenidoDeLinea()`), no el de la columna: hay líneas viejas con 1 que en
+    realidad se dividieron por 5.
+
+  La OC se dejó como está: "Cant." son paquetes en un insumo que viene en paquete, y la
+  factura nueva ya muestra "2 paq. × 5 kg" al importarla, que es donde se detecta el error.
+
+  Se corrigieron sólo los dos precios **vigentes**. Los anteriores mal guardados quedan
+  (ver *Datos históricos*): por eso la yerba va a mostrar una suba grande contra el 19/08.
 
 - **La carta de vinos lleva precios, y el QR se sacó** (23/09/26). El QR apuntaba a
   `recetas-tero.vercel.app/carta`, que desde V.41 es la pantalla **interna** de costos y

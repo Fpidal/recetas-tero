@@ -11,6 +11,7 @@ import {
   type MapaNotas,
 } from '@/lib/auditoria-semanal'
 import NotaLinea from '../components/NotaLinea'
+import { contenidoDeLinea } from '@/lib/costos'
 
 interface Percepcion {
   nombre: string
@@ -33,6 +34,7 @@ interface FacturaDetalle {
     vino_id: string | null
     insumo_nombre: string
     unidad_medida: string
+    contenido: number | null
     cantidad: number
     precio_unitario: number
     descuento: number
@@ -49,6 +51,17 @@ interface OCItem {
   unidad_medida: string
   cantidad: number
   precio_unitario: number
+}
+
+/**
+ * "2 × 5 kg" para una línea de 2 bolsas de 5 kg. Antes decía "2 kg": se leía como
+ * dos kilos cuando eran diez.
+ */
+function cantidadConContenido(item: { cantidad: number; unidad_medida: string; contenido: number | null }): string {
+  if (item.contenido && item.contenido !== 1) {
+    return `${formatearCantidad(item.cantidad, item.cantidad % 1 === 0 ? 0 : 2)} × ${formatearCantidad(item.contenido, item.contenido % 1 === 0 ? 0 : 2)} ${item.unidad_medida}`
+  }
+  return `${item.cantidad} ${item.unidad_medida}`
 }
 
 export default function VerFacturaPage({ params }: { params: { id: string } }) {
@@ -113,7 +126,9 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
           precio_unitario,
           descuento,
           subtotal,
+          contenido_override,
           insumos (nombre, unidad_medida, iva_porcentaje),
+          precios_insumo (precio),
           vinos (bodega, nombre, cepa)
         )
       `)
@@ -150,6 +165,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
           vino_id: item.vino_id,
           insumo_nombre: nombreItem,
           unidad_medida: esVino ? 'caja' : (item.insumos?.unidad_medida || ''),
+          contenido: esVino ? null : contenidoDeLinea(item),
           cantidad: parseFloat(item.cantidad),
           precio_unitario: parseFloat(item.precio_unitario),
           descuento: parseFloat(item.descuento) || 0,
@@ -430,7 +446,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                 )}
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-600 font-mono">
-                    {item.cantidad} {item.unidad_medida} ×
+                    {cantidadConContenido(item)} ×
                   </span>
                   <div className="flex items-center gap-2">
                     {getPrecioConComparacion(item, true)}
@@ -528,7 +544,7 @@ export default function VerFacturaPage({ params }: { params: { id: string } }) {
                       })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 font-mono">
-                      {item.cantidad} {item.unidad_medida}
+                      {cantidadConContenido(item)}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {getPrecioConComparacion(item)}

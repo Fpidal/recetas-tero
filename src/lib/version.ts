@@ -10,6 +10,20 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.56',
+    fecha: '26/09/26',
+    cambios: [
+      'Al cargar una factura, cada línea se lee como la compra: "2 paq. × 5 kg = 10 kg", y debajo del precio aparece el costo por kilo que va a quedar en el insumo, antes de guardar',
+      'El contenido de la línea ahora cuenta: si un proveedor vende suelto por kilo, se pone 1 y el precio no se divide por la bolsa. Antes se ignoraba y la yerba de Blancaluna quedó a la quinta parte de su precio',
+      'Corregidos los precios actuales de la yerba ($3.689,20/kg) y del queso crema 44% ($6.650,99/lt), que estaban cargados por debajo',
+      'Al cambiar la cantidad de una línea importada de la OC, el contenido ya no vuelve solo a 1',
+      'El detalle de la factura muestra "2 × 5 kg" en vez de "2 kg"',
+      'Editar una factura ya no le cambia el precio a sus líneas al guardar',
+      'La variación de precio no se confunde más cuando hay dos precios del mismo día: el arroz gallo mostraba +514% y era −38,6%',
+      'Las fechas de Insumos, del historial de precios de insumos y vinos, y del PDF de la orden de compra salían un día antes',
+    ],
+  },
+  {
     version: 'V.55',
     fecha: '23/09/26',
     cambios: [

@@ -6,6 +6,7 @@ import { Plus, Trash2, ArrowLeft, Save, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
 import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
+import { precioPorUnidadBase, contenidoDeLinea } from '@/lib/costos'
 import { TIPOS_PERCEPCION, calcularPercepcion, tipoPorNombre } from '@/lib/percepciones'
 
 interface Proveedor {
@@ -31,6 +32,8 @@ interface ItemFactura {
   vino_id: string | null
   insumo_nombre: string
   unidad_medida: string
+  // Lo que trae cada unidad facturada (bolsa de 5 kg → 5). null = el del insumo.
+  contenido: number | null
   cantidad: number
   precio_unitario: number
   descuento: number
@@ -87,8 +90,9 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         .select(`
           id, proveedor_id, numero_factura, fecha, notas, percepciones,
           factura_items (
-            id, insumo_id, vino_id, cantidad, precio_unitario, descuento, subtotal,
-            insumos (nombre, unidad_medida, iva_porcentaje),
+            id, insumo_id, vino_id, cantidad, precio_unitario, descuento, subtotal, contenido_override,
+            insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete),
+            precios_insumo (precio),
             vinos (bodega, nombre, cepa)
           )
         `)
@@ -150,6 +154,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         vino_id: item.vino_id,
         insumo_nombre: nombreItem,
         unidad_medida: esVino ? 'caja' : (item.insumos?.unidad_medida || ''),
+        contenido: esVino ? null : contenidoDeLinea(item),
         cantidad: parseFloat(item.cantidad),
         precio_unitario: parseFloat(item.precio_unitario),
         descuento: parseFloat(item.descuento) || 0,
@@ -223,6 +228,7 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
       vino_id: null,
       insumo_nombre: insumo.nombre,
       unidad_medida: insumo.unidad_medida,
+      contenido: insumo.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : null,
       cantidad: cantidadNum,
       precio_unitario: precioNum,
       descuento: descuentoNum,
@@ -472,6 +478,10 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
         precio_unitario: item.precio_unitario,
         descuento: item.descuento || 0,
         iva_porcentaje: item.iva_porcentaje || 21,
+        // Guardar la factura borra y reinserta las líneas, y el trigger vuelve a
+        // calcular el precio por kg: sin esto, una línea cargada por kg suelto
+        // volvería a dividirse por el paquete del insumo.
+        contenido_override: item.contenido,
       }))
       const { error: insertErr } = await supabase
         .from('factura_items')
@@ -790,7 +800,11 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                               onBlur={finishEditing}
                               className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                             />
-                            <span className="ml-1 text-sm text-gray-500">{item.unidad_medida}</span>
+                            <span className="ml-1 text-sm text-gray-500">
+                              {!item.vino_id && item.contenido && item.contenido !== 1
+                                ? <>paq. <span className="font-mono">× {formatearCantidad(item.contenido, item.contenido % 1 === 0 ? 0 : 2)}</span> {item.unidad_medida}</>
+                                : item.unidad_medida}
+                            </span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -806,6 +820,11 @@ export default function EditarFacturaPage({ params }: { params: { id: string } }
                               className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
                             />
                           </div>
+                          {!item.vino_id && (
+                            <div className="text-xs text-gray-500 font-mono mt-0.5" title="Precio que queda en el insumo y que usan las recetas">
+                              → {formatearMoneda(precioPorUnidadBase(item.precio_unitario, item.descuento, item.contenido))}/{item.unidad_medida}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <input

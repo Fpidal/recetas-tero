@@ -5,12 +5,12 @@ import { Check, Plus, Pencil, Trash2, Wine, Search, X, Save, BookOpen, FileText,
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Button, Modal } from '@/components/ui'
-import { parsearNumero, formatearMoneda } from '@/lib/formato-numeros'
+import { parsearNumero, formatearMoneda, formatearFecha } from '@/lib/formato-numeros'
 import { costoBotellaVino } from '@/lib/costos'
 import { Vino, CartaVino, ProveedorMapeoExcel } from '@/types/database'
 import { generarPDFCartaVinos } from '@/lib/generar-pdf-carta-vinos'
 import * as XLSX from 'xlsx'
-import { hoyISO } from '@/lib/fechas'
+import { hoyISO, formatearFechaCorta } from '@/lib/fechas'
 import { coincideBusqueda } from '@/lib/buscar'
 
 // La carta impresa arma una sección por categoría. Rosados y Dulces existen
@@ -345,7 +345,7 @@ export default function VinosPage() {
       .order('fecha', { ascending: true })
 
     const historial = (data || []).map(p => ({
-      fecha: new Date(p.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+      fecha: formatearFechaCorta(p.fecha),
       precio: p.precio_caja
     }))
 
@@ -1284,7 +1284,7 @@ export default function VinosPage() {
                 <div>
                   <p className="text-xs text-blue-600 font-medium">Última lista de precios</p>
                   <p className="text-sm text-blue-900">
-                    {new Date(editingVino.fecha_lista_precios).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    {formatearFecha(editingVino.fecha_lista_precios)}
                   </p>
                 </div>
                 {editingVino.precio_caja_anterior && editingVino.precio_caja_anterior !== editingVino.precio_caja && (

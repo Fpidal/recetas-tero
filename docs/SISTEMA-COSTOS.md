@@ -20,8 +20,14 @@ C. Final = precio × (1 + IVA/100) ÷ (1 − merma/100)
 ```
 
 - **precio**: ya viene normalizado a unidad base. El paquete de 3 kg se convirtió
-  a precio por kilo al cargar la factura (`precio_unitario / cantidad_por_paquete`).
+  a precio por kilo al cargar la factura (`precio_unitario × (1 − dto) / contenido`).
   Esa normalización es lo que hace comparables a todas las recetas entre sí.
+  El `contenido` sale de la **línea** de la factura (`factura_items.contenido_override`)
+  y, si no viene, de `insumos.cantidad_por_paquete`: el mismo arroz se compra en
+  bolsa de 5 kg a un proveedor y suelto por kilo a otro. Hasta el 26/09/26 el
+  trigger ignoraba el de la línea y la yerba de Blancaluna, facturada por kg, quedó
+  a 1/5 de su precio. Frontend: `precioPorUnidadBase()` en `src/lib/costos.ts`;
+  base: `supabase-fix-contenido-linea-factura.sql`.
 - **merma**: pérdida de aprovechamiento. Si comprás 1 kg y perdés 10% al limpiarlo,
   te quedan 0,9 kg utilizables → el kilo servible costó `precio / 0,9`.
   **No es `× 1,10`.** Ese error subestimaba el costo, y cada vez más cuanto mayor

@@ -2,6 +2,7 @@ import jsPDF from 'jspdf'
 import { supabase } from './supabase'
 import { PALETA, rgb } from './colores'
 import { ivaLineaOrden } from '@/lib/iva'
+import { parseFechaLocal } from '@/lib/fechas'
 
 interface OrdenPDF {
   id: string
@@ -200,7 +201,7 @@ export async function generarPDFOrden(ordenId: string) {
 
   // Formatear fecha: "Benavidez 04 de febrero de 2026"
   const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-  const fechaObj = new Date(orden.fecha)
+  const fechaObj = parseFechaLocal(orden.fecha)
   const dia = fechaObj.getDate().toString().padStart(2, '0')
   const mes = meses[fechaObj.getMonth()]
   const anio = fechaObj.getFullYear()

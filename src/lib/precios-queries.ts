@@ -40,6 +40,13 @@ export async function obtenerHistorialPrecios(): Promise<PrecioHistorial[]> {
       .from('precios_insumo')
       .select('insumo_id, precio, fecha, es_precio_actual, factura_items (facturas_proveedor (fecha))')
       .order('fecha', { ascending: false })
+      // Desempate: dos precios del mismo día (un error y su corrección) quedaban en
+      // orden al azar y el "anterior" podía ser el erróneo. El 16/09/26 el arroz
+      // gallo tuvo $217,99 y $2.179,87; la pantalla tomó el primero y mostró +514%.
+      // Las pantallas ordenan después por fecha de factura con un sort estable,
+      // así que este orden es el que decide los empates.
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
       .range(desde, desde + TAMANO_PAGINA - 1)
 
     if (error) {

@@ -159,7 +159,7 @@ Creación de OC con numeración automática, estados (borrador, enviada, recibid
 ### Facturas (`/facturas`)
 Dos solapas:
 
-- **Facturas** — registro de facturas de proveedores, con actualización automática de precios de insumos y soporte para Notas de Crédito. El semáforo compara cada factura contra su orden de compra: faltantes, cantidad menor, precio distinto y agregados sin pedir. En el detalle se puede comentar cada ítem (*"sin stock, viene el jueves"*): ese comentario se lee después en el resumen semanal.
+- **Facturas** — registro de facturas de proveedores, con actualización automática de precios de insumos y soporte para Notas de Crédito. Cada línea se carga como la compra —*2 paq. × 5 kg*— y muestra antes de guardar el precio por kilo que va a quedar en el insumo. El contenido es de la línea y no del insumo: el mismo producto puede venir en bolsa de un proveedor y suelto por kilo de otro. El semáforo compara cada factura contra su orden de compra: faltantes, cantidad menor, precio distinto y agregados sin pedir. En el detalle se puede comentar cada ítem (*"sin stock, viene el jueves"*): ese comentario se lee después en el resumen semanal.
 - **Resumen semanal** — el pantallazo de la semana cerrada, pensado para la reunión con el encargado de compras. Cinco bloques ordenados por plata: lo que no llegó completo, los cambios de precio (avisando si además cambió el proveedor), lo facturado a distinto precio del pedido, lo que llegó sin pedirse, y las órdenes que siguen sin factura. Cada línea acepta una nota, y todo se baja en PDF.
 
 ### Inventario (`/inventario`)

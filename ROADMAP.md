@@ -245,6 +245,21 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Próximo
 
+- **Anular una factura puede reactivar el precio de OTRA factura anulada.** Visto el
+  26/09/26 con dos facturas de prueba del arroz gallo (Alamenia 0001 y 0002): al anular la
+  0002, el arroz no volvió a los $1.338,60 de El Triunfo sino a los $1.400 de la 0001, que
+  ya estaba anulada. `revertir_precios_factura_anulada()` y `revertir_precio_item_eliminado()`
+  encienden "el precio más reciente que quede" sin mirar si su factura sigue activa. Hay que
+  saltear los de facturas con `activo = false`. No es urgente —anular es raro y sólo falla con
+  dos anulaciones seguidas del mismo insumo—, y al 27/09 ningún insumo se costea con un
+  precio de factura anulada.
+
+  Relacionado, en la **Papelera**: eliminar una factura para siempre **no borra sus precios**,
+  los desvincula (`factura_item_id = null`) y quedan sueltos en el historial, sin forma de
+  saber de dónde salieron. Una factura de prueba sigue moviendo la variación de precio después
+  de eliminada. Los dos precios de prueba del arroz se borraron a mano antes de vaciar la
+  Papelera.
+
 - **Fechas que retroceden un día en cálculos.** `new Date('2026-09-26')` se interpreta como
   medianoche UTC —el 25/09 a las 21:00 en Argentina—. En V.56 se arreglaron las fechas que
   se **muestran** (Insumos, historial de precios, PDF de la OC) con `formatearFechaCorta()` y

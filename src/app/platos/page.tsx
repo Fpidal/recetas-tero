@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Eye, UtensilsCrossed, Search, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, Package, BookOpen, X, ClipboardList, ImageIcon, Share2, type LucideIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, UtensilsCrossed, Search, ChevronDown, ChevronRight, Package, BookOpen, X, ClipboardList, ImageIcon, Share2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
-import { Button, ClickableItemName, BotonExportar } from '@/components/ui'
+import { Button, BotonExportar } from '@/components/ui'
 import { exportarRecetas } from '@/lib/exportaciones'
 import Link from 'next/link'
 import { SECCIONES as SECCIONES_ORDEN } from '@/lib/secciones'
@@ -47,23 +47,6 @@ interface PlatoDetalle {
     costo_linea: number
   }[]
   costo_total: number
-}
-
-// Helper para obtener ícono según sección/nombre del plato
-function getPlateIcon(seccion: string, nombrePlato?: string): LucideIcon {
-  const s = seccion.toLowerCase()
-  const n = nombrePlato?.toLowerCase() || ''
-
-  if (s.includes('entrada')) return Salad
-  if (s.includes('ensalada')) return Salad
-  if (s.includes('pasta') || s.includes('arroz')) return Wheat
-  if (s.includes('pescado') || s.includes('marisco') || n.includes('langostino') || n.includes('salmon') || n.includes('trucha')) return Fish
-  if (s.includes('postre')) return Cake
-  if (s.includes('sopa') || s.includes('guiso')) return Soup
-  if (s.includes('parrilla')) return Beef
-  if (s.includes('principal') || s.includes('carne') || n.includes('bife') || n.includes('lomo') || n.includes('costilla') || n.includes('entraña')) return Beef
-
-  return UtensilsCrossed // default
 }
 
 export default function PlatosPage() {
@@ -396,24 +379,21 @@ export default function PlatosPage() {
 
   // Card component for mobile
   const PlatoCard = ({ plato }: { plato: PlatoConCosto }) => {
-    const IconComponent = getPlateIcon(plato.seccion, plato.nombre)
     return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div
+      className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer"
+      onClick={() => handleVerDetalle(plato.id)}
+    >
       <div className="flex justify-between items-start mb-2">
-        <div className="flex items-start gap-2 flex-1">
-          <div className="p-1.5 bg-orange-100 rounded-lg flex-shrink-0">
-            <IconComponent className="w-4 h-4 text-orange-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900">{plato.nombre}</p>
-            {plato.descripcion && (
-              <p className="text-xs text-gray-400 italic">({plato.descripcion})</p>
-            )}
-          </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-gray-900">{plato.nombre}</p>
+          {plato.descripcion && (
+            <p className="text-xs text-ink-muted italic line-clamp-2" title={plato.descripcion}>{plato.descripcion}</p>
+          )}
         </div>
         <div className="text-right flex-shrink-0">
           <p className="text-xs text-gray-500">Costo</p>
-          <p className="font-bold text-green-700 font-mono">
+          <p className="font-semibold text-ink font-mono">
             ${plato.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </p>
         </div>
@@ -425,20 +405,13 @@ export default function PlatosPage() {
         </p>
       )}
 
-      <div className="flex justify-end gap-2 pt-3 border-t">
-        <Button variant="ghost" size="sm" onClick={() => handleVerDetalle(plato.id)}>
-          <Eye className="w-4 h-4 mr-1" />
-          Ver
-        </Button>
-        <Link href={`/platos/${plato.id}`}>
-          <Button variant="ghost" size="sm">
-            <Pencil className="w-4 h-4 mr-1" />
-            Editar
-          </Button>
+      <div className="flex justify-end gap-1 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
+        <Link href={`/platos/${plato.id}`} className="accion-fila" title="Editar">
+          <Pencil className="w-4 h-4" strokeWidth={1.5} />
         </Link>
-        <Button variant="ghost" size="sm" onClick={() => handleDelete(plato.id)}>
-          <Trash2 className="w-4 h-4 text-red-500" />
-        </Button>
+        <button type="button" className="accion-fila accion-fila-peligro" title="Eliminar" onClick={() => handleDelete(plato.id)}>
+          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+        </button>
       </div>
     </div>
   )}
@@ -549,9 +522,10 @@ export default function PlatosPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase bg-green-50">Costo Total</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="w-[32%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
+                  <th className="w-32 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo Total</th>
+                  <th className="w-24 px-4 py-3"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -562,7 +536,7 @@ export default function PlatosPage() {
                       className="bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
                       onClick={() => toggleSeccion(grupo.seccion)}
                     >
-                      <td colSpan={3} className="px-4 py-2">
+                      <td colSpan={4} className="px-4 py-2">
                         <div className="flex items-center gap-2">
                           {seccionesExpandidas.has(grupo.seccion) ? (
                             <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -576,51 +550,45 @@ export default function PlatosPage() {
                         </div>
                       </td>
                     </tr>
-                    {seccionesExpandidas.has(grupo.seccion) && grupo.platos.map((p) => {
-                      const IconComponent = getPlateIcon(p.seccion, p.nombre)
-                      return (
-                      <tr key={p.id} className="hover:bg-gray-50">
+                    {seccionesExpandidas.has(grupo.seccion) && grupo.platos.map((p) => (
+                      <tr
+                        key={p.id}
+                        className="fila-clic align-top"
+                        tabIndex={0}
+                        title="Ver receta"
+                        onClick={() => handleVerDetalle(p.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) handleVerDetalle(p.id) }}
+                      >
                         <td className="px-4 py-2">
-                          <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-orange-100 rounded-lg">
-                              <IconComponent className="w-4 h-4 text-orange-600" />
-                            </div>
-                            <div>
-                              <div className="flex items-baseline gap-2">
-                                <ClickableItemName
-                                  nombre={p.nombre}
-                                  onClick={() => handleVerDetalle(p.id)}
-                                  title="Ver receta"
-                                />
-                                {p.descripcion && (
-                                  <span className="text-xs text-gray-400 italic font-normal">({p.descripcion})</span>
-                                )}
-                              </div>
-                              {p.ingredientes_texto && (
-                                <p className="text-[10px] text-gray-400 truncate max-w-md">
-                                  {p.ingredientes_texto}
-                                </p>
-                              )}
-                            </div>
-                          </div>
+                          <p className="text-sm font-medium text-ink">{p.nombre}</p>
+                          {p.ingredientes_texto && (
+                            <p className="text-[10px] text-gray-400 truncate max-w-xs">
+                              {p.ingredientes_texto}
+                            </p>
+                          )}
                         </td>
-                        <td className="px-4 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums font-mono">
-                          <span className="text-green-500 font-normal">$</span><span className="ml-1">{p.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                        <td className="px-4 py-2">
+                          {p.descripcion ? (
+                            <p className="text-xs text-ink-muted italic line-clamp-2" title={p.descripcion}>{p.descripcion}</p>
+                          ) : (
+                            <span className="text-xs text-ink-light">—</span>
+                          )}
                         </td>
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-4 py-2 text-right text-sm font-semibold text-ink tabular-nums font-mono">
+                          ${p.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="px-4 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">
-                            <Link href={`/platos/${p.id}`}>
-                              <Button variant="ghost" size="sm" title="Editar receta">
-                                <Pencil className="w-3.5 h-3.5" />
-                              </Button>
+                            <Link href={`/platos/${p.id}`} className="accion-fila" title="Editar receta">
+                              <Pencil className="w-4 h-4" strokeWidth={1.5} />
                             </Link>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id)}>
-                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                            </Button>
+                            <button type="button" className="accion-fila accion-fila-peligro" title="Eliminar" onClick={() => handleDelete(p.id)}>
+                              <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                            </button>
                           </div>
                         </td>
                       </tr>
-                    )})}
+                    ))}
                   </>
                 ))}
               </tbody>
@@ -727,13 +695,10 @@ export default function PlatosPage() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header del modal */}
-            <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+            <div className="flex items-center justify-between p-4 border-b border-sand bg-cream">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-orange-100 rounded-lg">
-                  <UtensilsCrossed className="w-5 h-5 text-orange-600" />
-                </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="font-serif font-normal text-[26px] leading-tight tracking-normal text-ink">
                     {loadingDetalle ? 'Cargando...' : platoDetalle?.nombre}
                   </h2>
                   {platoDetalle?.seccion && (
@@ -743,9 +708,10 @@ export default function PlatosPage() {
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
+                className="accion-fila"
+                title="Cerrar"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5" strokeWidth={1.5} />
               </button>
             </div>
 
@@ -762,14 +728,14 @@ export default function PlatosPage() {
                     {platoDetalle.descripcion && (
                       <span className="text-gray-500 italic">{platoDetalle.descripcion}</span>
                     )}
-                    <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                      Rinde: <strong className="font-mono">{platoDetalle.rendimiento_porciones}</strong> porc.
+                    <span className="bg-white border border-sand px-2.5 py-1 rounded-md text-xs text-ink-muted">
+                      Rinde <strong className="ml-1 font-mono font-semibold text-ink">{platoDetalle.rendimiento_porciones} porc.</strong>
                     </span>
-                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold font-mono">
-                      ${(platoDetalle.costo_total / platoDetalle.rendimiento_porciones).toLocaleString('es-AR', { maximumFractionDigits: 0 })} / porción
+                    <span className="bg-white border border-sand px-2.5 py-1 rounded-md text-xs text-ink-muted">
+                      Por porción <strong className="ml-1 font-mono font-semibold text-ink">${(platoDetalle.costo_total / platoDetalle.rendimiento_porciones).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</strong>
                     </span>
-                    <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                      Total: ${platoDetalle.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    <span className="bg-white border border-sand px-2.5 py-1 rounded-md text-xs text-ink-muted">
+                      Total <strong className="ml-1 font-mono font-semibold text-ink">${platoDetalle.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</strong>
                     </span>
                   </div>
 

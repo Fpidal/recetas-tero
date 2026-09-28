@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { Plus, AlertTriangle, CheckCircle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, Salad, Beef, Fish, Cake, Wheat, Soup, UtensilsCrossed, Search, Eye, ExternalLink, LayoutGrid, Users, Calculator, type LucideIcon } from 'lucide-react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Plus, AlertTriangle, AlertCircle, Pencil, Trash2, X, Save, ChevronDown, ChevronRight, UtensilsCrossed, Search, ExternalLink, LayoutGrid, Users, Calculator, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
-import { Button, Input, Select, Modal, ClickableItemName, BotonExportar } from '@/components/ui'
+import { Button, Input, Select, Modal, BotonExportar } from '@/components/ui'
 import { exportarCarta } from '@/lib/exportaciones'
-import { parsearNumero } from '@/lib/formato-numeros'
+import { parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
 import { SECCIONES as SECCIONES_ORDEN, agruparSeccion, margenDeSeccion } from '@/lib/secciones'
 import { coincideBusqueda } from '@/lib/buscar'
 
@@ -89,20 +89,39 @@ function normalizarTipoOpcion(tipo: string): string {
   return agruparSeccion(tipo)
 }
 
-// Helper para obtener ícono según sección/nombre del plato
-function getPlateIcon(seccion: string, nombrePlato?: string): LucideIcon {
-  const s = seccion.toLowerCase()
-  const n = nombrePlato?.toLowerCase() || ''
+// Estado del FC. En Carta es el dato que más se mira: Atención y Fuera van
+// con ícono y el número en su color. OK va sin nada, en tinta, para que las
+// alertas se destaquen. OK si está en el objetivo, Atención hasta 5 puntos
+// arriba, Fuera más arriba.
+const ESTADO_FC: Record<string, { Icono: LucideIcon; icono: string; numero: string }> = {
+  warning: { Icono: AlertCircle, icono: 'text-warning', numero: 'text-warning' },
+  danger: { Icono: AlertTriangle, icono: 'text-danger', numero: 'text-danger' },
+}
 
-  if (s.includes('entrada')) return Salad
-  if (s.includes('ensalada')) return Salad
-  if (s.includes('pasta') || s.includes('arroz')) return Wheat
-  if (s.includes('pescado') || s.includes('marisco') || n.includes('langostino') || n.includes('salmon') || n.includes('trucha')) return Fish
-  if (s.includes('postre')) return Cake
-  if (s.includes('sopa') || s.includes('guiso')) return Soup
-  if (s.includes('principal') || s.includes('carne') || n.includes('bife') || n.includes('lomo') || n.includes('costilla') || n.includes('entraña')) return Beef
+// Estado de un plato en carta: Atención si pasa el objetivo, Fuera si lo pasa
+// en más de un 10% (objetivo 25% → Fuera desde 27,5%). Los menús ejecutivos
+// usan otra regla, +5 puntos: ver getEstadoMargen.
+function estadoItemCarta(foodCost: number, margenObjetivo: number): 'ok' | 'warning' | 'danger' {
+  if (foodCost > margenObjetivo * 1.1) return 'danger'
+  if (foodCost > margenObjetivo) return 'warning'
+  return 'ok'
+}
 
-  return UtensilsCrossed // default
+function EstadoFC({ estado, children, className = '' }: { estado: string; children: React.ReactNode; className?: string }) {
+  const e = ESTADO_FC[estado]
+  // OK: sin ícono, pero con el mismo hueco a la izquierda para que los números queden alineados
+  if (!e) return (
+    <span className={`inline-flex items-center gap-1 font-mono text-ink tabular-nums ${className}`}>
+      <span className="w-3.5 flex-none" aria-hidden="true" />
+      {children}
+    </span>
+  )
+  return (
+    <span className={`inline-flex items-center gap-1 font-mono font-semibold tabular-nums ${e.numero} ${className}`}>
+      <e.Icono className={`w-3.5 h-3.5 flex-none ${e.icono}`} strokeWidth={2} />
+      {children}
+    </span>
+  )
 }
 
 export default function CartaPage() {
@@ -110,6 +129,7 @@ export default function CartaPage() {
   const [itemsFueraCarta, setItemsFueraCarta] = useState<CartaItem[]>([])
   const [platosDisponibles, setPlatosDisponibles] = useState<PlatoConCosto[]>([])
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -132,6 +152,8 @@ export default function CartaPage() {
 
   // ============ ESTADOS MENÚS EJECUTIVOS ============
   const [menusEjecutivos, setMenusEjecutivos] = useState<MenuEjecutivoConCosto[]>([])
+  const [valoresCarta, setValoresCarta] = useState<Record<string, { precio?: string; margen?: string }>>({})
+  const [valoresMenu, setValoresMenu] = useState<Record<string, { precio?: string; margen?: string }>>({})
   const [isLoadingEjec, setIsLoadingEjec] = useState(true)
   const [editingMenuId, setEditingMenuId] = useState<string | null>(null)
   const [editMenuPrecio, setEditMenuPrecio] = useState('')
@@ -283,12 +305,7 @@ export default function CartaPage() {
       const foodCost = item.precio_carta > 0 ? (costoReal / item.precio_carta) * 100 : 0
       const precioSugerido = item.margen_objetivo > 0 ? costoReal / (item.margen_objetivo / 100) : 0
 
-      let estado: 'ok' | 'warning' | 'danger' = 'ok'
-      if (foodCost > item.margen_objetivo * 1.1) {
-        estado = 'danger'
-      } else if (foodCost > item.margen_objetivo) {
-        estado = 'warning'
-      }
+      const estado = estadoItemCarta(foodCost, item.margen_objetivo)
 
       return {
         id: item.id,
@@ -488,6 +505,67 @@ export default function CartaPage() {
     setIsSaving(false)
   }
 
+  // Edición en línea de precio y margen, igual que en Tragos: se escribe en la
+  // celda y se guarda al salir del campo (o con Enter). Esc vuelve al valor
+  // guardado sin salir del campo: si saliera, el onBlur todavía vería el valor
+  // tipeado (el estado no se actualizó aún) y lo guardaría.
+  function valorCarta(item: CartaItem, campo: 'precio' | 'margen'): string {
+    const enEdicion = valoresCarta[item.id]?.[campo]
+    if (enEdicion !== undefined) return enEdicion
+    return campo === 'precio'
+      ? item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })
+      : String(item.margen_objetivo).replace('.', ',')
+  }
+
+  function setValorCarta(id: string, campo: 'precio' | 'margen', valor: string) {
+    setValoresCarta(prev => ({ ...prev, [id]: { ...prev[id], [campo]: valor } }))
+  }
+
+  function descartarValorCarta(id: string) {
+    setValoresCarta(prev => {
+      const { [id]: _, ...resto } = prev
+      return resto
+    })
+  }
+
+  async function guardarEnLineaCarta(item: CartaItem) {
+    const editado = valoresCarta[item.id]
+    if (!editado) return
+    const precio = editado.precio !== undefined ? parsearNumero(editado.precio) : item.precio_carta
+    const margen = editado.margen !== undefined ? (parsearNumero(editado.margen) || 30) : item.margen_objetivo
+    if (precio === item.precio_carta && margen === item.margen_objetivo) {
+      descartarValorCarta(item.id)
+      return
+    }
+
+    const precioSugerido = calcularPrecioSugerido(item.plato_costo, margen)
+    const foodCost = calcularFoodCost(item.plato_costo, precio)
+    const { error } = await supabase
+      .from('carta')
+      .update({
+        precio_carta: precio,
+        margen_objetivo: margen,
+        precio_sugerido: precioSugerido,
+        food_cost_real: foodCost,
+      })
+      .eq('id', item.id)
+
+    if (error) {
+      console.error('Error actualizando carta:', error)
+      alert('No se pudo guardar el cambio. Quedó el valor anterior.')
+      descartarValorCarta(item.id)
+      return
+    }
+
+    // Se actualiza la fila en el lugar: recargar todo haría saltar la tabla
+    const actualizar = (lista: CartaItem[]) => lista.map(i => i.id === item.id
+      ? { ...i, precio_carta: precio, margen_objetivo: margen, precio_sugerido: precioSugerido, food_cost_real: foodCost, estado_margen: estadoItemCarta(foodCost, margen) }
+      : i)
+    setItems(actualizar)
+    setItemsFueraCarta(actualizar)
+    descartarValorCarta(item.id)
+  }
+
   function handleStartEdit(item: CartaItem) {
     setEditingId(item.id)
     setEditPrecio(item.precio_carta.toString())
@@ -554,32 +632,6 @@ export default function CartaPage() {
       alert('Error al cambiar estado')
     } else {
       fetchData()
-    }
-  }
-
-  function getEstadoIcon(estado: string) {
-    switch (estado) {
-      case 'ok':
-        return <CheckCircle className="w-5 h-5 text-green-500" />
-      case 'warning':
-        return <AlertCircle className="w-5 h-5 text-yellow-500" />
-      case 'danger':
-        return <AlertTriangle className="w-5 h-5 text-red-500" />
-      default:
-        return null
-    }
-  }
-
-  function getEstadoClass(estado: string) {
-    switch (estado) {
-      case 'ok':
-        return 'bg-green-100 text-green-800'
-      case 'warning':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'danger':
-        return 'bg-red-100 text-red-800'
-      default:
-        return ''
     }
   }
 
@@ -683,6 +735,57 @@ export default function CartaPage() {
     if (foodCost <= fcObjetivo) return 'ok'
     if (foodCost <= fcObjetivo + 5) return 'warning'
     return 'danger'
+  }
+
+  function valorMenu(menu: MenuEjecutivoConCosto, campo: 'precio' | 'margen'): string {
+    const enEdicion = valoresMenu[menu.id]?.[campo]
+    if (enEdicion !== undefined) return enEdicion
+    return campo === 'precio'
+      ? (menu.precio_carta || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })
+      : String(menu.margen_objetivo || 30).replace('.', ',')
+  }
+
+  function setValorMenu(id: string, campo: 'precio' | 'margen', valor: string) {
+    setValoresMenu(prev => ({ ...prev, [id]: { ...prev[id], [campo]: valor } }))
+  }
+
+  function descartarValorMenu(id: string) {
+    setValoresMenu(prev => {
+      const { [id]: _, ...resto } = prev
+      return resto
+    })
+  }
+
+  async function guardarEnLineaMenu(menu: MenuEjecutivoConCosto) {
+    const editado = valoresMenu[menu.id]
+    if (!editado) return
+    const precioActual = menu.precio_carta || 0
+    const margenActual = menu.margen_objetivo || 30
+    const precio = editado.precio !== undefined ? parsearNumero(editado.precio) : precioActual
+    const margen = editado.margen !== undefined ? (parsearNumero(editado.margen) || 30) : margenActual
+    if (precio === precioActual && margen === margenActual) {
+      descartarValorMenu(menu.id)
+      return
+    }
+
+    const precioSugerido = calcularPrecioSugerido(menu.costo_calculado, margen)
+    const foodCost = calcularFoodCost(menu.costo_calculado, precio)
+    const { error } = await supabase
+      .from('menus_ejecutivos')
+      .update({ precio_carta: precio, margen_objetivo: margen, precio_sugerido: precioSugerido, food_cost_real: foodCost })
+      .eq('id', menu.id)
+
+    if (error) {
+      console.error('Error actualizando menú ejecutivo:', error)
+      alert('No se pudo guardar el cambio. Quedó el valor anterior.')
+      descartarValorMenu(menu.id)
+      return
+    }
+
+    setMenusEjecutivos(prev => prev.map(m => m.id === menu.id
+      ? { ...m, precio_carta: precio, margen_objetivo: margen, precio_sugerido: precioSugerido, food_cost_real: foodCost }
+      : m))
+    descartarValorMenu(menu.id)
   }
 
   function handleStartEditMenu(menu: MenuEjecutivoConCosto) {
@@ -881,30 +984,30 @@ export default function CartaPage() {
       {/* Resumen - solo para tab En Carta */}
       {tabActiva === 'en_carta' && (
         <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-2">
-            <div className="flex items-center gap-1">
-              <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-              <span className="text-[10px] font-medium text-green-800">OK</span>
+          <div className="bg-white border border-sand rounded-lg p-2">
+            <div className="flex items-center gap-1.5">
+              <span className="punto-estado bg-success" />
+              <span className="text-[11px] text-ink-muted">OK</span>
             </div>
-            <p className="text-lg font-mono font-bold text-green-600 mt-0.5">
+            <p className="text-lg font-mono font-semibold text-ink mt-0.5">
               {items.filter(i => i.estado_margen === 'ok').length}
             </p>
           </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
-            <div className="flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />
-              <span className="text-[10px] font-medium text-yellow-800">Atención</span>
+          <div className="bg-white border border-sand rounded-lg p-2">
+            <div className="flex items-center gap-1.5">
+              <span className="punto-estado bg-warning" />
+              <span className="text-[11px] text-ink-muted">Atención</span>
             </div>
-            <p className="text-lg font-mono font-bold text-yellow-600 mt-0.5">
+            <p className="text-lg font-mono font-semibold text-ink mt-0.5">
               {items.filter(i => i.estado_margen === 'warning').length}
             </p>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-2">
-            <div className="flex items-center gap-1">
-              <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-              <span className="text-[10px] font-medium text-red-800">Fuera</span>
+          <div className="bg-white border border-sand rounded-lg p-2">
+            <div className="flex items-center gap-1.5">
+              <span className="punto-estado bg-danger" />
+              <span className="text-[11px] text-ink-muted">Fuera</span>
             </div>
-            <p className="text-lg font-mono font-bold text-red-600 mt-0.5">
+            <p className="text-lg font-mono font-semibold text-ink mt-0.5">
               {items.filter(i => i.estado_margen === 'danger').length}
             </p>
           </div>
@@ -918,8 +1021,8 @@ export default function CartaPage() {
             onClick={() => { setTabActiva('en_carta'); setSeccionFiltro(null) }}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               tabActiva === 'en_carta'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-terracotta text-ink'
+                : 'border-transparent text-ink-muted hover:text-ink'
             }`}
           >
             En Carta (<span className="font-mono">{items.length}</span>)
@@ -928,8 +1031,8 @@ export default function CartaPage() {
             onClick={() => { setTabActiva('fuera_carta'); setSeccionFiltro(null) }}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               tabActiva === 'fuera_carta'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-terracotta text-ink'
+                : 'border-transparent text-ink-muted hover:text-ink'
             }`}
           >
             Fuera de Carta (<span className="font-mono">{itemsFueraCarta.length}</span>)
@@ -938,22 +1041,22 @@ export default function CartaPage() {
             onClick={() => { setTabActiva('ejecutivos'); setSeccionFiltro(null) }}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
               tabActiva === 'ejecutivos'
-                ? 'border-teal-500 text-teal-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-terracotta text-ink'
+                : 'border-transparent text-ink-muted hover:text-ink'
             }`}
           >
-            <UtensilsCrossed className="w-3 h-3" />
+            <UtensilsCrossed className="w-3 h-3" strokeWidth={1.5} />
             Ejecutivos (<span className="font-mono">{menusEjecutivos.length}</span>)
           </button>
           <button
             onClick={() => { setTabActiva('especiales'); setSeccionFiltro(null) }}
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
               tabActiva === 'especiales'
-                ? 'border-pink-500 text-pink-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-terracotta text-ink'
+                : 'border-transparent text-ink-muted hover:text-ink'
             }`}
           >
-            <LayoutGrid className="w-3 h-3" />
+            <LayoutGrid className="w-3 h-3" strokeWidth={1.5} />
             Especiales (<span className="font-mono">{menusEspeciales.length}</span>)
           </button>
         </div>
@@ -1043,25 +1146,20 @@ export default function CartaPage() {
                 {seccionesExpandidas.has(grupo.seccion) && (
                   <div className="space-y-2">
                     {grupo.items.map((item) => {
-                      const IconComponent = getPlateIcon(item.plato_seccion, item.plato_nombre)
                       return (
                         <div
                           key={item.id}
-                          className={`bg-white rounded-lg border p-3 ${item.estado_margen === 'danger' ? 'border-red-300 bg-red-50' : ''}`}
+                          className="bg-white rounded-lg border p-3"
                         >
                           {/* Header del plato */}
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <div className="p-1.5 bg-orange-100 rounded">
-                                <IconComponent className="w-4 h-4 text-orange-600" />
-                              </div>
                               <div>
                                 <button
                                   onClick={() => handleVerReceta(item.plato_id)}
-                                  className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline text-left flex items-center gap-1"
+                                  className="font-serif text-[17px] leading-tight text-ink text-left"
                                 >
                                   {item.plato_nombre}
-                                  <Eye className="w-3 h-3 opacity-0 group-hover:opacity-50" />
                                 </button>
                                 <p className="text-[10px] text-gray-400">
                                   {item.plato_dias_actualizacion === 0
@@ -1077,7 +1175,7 @@ export default function CartaPage() {
                             <button
                               onClick={() => handleToggleEnCarta(item.id, tabActiva !== 'en_carta')}
                               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                                tabActiva === 'en_carta' ? 'bg-primary-600' : 'bg-gray-300'
+                                tabActiva === 'en_carta' ? 'bg-ink' : 'bg-gray-300'
                               }`}
                             >
                               <span
@@ -1128,7 +1226,7 @@ export default function CartaPage() {
                               <div className="grid grid-cols-4 gap-2 text-center mb-2">
                                 <div>
                                   <p className="text-[10px] text-gray-500">Costo</p>
-                                  <p className="text-xs font-mono font-medium tabular-nums">${item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                  <p className="text-xs font-mono font-semibold text-ink tabular-nums">${item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                                 </div>
                                 <div>
                                   <p className="text-[10px] text-gray-500">Sugerido</p>
@@ -1140,24 +1238,23 @@ export default function CartaPage() {
                                 </div>
                                 <div>
                                   <p className="text-[10px] text-gray-500">Contrib.</p>
-                                  <p className="text-xs font-mono font-semibold text-success tabular-nums">${(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+                                  <p className={`text-xs font-mono font-semibold tabular-nums ${item.precio_carta - item.plato_costo < 0 ? 'text-danger' : 'text-ink'}`}>${(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                                 </div>
                               </div>
                               <div className="flex items-center justify-between pt-2 border-t">
                                 <div className="flex items-center gap-2">
-                                  {getEstadoIcon(item.estado_margen)}
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium ${getEstadoClass(item.estado_margen)}`}>
-                                    FC: {item.food_cost_real.toFixed(1)}%
-                                  </span>
+                                  <EstadoFC estado={item.estado_margen} className="text-xs">
+                                    FC {item.food_cost_real.toFixed(1)}%
+                                  </EstadoFC>
                                   <span className="text-[10px] font-mono text-gray-500">Obj: {item.margen_objetivo}%</span>
                                 </div>
                                 <div className="flex gap-1">
-                                  <Button variant="ghost" size="sm" onClick={() => handleStartEdit(item)}>
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleEliminar(item.id)}>
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                  </Button>
+                                  <button type="button" className="accion-fila" title="Editar precio" onClick={() => handleStartEdit(item)}>
+                                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                                  </button>
+                                  <button type="button" className="accion-fila accion-fila-peligro" title="Quitar de la carta" onClick={() => handleEliminar(item.id)}>
+                                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                                  </button>
                                 </div>
                               </div>
                             </>
@@ -1181,10 +1278,10 @@ export default function CartaPage() {
                   <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
                   <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Sug.</th>
                   <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Carta</th>
-                  <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">M.Obj</th>
+                  <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">M.Obj</th>
                   <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">FC</th>
-                  <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">Contrib.</th>
-                  <th className="px-2 py-2"></th>
+                  <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Contrib.</th>
+                  <th className="w-12 px-2 py-2"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -1209,21 +1306,19 @@ export default function CartaPage() {
                       </td>
                     </tr>
                     {seccionesExpandidas.has(grupo.seccion) && grupo.items.map((item) => {
-                      const IconComponent = getPlateIcon(item.plato_seccion, item.plato_nombre)
                       return (
-                  <tr key={item.id} className={item.estado_margen === 'danger' ? 'bg-red-50' : ''}>
+                  <tr
+                    key={item.id}
+                    className="fila-clic"
+                    tabIndex={0}
+                    title="Ver receta"
+                    onClick={() => handleVerReceta(item.plato_id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) handleVerReceta(item.plato_id) }}
+                  >
                     <td className="px-2 py-1.5">
                       <div className="flex items-center gap-1.5">
-                        <div className="p-1 bg-orange-100 rounded flex-shrink-0">
-                          <IconComponent className="w-3 h-3 text-orange-600" />
-                        </div>
                         <div>
-                          <ClickableItemName
-                            nombre={item.plato_nombre}
-                            onClick={() => handleVerReceta(item.plato_id)}
-                            size="xs"
-                            title="Ver receta"
-                          />
+                          <p className="font-serif text-[17px] leading-tight text-ink">{item.plato_nombre}</p>
                           <p className="text-[9px] text-gray-400">
                             {item.plato_dias_actualizacion === 0
                               ? 'Hoy'
@@ -1243,7 +1338,7 @@ export default function CartaPage() {
                           handleToggleEnCarta(item.id, tabActiva !== 'en_carta')
                         }}
                         className={`relative inline-flex h-4 w-[30px] items-center rounded-full transition-colors ${
-                          tabActiva === 'en_carta' ? 'bg-primary-600' : 'bg-gray-300'
+                          tabActiva === 'en_carta' ? 'bg-ink' : 'bg-gray-300'
                         }`}
                       >
                         <span
@@ -1253,72 +1348,56 @@ export default function CartaPage() {
                         />
                       </button>
                     </td>
-                    <td className="px-2 py-1.5 text-right text-[11px] font-mono text-gray-600 tabular-nums">
-                      <span className="text-gray-400">$</span>{item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    <td className="px-2 py-1.5 text-right text-xs font-mono font-semibold text-ink tabular-nums">
+                      ${item.plato_costo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
-                    <td className="px-2 py-1.5 text-right text-[11px] font-mono text-gray-500 tabular-nums">
-                      <span className="text-gray-400">$</span>{item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    <td className="px-2 py-1.5 text-right text-[11px] font-mono text-ink-muted tabular-nums">
+                      ${item.precio_sugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
-                    <td className="px-2 py-1.5 text-right">
-                      {editingId === item.id ? (
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={editPrecio}
-                          onChange={(e) => setEditPrecio(e.target.value)}
-                          className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-[11px] font-mono text-right"
-                        />
-                      ) : (
-                        <span className="text-xs font-mono font-medium tabular-nums">
-                          <span className="text-gray-400 font-normal">$</span>{item.precio_carta.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                        </span>
-                      )}
+                    <td className="px-2 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        aria-label={`Precio de carta de ${item.plato_nombre}`}
+                        value={valorCarta(item, 'precio')}
+                        onChange={(e) => setValorCarta(item.id, 'precio', formatearInputNumero(e.target.value))}
+                        onBlur={() => guardarEnLineaCarta(item)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.currentTarget.blur()
+                          if (e.key === 'Escape') descartarValorCarta(item.id)
+                        }}
+                        className="input-inline w-20 font-medium"
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        aria-label={`Margen objetivo de ${item.plato_nombre}`}
+                        value={valorCarta(item, 'margen')}
+                        onChange={(e) => setValorCarta(item.id, 'margen', formatearInputNumero(e.target.value))}
+                        onBlur={() => guardarEnLineaCarta(item)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.currentTarget.blur()
+                          if (e.key === 'Escape') descartarValorCarta(item.id)
+                        }}
+                        className="input-inline w-12"
+                      />
+                      <span className="text-[10px] text-ink-light ml-0.5">%</span>
                     </td>
                     <td className="px-2 py-1.5 text-center">
-                      {editingId === item.id ? (
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={editMargen}
-                          onChange={(e) => setEditMargen(e.target.value)}
-                          className="w-12 rounded border border-gray-300 px-1 py-0.5 text-[11px] font-mono text-center"
-                        />
-                      ) : (
-                        <span className="text-[11px] font-mono text-gray-600">{item.margen_objetivo}%</span>
-                      )}
+                      <EstadoFC estado={item.estado_margen} className="text-[11px]">
+                        {item.food_cost_real.toFixed(1)}%
+                      </EstadoFC>
                     </td>
-                    <td className="px-2 py-1.5 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {getEstadoIcon(item.estado_margen)}
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${getEstadoClass(item.estado_margen)}`}>
-                          {item.food_cost_real.toFixed(1)}%
-                        </span>
-                      </div>
+                    <td className={`px-2 py-1.5 text-right text-[11px] font-mono font-medium tabular-nums ${item.precio_carta - item.plato_costo < 0 ? 'text-danger' : 'text-ink'}`}>
+                      ${(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
-                    <td className="px-2 py-1.5 text-right text-[11px] font-mono font-bold text-green-700 bg-green-50 tabular-nums">
-                      <span className="text-green-500 font-normal">$</span>{(item.precio_carta - item.plato_costo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                    </td>
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-0.5">
-                        {editingId === item.id ? (
-                          <>
-                            <Button variant="ghost" size="sm" onClick={() => handleSaveEdit(item)} disabled={isSaving}>
-                              <Save className="w-3.5 h-3.5 text-green-600" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-                              <X className="w-3.5 h-3.5 text-gray-500" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button variant="ghost" size="sm" onClick={() => handleStartEdit(item)}>
-                              <Pencil className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleEliminar(item.id)}>
-                              <Trash2 className="w-3 h-3 text-red-500" />
-                            </Button>
-                          </>
-                        )}
+                        <button type="button" className="accion-fila accion-fila-peligro" title="Quitar de la carta" onClick={() => handleEliminar(item.id)}>
+                          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1351,12 +1430,11 @@ export default function CartaPage() {
                 const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
                 const contribucion = (menu.precio_carta || 0) - menu.costo_calculado
                 return (
-                  <div key={menu.id} className={`bg-white rounded-lg border p-3 ${estado === 'danger' ? 'border-red-300 bg-red-50' : ''}`}>
+                  <div key={menu.id} className="bg-white rounded-lg border p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-teal-100 rounded-lg"><UtensilsCrossed className="w-4 h-4 text-teal-600" /></div>
                         <div>
-                          <Link href={`/menus-ejecutivos/${menu.id}`}><p className="text-sm font-medium text-gray-900 hover:text-primary-600">{menu.nombre}</p></Link>
+                          <Link href={`/menus-ejecutivos/${menu.id}`}><p className="font-serif text-[17px] leading-tight text-ink">{menu.nombre}</p></Link>
                           {menu.descripcion && <p className="text-xs text-gray-500 truncate max-w-[200px]">{menu.descripcion}</p>}
                         </div>
                       </div>
@@ -1375,20 +1453,19 @@ export default function CartaPage() {
                     ) : (
                       <>
                         <div className="grid grid-cols-4 gap-1 text-center mb-2">
-                          <div><p className="text-[10px] text-gray-500">Costo</p><p className="text-[11px] font-mono font-medium tabular-nums">{fmt(menu.costo_calculado)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">Costo</p><p className="text-[11px] font-mono font-semibold text-ink tabular-nums">{fmt(menu.costo_calculado)}</p></div>
                           <div><p className="text-[10px] text-gray-500">P.Sug.</p><p className="text-[11px] font-mono text-gray-600 tabular-nums">{fmt(precioSugerido)}</p></div>
                           <div><p className="text-[10px] text-gray-500">P.Carta</p><p className="text-[11px] font-mono font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</p></div>
-                          <div><p className="text-[10px] text-gray-500">Contrib.</p><p className={`text-[11px] font-mono font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</p></div>
+                          <div><p className="text-[10px] text-gray-500">Contrib.</p><p className={`text-[11px] font-mono font-semibold tabular-nums ${contribucion >= 0 ? 'text-ink' : 'text-danger'}`}>{fmt(contribucion)}</p></div>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t">
                           <div className="flex items-center gap-1.5">
-                            {getEstadoIcon(estado)}
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${getEstadoClass(estado)}`}>FC: {foodCost.toFixed(1)}%</span>
+                            <EstadoFC estado={estado} className="text-[11px]">FC {foodCost.toFixed(1)}%</EstadoFC>
                             <span className="text-[10px] font-mono text-gray-500">Obj: {menu.margen_objetivo || 30}%</span>
                           </div>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleStartEditMenu(menu)}><Pencil className="w-3.5 h-3.5" /></Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button>
+                            <button type="button" className="accion-fila" title="Editar precio" onClick={() => handleStartEditMenu(menu)}><Pencil className="w-4 h-4" strokeWidth={1.5} /></button>
+                            <button type="button" className="accion-fila accion-fila-peligro" title="Eliminar" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-4 h-4" strokeWidth={1.5} /></button>
                           </div>
                         </div>
                       </>
@@ -1406,9 +1483,9 @@ export default function CartaPage() {
                     <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo</th>
                     <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Sug.</th>
                     <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">P.Carta</th>
-                    <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">M.Obj</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">M.Obj</th>
                     <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">FC</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">Contrib.</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Contrib.</th>
                     <th className="px-2 py-2"></th>
                   </tr>
                 </thead>
@@ -1419,38 +1496,38 @@ export default function CartaPage() {
                     const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
                     const contribucion = (menu.precio_carta || 0) - menu.costo_calculado
                     return (
-                      <tr key={menu.id} className={`hover:bg-gray-50 ${estado === 'danger' ? 'bg-red-50' : ''}`}>
+                      <tr
+                        key={menu.id}
+                        className="fila-clic"
+                        tabIndex={0}
+                        title="Ver menú"
+                        onClick={() => router.push(`/menus-ejecutivos/${menu.id}`)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) router.push(`/menus-ejecutivos/${menu.id}`) }}
+                      >
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-teal-100 rounded-lg"><UtensilsCrossed className="w-4 h-4 text-teal-600" /></div>
                             <div>
-                              <Link href={`/menus-ejecutivos/${menu.id}`}><p className="text-sm font-medium text-gray-900 hover:text-primary-600">{menu.nombre}</p></Link>
+                              <p className="font-serif text-[17px] leading-tight text-ink">{menu.nombre}</p>
                               {menu.descripcion && <p className="text-xs text-gray-500 truncate max-w-xs">{menu.descripcion}</p>}
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono font-medium text-green-600 tabular-nums">{fmt(menu.costo_calculado)}</span></td>
-                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono text-gray-500 tabular-nums">{fmt(editingMenuId === menu.id ? calcularPrecioSugerido(menu.costo_calculado, parsearNumero(editMenuMargen) || 30) : precioSugerido)}</span></td>
-                        <td className="px-2 py-2 text-right">
-                          {editingMenuId === menu.id ? <input type="text" inputMode="decimal" value={editMenuPrecio} onChange={(e) => setEditMenuPrecio(e.target.value)} className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-xs font-mono text-right" /> : <span className="text-xs font-mono font-bold tabular-nums">{fmt(menu.precio_carta || 0)}</span>}
+                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono font-semibold text-ink tabular-nums">{fmt(menu.costo_calculado)}</span></td>
+                        <td className="px-2 py-2 text-right"><span className="text-xs font-mono text-ink-muted tabular-nums">{fmt(precioSugerido)}</span></td>
+                        <td className="px-2 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                          <input type="text" inputMode="decimal" aria-label={`Precio de carta de ${menu.nombre}`} value={valorMenu(menu, 'precio')} onChange={(e) => setValorMenu(menu.id, 'precio', formatearInputNumero(e.target.value))} onBlur={() => guardarEnLineaMenu(menu)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') descartarValorMenu(menu.id) }} className="input-inline w-20 font-medium" />
+                        </td>
+                        <td className="px-2 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                          <input type="text" inputMode="decimal" aria-label={`Margen objetivo de ${menu.nombre}`} value={valorMenu(menu, 'margen')} onChange={(e) => setValorMenu(menu.id, 'margen', formatearInputNumero(e.target.value))} onBlur={() => guardarEnLineaMenu(menu)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') descartarValorMenu(menu.id) }} className="input-inline w-12" />
+                          <span className="text-[10px] text-ink-light ml-0.5">%</span>
                         </td>
                         <td className="px-2 py-2 text-center">
-                          {editingMenuId === menu.id ? <input type="text" inputMode="decimal" value={editMenuMargen} onChange={(e) => setEditMenuMargen(e.target.value)} className="w-14 rounded border border-gray-300 px-1 py-0.5 text-xs font-mono text-center" /> : <span className="text-xs font-mono text-gray-600">{menu.margen_objetivo || 30}%</span>}
+                          <EstadoFC estado={estado} className="text-[11px]">{foodCost.toFixed(1)}%</EstadoFC>
                         </td>
-                        <td className="px-2 py-2 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {getEstadoIcon(estado)}
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium ${getEstadoClass(estado)}`}>{foodCost.toFixed(1)}%</span>
-                          </div>
-                        </td>
-                        <td className="px-2 py-2 text-right bg-green-50"><span className={`text-xs font-mono font-bold tabular-nums ${contribucion >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(contribucion)}</span></td>
-                        <td className="px-2 py-2">
+                        <td className="px-2 py-2 text-right"><span className={`text-xs font-mono font-medium tabular-nums ${contribucion >= 0 ? 'text-ink' : 'text-danger'}`}>{fmt(contribucion)}</span></td>
+                        <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">
-                            {editingMenuId === menu.id ? (
-                              <><Button variant="ghost" size="sm" onClick={handleCancelEditMenu}><X className="w-3.5 h-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => handleSaveEditMenu(menu)} disabled={isSavingMenu}><Save className="w-3.5 h-3.5 text-green-600" /></Button></>
-                            ) : (
-                              <><Button variant="ghost" size="sm" onClick={() => handleStartEditMenu(menu)}><Pencil className="w-3.5 h-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button></>
-                            )}
+                            <button type="button" className="accion-fila accion-fila-peligro" title="Eliminar" onClick={() => handleDeleteEjec(menu.id)}><Trash2 className="w-4 h-4" strokeWidth={1.5} /></button>
                           </div>
                         </td>
                       </tr>
@@ -1485,18 +1562,22 @@ export default function CartaPage() {
               const costoTotalEvento = costoPorPersona * personas
               return (
                 <div key={menu.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="p-3 flex items-center justify-between">
+                  <div
+                    className="p-3 flex items-center justify-between fila-clic"
+                    tabIndex={0}
+                    title="Ver menú"
+                    onClick={() => router.push(`/menus-especiales/${menu.id}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) router.push(`/menus-especiales/${menu.id}`) }}
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-pink-100 rounded-lg"><LayoutGrid className="w-4 h-4 text-pink-600" /></div>
                       <div>
-                        <h3 className="text-sm font-semibold text-gray-900">{menu.nombre}</h3>
+                        <h3 className="font-serif font-normal text-xl leading-tight tracking-normal text-ink">{menu.nombre}</h3>
                         {menu.descripcion && <p className="text-xs text-gray-500">{menu.descripcion}</p>}
                         <p className="text-[10px] text-gray-400 mt-0.5"><span className="font-mono">{menu.menu_especial_opciones?.length || 0}</span> opciones • <span className="font-mono">{comensales}</span> comensales</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Link href={`/menus-especiales/${menu.id}`}><Button variant="ghost" size="sm" title="Ver / Editar"><Eye className="w-3.5 h-3.5" /></Button></Link>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteEsp(menu.id)} title="Eliminar"><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button type="button" className="accion-fila accion-fila-peligro" onClick={() => handleDeleteEsp(menu.id)} title="Eliminar"><Trash2 className="w-4 h-4" strokeWidth={1.5} /></button>
                     </div>
                   </div>
                   {/* Análisis de Precios */}
@@ -1518,37 +1599,37 @@ export default function CartaPage() {
                             <th className="text-right font-medium">P.Sug.</th>
                             <th className="text-right font-medium">P.Venta</th>
                             <th className="text-center font-medium">FC Real</th>
-                            <th className="text-right font-medium bg-green-50">Contrib.</th>
+                            <th className="text-right font-medium">Contrib.</th>
                             <th className="w-10"></th>
                           </tr></thead>
                           <tbody><tr>
                             <td className="py-1.5 text-left"><span className="text-[11px] font-mono text-gray-600"><span className="text-gray-400">$</span>{costoMenu.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span><span className="text-[9px] font-mono text-gray-400 ml-1">({comensales}p)</span></td>
-                            <td className="py-1.5 text-right"><span className="text-xs font-mono font-bold text-green-600"><span className="text-green-400 font-normal">$</span>{costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
+                            <td className="py-1.5 text-right"><span className="text-xs font-mono font-semibold text-ink">${costoPorPersona.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
                             <td className="py-1.5 text-center"><div className="flex items-center justify-center gap-0.5"><input type="text" inputMode="decimal" value={getEditValueEsp(menu.id, 'margen', fcObjetivo)} onChange={(e) => setEditValueEsp(menu.id, 'margen', e.target.value)} onBlur={(e) => handleBlurSaveEsp(menu.id, 'margen', e.target.value, fcObjetivo)} className="w-10 px-1 py-0.5 border border-gray-300 rounded text-center text-[11px] font-mono" /><span className="text-[9px] font-mono text-gray-400">%</span></div></td>
-                            <td className="py-1.5 text-right"><span className="text-[11px] font-mono text-blue-600 font-medium"><span className="text-blue-400">$</span>{currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
+                            <td className="py-1.5 text-right"><span className="text-[11px] font-mono text-ink-muted">${currentPrecioSugerido.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></td>
                             <td className="py-1.5 text-right"><div className="flex items-center justify-end gap-0.5"><span className="text-[9px] font-mono text-gray-400">$</span><input type="text" value={Number(getEditValueEsp(menu.id, 'precio', precioVenta) || 0).toLocaleString('es-AR')} onChange={(e) => { const raw = e.target.value.replace(/\D/g, ''); setEditValueEsp(menu.id, 'precio', raw) }} onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); handleBlurSaveEsp(menu.id, 'precio', raw, precioVenta) }} className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-[11px] font-mono" placeholder="0" /></div></td>
-                            <td className="py-1.5 text-center">{currentPrecio > 0 ? <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-[9px] font-mono font-medium ${isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{currentFcReal.toFixed(1)}%</span> : <span className="text-gray-400 text-[11px]">—</span>}</td>
-                            <td className="py-1.5 text-right bg-green-50">{currentPrecio > 0 ? <span className="text-[11px] font-mono font-bold text-green-700"><span className="text-green-500 font-normal">$</span>{currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span> : <span className="text-gray-400 text-[11px]">—</span>}</td>
-                            <td className="py-1.5 text-right">{hasChanges && <Button variant="ghost" size="sm" onClick={() => handleSaveEsp(menu.id)} title="Guardar cambios"><Save className="w-3 h-3 text-green-600" /></Button>}</td>
+                            <td className="py-1.5 text-center">{currentPrecio > 0 ? <EstadoFC estado={isOk ? 'ok' : 'danger'} className="text-[11px]">{currentFcReal.toFixed(1)}%</EstadoFC> : <span className="text-gray-400 text-[11px]">—</span>}</td>
+                            <td className="py-1.5 text-right">{currentPrecio > 0 ? <span className={`text-[11px] font-mono font-medium ${currentContrib < 0 ? 'text-danger' : 'text-ink'}`}>${currentContrib.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span> : <span className="text-gray-400 text-[11px]">—</span>}</td>
+                            <td className="py-1.5 text-right">{hasChanges && <button type="button" className="accion-fila" onClick={() => handleSaveEsp(menu.id)} title="Guardar cambios"><Save className="w-4 h-4" strokeWidth={1.5} /></button>}</td>
                           </tr></tbody>
                         </table>
                       </div>
                     )
                   })()}
                   {/* Calculadora */}
-                  <div className="border-t bg-gradient-to-r from-pink-50 to-purple-50 px-3 py-2">
+                  <div className="border-t border-sand-light bg-cream-light px-3 py-2">
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex items-center gap-1.5">
-                        <Calculator className="w-3.5 h-3.5 text-pink-500" />
-                        <Users className="w-3.5 h-3.5 text-gray-500" />
+                        <Calculator className="w-3.5 h-3.5 text-ink-muted" strokeWidth={1.5} />
+                        <Users className="w-3.5 h-3.5 text-ink-muted" strokeWidth={1.5} />
                         <Input type="number" value={calculadora?.menuId === menu.id ? calculadora.personas : ''} onChange={(e) => setCalculadora({ menuId: menu.id, personas: e.target.value })} placeholder="Cant." className="w-16 text-xs font-mono" />
                         <span className="text-xs text-gray-600">personas</span>
                       </div>
                       {personas > 0 && (
                         <div className="flex items-center gap-2">
                           <span className="text-gray-400 text-xs">→</span>
-                          <span className="text-xs text-gray-600">Costo: <span className="font-mono font-bold text-green-600">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
-                          {precioVenta > 0 && (<><span className="text-gray-400">|</span><span className="text-xs text-gray-600">Ingreso: <span className="font-mono font-bold text-purple-600">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span></>)}
+                          <span className="text-xs text-gray-600">Costo: <span className="font-mono font-semibold text-ink">${costoTotalEvento.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span>
+                          {precioVenta > 0 && (<><span className="text-gray-400">|</span><span className="text-xs text-gray-600">Ingreso: <span className="font-mono font-semibold text-ink">${(precioVenta * personas).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span></span></>)}
                         </div>
                       )}
                     </div>

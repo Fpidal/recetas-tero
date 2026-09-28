@@ -22,7 +22,7 @@ const config: Config = {
         xs: '475px',
       },
       fontFamily: {
-        // serif → solo logo, títulos de página y cifras hero
+        // serif → logo, títulos de página y de vistas previas, y nombres en Carta
         serif: ['var(--font-serif)', 'Georgia', 'serif'],
         // sans → todo el resto de la interfaz
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],

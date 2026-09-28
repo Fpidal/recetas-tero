@@ -245,6 +245,14 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Próximo
 
+- **Terminar de sacar el color decorativo** (sigue a V.57). Quedan, para decidir uno por uno:
+  íconos con fondo de color en Menús ejecutivos, Menús especiales, Facturas, Ventas, Análisis
+  e Inventario; acciones en rojo o azul en Insumos, Proveedores, Órdenes de compra, Papelera
+  y en las pantallas de alta y edición; dentro de lo ya hecho, las pestañas y la bodega en
+  violeta de Vinos, la pestaña *Insumos* de Recetas, Elaboraciones y Tragos, el modal de
+  receta y el de "Agregar plato" de Carta, y el botón de WhatsApp de las vistas previas. Los
+  íconos que no se tocaron siguen con trazo 2; los nuevos van con 1,5.
+
 - **Anular una factura puede reactivar el precio de OTRA factura anulada.** Visto el
   26/09/26 con dos facturas de prueba del arroz gallo (Alamenia 0001 y 0002): al anular la
   0002, el arroz no volvió a los $1.338,60 de El Triunfo sino a los $1.400 de la 0001, que
@@ -385,6 +393,30 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 3. Decisiones tomadas
 
 Registradas para no volver a discutirlas.
+
+- **El color es para datos con significado, no para decorar** (28/09/26, V.57). Recetas,
+  Elaboraciones, Tragos, Vinos y Carta tenían un ícono con fondo de color por fila, el costo
+  en verde con fondo verde, el eliminar en rojo siempre y el "ver" en azul: con todo pintado,
+  un food cost fuera de objetivo no se distinguía del resto. Ahora el color queda para
+  estados (Bev. Cost, FC %), variaciones y alertas; las acciones van en gris y la terracota
+  es un solo botón por pantalla, el de "Nuevo…". Las reglas y las clases están en el README
+  (*Sistema de diseño → Colores*) y en `globals.css`, sección *LISTADOS*. Se decidió con
+  maquetas sobre datos reales antes de tocar código.
+
+  Dos excepciones pedidas a propósito, las dos en **Carta**:
+  - Los nombres de platos y menús van en la **serif** de los títulos. Recetas y Carta muestran
+    los mismos platos; la tipografía dice en cuál de las dos se está.
+  - El **FC** no usa el punto chico de los otros listados: Atención y Fuera llevan ícono y el
+    número en su color, y OK no lleva nada. Un tilde verde en 35 de 50 filas tapaba las 15
+    que importan.
+
+  Carta pasó además a **editar precio y margen en la celda**, como Tragos (se guarda al salir
+  del campo). En el **celular** quedó el lápiz: sin mouse, un campo sin borde no se reconoce
+  como editable.
+
+  Al leer el código apareció que la carta y los menús ejecutivos **no usan la misma regla**
+  para "Fuera": los platos, más de un 10% arriba del objetivo; los ejecutivos, más de 5
+  puntos. No se tocó. Queda en `estadoItemCarta()` y `getEstadoMargen()` de `carta/page.tsx`.
 
 - **El precio por kilo sale del contenido de la LÍNEA de factura, no del insumo** (26/09/26).
   El mismo arroz se compra en bolsa de 5 kg a El Triunfo y suelto por kilo a otro proveedor;

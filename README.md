@@ -23,13 +23,13 @@ Sistema de gestión de recetas, costos y menús para restaurante. Permite admini
 
 | Rol | Fuente | Dónde |
 |---|---|---|
-| **Display** | Instrument Serif (400) | Logo del sidebar y títulos de página, y nada más |
+| **Display** | Instrument Serif (400) | Logo, títulos de página, título de las vistas previas y nombres de platos y menús en Carta |
 | **Interfaz** | Instrument Sans | Todo el resto: navegación, labels, botones, tablas |
 | **Cifras** | IBM Plex Mono | Toda cifra: montos, porcentajes, fechas, cantidades |
 
 Reglas:
 
-- La serif aparece **solo** en el logo y en los títulos de página. Si se usara también en subtítulos o botones dejaría de señalar nada.
+- La serif aparece **solo** en el logo, los títulos de página, el título de las vistas previas (platos y elaboraciones) y los nombres de platos y menús en **Carta**. En Carta es a propósito: se nota a primera vista que se está en la carta y no en Recetas. Si se usara también en subtítulos o botones dejaría de señalar nada.
 - Instrument Serif tiene un único peso (400). Poner `font-bold` la sintetiza y ensucia el trazo: la jerarquía la da el tamaño.
 - El `<h1>` se estila una sola vez, en `globals.css`. Las páginas escriben `<h1>Insumos</h1>` sin clases de tipografía, así todos los títulos quedan iguales.
 - Todo número lleva `font-mono`, incluso dentro de un párrafo. Las columnas numéricas van alineadas a la derecha.
@@ -37,10 +37,22 @@ Reglas:
 
 ### Colores
 
-La paleta de colores está definida en `tailwind.config.ts` con variantes para:
-- **Primary**: Tonos principales de la marca
-- **Gray**: Escala de grises para texto y fondos
-- **Semánticos**: Green (éxito), Yellow (warning), Red (danger)
+La paleta vive en `tailwind.config.ts`, y los valores que comparten pantalla, PDF y Excel en `src/lib/colores.ts`.
+
+- **Tinta** (`ink`, `ink-muted`, `ink-light`) para texto; **crema** (`cream`) de fondo; **arena** (`sand`) para bordes.
+- **Terracota**: el acento. Un solo botón lleno por pantalla, el de "Nuevo…"; el resto de los botones va con contorno (`variant="secondary"`).
+- **Semánticos** (`success`, `warning`, `danger`): solo para datos con significado — estados como Bev. Cost o FC %, variaciones y alertas. Nada de color decorativo.
+
+Reglas de los listados (desde V.57):
+
+- **Sin íconos con fondo de color** al inicio de las filas.
+- **Acciones de fila en gris** (`accion-fila`). Eliminar se pone rojo solo al pasar el mouse (`accion-fila-peligro`).
+- **Clic en la fila abre el detalle**; no hay botón de "ver". Las acciones cortan el clic con `stopPropagation`.
+- **Costos en tinta**, monoespaciados y en semibold. Nada de fondo verde en la columna.
+- **Estados con un punto de color** antes del valor (`punto-estado`). La excepción es **Carta**, donde el FC es lo que más se mira: Atención y Fuera llevan ícono y el número en su color, y OK va sin nada para que las alertas resalten.
+- **Inputs dentro de tablas** (`input-inline`): sin borde en reposo, borde al pasar por la fila, foco terracota.
+
+Las clases están en `src/app/globals.css`, sección *LISTADOS*.
 
 ## Estructura de Carpetas
 
@@ -138,8 +150,8 @@ Recetas con ingredientes, cálculo automático de costo total, margen y precio d
 
 ### Carta (`/carta`)
 Vista unificada con 4 tabs:
-- **En Carta / Fuera de Carta**: Platos activos e inactivos con modal de preview
-- **Ejecutivos**: Menús del día con secciones (Parrilla, Entrada, Fondo, Postre, Jugo)
+- **En Carta / Fuera de Carta**: Platos activos e inactivos con modal de preview. El precio de carta y el margen objetivo se editan directo en la celda y se guardan al salir del campo (Esc vuelve atrás)
+- **Ejecutivos**: Menús del día con secciones (Parrilla, Entrada, Fondo, Postre, Jugo). Precio y margen, igual que en la carta
 - **Especiales**: Menús para eventos con presupuestación
 
 Navegación inteligente: al volver de editar un menú, se mantiene la tab activa.

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Eye, Martini, Search, ChevronDown, ChevronRight, Package, BookOpen, Check } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Plus, Pencil, Trash2, Martini, Search, ChevronDown, ChevronRight, Package, BookOpen, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { Button } from '@/components/ui'
@@ -29,11 +30,22 @@ interface InsumoEnTragos {
   tragos: { id: string; nombre: string }[]
 }
 
-// BC = costo / precio. Verde ≤22, amarillo ≤28, rojo >28
-function bcClasses(bc: number): string {
-  if (bc <= 22) return 'text-green-600'
-  if (bc <= 28) return 'text-amber-500'
-  return 'text-red-600'
+// BC = costo / precio. Verde ≤22, amarillo ≤28, rojo >28.
+// El color va en un punto antes del valor; el número queda en tinta.
+function bcPunto(bc: number): string {
+  if (bc <= 22) return 'bg-success'
+  if (bc <= 28) return 'bg-warning'
+  return 'bg-danger'
+}
+
+function BevCost({ bc, precioVenta, className = '' }: { bc: number; precioVenta: number; className?: string }) {
+  if (precioVenta <= 0) return <span className={`font-mono text-gray-300 ${className}`}>—</span>
+  return (
+    <span className={`inline-flex items-center gap-1.5 font-mono font-semibold text-ink ${className}`}>
+      <span className={`punto-estado ${bcPunto(bc)}`} />
+      {bc.toFixed(0)}%
+    </span>
+  )
 }
 
 function precioSugerido(costo: number, margen: number): number {
@@ -41,6 +53,7 @@ function precioSugerido(costo: number, margen: number): number {
 }
 
 export default function TragosPage() {
+  const router = useRouter()
   const [tragos, setTragos] = useState<TragoConCosto[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
@@ -286,12 +299,12 @@ export default function TragosPage() {
     const bc = bcDe(trago)
     const sug = precioSugerido(trago.costo_total, parsearNumero(editValues[trago.id]?.margen) || trago.margen_objetivo)
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div
+        className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer"
+        onClick={() => router.push(`/tragos/${trago.id}?view=true`)}
+      >
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-start gap-2 flex-1">
-            <div className="p-1.5 bg-orange-100 rounded-lg flex-shrink-0">
-              <Martini className="w-4 h-4 text-orange-600" />
-            </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900">{trago.nombre}</p>
               {(trago.vaso || trago.tecnica) && (
@@ -301,13 +314,13 @@ export default function TragosPage() {
           </div>
           <div className="text-right flex-shrink-0">
             <p className="text-xs text-gray-500">Costo</p>
-            <p className="font-bold text-green-700 font-mono">
+            <p className="font-semibold text-ink font-mono">
               ${trago.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mb-2">
+        <div className="grid grid-cols-3 gap-2 mb-2" onClick={(e) => e.stopPropagation()}>
           <div>
             <p className="text-[10px] text-gray-500 mb-0.5">M.Obj %</p>
             <input
@@ -333,22 +346,17 @@ export default function TragosPage() {
           </div>
           <div className="text-right">
             <p className="text-[10px] text-gray-500 mb-0.5">Bev. Cost</p>
-            <p className={`text-sm font-bold font-mono ${trago.precio_venta > 0 ? bcClasses(bc) : 'text-gray-300'}`}>
-              {trago.precio_venta > 0 ? `${bc.toFixed(0)}%` : '—'}
-            </p>
+            <BevCost bc={bc} precioVenta={trago.precio_venta} className="text-sm" />
           </div>
         </div>
 
-        <div className="flex justify-end gap-1 pt-2 border-t">
-          <Link href={`/tragos/${trago.id}?view=true`}>
-            <Button variant="ghost" size="sm"><Eye className="w-4 h-4 text-blue-500" /></Button>
+        <div className="flex justify-end gap-1 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+          <Link href={`/tragos/${trago.id}`} className="accion-fila" title="Editar">
+            <Pencil className="w-4 h-4" strokeWidth={1.5} />
           </Link>
-          <Link href={`/tragos/${trago.id}`}>
-            <Button variant="ghost" size="sm"><Pencil className="w-4 h-4" /></Button>
-          </Link>
-          <Button variant="ghost" size="sm" onClick={() => handleDelete(trago.id)}>
-            <Trash2 className="w-4 h-4 text-red-500" />
-          </Button>
+          <button type="button" className="accion-fila accion-fila-peligro" title="Eliminar" onClick={() => handleDelete(trago.id)}>
+            <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+          </button>
         </div>
       </div>
     )
@@ -419,7 +427,7 @@ export default function TragosPage() {
                   <span className="text-xs text-gray-500">%</span>
                 </div>
               </div>
-              <Button size="sm" onClick={handleAplicarATodos} disabled={aplicando}>
+              <Button variant="secondary" size="sm" onClick={handleAplicarATodos} disabled={aplicando}>
                 <Check className="w-4 h-4 mr-1" />
                 {aplicando ? 'Aplicando...' : 'Aplicar a todos'}
               </Button>
@@ -456,12 +464,12 @@ export default function TragosPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trago</th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase bg-green-50">Costo</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">P.Sug.</th>
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">M.Obj %</th>
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">P.Carta</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">M.Obj %</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">P.Carta</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Bev. Cost</th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    <th className="w-24 px-3 py-3"><span className="sr-only">Acciones</span></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -470,12 +478,16 @@ export default function TragosPage() {
                     const margenEdit = parsearNumero(editValues[trago.id]?.margen) || trago.margen_objetivo
                     const sug = precioSugerido(trago.costo_total, margenEdit)
                     return (
-                      <tr key={trago.id} className="hover:bg-gray-50">
+                      <tr
+                        key={trago.id}
+                        className="fila-clic"
+                        tabIndex={0}
+                        title="Ver trago"
+                        onClick={() => router.push(`/tragos/${trago.id}?view=true`)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) router.push(`/tragos/${trago.id}?view=true`) }}
+                      >
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-orange-100 rounded-lg">
-                              <Martini className="w-4 h-4 text-orange-600" />
-                            </div>
                             <div>
                               <p className="text-sm font-medium text-gray-900">
                                 {trago.nombre}
@@ -491,47 +503,46 @@ export default function TragosPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums font-mono">
+                        <td className="px-3 py-2 text-right text-sm font-semibold text-ink tabular-nums font-mono">
                           ${trago.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="px-3 py-2 text-right text-xs text-gray-500 tabular-nums font-mono">
+                        <td className="px-3 py-2 text-right text-xs text-ink-muted tabular-nums font-mono">
                           ${Math.round(sug).toLocaleString('es-AR')}
                         </td>
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="text"
                             inputMode="decimal"
+                            aria-label={`Margen objetivo de ${trago.nombre}`}
                             value={editValues[trago.id]?.margen ?? ''}
                             onChange={(e) => setEdit(trago.id, 'margen', formatearInputNumero(e.target.value))}
                             onBlur={() => handleSaveMargen(trago)}
-                            className="w-14 rounded border border-gray-300 px-1.5 py-1 text-xs text-center font-mono focus:ring-2 focus:ring-primary-500"
+                            className="input-inline w-14"
                           />
                         </td>
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                           <input
+                            aria-label={`Precio de carta de ${trago.nombre}`}
                             type="text"
                             inputMode="decimal"
                             value={editValues[trago.id]?.precio ?? ''}
                             onChange={(e) => setEdit(trago.id, 'precio', formatearInputNumero(e.target.value))}
                             onBlur={() => handleSavePrecio(trago)}
                             placeholder={Math.round(sug).toLocaleString('es-AR')}
-                            className="w-24 rounded border border-gray-300 px-2 py-1 text-xs text-right font-mono focus:ring-2 focus:ring-primary-500"
+                            className="input-inline w-24"
                           />
                         </td>
-                        <td className={`px-3 py-2 text-right text-xs font-semibold tabular-nums font-mono ${trago.precio_venta > 0 ? bcClasses(bc) : 'text-gray-300'}`}>
-                          {trago.precio_venta > 0 ? `${bc.toFixed(0)}%` : '—'}
+                        <td className="px-3 py-2 text-right text-xs tabular-nums">
+                          <BevCost bc={bc} precioVenta={trago.precio_venta} />
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-3 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">
-                            <Link href={`/tragos/${trago.id}?view=true`}>
-                              <Button variant="ghost" size="sm" title="Ver"><Eye className="w-3.5 h-3.5 text-blue-500" /></Button>
+                            <Link href={`/tragos/${trago.id}`} className="accion-fila" title="Editar">
+                              <Pencil className="w-4 h-4" strokeWidth={1.5} />
                             </Link>
-                            <Link href={`/tragos/${trago.id}`}>
-                              <Button variant="ghost" size="sm" title="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
-                            </Link>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(trago.id)}>
-                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                            </Button>
+                            <button type="button" className="accion-fila accion-fila-peligro" title="Eliminar" onClick={() => handleDelete(trago.id)}>
+                              <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                            </button>
                           </div>
                         </td>
                       </tr>

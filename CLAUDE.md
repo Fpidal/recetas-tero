@@ -109,6 +109,9 @@ src/
 - Timestamps: `created_at` automático
 - IVA: almacenado como decimal (0.21, 0.10, 0)
 - Números: siempre con `font-mono` para alineación tabular
+- Color: solo para datos con significado (estados, variaciones, alertas). En listados, acciones
+  con `accion-fila`, estados con `punto-estado`, inputs de tabla con `input-inline` (ver README,
+  *Sistema de diseño → Colores*). Un solo botón terracota por pantalla, el de "Nuevo…"
 
 ## ⚠️ Trece trampas que ya rompieron cosas
 

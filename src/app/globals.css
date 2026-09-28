@@ -333,3 +333,44 @@ body {
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* =====================================================
+   LISTADOS - acciones, inputs inline y estados
+   El color se reserva para datos con significado (Bev. Cost, FC %,
+   variaciones, alertas). Las acciones de fila van en gris y sólo
+   "eliminar" se pone rojo, y sólo al pasar el mouse.
+   ===================================================== */
+@layer components {
+  /* Botón de ícono en una fila (editar, eliminar, historial) */
+  .accion-fila {
+    @apply inline-grid place-items-center w-8 h-8 rounded-md text-ink-muted transition-colors;
+    @apply hover:bg-cream-dark hover:text-ink;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/40;
+  }
+  .accion-fila-peligro {
+    @apply hover:bg-danger-bg hover:text-danger;
+  }
+
+  /* Input editable dentro de una tabla: parece texto hasta que se lo usa */
+  .input-inline {
+    @apply font-mono text-xs text-right text-ink bg-transparent rounded-md px-1.5 py-1;
+    @apply border border-transparent transition-[border-color,box-shadow,background-color];
+  }
+  tr:hover .input-inline {
+    @apply border-sand-dark bg-white;
+  }
+  .input-inline:focus {
+    @apply outline-none border-terracotta bg-white ring-[3px] ring-terracotta/15;
+  }
+
+  /* Punto de color antes de un valor de estado (Bev. Cost, FC %) */
+  .punto-estado {
+    @apply inline-block w-[7px] h-[7px] rounded-full flex-none;
+  }
+
+  /* Fila de listado que abre el detalle al hacer clic */
+  .fila-clic {
+    @apply cursor-pointer transition-colors hover:bg-cream;
+    @apply focus:outline-none focus-visible:bg-cream;
+  }
+}

@@ -10,6 +10,21 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.57',
+    fecha: '28/09/26',
+    cambios: [
+      'Recetas, Elaboraciones, Tragos, Vinos y Carta con menos color: el color queda solo para lo que avisa algo, como el food cost o el Bev. Cost',
+      'Se sacaron los íconos de colores del principio de cada fila',
+      'Haciendo clic en cualquier parte de la fila se abre el plato, la elaboración o el trago. Se fue el botón del ojo',
+      'Editar y eliminar ahora son grises. Eliminar se pone rojo recién al pasar el mouse',
+      'En Recetas, la descripción del plato tiene su propia columna',
+      'En Carta, los nombres de los platos y menús van con la letra de los títulos, para distinguirla de Recetas de un vistazo',
+      'En Carta, el food cost en Atención o Fuera se marca con un ícono y el número en color; los que están bien no llevan nada',
+      'En Carta y en los menús ejecutivos, el precio y el margen se cambian directo en la tabla, sin el lápiz: se guarda al salir del campo',
+      'La vista previa de platos y elaboraciones tiene el título con la letra de los títulos y los datos en recuadros neutros',
+    ],
+  },
+  {
     version: 'V.56',
     fecha: '26/09/26',
     cambios: [

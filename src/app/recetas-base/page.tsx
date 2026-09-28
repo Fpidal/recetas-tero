@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, ChefHat, Search, Eye, X, ClipboardList, ImageIcon, Share2, Package, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChefHat, Search, X, ClipboardList, ImageIcon, Share2, Package, ChevronDown, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
-import { Button, ClickableItemName, BotonExportar } from '@/components/ui'
+import { Button, BotonExportar } from '@/components/ui'
 import { exportarElaboraciones } from '@/lib/exportaciones'
 import Link from 'next/link'
 import { coincideBusqueda } from '@/lib/buscar'
@@ -257,12 +257,12 @@ export default function RecetasBasePage() {
 
   // Card component for mobile
   const RecetaCard = ({ receta }: { receta: RecetaConCosto }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div
+      className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer"
+      onClick={() => handleVerDetalle(receta.id)}
+    >
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-start gap-2 flex-1 min-w-0">
-          <div className="p-1.5 bg-purple-100 rounded-lg flex-shrink-0">
-            <ChefHat className="w-4 h-4 text-purple-600" />
-          </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900">{receta.nombre}</p>
             {receta.descripcion && (
@@ -279,31 +279,25 @@ export default function RecetasBasePage() {
         </div>
         <div>
           <p className="text-[10px] text-gray-500">Costo Total</p>
-          <p className="text-sm font-medium font-mono">
+          <p className="text-sm font-semibold text-ink font-mono">
             ${receta.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </p>
         </div>
         <div className="text-right">
           <p className="text-[10px] text-gray-500">$/Porción</p>
-          <p className="text-sm font-bold text-green-700 font-mono">
+          <p className="text-sm font-semibold text-ink font-mono">
             ${receta.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
           </p>
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 pt-3 border-t">
-        <Button variant="ghost" size="sm" onClick={() => handleVerDetalle(receta.id)}>
-          <Eye className="w-4 h-4 text-blue-500" />
-        </Button>
-        <Link href={`/recetas-base/${receta.id}`}>
-          <Button variant="ghost" size="sm">
-            <Pencil className="w-4 h-4 mr-1" />
-            Editar
-          </Button>
+      <div className="flex justify-end gap-1 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
+        <Link href={`/recetas-base/${receta.id}`} className="accion-fila" title="Editar">
+          <Pencil className="w-4 h-4" strokeWidth={1.5} />
         </Link>
-        <Button variant="ghost" size="sm" onClick={() => handleDelete(receta.id)}>
-          <Trash2 className="w-4 h-4 text-red-500" />
-        </Button>
+        <button type="button" className="accion-fila accion-fila-peligro" title="Eliminar" onClick={() => handleDelete(receta.id)}>
+          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+        </button>
       </div>
     </div>
   );
@@ -386,49 +380,45 @@ export default function RecetasBasePage() {
                   <th className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Nombre</th>
                   <th className="px-4 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Rinde</th>
                   <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Costo Total</th>
-                  <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">$/Porción</th>
-                  <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-4 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">$/Porción</th>
+                  <th className="w-24 px-4 py-2"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {recetasFiltradas.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
+                  <tr
+                    key={r.id}
+                    className="fila-clic"
+                    tabIndex={0}
+                    title="Ver elaboración"
+                    onClick={() => handleVerDetalle(r.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) handleVerDetalle(r.id) }}
+                  >
                     <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-purple-100 rounded-lg">
-                          <ChefHat className="w-4 h-4 text-purple-600" />
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                          <ClickableItemName
-                            nombre={r.nombre}
-                            onClick={() => handleVerDetalle(r.id)}
-                            title="Ver elaboración"
-                          />
-                          {r.descripcion && (
-                            <span className="text-xs text-gray-400 italic font-normal">({r.descripcion})</span>
-                          )}
-                        </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-medium text-ink">{r.nombre}</span>
+                        {r.descripcion && (
+                          <span className="text-xs text-gray-400 italic font-normal">({r.descripcion})</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-2 text-center text-xs text-gray-600 font-mono">
                       {r.rendimiento_porciones}
                     </td>
-                    <td className="px-4 py-2 text-right text-xs font-medium tabular-nums font-mono">
-                      <span className="text-gray-400">$</span><span className="ml-1">{r.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                    <td className="px-4 py-2 text-right text-sm font-semibold text-ink tabular-nums font-mono">
+                      ${r.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
-                    <td className="px-4 py-2 text-right text-xs font-bold text-green-700 bg-green-50 tabular-nums font-mono">
-                      <span className="text-green-500 font-normal">$</span><span className="ml-1">{r.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                    <td className="px-4 py-2 text-right text-sm font-semibold text-ink tabular-nums font-mono">
+                      ${r.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-4 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
-                        <Link href={`/recetas-base/${r.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
+                        <Link href={`/recetas-base/${r.id}`} className="accion-fila" title="Editar">
+                          <Pencil className="w-4 h-4" strokeWidth={1.5} />
                         </Link>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)}>
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                        </Button>
+                        <button type="button" className="accion-fila accion-fila-peligro" title="Eliminar" onClick={() => handleDelete(r.id)}>
+                          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -530,20 +520,18 @@ export default function RecetasBasePage() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header del modal */}
-            <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+            <div className="flex items-center justify-between p-4 border-b border-sand bg-cream">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-purple-100 rounded-lg">
-                  <ChefHat className="w-5 h-5 text-purple-600" />
-                </div>
-                <h2 className="text-lg font-bold text-gray-900">
+                <h2 className="font-serif font-normal text-[26px] leading-tight tracking-normal text-ink">
                   {loadingDetalle ? 'Cargando...' : recetaDetalle?.nombre}
                 </h2>
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
+                className="accion-fila"
+                title="Cerrar"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5" strokeWidth={1.5} />
               </button>
             </div>
 
@@ -560,14 +548,14 @@ export default function RecetasBasePage() {
                     {recetaDetalle.descripcion && (
                       <span className="text-gray-500 italic">{recetaDetalle.descripcion}</span>
                     )}
-                    <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                      Rinde: <strong className="font-mono">{recetaDetalle.rendimiento_porciones}</strong> porc.
+                    <span className="bg-white border border-sand px-2.5 py-1 rounded-md text-xs text-ink-muted">
+                      Rinde <strong className="ml-1 font-mono font-semibold text-ink">{recetaDetalle.rendimiento_porciones} porc.</strong>
                     </span>
-                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold font-mono">
-                      ${recetaDetalle.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })} / porción
+                    <span className="bg-white border border-sand px-2.5 py-1 rounded-md text-xs text-ink-muted">
+                      Por porción <strong className="ml-1 font-mono font-semibold text-ink">${recetaDetalle.costo_por_porcion.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</strong>
                     </span>
-                    <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                      Total: ${recetaDetalle.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    <span className="bg-white border border-sand px-2.5 py-1 rounded-md text-xs text-ink-muted">
+                      Total <strong className="ml-1 font-mono font-semibold text-ink">${recetaDetalle.costo_total.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</strong>
                     </span>
                   </div>
 

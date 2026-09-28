@@ -66,6 +66,14 @@ interface VinoConCarta extends Vino {
   costo: number // precio final botella
 }
 
+// FC de un vino en carta: rojo desde 40%, ámbar si pasa el margen objetivo, verde si no.
+// El color va en un punto antes del valor; el número queda en tinta.
+function fcPunto(foodCost: number, margenObj: number): string {
+  if (Math.round(foodCost) >= 40) return 'bg-danger'
+  if (Math.round(foodCost) > margenObj) return 'bg-warning'
+  return 'bg-success'
+}
+
 export default function VinosPage() {
   const [activeTab, setActiveTab] = useState<'vinos' | 'carta'>('vinos')
   const [vinos, setVinos] = useState<Vino[]>([])
@@ -793,14 +801,15 @@ export default function VinosPage() {
         </div>
         {activeTab === 'vinos' && (
           <div className="flex gap-2 w-full sm:w-auto">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setShowImportModal(true)}
-              className="flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-md flex items-center justify-center gap-1.5 text-white"
-              style={{ backgroundColor: '#7a7a3a' }}
+              className="flex-1 sm:flex-none text-xs"
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Upload className="w-3.5 h-3.5 mr-1 text-ink-muted" strokeWidth={1.5} />
               Importar Precios
-            </button>
+            </Button>
             <Button onClick={() => handleOpenModal()} size="sm" className="flex-1 sm:flex-none text-xs">
               <Plus className="w-3.5 h-3.5 mr-1" />
               Nuevo Vino
@@ -927,14 +936,14 @@ export default function VinosPage() {
                         <p className="text-[10px] text-gray-500">{vino.cepa}</p>
                       </div>
                       <div className="flex gap-0.5">
-                        <button onClick={() => fetchHistorialVino(vino)} className="p-1 hover:bg-gray-100 rounded" title="Historial de precios">
-                          <LineChartIcon className="w-3.5 h-3.5 text-blue-500" />
+                        <button onClick={() => fetchHistorialVino(vino)} className="accion-fila" title="Historial de precios">
+                          <LineChartIcon className="w-4 h-4" strokeWidth={1.5} />
                         </button>
-                        <button onClick={() => handleOpenModal(vino)} className="p-1 hover:bg-gray-100 rounded">
-                          <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                        <button onClick={() => handleOpenModal(vino)} className="accion-fila" title="Editar">
+                          <Pencil className="w-4 h-4" strokeWidth={1.5} />
                         </button>
-                        <button onClick={() => handleDelete(vino.id, vino.nombre)} className="p-1 hover:bg-gray-100 rounded">
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        <button onClick={() => handleDelete(vino.id, vino.nombre)} className="accion-fila accion-fila-peligro" title="Eliminar">
+                          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                         </button>
                       </div>
                     </div>
@@ -947,9 +956,9 @@ export default function VinosPage() {
                         <p className="text-[9px] text-gray-500">Desc</p>
                         <p className="text-[10px] font-medium font-mono">{vino.descuento_porcentaje}%</p>
                       </div>
-                      <div className="bg-green-100 rounded -m-1.5 p-1.5">
-                        <p className="text-[9px] text-green-700">Final</p>
-                        <p className="text-[10px] font-bold text-green-700 font-mono">{fmt(unidadFinal)}</p>
+                      <div>
+                        <p className="text-[9px] text-gray-500">Final</p>
+                        <p className="text-[10px] font-semibold text-ink font-mono">{fmt(unidadFinal)}</p>
                         {(() => {
                           const pp = ppDe(vino.id, vino.unidades_caja)
                           if (!pp) return null
@@ -974,7 +983,7 @@ export default function VinosPage() {
                     <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Ud</th>
                     <th className="px-2 py-2 text-center text-[10px] font-medium text-gray-500 uppercase">Desc</th>
                     <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Final Caja</th>
-                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase bg-green-50">Final Botella</th>
+                    <th className="px-2 py-2 text-right text-[10px] font-medium text-gray-500 uppercase">Final Botella</th>
                     <th className="px-1 py-2"></th>
                   </tr>
                 </thead>
@@ -993,8 +1002,8 @@ export default function VinosPage() {
                         {/* Debajo del final, el P.P: lo que se pagó de verdad en la
                             última factura. Sólo referencia — el costo lo sigue
                             dando la lista de la bodega. */}
-                        <td className="px-2 py-1.5 text-right bg-green-50">
-                          <span className="text-xs font-bold text-green-700 font-mono block">{fmt(unidadFinal)}</span>
+                        <td className="px-2 py-1.5 text-right">
+                          <span className="text-xs font-semibold text-ink font-mono block">{fmt(unidadFinal)}</span>
                           {(() => {
                             const pp = ppDe(vino.id, vino.unidades_caja)
                             if (!pp) return null
@@ -1010,14 +1019,14 @@ export default function VinosPage() {
                         </td>
                         <td className="px-1 py-1.5">
                           <div className="flex justify-end gap-0.5">
-                            <button onClick={() => fetchHistorialVino(vino)} className="p-1 hover:bg-gray-100 rounded" title="Historial de precios">
-                              <LineChartIcon className="w-3.5 h-3.5 text-blue-500" />
+                            <button onClick={() => fetchHistorialVino(vino)} className="accion-fila" title="Historial de precios">
+                              <LineChartIcon className="w-4 h-4" strokeWidth={1.5} />
                             </button>
-                            <button onClick={() => handleOpenModal(vino)} className="p-1 hover:bg-gray-100 rounded">
-                              <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                            <button onClick={() => handleOpenModal(vino)} className="accion-fila" title="Editar">
+                              <Pencil className="w-4 h-4" strokeWidth={1.5} />
                             </button>
-                            <button onClick={() => handleDelete(vino.id, vino.nombre)} className="p-1 hover:bg-gray-100 rounded">
-                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            <button onClick={() => handleDelete(vino.id, vino.nombre)} className="accion-fila accion-fila-peligro" title="Eliminar">
+                              <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                             </button>
                           </div>
                         </td>
@@ -1103,7 +1112,7 @@ export default function VinosPage() {
                             </button>
                           </td>
                           <td className="px-3 py-2 text-right">
-                            <span className="text-xs font-medium text-gray-900 font-mono">{fmtDec(vino.costo)}</span>
+                            <span className="text-xs font-semibold text-ink font-mono">{fmtDec(vino.costo)}</span>
                           </td>
                           <td className="px-3 py-2 text-right">
                             <span className="text-xs text-gray-500 font-mono">{fmt(precioSugerido)}</span>
@@ -1140,9 +1149,14 @@ export default function VinosPage() {
                             )}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            <span className={`text-xs font-medium font-mono ${Math.round(foodCost) >= 40 ? 'text-red-600' : Math.round(foodCost) > margenObj ? 'text-yellow-600' : 'text-green-600'}`}>
-                              {precioCarta > 0 ? pct(foodCost) : '-'}
-                            </span>
+                            {precioCarta > 0 ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold font-mono text-ink">
+                                <span className={`punto-estado ${fcPunto(foodCost, margenObj)}`} />
+                                {pct(foodCost)}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-mono text-gray-400">-</span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right">
                             <span className={`text-xs font-semibold font-mono ${contribucion > 0 ? 'text-green-600' : 'text-gray-400'}`}>
@@ -1160,8 +1174,8 @@ export default function VinosPage() {
                                 </button>
                               </div>
                             ) : (
-                              <button onClick={() => handleEditCarta(vino)} className="p-1 hover:bg-gray-100 rounded">
-                                <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                              <button onClick={() => handleEditCarta(vino)} className="accion-fila" title="Editar precio de carta">
+                                <Pencil className="w-4 h-4" strokeWidth={1.5} />
                               </button>
                             )}
                           </td>
@@ -1207,8 +1221,8 @@ export default function VinosPage() {
                             <p className="text-[10px] text-gray-500">{vino.cepa}</p>
                           </button>
                         </div>
-                        <button onClick={() => handleEditCarta(vino)} className="p-1">
-                          <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                        <button onClick={() => handleEditCarta(vino)} className="accion-fila" title="Editar precio de carta">
+                          <Pencil className="w-4 h-4" strokeWidth={1.5} />
                         </button>
                       </div>
                       <div className="grid grid-cols-4 gap-1 text-center bg-gray-50 rounded p-1.5 text-[10px]">
@@ -1222,7 +1236,8 @@ export default function VinosPage() {
                         </div>
                         <div>
                           <p className="text-gray-500">FC</p>
-                          <p className={`font-medium font-mono ${Math.round(foodCost) >= 40 ? 'text-red-600' : Math.round(foodCost) > margenObj ? 'text-yellow-600' : 'text-green-600'}`}>
+                          <p className="inline-flex items-center gap-1 font-semibold font-mono text-ink">
+                            {precioCarta > 0 && <span className={`punto-estado ${fcPunto(foodCost, margenObj)}`} />}
                             {precioCarta > 0 ? pct(foodCost) : '-'}
                           </p>
                         </div>

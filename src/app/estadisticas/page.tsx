@@ -8,7 +8,7 @@ import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRig
 import CierreMes from './components/CierreMes'
 import AbcInsumos from './components/AbcInsumos'
 import { PALETA } from '@/lib/colores'
-import { dateToString } from '@/lib/fechas'
+import { dateToString, parseFechaLocal } from '@/lib/fechas'
 
 // ============ TIPOS ============
 interface Insumo {
@@ -38,10 +38,14 @@ interface FacturaConDetalle {
   proveedores: { nombre: string } | null
   factura_items: {
     insumo_id: string
+    vino_id?: string | null
     cantidad: number
     precio_unitario: number
+    descuento?: number | null
+    iva_porcentaje?: number | null
     insumos: { categoria: string; iva_porcentaje: number } | null
   }[]
+  percepciones?: { nombre: string; valor: string }[] | null
 }
 
 // ============ CONSTANTES ============
@@ -298,9 +302,9 @@ export default function EstadisticasPage() {
       `).eq('activo', true).lt('fecha', desde).order('fecha', { ascending: false }),
       // Traer facturas de los últimos 6 meses para evolución y comparador
       supabase.from('facturas_proveedor').select(`
-        id, fecha, total, tipo, proveedor_id,
+        id, fecha, total, tipo, proveedor_id, percepciones,
         proveedores (nombre),
-        factura_items (insumo_id, cantidad, precio_unitario, insumos (categoria, iva_porcentaje))
+        factura_items (insumo_id, vino_id, cantidad, precio_unitario, descuento, iva_porcentaje, insumos (categoria, iva_porcentaje))
       `).eq('activo', true).gte('fecha', desde6Meses).order('fecha', { ascending: true }),
     ])
 
@@ -478,33 +482,60 @@ export default function EstadisticasPage() {
       mesesSet.add(mesKey)
     }
 
+    // Cada línea se suma como en la factura: neto con descuento, más el IVA de
+    // la LÍNEA. Las percepciones van aparte, como una fila más: se pagan, pero
+    // no son costo de ninguna categoría. El total de cada mes coincide con
+    // Ventas → Detalle por mes, que suma el total de las facturas.
+    const sumar = (mapa: Map<string, { [mes: string]: number }>, clave: string, mesKey: string, monto: number) => {
+      if (!mapa.has(clave)) mapa.set(clave, {})
+      const datos = mapa.get(clave)!
+      datos[mesKey] = (datos[mesKey] || 0) + monto
+    }
+
     facturas6Meses.forEach(f => {
       const provNombre = f.proveedores?.nombre || 'Sin proveedor'
-      const esNC = f.tipo === 'nota_credito'
-      const fechaFactura = new Date(f.fecha)
+      const signo = f.tipo === 'nota_credito' ? -1 : 1
+      // parseFechaLocal y no new Date(): con new Date('2026-09-01') la factura
+      // del día 1 caía en el mes anterior (medianoche UTC = 21 h del día antes).
+      const fechaFactura = parseFechaLocal(f.fecha)
       const mesKey = `${mesesNombres[fechaFactura.getMonth()]} ${fechaFactura.getFullYear().toString().slice(-2)}`
+      // Sólo los meses que se muestran: el total de la fila no puede sumar
+      // un mes que no está en la tabla (pasaba con el primero del rango).
+      if (!mesesSet.has(mesKey)) return
 
-      if (!porProveedor.has(provNombre)) {
-        porProveedor.set(provNombre, {})
+      const lineas = (f.factura_items || []).map(item => {
+        const neto = item.cantidad * item.precio_unitario * (1 - (Number(item.descuento) || 0) / 100)
+        const ivaPct = item.iva_porcentaje ?? item.insumos?.iva_porcentaje ?? 21
+        // Los vinos no tienen insumo, y por eso salían como "Sin categoría"
+        const categoria = item.vino_id ? 'Vinos' : (item.insumos?.categoria || 'Sin categoría')
+        return { categoria, monto: neto * (1 + ivaPct / 100) }
+      })
+      const sumaLineas = lineas.reduce((acc, l) => acc + l.monto, 0)
+      const percepciones = (f.percepciones || []).reduce((acc, p) => acc + (Number(p.valor) || 0), 0)
+
+      // Lo que se pagó es el total de la factura. En casi todas coincide con
+      // líneas + percepciones, pero no en todas: en abril y mayo de 2026 hay
+      // unas 100 cuyo IVA de línea no es el que se usó para el total (la carne
+      // de Frigolar figura al 21% y se facturó al 10,5%). En esas, el total sin
+      // percepciones se reparte entre las categorías en proporción a sus líneas,
+      // así ninguna categoría se lleva un IVA que no se pagó.
+      const mercaderia = Math.abs(Number(f.total)) - percepciones
+      const factor = sumaLineas > 0 ? mercaderia / sumaLineas : 1
+
+      lineas.forEach(l => {
+        const monto = signo * l.monto * factor
+        sumar(porProveedor, provNombre, mesKey, monto)
+        sumar(porCategoria, l.categoria, mesKey, monto)
+      })
+      if (sumaLineas === 0 && mercaderia !== 0) {
+        sumar(porProveedor, provNombre, mesKey, signo * mercaderia)
+        sumar(porCategoria, 'Sin categoría', mesKey, signo * mercaderia)
       }
 
-      f.factura_items?.forEach(item => {
-        const subtotal = item.cantidad * item.precio_unitario
-        const iva = subtotal * ((item.insumos?.iva_porcentaje ?? 21) / 100)
-        const totalItem = esNC ? -(subtotal + iva) : (subtotal + iva)
-
-        // Por proveedor
-        const provData = porProveedor.get(provNombre)!
-        provData[mesKey] = (provData[mesKey] || 0) + totalItem
-
-        // Por categoría
-        const categoria = item.insumos?.categoria || 'Sin categoría'
-        if (!porCategoria.has(categoria)) {
-          porCategoria.set(categoria, {})
-        }
-        const catData = porCategoria.get(categoria)!
-        catData[mesKey] = (catData[mesKey] || 0) + totalItem
-      })
+      if (percepciones !== 0) {
+        sumar(porProveedor, provNombre, mesKey, signo * percepciones)
+        sumar(porCategoria, 'Percepciones', mesKey, signo * percepciones)
+      }
     })
 
     // Convertir a arrays ordenados por total

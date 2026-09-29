@@ -245,6 +245,23 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 ### Próximo
 
+- **Unas 100 facturas no cierran con sus líneas** (visto el 29/09/26). El total guardado no
+  coincide con líneas + percepciones. Casi todas son de abril y mayo de 2026: la línea dice
+  IVA 21% y el total se calculó con el del insumo (la carne de Frigolar del 04/05, al 10,5%).
+  Hay otras en agosto y septiembre con el total por encima de las líneas (Verdura Francisco
+  del 18/08: exactamente 1,2 veces, con todas las líneas al 0%), sin causa clara todavía.
+  Estadísticas ya lo contempla —reparte el total de la factura entre sus categorías—, pero
+  el dato sigue desparejo. Falta sumarlo a `npm run consultar -- chequeos` para que un caso
+  nuevo no pase inadvertido. No se corrigen las facturas viejas.
+
+- **Otros gráficos de Estadísticas usan la cuenta vieja.** En V.58 se corrigió la
+  comparación mensual. Quedan con `cantidad × precio` sin descuento, con el IVA del insumo y,
+  en algunos, la fecha con `new Date()`: compras por proveedor del período, variación de
+  precios y la evolución de 6 meses (`estadisticas/page.tsx`, alrededor de las líneas 403,
+  442 y 908). Y el cuadro de compras semanales **no filtra las notas de crédito**: una
+  devolución sumaría cantidad y una "vez" (el "(2x)"). Al 29/09 no había ninguna en esas
+  semanas.
+
 - **Terminar de sacar el color decorativo** (sigue a V.57). Quedan, para decidir uno por uno:
   íconos con fondo de color en Menús ejecutivos, Menús especiales, Facturas, Ventas, Análisis
   e Inventario; acciones en rojo o azul en Insumos, Proveedores, Órdenes de compra, Papelera
@@ -393,6 +410,17 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 3. Decisiones tomadas
 
 Registradas para no volver a discutirlas.
+
+- **Las compras de un mes son el total de sus facturas** (29/09/26, V.58). Ventas y
+  Estadísticas mostraban cifras distintas para el mismo mes —septiembre: $23,8 M contra
+  $20,5 M—. Ventas suma `facturas_proveedor.total`; Estadísticas recalculaba cada línea
+  sin descuento, con el IVA del insumo, sin percepciones, y con la fecha corrida: las
+  facturas del día 1 caían en el mes anterior (7 facturas, $2,6 M de septiembre en agosto).
+  Además la columna Total sumaba marzo sin mostrarlo. Se tomó el total de la factura como
+  la verdad —es lo que se pagó— y la comparación por categoría lo reparte: descuentos e IVA
+  de la línea, y cuando la factura no cierra con sus líneas, en proporción a ellas. Las
+  percepciones van en una fila propia: se pagan, pero no son costo de ninguna categoría.
+  Los vinos, que no tienen insumo, tienen su fila en vez de "Sin categoría".
 
 - **El color es para datos con significado, no para decorar** (28/09/26, V.57). Recetas,
   Elaboraciones, Tragos, Vinos y Carta tenían un ícono con fondo de color por fila, el costo

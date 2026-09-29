@@ -10,6 +10,17 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.58',
+    fecha: '29/09/26',
+    cambios: [
+      'Estadísticas → Comparación mensual: las compras de cada mes ahora coinciden con las de Ventas',
+      'Las facturas del día 1 se contaban en el mes anterior: septiembre perdía $2,6 millones que aparecían en agosto',
+      'Se restan los descuentos de las facturas y se usa el IVA de cada línea',
+      'Los vinos tienen su propia fila (antes salían como "Sin categoría") y las percepciones otra, aparte del costo',
+      'La columna Total suma solo los meses que se ven: incluía un mes más, oculto',
+    ],
+  },
+  {
     version: 'V.57',
     fecha: '28/09/26',
     cambios: [

@@ -186,7 +186,7 @@ Control de stock con hojas de control diario. Las NC restan del inventario autom
 ### Estadísticas (`/estadisticas`)
 Dashboard analítico en cinco solapas:
 - Compras semanales por insumo/proveedor
-- Comparación mensual
+- Comparación mensual por proveedor y por categoría. El total de cada mes coincide con *Ventas → Detalle por mes*: suma lo que se pagó, con descuentos e IVA de cada línea. Los vinos tienen su propia fila y las percepciones otra, aparte del costo
 - Compras por proveedor
 - Variación de precios, con alertas de aumentos
 - **ABC de insumos** — Pareto del gasto: qué insumos son el 80% de las compras (clase A), cuáles el 15% (B) y cuáles el 5% restante (C), con la volatilidad de precio de cada uno. Sirve tanto para saber qué vigilar como para dejar de perder tiempo con lo que no mueve la aguja.

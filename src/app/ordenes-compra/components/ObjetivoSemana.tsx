@@ -138,7 +138,7 @@ export default function ObjetivoSemana({ recargar }: { recargar?: number }) {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Dato rotulo="Generado" valor={money(datos.generado)}
-          pie={datos.porcentaje !== null ? `${datos.porcentaje.toFixed(0)}% del objetivo` : 'sin objetivo'}
+          pie={pieGenerado(datos.porcentaje)}
           color={barra.texto} />
         <Dato rotulo="Recibido" valor={money(datos.recibido)} pie="ya ingresó" />
         <Dato rotulo="Pendiente" valor={money(datos.pendiente)} pie="falta llegar" />
@@ -162,6 +162,22 @@ export default function ObjetivoSemana({ recargar }: { recargar?: number }) {
       )}
     </div>
   )
+}
+
+/**
+ * Debajo del objetivo se lee cuánto se lleva usado ("93% del objetivo"). Pasado,
+ * importa cuánto se pasó: "101% del objetivo" obliga a restar 100 de cabeza,
+ * y lo que hay que ver es "+1%".
+ */
+function pieGenerado(porcentaje: number | null): string {
+  if (porcentaje === null) return 'sin objetivo'
+  if (porcentaje > 100) {
+    const exceso = porcentaje - 100
+    // Por debajo del 1% se muestra un decimal: "+0%" diría que no se pasó
+    const texto = exceso < 1 ? exceso.toFixed(1).replace('.', ',') : exceso.toFixed(0)
+    return `+${texto}% sobre el objetivo`
+  }
+  return `${porcentaje.toFixed(0)}% del objetivo`
 }
 
 function Dato({ rotulo, valor, pie, color = 'text-gray-900' }: {

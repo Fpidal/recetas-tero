@@ -70,6 +70,14 @@ CREATE UNIQUE INDEX precios_insumo_un_vigente_por_insumo
   ON precios_insumo (insumo_id) WHERE es_precio_actual;
 ```
 
+**Cuál es el vigente: el de la factura más NUEVA, no el de la última cargada
+(V.59).** Hasta el 07/10/26 el trigger marcaba vigente la línea que acababa de
+entrar. Una factura del 10/09 de Los calvos cargada el 05/10 pisó la de
+Blancaluna del 30/09: el fiambre de paleta quedó a $11.661 en vez de $9.383 e
+Insumos mostró +82% cuando había bajado. Ahora una línea pasa a vigente sólo si
+su factura es de igual fecha o posterior; si no, entra al historial. Ver
+`supabase-fix-precio-vigente-por-fecha.sql`.
+
 **Por qué importa tanto.** La vista `v_insumos_con_precio` hace un join contra
 esa tabla: con dos vigentes devuelve **dos filas del mismo insumo**. Y las
 pantallas resuelven el precio con `.find(...)` sobre esa lista, o sea que toman

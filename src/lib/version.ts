@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.59',
+    fecha: '07/10/26',
+    cambios: [
+      'Compras de la semana: cuando se pasa del objetivo muestra cuánto se pasó ("+1% sobre el objetivo") en vez de "101% del objetivo"',
+      'Insumos: una factura vieja cargada tarde ya no pisa el precio de una compra más nueva, ni muestra una suba que no existió',
+    ],
+  },
+  {
     version: 'V.58',
     fecha: '29/09/26',
     cambios: [

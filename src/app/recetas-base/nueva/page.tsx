@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, ArrowLeft, Save, ClipboardList } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
-import { parsearNumero } from '@/lib/formato-numeros'
-import { Button } from '@/components/ui'
+import { parsearNumero, formatearInputCantidad, cantidadEditable } from '@/lib/formato-numeros'
+import { Button, BuscadorItem } from '@/components/ui'
 import { PALETA } from '@/lib/colores'
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -38,7 +38,7 @@ interface Ingrediente {
   insumo_nombre: string
   unidad_medida: string
   categoria: string
-  cantidad: number
+  cantidad: number | string  // string mientras edita, number para cálculos
   costo_unitario: number
   costo_linea: number
 }
@@ -55,6 +55,8 @@ export default function NuevaRecetaBasePage() {
   const [cantidad, setCantidad] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const cantidadMobileRef = useRef<HTMLInputElement>(null)
+  const cantidadDesktopRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchInsumos()
@@ -121,11 +123,19 @@ export default function NuevaRecetaBasePage() {
   }
 
   function handleCantidadChange(id: string, nuevaCantidad: string) {
+    // Se guarda el texto tal cual ("0,") para poder seguir escribiendo los
+    // decimales; si se guardara el número, la coma desaparecería al tipearla
     const cantidadNum = parsearNumero(nuevaCantidad)
     setIngredientes(ingredientes.map(ing =>
-      ing.id === id ? { ...ing, cantidad: cantidadNum, costo_linea: ing.costo_unitario * cantidadNum } : ing
+      ing.id === id ? { ...ing, cantidad: nuevaCantidad, costo_linea: ing.costo_unitario * cantidadNum } : ing
     ))
   }
+
+  const opcionesInsumo = insumos.map(i => ({
+    id: i.id,
+    nombre: i.nombre,
+    detalle: `${i.unidad_medida} · $${(i.costo_final || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
+  }))
 
   const costoTotal = ingredientes.reduce((sum, ing) => sum + ing.costo_linea, 0)
   const costoPorPorcion = parseInt(rendimiento) > 0 ? costoTotal / parseInt(rendimiento) : 0
@@ -162,7 +172,7 @@ export default function NuevaRecetaBasePage() {
     const ingredientesData = ingredientes.map(ing => ({
       receta_base_id: receta.id,
       insumo_id: ing.insumo_id,
-      cantidad: ing.cantidad,
+      cantidad: typeof ing.cantidad === 'string' ? parsearNumero(ing.cantidad) : ing.cantidad,
       costo_linea: ing.costo_linea,
     }))
 
@@ -226,27 +236,25 @@ export default function NuevaRecetaBasePage() {
           <div className="sm:hidden space-y-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Insumo</label>
-              <select
+              <BuscadorItem
+                opciones={opcionesInsumo}
                 value={selectedInsumo}
-                onChange={(e) => setSelectedInsumo(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-              >
-                <option value="">Seleccionar...</option>
-                {insumos.map(i => (
-                  <option key={i.id} value={i.id}>
-                    {i.nombre} ({i.unidad_medida}) - ${(i.costo_final || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedInsumo}
+                onElegido={() => cantidadMobileRef.current?.focus()}
+                placeholder="Buscar insumo..."
+                tamano="md"
+              />
             </div>
             <div className="flex gap-2 items-end">
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
                 <input
+                  ref={cantidadMobileRef}
                   type="text"
                   inputMode="decimal"
                   value={cantidad}
-                  onChange={(e) => setCantidad(e.target.value)}
+                  onChange={(e) => setCantidad(formatearInputCantidad(e.target.value))}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAgregarIngrediente() }}
                   className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="0"
                 />
@@ -272,26 +280,23 @@ export default function NuevaRecetaBasePage() {
           <div className="hidden sm:flex gap-2 items-end">
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-700 mb-1">Insumo</label>
-              <select
+              <BuscadorItem
+                opciones={opcionesInsumo}
                 value={selectedInsumo}
-                onChange={(e) => setSelectedInsumo(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-              >
-                <option value="">Seleccionar...</option>
-                {insumos.map(i => (
-                  <option key={i.id} value={i.id}>
-                    {i.nombre} ({i.unidad_medida}) - ${(i.costo_final || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedInsumo}
+                onElegido={() => cantidadDesktopRef.current?.focus()}
+                placeholder="Buscar insumo..."
+              />
             </div>
             <div className="w-20">
               <label className="block text-xs font-medium text-gray-700 mb-1">Cant.</label>
               <input
+                ref={cantidadDesktopRef}
                 type="text"
                 inputMode="decimal"
                 value={cantidad}
-                onChange={(e) => setCantidad(e.target.value)}
+                onChange={(e) => setCantidad(formatearInputCantidad(e.target.value))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAgregarIngrediente() }}
                 className="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="0"
               />
@@ -333,8 +338,8 @@ export default function NuevaRecetaBasePage() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad}
-                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            value={cantidadEditable(ing.cantidad)}
+                            onChange={(e) => handleCantidadChange(ing.id, formatearInputCantidad(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
                           />
                           <span className="text-xs text-gray-500">{ing.unidad_medida}</span>
@@ -378,8 +383,8 @@ export default function NuevaRecetaBasePage() {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={ing.cantidad}
-                            onChange={(e) => handleCantidadChange(ing.id, e.target.value)}
+                            value={cantidadEditable(ing.cantidad)}
+                            onChange={(e) => handleCantidadChange(ing.id, formatearInputCantidad(e.target.value))}
                             className="w-16 rounded border border-gray-300 px-1.5 py-0.5 text-xs"
                           />
                           <span className="ml-1 text-xs text-gray-500">{ing.unidad_medida}</span>

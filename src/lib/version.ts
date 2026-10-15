@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.60',
+    fecha: '15/10/26',
+    cambios: [
+      'Elaboraciones: el insumo se elige con un buscador — se tipea un pedazo ("ace oli") y aparecen las coincidencias, en vez de recorrer la lista entera',
+      'Elaboraciones: las cantidades se muestran con coma (0,9) y se pueden escribir con coma o con punto',
+      'Elaboraciones: al editar una cantidad ya se puede poner la coma; y escribir 0.9 ya no la convierte en 9',
+    ],
+  },
+  {
     version: 'V.59',
     fecha: '07/10/26',
     cambios: [

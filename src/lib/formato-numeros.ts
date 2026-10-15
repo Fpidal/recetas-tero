@@ -133,3 +133,24 @@ export function formatearInputNumero(valor: string): string {
   }
   return enteroConPuntos
 }
+
+/**
+ * Input de CANTIDAD de receta (0,9 lt · 1,250 kg) mientras se escribe.
+ *
+ * A diferencia de formatearInputNumero —pensado para montos, donde el punto
+ * es de miles y se descarta—, acá el punto se toma como coma decimal. Es la
+ * tecla decimal del teclado numérico, y en una cantidad de receta nadie
+ * escribe miles. Descartarlo convertía 0.9 litros en "09", o sea 9 litros.
+ *
+ *   "0.9" → "0,9"     "0,9" → "0,9"     "1.250" → "1,250"
+ */
+export function formatearInputCantidad(valor: string): string {
+  const limpio = valor.replace(/\./g, ',').replace(/[^\d,]/g, '')
+  const [entero, ...resto] = limpio.split(',')
+  return resto.length > 0 ? `${entero},${resto.join('')}` : entero
+}
+
+/** Una cantidad guardada (0.9) lista para un input editable ("0,9"), sin miles */
+export function cantidadEditable(valor: number | string): string {
+  return typeof valor === 'string' ? valor : String(valor).replace('.', ',')
+}

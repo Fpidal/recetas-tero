@@ -182,7 +182,7 @@ Dos solapas:
 - **Resumen semanal** — el pantallazo de la semana cerrada, pensado para la reunión con el encargado de compras. Cinco bloques ordenados por plata: lo que no llegó completo, los cambios de precio (avisando si además cambió el proveedor), lo facturado a distinto precio del pedido, lo que llegó sin pedirse, y las órdenes que siguen sin factura. Cada línea acepta una nota, y todo se baja en PDF.
 
 ### Inventario (`/inventario`)
-Control de stock con hojas de control diario. Las NC restan del inventario automáticamente.
+Control de stock, con hojas de inventario para imprimir y contar a mano. Son cuatro hojas fijas (`public/hojas/`) —Carnes (con pollo, cerdo, pescados y mariscos), Almacén, Verduras y frutas, y Lácteos y fiambres—, armadas a mano y ordenadas por rubro. Un insumo nuevo no aparece solo: se rehace el PDF o se anota en "Faltantes / otros". Las NC restan del inventario automáticamente.
 
 > **No hay tabla de stock.** El stock sale siempre de la cuenta *último conteo + compras −
 > consumo* (`src/lib/inventario.ts`), justamente para que no pueda quedar desfasado. Este README
@@ -349,7 +349,7 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 - **Carta unificada con 4 tabs** (En Carta, Fuera de Carta, Ejecutivos, Especiales)
 - Modal de preview de recetas
 - Carta/Menú en PDF lista para imprimir
-- Control de inventario con hojas de control
+- Control de inventario con hojas de inventario para contar a mano
 - Dashboard de estadísticas con gráficos
 - **Módulo de Ventas e Incidencia**:
   - Carga diaria por servicio (mediodía / noche / eventos)

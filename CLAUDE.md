@@ -361,7 +361,9 @@ Si se toca una, se toca la otra. Nunca volver a copiarla inline en una pantalla.
 - El IVA es editable por insumo (19%, 10%, 0%)
 - Las comparaciones de precios permiten proveedores temporales (sin registrar)
 - Los menús ejecutivos tienen secciones: Parrilla, Entrada, Fondo, Postre, Jugo
-- El inventario usa "hojas de control" para registro diario
+- El inventario tiene "hojas de inventario" para contar a mano. Son cuatro PDF FIJOS en
+  `public/hojas/`, armados a mano y ordenados por rubro. Un insumo nuevo no aparece solo:
+  hay que rehacer el PDF
 
 ## IMPORTANTE: Workflow de Git
 

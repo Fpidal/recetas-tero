@@ -194,7 +194,7 @@ export default function InventarioPage() {
     { id: 'stock' as TabType, label: 'Stock', icon: Warehouse },
     { id: 'conteo' as TabType, label: 'Contar', icon: ClipboardCheck },
     { id: 'diferencias' as TabType, label: 'Diferencias', icon: TrendingDown },
-    { id: 'hojas' as TabType, label: 'Hojas de Control', icon: ClipboardList },
+    { id: 'hojas' as TabType, label: 'Hojas de inventario', icon: ClipboardList },
   ]
 
   return (

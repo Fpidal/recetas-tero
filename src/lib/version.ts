@@ -10,6 +10,18 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.62',
+    fecha: '19/10/26',
+    cambios: [
+      'Inventario: la solapa "Hojas de Control" pasa a llamarse "Hojas de inventario"',
+      'Inventario: la hoja de carnes es ahora una hoja fija, ordenada como la cámara, con stock, pedido y recibido; incluye pollo, cerdo, pescados, mariscos y achuras, y reemplaza a las dos hojas automáticas de Carnes y de Pescados',
+      'Inventario: también es fija la hoja de almacén, por rubro: aceites, arroces y pastas, harinas, conservas, especias, salsas, congelados, repostería, frescos y cafetería',
+      'Inventario: y la de verduras y frutas: hojas y brotes, hierbas, bulbos, raíces, hortalizas, hongos y frutas',
+      'Inventario: y la de lácteos y fiambres: lácteos, quesos blandos, semiduros y de rallar, fiambres y helados. Ya no queda ninguna hoja autogenerada',
+      'Inventario: las hojas van en una sola fila, cada una con el título en su color (bordó carnes, ocre almacén, oliva verduras, pizarra lácteos)',
+    ],
+  },
+  {
     version: 'V.61',
     fecha: '19/10/26',
     cambios: [

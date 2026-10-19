@@ -115,6 +115,18 @@ export const CATEG_COLORES: Record<string, string> = {
 }
 
 /**
+ * Franja del título en las Hojas de inventario: tonos apagados, de cocina
+ * (bordó para carnes, oliva para verduras), con texto blanco encima. No son
+ * los de CATEG_COLORES —esos son de gráfico y sobre una tarjeta clara gritan—.
+ */
+export const HOJA_COLORES: Record<string, string> = {
+  Carnes: '#7A2631',            // bordó
+  Almacen: '#8C6A2F',           // ocre
+  Verduras_Frutas: '#5F6B2E',   // verde oliva
+  Lacteos_Fiambres: '#3F5B73',  // azul pizarra
+}
+
+/**
  * Semáforo de incidencia — el ÚNICO lugar donde el color decide una lectura.
  * Los tres comparten luminosidad para que ninguno grite más que otro, y pasan
  * contraste AA sobre su propio fondo.

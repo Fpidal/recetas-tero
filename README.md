@@ -220,7 +220,7 @@ Módulo de **food cost real** basado en lo realmente consumido por cocina al fin
 
   Buscador por fragmentos sueltos e ignorando acentos ("sal res mal" encuentra "Reserva Malbec (Salentein)"), todos los costos con IVA incluido. El costo del servicio se muestra separado en **Cocina** y **Barra**.
 - **Consumo diario**: vista informativa que **desglosa recetas y elaboraciones a nivel insumo** (ej: "12 milanesas + 2,5 kg pollo" → "Bola de lomo: 1,8 kg, Pollo: 2,5 kg, ..."). Botón "Confirmar consumo" como paso previo al descuento de stock.
-- **Incidencia**: carga manual de venta + cubiertos por día/servicio. Cruza automático con el costo de cocina. KPIs: ventas, costo real, **% Incidencia REAL** con semáforo, margen bruto. Detalle día a día.
+- **Incidencia**: carga manual de venta + cubiertos por día/servicio. Cruza automático con el costo de cocina. KPIs: ventas, costo real, **% Incidencia REAL** con semáforo, margen bruto sobre los mismos servicios con consumo cargado. Detalle día a día.
 - **Resumen**: consumo de la semana desglosado a nivel insumo y agrupado por rubro, con descarga en PDF (ver abajo).
 - **Histórico**: evolución mensual de la incidencia real (últimos 6 meses) con gráfico de tendencia y línea de objetivo, y el **muestreo** de cada mes.
 

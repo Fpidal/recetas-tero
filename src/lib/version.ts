@@ -17,6 +17,7 @@ export const CHANGELOG: VersionEntry[] = [
       'PDF de la orden: el horario de entrega (lunes a sábado de 10.00 a 16.00) va primero en las condiciones, en negrita',
       'PDF de la orden: "Orden de compra" ya no aparece dos veces en el encabezado, y la dirección lleva tildes (Benavídez, Agustín García)',
       'Dashboard → Cifras del mes: el margen bruto ahora es ventas menos compras; antes restaba solo el costo de los días con consumo cargado y daba de más',
+      'Análisis → Incidencia: el margen bruto se calcula sobre los mismos servicios que la incidencia real (los que tienen consumo cargado), y no sobre la venta de todo el mes',
     ],
   },
   {

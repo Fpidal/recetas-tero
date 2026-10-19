@@ -279,10 +279,12 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4">
           <div className="text-[10px] sm:text-xs uppercase text-gray-500 font-semibold">Margen bruto</div>
           <div className="text-lg sm:text-xl font-bold text-gray-900 mt-1 break-all font-mono">
-            {formatearMonedaAnalisis(margenMes)}
+            {totales.diasConCarga > 0 ? formatearMonedaAnalisis(margenMes) : '—'}
           </div>
           <div className="text-[10px] text-gray-500 mt-1 font-mono">
-            {totales.venta > 0 ? `${((margenMes / totales.venta) * 100).toFixed(1)}% del total` : '—'}
+            {totales.ventaConCosto > 0
+              ? `${((margenMes / totales.ventaConCosto) * 100).toFixed(1)}% · ${totales.diasConCarga} servicios cargados`
+              : 'Sin costos cargados'}
           </div>
         </div>
       </div>

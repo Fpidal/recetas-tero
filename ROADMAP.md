@@ -165,12 +165,6 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   - Que las solapas **Resumen** e **Histórico** muestren la evolución en el tiempo. Sin eso se
     carga el consumo todos los días y no se ve la tendencia, que es el motivo por el que
     existe el módulo.
-  - **El "Margen bruto" de la solapa Incidencia está mal** (detectado el 18/10/26). Sale de
-    `resumirIncidencias()` como `venta − costo`, pero la venta es la de TODOS los servicios y
-    el costo sólo el de los que tienen consumo cargado: con 11 de 18 cargados daba un 90% de
-    margen. En el Dashboard se corrigió en V.61 (ventas − compras); acá falta decidir si se
-    calcula igual —trayendo las compras del mes— o si la tarjeta se saca, porque la solapa es
-    de incidencia real y el margen ya está en el Dashboard y en Ventas.
 
 - **Propagación a menús ejecutivos.** Detectado el 08/08/26: cuando cambia el precio de un
   insumo, el costo se propaga bien hasta el plato, pero **no llega a los menús ejecutivos**.
@@ -424,6 +418,11 @@ Registradas para no volver a discutirlas.
   el mes anterior dependía de cuántos servicios se habían cargado en cada uno. Se eligió
   ventas − compras porque las compras se cargan siempre, completas. Es la misma cuenta que
   ya usaba la pantalla de Ventas (`ventas-queries.ts`).
+
+  La excepción es **Análisis → Incidencia**, que muestra un servicio por vez: las compras no
+  se separan por servicio, así que ahí el margen es el de los servicios con consumo cargado
+  (`ventaConCosto − costo` en `resumirIncidencias()`), el complemento exacto de la incidencia
+  real que está al lado. Antes era venta de todos − costo de los cargados, el mismo error.
 
 - **Las notas de la OC no pasan a la factura** (19/10/26, V.61). Son una aclaración para el
   proveedor y para controlar la entrega contra el pedido —*"feteada"*, *"marca X"*—; la

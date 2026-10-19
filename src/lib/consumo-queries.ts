@@ -853,6 +853,10 @@ export interface ResumenIncidencia {
   ventaConCosto: number
   incidencia: number
   ticketPromedio: number
+  /**
+   * Margen de los servicios con consumo cargado: ventaConCosto − costo. Es el
+   * complemento de la incidencia real (margen % = 100 − incidencia).
+   */
   margen: number
 }
 
@@ -876,7 +880,10 @@ export function resumirIncidencias(incidencias: IncidenciaDia[]): ResumenInciden
     diasConVenta: incidencias.filter((d) => d.tiene_venta).length,
     incidencia: t.ventaConCosto > 0 ? (t.costo / t.ventaConCosto) * 100 : 0,
     ticketPromedio: t.cubiertos > 0 ? t.venta / t.cubiertos : 0,
-    margen: t.venta - t.costo,
+    // Sobre la MISMA venta que la incidencia. Antes era venta − costo: la venta
+    // de todos los servicios menos el costo de los cargados, y con 11 de 18
+    // cargados daba un 90% de margen (18/10/26).
+    margen: t.ventaConCosto - t.costo,
   }
 }
 

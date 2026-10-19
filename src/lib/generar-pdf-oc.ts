@@ -30,6 +30,7 @@ interface OrdenPDF {
     subtotal_factura?: number // Subtotal según factura
     iva_porcentaje: number
     iva_monto: number
+    nota: string | null // Aclaración para el proveedor: "feteada", "marca X"
   }[]
   tieneFactura?: boolean
 }
@@ -38,10 +39,16 @@ interface OrdenPDF {
 const TERO_DATA = {
   nombre: 'Tero (Oret Srl)',
   cuit: 'CUIT 30-71732567-9',
-  direccion: 'Av Agustin Garcia 9501',
-  localidad: 'Benavidez',
+  direccion: 'Av. Agustín García 9501',
+  localidad: 'Benavídez',
   cp: 'CP 1621',
 }
+
+/**
+ * Primera de las condiciones, en negrita: es lo primero que el proveedor
+ * necesita para coordinar la entrega.
+ */
+const HORARIO_ENTREGA = 'Horario de entrega: de lunes a sábado de 10.00 a 16.00'
 
 export async function generarPDFOrden(ordenId: string) {
   // Fetch datos completos
@@ -51,7 +58,7 @@ export async function generarPDFOrden(ordenId: string) {
       id, numero, fecha, notas, estado,
       proveedores (nombre, contacto, telefono, email, direccion),
       orden_compra_items (
-        insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display, iva_porcentaje,
+        insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display, iva_porcentaje, nota,
         insumos (nombre, unidad_medida, iva_porcentaje),
         vinos (bodega, nombre, cepa)
       )
@@ -120,6 +127,7 @@ export async function generarPDFOrden(ordenId: string) {
         subtotal_factura: subtotalFactura,
         iva_porcentaje: ivaPorcentaje,
         iva_monto: ivaMonto,
+        nota: item.nota || null,
       }
     }),
   }
@@ -199,13 +207,13 @@ export async function generarPDFOrden(ordenId: string) {
     return `$${n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
   }
 
-  // Formatear fecha: "Benavidez 04 de febrero de 2026"
+  // Formatear fecha: "Benavídez 04 de febrero de 2026"
   const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
   const fechaObj = parseFechaLocal(orden.fecha)
   const dia = fechaObj.getDate().toString().padStart(2, '0')
   const mes = meses[fechaObj.getMonth()]
   const anio = fechaObj.getFullYear()
-  const fechaFormateada = `Benavidez ${dia} de ${mes} de ${anio}`
+  const fechaFormateada = `${TERO_DATA.localidad} ${dia} de ${mes} de ${anio}`
 
   // Fondo
   doc.setFillColor(255, 255, 255)
@@ -246,7 +254,9 @@ export async function generarPDFOrden(ordenId: string) {
   const rightX = pageWidth - margin - 4
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
-  doc.text(`Orden de compra N° ${orden.numero || 'S/N'}`, rightX, y + 10, { align: 'right' })
+  // Sólo el número: "Orden de compra" ya figura a la izquierda, y repetirlo
+  // acá hacía que el encabezado lo dijera dos veces
+  doc.text(`N° ${orden.numero || 'S/N'}`, rightX, y + 10, { align: 'right' })
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
@@ -337,7 +347,10 @@ export async function generarPDFOrden(ordenId: string) {
   const rowH = esRecibidaCompleta ? 9 : 7 // Más alto para OC Recibida (tiene 2 líneas de precio)
 
   // Constantes de paginación
-  const ESPACIO_FOOTER = 55 // Totales + observaciones + condiciones + footer
+  const ESPACIO_FOOTER = 60 // Totales + observaciones + condiciones + footer
+  // Una línea con nota lleva un renglón más debajo del insumo
+  const ALTO_NOTA = 3
+  const altoFila = (item: { nota: string | null }) => rowH + (item.nota ? ALTO_NOTA : 0)
   const ESPACIO_HEADER_TABLA = 7
   const MARGEN_INFERIOR = margin + 5
 
@@ -443,22 +456,27 @@ export async function generarPDFOrden(ordenId: string) {
     }
   }
 
-  // Estimar páginas (aproximado: 12 items primera página, 19 siguientes)
-  const itemsPrimeraPagina = Math.floor((pageHeight - y - ESPACIO_FOOTER) / rowH)
-  const itemsPorPaginaSiguiente = Math.floor((pageHeight - margin - ESPACIO_HEADER_TABLA - MARGEN_INFERIOR) / rowH)
-
-  if (orden.items.length <= itemsPrimeraPagina) {
-    totalPaginas = 1
-  } else {
-    const itemsRestantes = orden.items.length - itemsPrimeraPagina
-    totalPaginas = 1 + Math.ceil(itemsRestantes / itemsPorPaginaSiguiente)
+  // Contar páginas simulando el mismo corte que el loop de abajo. Ya no
+  // alcanza con dividir por rowH: las líneas con nota son más altas.
+  {
+    let ySim = y
+    orden.items.forEach((item, idx) => {
+      const alto = altoFila(item)
+      const necesario = idx === orden.items.length - 1 ? alto + ESPACIO_FOOTER : alto
+      if (ySim + necesario > pageHeight - MARGEN_INFERIOR) {
+        totalPaginas++
+        ySim = margin + 4 + rowH
+      }
+      ySim += alto
+    })
   }
 
   // Filas con paginación
   orden.items.forEach((item, idx) => {
     // Verificar si necesitamos nueva página
     const esUltimoItem = idx === orden.items.length - 1
-    const espacioNecesario = esUltimoItem ? rowH + ESPACIO_FOOTER : rowH
+    const alto = altoFila(item)
+    const espacioNecesario = esUltimoItem ? alto + ESPACIO_FOOTER : alto
 
     if (y + espacioNecesario > pageHeight - MARGEN_INFERIOR) {
       // Nueva página
@@ -479,13 +497,13 @@ export async function generarPDFOrden(ordenId: string) {
     const hayDiferencia = esRecibidaCompleta && (precioDiferente || cantidadDiferente)
     if (hayDiferencia) {
       doc.setFillColor(255, 235, 235) // rojo muy claro
-      doc.rect(margin, y, contentWidth, rowH, 'F')
+      doc.rect(margin, y, contentWidth, alto, 'F')
     } else if (hayFaltante) {
       doc.setFillColor(255, 240, 230) // naranja claro
-      doc.rect(margin, y, contentWidth, rowH, 'F')
+      doc.rect(margin, y, contentWidth, alto, 'F')
     } else if (idx % 2 === 0) {
       doc.setFillColor(250, 250, 250)
-      doc.rect(margin, y, contentWidth, rowH, 'F')
+      doc.rect(margin, y, contentWidth, alto, 'F')
     }
     doc.setDrawColor(230, 230, 230)
     doc.setLineWidth(0.1)
@@ -638,7 +656,19 @@ export async function generarPDFOrden(ordenId: string) {
       doc.text(fmtMoney(item.subtotal), colX.subtotalRight, textY, { align: 'right' })
     }
 
-    y += rowH
+    // Nota de la línea, en un renglón propio debajo del insumo. Ocupa todo el
+    // ancho de la fila: en ese renglón no hay números con los que chocar.
+    if (item.nota) {
+      doc.setFont('helvetica', 'italic')
+      doc.setFontSize(5.5)
+      doc.setTextColor(...TERRACOTA)
+      const anchoNota = colX.subtotalRight - colX.insumo
+      const [primera, ...resto] = doc.splitTextToSize(item.nota, anchoNota) as string[]
+      doc.text(resto.length > 0 ? primera.replace(/\s*\S*$/, '') + '…' : primera, colX.insumo, y + rowH + 0.8)
+      doc.setFont('helvetica', 'normal')
+    }
+
+    y += alto
   })
 
   // Línea cierre tabla
@@ -748,6 +778,13 @@ export async function generarPDFOrden(ordenId: string) {
   doc.setFontSize(5.5)
   doc.setTextColor(...TERRACOTA)
   doc.text('Condiciones:', margin + 2, y)
+
+  // El horario va primero y en negrita, para que resalte entre las condiciones
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(5.5)
+  doc.setTextColor(40, 40, 40)
+  doc.text(`• ${HORARIO_ENTREGA}.`, margin + 2, y + 4)
+  y += 3.5
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(5)

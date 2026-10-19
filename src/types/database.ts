@@ -253,6 +253,8 @@ export interface Database {
           precio_unitario: number
           /** IVA pactado para esta linea. NULL en las ordenes previas al 07/09/26. */
           iva_porcentaje: number | null
+          /** Aclaración para el proveedor: "feteada", "marca X". Sale en el PDF. */
+          nota: string | null
           subtotal: number
           created_at: string
         }

@@ -39,7 +39,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 | Módulo | Para qué sirve |
 |---|---|
-| **Inicio** | Panel de entrada: KPIs de la semana, alertas de variación de precios, compras por categoría y **Cifras del mes** — ventas, compras, margen bruto e incidencia teórica y real contra el mes anterior (V.32) |
+| **Inicio** | Panel de entrada: KPIs de la semana, alertas de variación de precios, compras por categoría y **Cifras del mes** — ventas, compras, margen bruto e incidencia teórica y real contra el mes anterior (V.32). El margen es ventas − compras desde V.61 |
 | **Insumos** | Ingredientes: unidad, categoría, IVA, merma, presentaciones. Acceso a Proveedores y al Comparador de precios |
 | **Vinos** | Carta de vinos con importación de listas de precios desde Excel de bodega (matching por código y cepa). Buscador por fragmentos: `sal re mal` encuentra el Salentein Reserva Malbec entre ocho "Salentein Reserva" que sólo difieren en la cepa (V.49). Debajo del costo, el **P.P** — lo pagado en la última factura, sólo como referencia. **Carta de vinos en PDF** (V.55), con precios o sin precios, ordenada de mayor a menor dentro de cada sección |
 | **Elaboraciones** | Sub-recetas (bases) que se usan como ingrediente dentro de las recetas |
@@ -47,7 +47,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Tragos** | Coctelería con costos y beverage cost |
 | **Carta** | Carta editorial en HTML. Exporta a Excel lo que está en carta y lo que quedó afuera. Desde acá se llega a Menús ejecutivos y especiales. **El menú digital público (`/menu`) y su QR se sacaron en V.41**: hoy no hay ninguna pantalla que muestre datos sin sesión, y por eso se le pudieron revocar a `anon` las 8 columnas que le quedaban |
 | **Menús ejecutivos** | Menú del día: entrada + principal + bebida. La ficha muestra la **Composición del costo** (V.36) — torta por componente, coloreada según el papel (principal, entrada, bebida) y con un matiz por porción, porque un menú de parrilla tiene siete componentes que son todos principal. Sirve para ver qué componente decide el costo: en Menu Pescados el salmón es el 75% |
-| **Órdenes de Compra** | Pedidos a proveedores, con PDF. **Objetivo de compras semanal** (V.43): lo pedido en la semana contra un objetivo editable, con solapa de historial. Se cuenta por **fecha de pedido** —medido sobre 104 facturas, ninguna tardó más de 7 días desde su OC— y **con IVA**, que es como se ven los totales en pantalla |
+| **Órdenes de Compra** | Pedidos a proveedores, con PDF. **Objetivo de compras semanal** (V.43): lo pedido en la semana contra un objetivo editable, con solapa de historial. Se cuenta por **fecha de pedido** —medido sobre 104 facturas, ninguna tardó más de 7 días desde su OC— y **con IVA**, que es como se ven los totales en pantalla. **Nota por línea** para el proveedor (V.61): sale en el PDF, no pasa a la factura |
 | **Facturas** | Facturas de compra: alimentan el precio de cada insumo. Soportan descuentos y notas de crédito. Solapa **Resumen semanal** (V.26): faltantes, cambios de precio, agregados sin pedir y órdenes sin factura, con notas por línea y PDF |
 | **Ventas** | Carga diaria de ventas. **Nivel grueso:** ventas vs compras del período |
 | **Análisis** | **Importación del informe de ventas** (V.44): un Excel del salón carga la venta del turno, los cubiertos y el consumo producto por producto. Los enlaces se resuelven una vez y quedan guardados. Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo. Desde Resumen se baja la planilla de pedido de la semana, con la cantidad **a comprar** ajustada por merma (V.30) |
@@ -165,6 +165,12 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   - Que las solapas **Resumen** e **Histórico** muestren la evolución en el tiempo. Sin eso se
     carga el consumo todos los días y no se ve la tendencia, que es el motivo por el que
     existe el módulo.
+  - **El "Margen bruto" de la solapa Incidencia está mal** (detectado el 18/10/26). Sale de
+    `resumirIncidencias()` como `venta − costo`, pero la venta es la de TODOS los servicios y
+    el costo sólo el de los que tienen consumo cargado: con 11 de 18 cargados daba un 90% de
+    margen. En el Dashboard se corrigió en V.61 (ventas − compras); acá falta decidir si se
+    calcula igual —trayendo las compras del mes— o si la tarjeta se saca, porque la solapa es
+    de incidencia real y el margen ya está en el Dashboard y en Ventas.
 
 - **Propagación a menús ejecutivos.** Detectado el 08/08/26: cuando cambia el precio de un
   insumo, el costo se propaga bien hasta el plato, pero **no llega a los menús ejecutivos**.
@@ -410,6 +416,18 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 3. Decisiones tomadas
 
 Registradas para no volver a discutirlas.
+
+- **El margen bruto es ventas − compras** (18/10/26, V.61). El Dashboard lo calculaba con la
+  incidencia real: la venta del mes menos el costo de los servicios con consumo cargado. Como
+  el consumo se carga por muestreo, a la venta de 18 servicios le restaba el costo de 11 y
+  daba $50,2 M —un 90% de margen— con una incidencia real de 27,6%; y la comparación contra
+  el mes anterior dependía de cuántos servicios se habían cargado en cada uno. Se eligió
+  ventas − compras porque las compras se cargan siempre, completas. Es la misma cuenta que
+  ya usaba la pantalla de Ventas (`ventas-queries.ts`).
+
+- **Las notas de la OC no pasan a la factura** (19/10/26, V.61). Son una aclaración para el
+  proveedor y para controlar la entrega contra el pedido —*"feteada"*, *"marca X"*—; la
+  factura tiene sus propios comentarios, que son otra cosa (lo que pasó con esa compra).
 
 - **Las compras de un mes son el total de sus facturas** (29/09/26, V.58). Ventas y
   Estadísticas mostraban cifras distintas para el mismo mes —septiembre: $23,8 M contra

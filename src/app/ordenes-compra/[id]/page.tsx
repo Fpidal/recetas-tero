@@ -39,6 +39,8 @@ interface OrdenDetalle {
     subtotal: number
     iva_porcentaje: number
     iva_monto: number
+    /** Aclaración para el proveedor ("feteada", "marca X") */
+    nota: string | null
   }[]
 }
 
@@ -121,6 +123,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           iva_porcentaje,
           subtotal,
           unidad_display,
+          nota,
           insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete),
           vinos (bodega, nombre, cepa)
         )
@@ -174,6 +177,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           subtotal,
           iva_porcentaje: ivaPorcentaje,
           iva_monto: ivaMonto,
+          nota: item.nota || null,
         }
       }),
     }
@@ -267,7 +271,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
       return
     }
 
-    const itemsFaltantes: { insumo_id: string | null; vino_id: string | null; cantidad: number; precio_unitario: number; subtotal: number }[] = []
+    const itemsFaltantes: { insumo_id: string | null; vino_id: string | null; cantidad: number; precio_unitario: number; subtotal: number; nota: string | null }[] = []
 
     for (const item of orden.items) {
       const fi = facturaItems.find(f =>
@@ -281,6 +285,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
           subtotal: item.cantidad * item.precio_unitario,
+          nota: item.nota,
         })
       } else if (fi.cantidad < item.cantidad) {
         // Parcial → diferencia
@@ -291,6 +296,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
           cantidad: cantFaltante,
           precio_unitario: item.precio_unitario,
           subtotal: cantFaltante * item.precio_unitario,
+          nota: item.nota,
         })
       }
     }
@@ -339,6 +345,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
       vino_id: i.vino_id || null,
       cantidad: i.cantidad,
       precio_unitario: i.precio_unitario,
+      nota: i.nota,
     }))
 
     const { error: itemsErr } = await supabase.from('orden_compra_items').insert(itemsData)
@@ -600,6 +607,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                       }`}>
                         {item.insumo_nombre}
                         {item.contenido > 1 && <span className="text-gray-500 font-normal"> [{item.contenido} {item.unidad_medida}]</span>}
+                        {item.nota && <span className="block text-[11px] font-normal text-amber-700 truncate">{item.nota}</span>}
                       </span>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ml-2 ${
@@ -725,6 +733,7 @@ export default function VerOrdenCompraPage({ params }: { params: { id: string } 
                             <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded">No entregado</span>
                           )}
                         </div>
+                        {item.nota && <p className="pl-6 mt-0.5 text-xs text-amber-700">{item.nota}</p>}
                       </td>
                       <td className={`px-4 py-3 text-sm font-mono ${esCompleto ? 'text-gray-400' : esModificado ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
                         {prefijoUnidades(item)}

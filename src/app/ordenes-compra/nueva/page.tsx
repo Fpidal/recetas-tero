@@ -6,6 +6,7 @@ import { Plus, Trash2, ArrowLeft, Save, Package, Search, PlusCircle } from 'luci
 import { supabase } from '@/lib/supabase'
 import { getNextOCNumber } from '@/lib/oc-numero'
 import { Button, Input, Select, Modal } from '@/components/ui'
+import NotaLinea from '@/app/facturas/components/NotaLinea'
 import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
 
 interface Proveedor {
@@ -55,7 +56,12 @@ interface ItemOrden {
   iva_monto: number
   es_vino?: boolean
   vino_id?: string
+  /** Aclaración para el proveedor ("feteada", "marca X"). Sale en el PDF. */
+  nota: string | null
 }
+
+/** Orienta sobre qué escribir en la nota de una línea */
+const PLACEHOLDER_NOTA = 'Ej: feteada, marca La Serenísima…'
 
 export default function NuevaOrdenCompraPage() {
   const router = useRouter()
@@ -200,6 +206,7 @@ export default function NuevaOrdenCompraPage() {
         subtotal,
         iva_porcentaje: ivaPorcentaje,
         iva_monto: ivaMonto,
+        nota: null,
       }
 
       setItems([...items, nuevoItem])
@@ -237,6 +244,7 @@ export default function NuevaOrdenCompraPage() {
       subtotal,
       iva_porcentaje: ivaPorcentaje,
       iva_monto: ivaMonto,
+      nota: null,
     }
 
     setItems([...items, nuevoItem])
@@ -295,6 +303,11 @@ export default function NuevaOrdenCompraPage() {
       }
       return item
     }))
+  }
+
+  async function handleNotaChange(id: string, texto: string) {
+    const nota = texto.trim() || null
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, nota } : item)))
   }
 
   function handleUnidadDisplayChange(id: string, nuevaUnidad: string) {
@@ -474,6 +487,7 @@ export default function NuevaOrdenCompraPage() {
       // orden se releia el del insumo, perdiendo lo que el usuario habia elegido.
       iva_porcentaje: item.iva_porcentaje,
       unidad_display: item.unidad_display !== item.unidad_medida ? item.unidad_display : null,
+      nota: item.nota,
     }))
 
     const { error: itemsError } = await supabase
@@ -883,6 +897,13 @@ export default function NuevaOrdenCompraPage() {
                         <option value={0}>0%</option>
                       </select>
                     </div>
+                    <div className="mb-2">
+                      <NotaLinea
+                        valor={item.nota ?? ''}
+                        onGuardar={(t) => handleNotaChange(item.id, t)}
+                        placeholder={PLACEHOLDER_NOTA}
+                      />
+                    </div>
                     <div className="grid grid-cols-4 gap-2 mb-2">
                       <div>
                         <p className="text-[10px] text-gray-500 mb-0.5">Unid.</p>
@@ -1008,6 +1029,13 @@ export default function NuevaOrdenCompraPage() {
                                 </span>
                               )}
                             </span>
+                          </div>
+                          <div className="pl-5">
+                            <NotaLinea
+                              valor={item.nota ?? ''}
+                              onGuardar={(t) => handleNotaChange(item.id, t)}
+                              placeholder={PLACEHOLDER_NOTA}
+                            />
                           </div>
                         </td>
                         {/* Cuántos bultos van. Es lo que el proveedor prepara;

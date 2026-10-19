@@ -10,6 +10,16 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.61',
+    fecha: '19/10/26',
+    cambios: [
+      'Órdenes de compra: cada línea puede llevar una nota para el proveedor ("feteada", "marca La Serenísima"), que sale en el PDF debajo del insumo',
+      'PDF de la orden: el horario de entrega (lunes a sábado de 10.00 a 16.00) va primero en las condiciones, en negrita',
+      'PDF de la orden: "Orden de compra" ya no aparece dos veces en el encabezado, y la dirección lleva tildes (Benavídez, Agustín García)',
+      'Dashboard → Cifras del mes: el margen bruto ahora es ventas menos compras; antes restaba solo el costo de los días con consumo cargado y daba de más',
+    ],
+  },
+  {
     version: 'V.60',
     fecha: '15/10/26',
     cambios: [

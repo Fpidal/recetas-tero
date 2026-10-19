@@ -160,6 +160,13 @@ Generación de PDF de carta lista para imprimir.
 ### Órdenes de Compra (`/ordenes-compra`)
 Creación de OC con numeración automática, estados (borrador, enviada, recibida, parcial, cancelada) y generación de PDF.
 
+- **Nota por línea** (V.61): una aclaración para el proveedor en cada insumo —*"feteada"*,
+  *"marca La Serenísima"*—. Se carga al armar o editar la orden, sale en el PDF debajo del
+  insumo y sirve para controlar que la entrega corresponda al pedido. Es de la orden y nada
+  más: no pasa a la factura ni entra en ninguna cuenta. La OC de faltantes la hereda.
+- **PDF**: el horario de entrega (lunes a sábado de 10.00 a 16.00) va primero en las
+  condiciones, en negrita. Las observaciones de la orden salen en su propia caja, sólo si hay.
+
 **OC Recibida con comparación vs Factura:**
 - Muestra cantidades y precios reales de la factura
 - Badges de estado: Completo, Parcial (X de Y), No entregado

@@ -1314,6 +1314,12 @@ export default function Home() {
           const inc = cierre.incidencia
           const incPrev = cierre.incidenciaPrevia
           const hayReal = inc.diasConCarga > 0
+          // Margen = ventas − compras, igual que la pantalla de Ventas
+          // (ventas-queries.ts). No sale de la incidencia real: esa resta el
+          // costo de los servicios con consumo cargado a la venta de TODOS, y
+          // con 11 de 18 servicios cargados daba un 90% de margen.
+          const margen = cierre.ventas.mes - cierre.compras.mes
+          const margenPrev = cierre.ventas.previo - cierre.compras.previo
 
           /** Delta en %: rojo si es malo, verde si es bueno */
           const pct = (v: number, prev: number, subirEsBueno: boolean) => {
@@ -1340,7 +1346,7 @@ export default function Home() {
           const celdas = [
             { label: 'Ventas', valor: formatMoney(cierre.ventas.mes), delta: pct(cierre.ventas.mes, cierre.ventas.previo, true) },
             { label: 'Compras', valor: formatMoney(cierre.compras.mes), delta: pct(cierre.compras.mes, cierre.compras.previo, false) },
-            { label: 'Margen bruto', valor: formatMoney(inc.margen), delta: pct(inc.margen, incPrev.margen, true) },
+            { label: 'Margen bruto', valor: formatMoney(margen), delta: pct(margen, margenPrev, true), nota: 'ventas − compras' },
             { label: 'Inc. teórica', valor: teo !== null ? `${teo.toFixed(1)}%` : '—', delta: pts(teo, teoPrev), nota: 'compras s/ventas' },
             { label: 'Inc. real', valor: hayReal ? `${inc.incidencia.toFixed(1)}%` : '—', delta: hayReal && incPrev.diasConCarga > 0 ? pts(inc.incidencia, incPrev.incidencia) : { texto: `${inc.diasConCarga} de ${inc.diasConVenta} servicios`, color: '#9B948C' }, nota: hayReal ? `muestreo ${inc.diasConCarga}/${inc.diasConVenta}` : undefined },
             {

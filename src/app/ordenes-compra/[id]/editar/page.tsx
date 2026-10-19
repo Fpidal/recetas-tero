@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, ArrowLeft, Save, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Select } from '@/components/ui'
+import NotaLinea from '@/app/facturas/components/NotaLinea'
 import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
 import { ivaLineaOrden } from '@/lib/iva'
 
@@ -49,9 +50,14 @@ interface ItemOrden {
   subtotal: number
   iva_porcentaje: number
   iva_monto: number
+  /** Aclaración para el proveedor ("feteada", "marca X"). Sale en el PDF. */
+  nota: string | null
   isNew?: boolean
   isDeleted?: boolean
 }
+
+/** Orienta sobre qué escribir en la nota de una línea */
+const PLACEHOLDER_NOTA = 'Ej: feteada, marca La Serenísima…'
 
 export default function EditarOrdenCompraPage({ params }: { params: { id: string } }) {
   const { id } = params
@@ -106,7 +112,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         .select(`
           id, proveedor_id, notas, estado,
           orden_compra_items (
-            id, insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display, iva_porcentaje,
+            id, insumo_id, vino_id, cantidad, unidades, precio_unitario, subtotal, unidad_display, iva_porcentaje, nota,
             insumos (nombre, unidad_medida, iva_porcentaje, cantidad_por_paquete),
             vinos (bodega, nombre, cepa)
           )
@@ -153,6 +159,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
           subtotal,
           iva_porcentaje: ivaPorcentaje,
           iva_monto: ivaMonto,
+          nota: item.nota || null,
         }
       })
 
@@ -251,6 +258,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         subtotal,
         iva_porcentaje: ivaPorcentaje,
         iva_monto: ivaMonto,
+        nota: null,
         isNew: true,
       }
     } else {
@@ -280,6 +288,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         subtotal,
         iva_porcentaje: ivaPorcentaje,
         iva_monto: ivaMonto,
+        nota: null,
         isNew: true,
       }
     }
@@ -347,6 +356,11 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
       }
       return item
     }))
+  }
+
+  async function handleNotaChange(itemId: string, texto: string) {
+    const nota = texto.trim() || null
+    setItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, nota } : item)))
   }
 
   function handleUnidadDisplayChange(itemId: string, nuevaUnidad: string) {
@@ -474,6 +488,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
           precio_unitario: item.precio_unitario,
           iva_porcentaje: item.iva_porcentaje,
           unidad_display: item.unidad_display,
+          nota: item.nota,
         })
         .eq('id', item.id)
 
@@ -494,6 +509,7 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
         precio_unitario: item.precio_unitario,
         iva_porcentaje: item.iva_porcentaje,
         unidad_display: item.unidad_display,
+        nota: item.nota,
       }))
 
       console.log('Insertando items nuevos:', insertData)
@@ -879,6 +895,13 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                         <Trash2 className="w-4 h-4 text-red-500" />
                       </Button>
                     </div>
+                    <div className="mb-2">
+                      <NotaLinea
+                        valor={item.nota ?? ''}
+                        onGuardar={(t) => handleNotaChange(item.id, t)}
+                        placeholder={PLACEHOLDER_NOTA}
+                      />
+                    </div>
                     <div className="grid grid-cols-4 gap-2">
                       <div>
                         <label className="text-[10px] text-gray-500">Unid.</label>
@@ -1014,6 +1037,13 @@ export default function EditarOrdenCompraPage({ params }: { params: { id: string
                             {item.isNew && (
                               <span className="text-[10px] text-green-600">(nuevo)</span>
                             )}
+                          </div>
+                          <div className="pl-5">
+                            <NotaLinea
+                              valor={item.nota ?? ''}
+                              onGuardar={(t) => handleNotaChange(item.id, t)}
+                              placeholder={PLACEHOLDER_NOTA}
+                            />
                           </div>
                         </td>
                         {/* Bultos para el proveedor. No entra en el subtotal:

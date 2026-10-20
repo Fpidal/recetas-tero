@@ -551,7 +551,8 @@ export default function NuevaOrdenCompraPage() {
 
           {/* Mobile: Stack vertical */}
           <div className="sm:hidden space-y-3 mb-4">
-            <div className="grid grid-cols-2 gap-3">
+            {/* Uno debajo del otro: a media pantalla el nombre del insumo no se leía */}
+            <div className="space-y-3">
               <Select
                 label="Categoría"
                 options={[
@@ -606,6 +607,7 @@ export default function NuevaOrdenCompraPage() {
                     size="sm"
                     onClick={() => setShowNuevoInsumo(true)}
                     title="Nuevo"
+                    className="h-11 w-11 !px-0"
                   >
                     <PlusCircle className="w-4 h-4" />
                   </Button>
@@ -678,7 +680,8 @@ export default function NuevaOrdenCompraPage() {
                   />
                 </div>
               )}
-              <Button onClick={handleAgregarItem} className="flex-shrink-0">
+              {/* Del alto del campo, para que quede alineado con Cantidad y Precio */}
+              <Button onClick={handleAgregarItem} className="flex-shrink-0 h-[46px] w-[46px] !px-0">
                 <Plus className="w-4 h-4" />
               </Button>
             </div>

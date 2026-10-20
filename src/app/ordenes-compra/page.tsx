@@ -89,7 +89,7 @@ const estadoLabels: Record<string, string> = {
 }
 
 const CATEGORIAS = [
-  { value: '', label: 'Todas las categorías' },
+  { value: '', label: 'Todas' }, // corto: arriba ya dice "Categoría", y en el celular no entraba
   { value: 'Almacén', label: 'Almacén' },
   { value: 'Alquiler', label: 'Alquiler' },
   { value: 'Arreglos', label: 'Arreglos' },
@@ -156,7 +156,7 @@ export default function OrdenesCompraPage() {
     })
     const sorted = Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]))
     return [
-      { value: '', label: 'Todos los proveedores' },
+      { value: '', label: 'Todos' }, // corto: arriba ya dice "Proveedor"
       ...sorted.map(([id, nombre]) => ({ value: id, label: nombre })),
     ]
   }, [ordenes])

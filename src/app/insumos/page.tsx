@@ -613,7 +613,7 @@ export default function InsumosPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
         <nav className="-mb-px flex space-x-6">
           {tabs.map((tab) => {
             const Icon = tab.icon
@@ -628,7 +628,7 @@ export default function InsumosPage() {
                     setActiveTab(tab.id)
                   }
                 }}
-                className={`flex items-center gap-2 py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 py-3 px-1 border-b-2 text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
                   isActive
                     ? 'border-red-500 text-red-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -646,7 +646,8 @@ export default function InsumosPage() {
         <ComparadorPrecios />
       ) : (
         <>
-      <div className="mb-4 flex items-center gap-1.5">
+      {/* En el celular van de a dos por renglón: en una sola fila el cuarto filtro quedaba fuera de la pantalla */}
+      <div className="mb-4 grid grid-cols-2 gap-1.5 sm:flex sm:items-center">
         <div className="relative">
           <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
           <input
@@ -654,13 +655,13 @@ export default function InsumosPage() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar..."
-            className="pl-6 pr-2 py-1 w-28 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="pl-6 pr-2 py-1 w-full sm:w-28 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         </div>
         <select
           value={filtroCategoria}
           onChange={(e) => setFiltroCategoria(e.target.value)}
-          className="py-1 px-2 w-32 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+          className="py-1 px-2 w-full sm:w-32 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
         >
           <option value="">Categoría</option>
           {categorias.map((c) => (
@@ -670,7 +671,7 @@ export default function InsumosPage() {
         <select
           value={filtroProveedor}
           onChange={(e) => setFiltroProveedor(e.target.value)}
-          className="py-1 px-2 w-32 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+          className="py-1 px-2 w-full sm:w-32 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
         >
           <option value="">Proveedor</option>
           {proveedores.map((p) => (
@@ -680,7 +681,7 @@ export default function InsumosPage() {
         <select
           value={filtroVariacion}
           onChange={(e) => setFiltroVariacion(e.target.value)}
-          className="py-1 px-2 w-28 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+          className="py-1 px-2 w-full sm:w-28 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
         >
           <option value="">Variación</option>
           <option value="aumento">Con aumento</option>

@@ -12,7 +12,7 @@ export default function VentasPage() {
   const [tab, setTab] = useState<Tab>('carga')
 
   return (
-    <div className="p-4 lg:p-6 mobile-content-padding">
+    <div>
       {/* Header */}
       <div className="mb-6">
         <h1>Ventas e Incidencia</h1>

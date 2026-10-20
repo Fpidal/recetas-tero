@@ -198,7 +198,7 @@ export default function InventarioPage() {
   ]
 
   return (
-    <div className="p-4 lg:p-6 mobile-content-padding">
+    <div>
       <div className="mb-6">
         <h1>Inventario</h1>
         <p className="text-sm text-gray-500 mt-1">

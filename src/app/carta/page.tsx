@@ -1016,10 +1016,11 @@ export default function CartaPage() {
 
       {/* Tabs y Buscador */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div className="flex gap-1 border-b sm:border-b-0">
+        {/* En el celular las solapas no se parten: van en una fila con scroll */}
+        <div className="flex gap-1 border-b sm:border-b-0 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <button
             onClick={() => { setTabActiva('en_carta'); setSeccionFiltro(null) }}
-            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               tabActiva === 'en_carta'
                 ? 'border-terracotta text-ink'
                 : 'border-transparent text-ink-muted hover:text-ink'
@@ -1029,7 +1030,7 @@ export default function CartaPage() {
           </button>
           <button
             onClick={() => { setTabActiva('fuera_carta'); setSeccionFiltro(null) }}
-            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               tabActiva === 'fuera_carta'
                 ? 'border-terracotta text-ink'
                 : 'border-transparent text-ink-muted hover:text-ink'
@@ -1039,25 +1040,25 @@ export default function CartaPage() {
           </button>
           <button
             onClick={() => { setTabActiva('ejecutivos'); setSeccionFiltro(null) }}
-            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
               tabActiva === 'ejecutivos'
                 ? 'border-terracotta text-ink'
                 : 'border-transparent text-ink-muted hover:text-ink'
             }`}
           >
             <UtensilsCrossed className="w-3 h-3" strokeWidth={1.5} />
-            Ejecutivos (<span className="font-mono">{menusEjecutivos.length}</span>)
+            <span>Ejecutivos (<span className="font-mono">{menusEjecutivos.length}</span>)</span>
           </button>
           <button
             onClick={() => { setTabActiva('especiales'); setSeccionFiltro(null) }}
-            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${
               tabActiva === 'especiales'
                 ? 'border-terracotta text-ink'
                 : 'border-transparent text-ink-muted hover:text-ink'
             }`}
           >
             <LayoutGrid className="w-3 h-3" strokeWidth={1.5} />
-            Especiales (<span className="font-mono">{menusEspeciales.length}</span>)
+            <span>Especiales (<span className="font-mono">{menusEspeciales.length}</span>)</span>
           </button>
         </div>
         <div className="relative">

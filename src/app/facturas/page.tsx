@@ -374,7 +374,7 @@ function FacturasContent() {
           <h1>Facturas</h1>
           <p className="text-xs text-gray-600">Registro de compras a proveedores</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-400">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> No entregado</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" /> Cant. menor</span>
@@ -387,7 +387,7 @@ function FacturasContent() {
             titulo={`Descargar en Excel los ${facturasFiltradas.length} comprobantes que estás viendo`}
           />
           <Link href="/facturas/nueva">
-            <Button>
+            <Button className="whitespace-nowrap">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Nueva Factura
             </Button>
@@ -419,14 +419,15 @@ function FacturasContent() {
       <>
       {/* Filtros */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2.5 sm:p-3 mb-3">
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+        {/* En el celular, grilla de dos: proveedor a lo ancho, período y fechas de a pares */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3 sm:flex-wrap">
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-gray-600">
             <Filter className="w-3.5 h-3.5" />
             <span className="font-medium">Filtros:</span>
           </div>
 
           {/* Proveedor */}
-          <div className="w-40">
+          <div className="col-span-2 sm:w-40">
             <Select
               value={filtroProveedor}
               onChange={(e) => setFiltro('proveedor', e.target.value)}
@@ -438,7 +439,7 @@ function FacturasContent() {
           </div>
 
           {/* Periodo */}
-          <div className="w-32">
+          <div className="col-span-2 sm:w-32">
             <Select
               value={filtroPeriodo}
               onChange={(e) => setFiltro('periodo', e.target.value)}
@@ -447,24 +448,24 @@ function FacturasContent() {
           </div>
 
           {/* Fecha desde */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 min-w-0">
             <span className="text-[10px] text-gray-500">Desde:</span>
             <input
               type="date"
               value={filtroFechaDesde}
               onChange={(e) => setFiltro('desde', e.target.value)}
-              className="px-1.5 py-1 border border-gray-300 rounded-md text-xs"
+              className="flex-1 min-w-0 sm:flex-none px-1.5 py-1 border border-gray-300 rounded-md text-xs"
             />
           </div>
 
           {/* Fecha hasta */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 min-w-0">
             <span className="text-[10px] text-gray-500">Hasta:</span>
             <input
               type="date"
               value={filtroFechaHasta}
               onChange={(e) => setFiltro('hasta', e.target.value)}
-              className="px-1.5 py-1 border border-gray-300 rounded-md text-xs"
+              className="flex-1 min-w-0 sm:flex-none px-1.5 py-1 border border-gray-300 rounded-md text-xs"
             />
           </div>
 
@@ -477,7 +478,7 @@ function FacturasContent() {
           )}
 
           {/* Contador y Total */}
-          <div className="ml-auto flex items-center gap-3">
+          <div className="col-span-2 justify-end ml-auto flex items-center gap-3">
             <span className="text-[10px] text-gray-400 font-mono">
               {facturasFiltradas.length} de {facturas.length}
             </span>

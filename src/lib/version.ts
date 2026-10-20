@@ -10,6 +10,17 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.64',
+    fecha: '20/10/26',
+    cambios: [
+      'Celular → Insumos: los filtros van de a dos por renglón; antes "Proveedor" quedaba cortado y "Variación" no se veía',
+      'Celular → Carta: las solapas (En carta, Fuera de carta, Ejecutivos, Especiales) van en una sola fila que se desliza, sin partirse en varios renglones',
+      'Celular → Facturas: el botón "Nueva Factura" ya no se parte y los filtros quedan ordenados',
+      'Celular → Órdenes de compra: los filtros dicen "Todos" y "Todas" para que no se corten, y en la nueva orden el insumo ocupa todo el ancho, con los botones alineados',
+      'Ventas, Análisis, Inventario y Configuración tenían el margen duplicado: un espacio grande arriba y a los costados. Ahora quedan como el resto',
+    ],
+  },
+  {
     version: 'V.63',
     fecha: '20/10/26',
     cambios: [

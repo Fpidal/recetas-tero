@@ -361,11 +361,13 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   Cuando haya un segundo restaurante, lo único que cambia de ese lado es el filtro de
   `obtenerEmpresa()`.
 
-  **Siguiente: Configuración → Usuarios.** Alta y baja sin SQL. Necesita decidir dónde vive
-  la clave `service_role`: crear o borrar usuarios no se puede con la clave pública. La
-  forma estándar es una variable sólo del servidor en Vercel, usada por una server action
-  que primero verifica que quien llama sea admin. La alternativa es que la solapa sólo
-  muestre quién tiene acceso, y el alta y la baja sigan por el SQL Editor.
+  **Siguiente: Configuración → Usuarios**, cuando se arme el multiusuario. Se decidió
+  (20/10/26) que se administre **desde la app**: invitar por mail con rol, dar de baja
+  (clave nueva y cierre de todas las sesiones, en ese orden: trampa 12), cambiar rol, y ver
+  la actividad real desde `auth.sessions`. Crear o borrar usuarios no se puede con la clave
+  pública, así que la `service_role` va **sólo como variable del servidor en Vercel**,
+  usada por server actions que primero verifican que quien llama sea admin. Nunca en el
+  navegador ni en `.env.local`.
 
   Quedan con "Tero Restó" fijo el **login** y el **título de la pestaña**: se muestran antes de
   saber de qué restaurante es el usuario, así que necesitan un nombre propio del sistema,
@@ -428,6 +430,15 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 3. Decisiones tomadas
 
 Registradas para no volver a discutirlas.
+
+- **Los usuarios se administran desde la app** (20/10/26). Con un restaurante por cliente y
+  un usuario por persona, el alta y la baja por SQL Editor no escalan. La clave
+  `service_role` vive sólo en el servidor (Vercel). Se construye junto con el multiusuario.
+
+- **Una pantalla no repite el margen del layout** (20/10/26, V.64). `<main>` ya trae
+  `mobile-content-padding`; Ventas, Análisis, Inventario y Configuración lo volvían a poner
+  y en el celular sumaban 72 px arriba y el doble a los costados. El contenedor de la página
+  va sin padding propio.
 
 - **Los datos de la empresa viven en la base, no en el código** (20/10/26, V.63). Tabla
   `restaurantes`, editable desde Configuración. Un solo nombre —el de fantasía— para el menú,

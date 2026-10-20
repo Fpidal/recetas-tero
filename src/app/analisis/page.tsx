@@ -24,7 +24,7 @@ export default function AnalisisPage() {
   const [servicio, setServicio] = useState<Servicio>('mediodia')
 
   return (
-    <div className="p-4 lg:p-6 mobile-content-padding">
+    <div>
       {/* Header */}
       <div className="mb-6">
         <h1>Análisis</h1>

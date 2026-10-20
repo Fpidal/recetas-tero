@@ -135,7 +135,7 @@ export default function ConfiguracionPage() {
 
   if (cargando) {
     return (
-      <div className="p-4 lg:p-6 mobile-content-padding">
+      <div>
         <p className="text-sm text-ink-muted">Cargando…</p>
       </div>
     )
@@ -145,7 +145,7 @@ export default function ConfiguracionPage() {
   const v = (x: string | null) => x ?? ''
 
   return (
-    <div className="p-4 lg:p-6 mobile-content-padding">
+    <div>
       <div className="mb-6">
         <h1>Configuración</h1>
         <p className="text-sm text-ink-muted mt-1">

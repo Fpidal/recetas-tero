@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { PALETA, rgb } from './colores'
 import { ivaLineaOrden } from '@/lib/iva'
 import { parseFechaLocal } from '@/lib/fechas'
+import { obtenerEmpresa, condicionesOC, nombreConRazonSocial, logoParaFranja, encajarLogo } from '@/lib/empresa'
 
 interface OrdenPDF {
   id: string
@@ -35,22 +36,21 @@ interface OrdenPDF {
   tieneFactura?: boolean
 }
 
-// Datos fijos de Tero
-const TERO_DATA = {
-  nombre: 'Tero (Oret Srl)',
-  cuit: 'CUIT 30-71732567-9',
-  direccion: 'Av. Agustín García 9501',
-  localidad: 'Benavídez',
-  cp: 'CP 1621',
-}
-
-/**
- * Primera de las condiciones, en negrita: es lo primero que el proveedor
- * necesita para coordinar la entrega.
- */
-const HORARIO_ENTREGA = 'Horario de entrega: de lunes a sábado de 10.00 a 16.00'
+// Los datos de la empresa (nombre, razón social, domicilio, horario,
+// condiciones y logo) salen de Configuración → Empresa. Hasta V.63 estaban
+// escritos acá. Ver src/lib/empresa.ts.
 
 export async function generarPDFOrden(ordenId: string) {
+  // Sin razón social ni domicilio la orden no se manda: mejor un aviso que un
+  // PDF con el "Entregar en" vacío.
+  let empresa
+  try {
+    empresa = await obtenerEmpresa()
+  } catch (e) {
+    alert(e instanceof Error ? e.message : 'No se pudieron leer los datos de la empresa')
+    return
+  }
+
   // Fetch datos completos
   const { data, error } = await supabase
     .from('ordenes_compra')
@@ -181,27 +181,21 @@ export async function generarPDFOrden(ordenId: string) {
   const TERRACOTA = rgb(PALETA.terracotta)
   const TERRACOTA_LIGHT = rgb(PALETA.terracottaLight)
   const GRIS_CLARO = rgb(PALETA.creamDark)
+  // Fondo del encabezado de la tabla: un tono más que las cajas, sin terracota
+  const GRIS_TABLA: [number, number, number] = [238, 234, 228]
 
-  // Logo desde bucket "fotos platos"
-  let logoDataUrl: string | null = null
-  try {
-    const { data: files } = await supabase.storage.from('fotos platos').list('', { limit: 1 })
-    if (files && files.length > 0) {
-      const logoFile = files[0].name
-      const { data: urlData } = supabase.storage.from('fotos platos').getPublicUrl(logoFile)
-      if (urlData?.publicUrl) {
-        const response = await fetch(urlData.publicUrl)
-        if (response.ok) {
-          const blob = await response.blob()
-          logoDataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(reader.result as string)
-            reader.readAsDataURL(blob)
-          })
-        }
-      }
-    }
-  } catch {}
+  // V.63: Lato en vez de Helvetica, más cercana a la tipografía de la app.
+  // Es la de toda la OC; Times queda sólo para el nombre cuando no hay logo.
+  // Import dinámico: son 185 KB que sólo hacen falta al generar el PDF, no al
+  // abrir la pantalla de órdenes
+  const { registrarLato } = await import('@/lib/fonts/lato')
+  registrarLato(doc)
+  const FUENTE = 'Lato'
+
+  // El logo de Configuración → Empresa, en blanco y con su proporción. Antes
+  // era el primer archivo del bucket "fotos platos", dibujado en un cuadrado
+  // de 20 × 20 mm: salía aplastado y en negro sobre el terracota.
+  const logo = empresa.logo && empresa.logo_en_oc ? await logoParaFranja(empresa.logo) : null
 
   function fmtMoney(n: number): string {
     return `$${n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
@@ -213,63 +207,74 @@ export async function generarPDFOrden(ordenId: string) {
   const dia = fechaObj.getDate().toString().padStart(2, '0')
   const mes = meses[fechaObj.getMonth()]
   const anio = fechaObj.getFullYear()
-  const fechaFormateada = `${TERO_DATA.localidad} ${dia} de ${mes} de ${anio}`
+  const fechaFormateada = [empresa.localidad, `${dia} de ${mes} de ${anio}`].filter(Boolean).join(' ')
 
   // Fondo
   doc.setFillColor(255, 255, 255)
   doc.rect(0, 0, pageWidth, pageHeight, 'F')
 
-  // Borde exterior
-  doc.setDrawColor(...TERRACOTA_LIGHT)
-  doc.setLineWidth(0.5)
-  doc.rect(margin - 2, margin - 2, contentWidth + 4, pageHeight - margin * 2 + 4, 'S')
-
-  let y = margin + 4
+  // Sin borde exterior: el diseño de V.63 se apoya en la franja y las cajas
+  let y = margin + 2
 
   // === HEADER ===
-  const headerHeight = 24
+  // Logo | Orden de compra | N° y fecha, separados por dos filetes blancos
+  const headerHeight = 26
+  const headerMid = y + headerHeight / 2
   doc.setFillColor(...TERRACOTA)
-  doc.rect(margin, y, contentWidth, headerHeight, 'F')
+  doc.roundedRect(margin, y, contentWidth, headerHeight, 2, 2, 'F')
 
-  // Logo a la izquierda (si existe)
-  let textX = margin + 4  // Por defecto pegado al margen
-  if (logoDataUrl) {
+  // Izquierda: el logo, o el nombre si no hay logo (o se eligió no usarlo)
+  const izqX = margin + 5
+  let izqFin = izqX
+  if (logo) {
+    const { ancho, alto } = encajarLogo(logo.proporcion, 34, 17)
     try {
-      doc.addImage(logoDataUrl, 'PNG', margin + 3, y + 2, 20, 20)
-      textX = margin + 26  // Si hay logo, mover texto a la derecha
+      doc.addImage(logo.imagen, 'PNG', izqX, headerMid - alto / 2, ancho, alto)
+      izqFin = izqX + ancho
     } catch {}
   }
+  if (izqFin === izqX) {
+    doc.setFont('times', 'bolditalic')
+    doc.setFontSize(15)
+    doc.setTextColor(255, 255, 255)
+    const nombre = doc.splitTextToSize(empresa.nombre_fantasia, 34)[0] as string
+    doc.text(nombre, izqX, headerMid + 1.8)
+    izqFin = izqX + doc.getTextWidth(nombre)
+  }
 
-  // Texto: Tero arriba, "Orden de compra" abajo
-  doc.setFont('times', 'bolditalic')
-  doc.setFontSize(14)
+  // Derecha: número y fecha, alineados al borde
+  const rightX = pageWidth - margin - 5
+  doc.setFont(FUENTE, 'bold')
+  doc.setFontSize(9.5)
   doc.setTextColor(255, 255, 255)
-  doc.text('Tero', textX, y + 10)
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(10)
-  doc.text('Orden de compra', textX, y + 18)
-
-  // Datos derecha (Orden de compra N°, Fecha)
-  const rightX = pageWidth - margin - 4
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
-  // Sólo el número: "Orden de compra" ya figura a la izquierda, y repetirlo
-  // acá hacía que el encabezado lo dijera dos veces
-  doc.text(`N° ${orden.numero || 'S/N'}`, rightX, y + 10, { align: 'right' })
-
-  doc.setFont('helvetica', 'normal')
+  const textoNumero = `N° ${orden.numero || 'S/N'}`
+  const anchoNumero = doc.getTextWidth(textoNumero)
+  doc.text(textoNumero, rightX, headerMid - 1, { align: 'right' })
+  doc.setFont(FUENTE, 'normal')
   doc.setFontSize(7)
-  doc.text(fechaFormateada, rightX, y + 17, { align: 'right' })
+  const anchoFecha = doc.getTextWidth(fechaFormateada)
+  doc.text(fechaFormateada, rightX, headerMid + 3.5, { align: 'right' })
+  const derInicio = rightX - Math.max(anchoNumero, anchoFecha)
 
-  y += headerHeight + 3
+  // Filetes y título al medio
+  doc.setDrawColor(255, 255, 255)
+  doc.setLineWidth(0.25)
+  const filete1 = izqFin + 5
+  const filete2 = derInicio - 5
+  doc.line(filete1, y + 6, filete1, y + headerHeight - 6)
+  doc.line(filete2, y + 6, filete2, y + headerHeight - 6)
+  doc.setFont(FUENTE, 'bold')
+  doc.setFontSize(13)
+  doc.text('Orden de compra', (filete1 + filete2) / 2, headerMid + 1.6, { align: 'center' })
+
+  y += headerHeight + 4
 
   // === BADGE "RECIBIDA" si corresponde ===
   const esRecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
   if (esRecibida) {
     doc.setFillColor(34, 139, 34) // verde
     doc.roundedRect(margin, y, contentWidth, 8, 1.5, 1.5, 'F')
-    doc.setFont('helvetica', 'bold')
+    doc.setFont(FUENTE, 'bold')
     doc.setFontSize(12)
     doc.setTextColor(255, 255, 255)
     doc.text('RECIBIDA', pageWidth / 2, y + 5.5, { align: 'center' })
@@ -280,58 +285,59 @@ export async function generarPDFOrden(ordenId: string) {
   const boxHeight = 28
   const halfWidth = (contentWidth - 3) / 2
 
+  // Caja: fondo crema, sin borde, con un filete terracota a la izquierda
+  function caja(x: number, etiqueta: string): number {
+    doc.setFillColor(...GRIS_CLARO)
+    doc.roundedRect(x, y, halfWidth, boxHeight, 1.5, 1.5, 'F')
+    doc.setFillColor(...TERRACOTA)
+    doc.rect(x + 3.5, y + 4, 0.6, boxHeight - 8, 'F')
+    doc.setFont(FUENTE, 'bold')
+    doc.setFontSize(5.5)
+    doc.setTextColor(...TERRACOTA)
+    doc.text(etiqueta, x + 7, y + 6, { charSpace: 0.35 })
+    return x + 7
+  }
+
   // Caja PROVEEDOR (izquierda)
-  doc.setFillColor(...GRIS_CLARO)
-  doc.rect(margin, y, halfWidth, boxHeight, 'F')
-  doc.setDrawColor(...TERRACOTA_LIGHT)
-  doc.setLineWidth(0.3)
-  doc.rect(margin, y, halfWidth, boxHeight, 'S')
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(6)
-  doc.setTextColor(...TERRACOTA)
-  doc.text('PROVEEDOR:', margin + 3, y + 5)
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
+  const provX = caja(margin, 'PROVEEDOR:')
+  doc.setFont(FUENTE, 'bold')
+  doc.setFontSize(9)
   doc.setTextColor(40, 40, 40)
-  doc.text(orden.proveedor_nombre, margin + 3, y + 11)
+  doc.text(orden.proveedor_nombre, provX, y + 12, { maxWidth: halfWidth - 10 })
 
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(6)
-  doc.setTextColor(80, 80, 80)
+  doc.setFont(FUENTE, 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(100, 100, 100)
   if (orden.proveedor_contacto) {
-    doc.text(orden.proveedor_contacto, margin + 3, y + 16)
+    doc.text(orden.proveedor_contacto, provX, y + 16.5)
   }
   if (orden.proveedor_telefono) {
-    doc.text(`Tel: ${orden.proveedor_telefono}`, margin + 3, y + 20)
+    doc.text(`Tel: ${orden.proveedor_telefono}`, provX, y + 20.5)
   }
 
   // Caja ENTREGAR EN (derecha)
   const rightBoxX = margin + halfWidth + 3
-  doc.setFillColor(...GRIS_CLARO)
-  doc.rect(rightBoxX, y, halfWidth, boxHeight, 'F')
-  doc.setDrawColor(...TERRACOTA_LIGHT)
-  doc.rect(rightBoxX, y, halfWidth, boxHeight, 'S')
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(6)
-  doc.setTextColor(...TERRACOTA)
-  doc.text('ENTREGAR EN:', rightBoxX + 3, y + 5)
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7)
+  const entregaX = caja(rightBoxX, 'ENTREGAR EN:')
+  doc.setFont(FUENTE, 'bold')
+  doc.setFontSize(8)
   doc.setTextColor(40, 40, 40)
-  doc.text(TERO_DATA.nombre, rightBoxX + 3, y + 10)
+  doc.text(nombreConRazonSocial(empresa), entregaX, y + 11.5, { maxWidth: halfWidth - 10 })
 
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(6)
-  doc.setTextColor(80, 80, 80)
-  doc.text(TERO_DATA.cuit, rightBoxX + 3, y + 14)
-  doc.text(TERO_DATA.direccion, rightBoxX + 3, y + 18)
-  doc.text(`${TERO_DATA.localidad} - ${TERO_DATA.cp}`, rightBoxX + 3, y + 22)
+  doc.setFont(FUENTE, 'normal')
+  doc.setFontSize(6.2)
+  doc.setTextColor(100, 100, 100)
+  // Cada dato en su renglón, sin dejar huecos si alguno no está cargado
+  const lineasEntrega = [
+    empresa.cuit ? `CUIT ${empresa.cuit}` : null,
+    empresa.direccion,
+    [empresa.localidad, empresa.codigo_postal ? `CP ${empresa.codigo_postal}` : null].filter(Boolean).join(' - ') || null,
+    [empresa.telefono, empresa.email_compras].filter(Boolean).join(' · ') || null,
+  ].filter((l): l is string => !!l)
+  lineasEntrega.forEach((linea, i) => {
+    doc.text(linea, entregaX, y + 15.5 + i * 3.3, { maxWidth: halfWidth - 10 })
+  })
 
-  y += boxHeight + 4
+  y += boxHeight + 5
 
   // === TABLA CON PAGINACIÓN ===
   const esParcialORecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
@@ -347,7 +353,10 @@ export async function generarPDFOrden(ordenId: string) {
   const rowH = esRecibidaCompleta ? 9 : 7 // Más alto para OC Recibida (tiene 2 líneas de precio)
 
   // Constantes de paginación
-  const ESPACIO_FOOTER = 60 // Totales + observaciones + condiciones + footer
+  // Totales + observaciones + condiciones + footer. Los 60 alcanzan para el
+  // horario y tres condiciones; cada condición más suma un renglón.
+  const condiciones = condicionesOC(empresa)
+  const ESPACIO_FOOTER = 66 + Math.max(0, condiciones.length - 3) * 3.6
   // Una línea con nota lleva un renglón más debajo del insumo
   const ALTO_NOTA = 3
   const altoFila = (item: { nota: string | null }) => rowH + (item.nota ? ALTO_NOTA : 0)
@@ -400,11 +409,11 @@ export async function generarPDFOrden(ordenId: string) {
 
   // Función para dibujar header de tabla
   function dibujarHeaderTabla(yPos: number): number {
-    doc.setFillColor(...TERRACOTA)
-    doc.rect(margin, yPos, contentWidth, rowH, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(6)
-    doc.setTextColor(255, 255, 255)
+    doc.setFillColor(...GRIS_TABLA)
+    doc.roundedRect(margin, yPos, contentWidth, rowH, 1.2, 1.2, 'F')
+    doc.setFont(FUENTE, 'bold')
+    doc.setFontSize(5.8)
+    doc.setTextColor(70, 70, 70)
 
     const hTextY = yPos + 4.5
     doc.text('#', colX.num, hTextY)
@@ -501,18 +510,18 @@ export async function generarPDFOrden(ordenId: string) {
     } else if (hayFaltante) {
       doc.setFillColor(255, 240, 230) // naranja claro
       doc.rect(margin, y, contentWidth, alto, 'F')
-    } else if (idx % 2 === 0) {
-      doc.setFillColor(250, 250, 250)
-      doc.rect(margin, y, contentWidth, alto, 'F')
     }
-    doc.setDrawColor(230, 230, 230)
-    doc.setLineWidth(0.1)
-    doc.line(margin, y, pageWidth - margin, y)
+    // Filas en blanco, separadas por un filete fino (no la primera: pega con el encabezado)
+    if (idx > 0) {
+      doc.setDrawColor(232, 228, 222)
+      doc.setLineWidth(0.15)
+      doc.line(margin, y, pageWidth - margin, y)
+    }
 
     const textY = y + 4.5
     doc.setFontSize(6.5)
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont(FUENTE, 'normal')
     doc.setTextColor(150, 150, 150)
     doc.text(`${idx + 1}`, colX.num, textY)
 
@@ -583,7 +592,7 @@ export async function generarPDFOrden(ordenId: string) {
       doc.setFontSize(6.5)
 
       // Subtotal de factura
-      doc.setFont('helvetica', 'bold')
+      doc.setFont(FUENTE, 'bold')
       doc.setTextColor(30, 30, 30)
       doc.text(fmtMoney(subtotalFactura), colX.subtotalRight, textY, { align: 'right' })
     } else if (esParcialORecibida) {
@@ -597,11 +606,11 @@ export async function generarPDFOrden(ordenId: string) {
       doc.text(recibidoStr, (colX as any).recibidoRight, textY, { align: 'right' })
 
       if (faltante > 0) {
-        doc.setFont('helvetica', 'bold')
+        doc.setFont(FUENTE, 'bold')
         doc.setTextColor(200, 50, 50) // rojo
         const faltanteStr = faltante % 1 === 0 ? faltante.toFixed(0) : faltante.toFixed(2).replace('.', ',')
         doc.text(faltanteStr, (colX as any).faltanteRight, textY, { align: 'right' })
-        doc.setFont('helvetica', 'normal')
+        doc.setFont(FUENTE, 'normal')
       } else {
         doc.setTextColor(150, 150, 150)
         doc.text('-', (colX as any).faltanteRight, textY, { align: 'right' })
@@ -615,7 +624,7 @@ export async function generarPDFOrden(ordenId: string) {
       doc.setTextColor(50, 50, 50)
       doc.text(fmtMoney(item.precio_unitario), colX.precioRight, textY, { align: 'right' })
 
-      doc.setFont('helvetica', 'bold')
+      doc.setFont(FUENTE, 'bold')
       doc.setTextColor(30, 30, 30)
       doc.text(fmtMoney(item.subtotal), colX.subtotalRight, textY, { align: 'right' })
     } else {
@@ -651,7 +660,7 @@ export async function generarPDFOrden(ordenId: string) {
       doc.setTextColor(50, 50, 50)
       doc.text(fmtMoney(item.precio_unitario), colX.precioRight, textY, { align: 'right' })
 
-      doc.setFont('helvetica', 'bold')
+      doc.setFont(FUENTE, 'bold')
       doc.setTextColor(30, 30, 30)
       doc.text(fmtMoney(item.subtotal), colX.subtotalRight, textY, { align: 'right' })
     }
@@ -659,13 +668,13 @@ export async function generarPDFOrden(ordenId: string) {
     // Nota de la línea, en un renglón propio debajo del insumo. Ocupa todo el
     // ancho de la fila: en ese renglón no hay números con los que chocar.
     if (item.nota) {
-      doc.setFont('helvetica', 'italic')
+      doc.setFont(FUENTE, 'italic')
       doc.setFontSize(5.5)
       doc.setTextColor(...TERRACOTA)
       const anchoNota = colX.subtotalRight - colX.insumo
       const [primera, ...resto] = doc.splitTextToSize(item.nota, anchoNota) as string[]
       doc.text(resto.length > 0 ? primera.replace(/\s*\S*$/, '') + '…' : primera, colX.insumo, y + rowH + 0.8)
-      doc.setFont('helvetica', 'normal')
+      doc.setFont(FUENTE, 'normal')
     }
 
     y += alto
@@ -681,30 +690,30 @@ export async function generarPDFOrden(ordenId: string) {
   const totalesX = colX.subtotalRight
   const labelX = colX.precioRight
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont(FUENTE, 'normal')
   doc.setFontSize(7)
   doc.setTextColor(100, 100, 100)
   doc.text('Subtotal Neto', labelX, y, { align: 'right' })
-  doc.setFont('helvetica', 'bold')
+  doc.setFont(FUENTE, 'bold')
   doc.setTextColor(40, 40, 40)
   doc.text(fmtMoney(subtotalNeto), totalesX, y, { align: 'right' })
   y += 4.5
 
   if (totalIva21 > 0) {
-    doc.setFont('helvetica', 'normal')
+    doc.setFont(FUENTE, 'normal')
     doc.setTextColor(100, 100, 100)
     doc.text('IVA (21%)', labelX, y, { align: 'right' })
-    doc.setFont('helvetica', 'bold')
+    doc.setFont(FUENTE, 'bold')
     doc.setTextColor(40, 40, 40)
     doc.text(fmtMoney(totalIva21), totalesX, y, { align: 'right' })
     y += 4.5
   }
 
   if (totalIva105 > 0) {
-    doc.setFont('helvetica', 'normal')
+    doc.setFont(FUENTE, 'normal')
     doc.setTextColor(100, 100, 100)
     doc.text('IVA (10.5%)', labelX, y, { align: 'right' })
-    doc.setFont('helvetica', 'bold')
+    doc.setFont(FUENTE, 'bold')
     doc.setTextColor(40, 40, 40)
     doc.text(fmtMoney(totalIva105), totalesX, y, { align: 'right' })
     y += 4.5
@@ -723,12 +732,15 @@ export async function generarPDFOrden(ordenId: string) {
   const totalBoxX = pageWidth - margin - totalBoxW
   doc.roundedRect(totalBoxX, y - 3, totalBoxW, 10, 1.5, 1.5, 'F')
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
+  doc.setFont(FUENTE, 'bold')
+  doc.setFontSize(8.5)
   doc.setTextColor(255, 255, 255)
-  doc.text('TOTAL GENERAL', totalBoxX + 4, y + 3)
-  doc.setFontSize(9)
-  doc.text(fmtMoney(totalConIva), pageWidth - margin - 3, y + 3, { align: 'right' })
+  doc.text('TOTAL', totalBoxX + 5, y + 3.3, { charSpace: 0.4 })
+  doc.setDrawColor(255, 255, 255)
+  doc.setLineWidth(0.25)
+  doc.line(totalBoxX + 22, y - 0.8, totalBoxX + 22, y + 5)
+  doc.setFontSize(10)
+  doc.text(fmtMoney(totalConIva), pageWidth - margin - 4, y + 3.5, { align: 'right' })
   y += 12
 
   // Diferencia vs OC (solo si está recibida y hay diferencia)
@@ -740,7 +752,7 @@ export async function generarPDFOrden(ordenId: string) {
     doc.setDrawColor(...colorDif)
     doc.roundedRect(totalBoxX, y - 2, totalBoxW, 8, 1.5, 1.5, 'S')
 
-    doc.setFont('helvetica', 'bold')
+    doc.setFont(FUENTE, 'bold')
     doc.setFontSize(7)
     doc.setTextColor(...colorDif)
     doc.text('Diferencia vs OC:', totalBoxX + 3, y + 3)
@@ -761,12 +773,12 @@ export async function generarPDFOrden(ordenId: string) {
     const boxH = notasLines.length * 3.5 + 8
     doc.roundedRect(margin, y, contentWidth, boxH, 1.5, 1.5, 'FD')
 
-    doc.setFont('helvetica', 'bold')
+    doc.setFont(FUENTE, 'bold')
     doc.setFontSize(7)
     doc.setTextColor(...TERRACOTA)
     doc.text('OBSERVACIONES:', margin + 3, y + 5)
 
-    doc.setFont('helvetica', 'normal')
+    doc.setFont(FUENTE, 'normal')
     doc.setFontSize(6.5)
     doc.setTextColor(40, 40, 40)
     doc.text(notasLines, margin + 3, y + 10)
@@ -774,42 +786,44 @@ export async function generarPDFOrden(ordenId: string) {
   }
 
   // Condiciones de entrega (texto fijo)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(5.5)
+  y += 2
+  doc.setFont(FUENTE, 'bold')
+  doc.setFontSize(7.5)
   doc.setTextColor(...TERRACOTA)
   doc.text('Condiciones:', margin + 2, y)
+  y += 4.5
 
-  // El horario va primero y en negrita, para que resalte entre las condiciones
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(5.5)
-  doc.setTextColor(40, 40, 40)
-  doc.text(`• ${HORARIO_ENTREGA}.`, margin + 2, y + 4)
-  y += 3.5
+  // Cada condición con su viñeta terracota
+  function condicion(texto: string, destacada: boolean) {
+    doc.setFillColor(...TERRACOTA)
+    doc.circle(margin + 3, y - 0.9, 0.45, 'F')
+    doc.setFont(FUENTE, destacada ? 'bold' : 'normal')
+    doc.setFontSize(6.3)
+    if (destacada) doc.setTextColor(40, 40, 40)
+    else doc.setTextColor(100, 100, 100)
+    doc.text(texto, margin + 6, y)
+    y += 3.6
+  }
 
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(5)
-  doc.setTextColor(100, 100, 100)
-  const condiciones = [
-    '• Mercadería sujeta a control de calidad al recibir.',
-    '• Confirmar si el pedido será entregado en su totalidad.',
-    '• Confirmar fecha de entrega.',
-  ]
-  condiciones.forEach((cond, i) => {
-    doc.text(cond, margin + 2, y + 4 + (i * 3))
-  })
+  // El horario va primero y en negrita: es lo primero que el proveedor
+  // necesita para coordinar la entrega
+  if (empresa.horario_entrega) {
+    condicion(`Horario de entrega: ${empresa.horario_entrega.replace(/\.$/, '')}.`, true)
+  }
+  condiciones.forEach((cond) => condicion(cond, false))
 
   // Footer con número de página
   const footerY = pageHeight - margin - 8
-  doc.setDrawColor(...TERRACOTA_LIGHT)
-  doc.setLineWidth(0.2)
-  doc.line(margin + 20, footerY, pageWidth - margin - 20, footerY)
+  doc.setDrawColor(...TERRACOTA)
+  doc.setLineWidth(0.25)
+  doc.line(margin, footerY, pageWidth - margin, footerY)
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFont(FUENTE, 'normal')
   doc.setFontSize(5)
   doc.setTextColor(150, 130, 120)
 
   const textoPagina = totalPaginas > 1 ? `  |  Página ${paginaActual} de ${totalPaginas}` : ''
-  doc.text(`Tero Restó  |  Orden de Compra${textoPagina}`, pageWidth / 2, footerY + 4, { align: 'center' })
+  doc.text(`${empresa.nombre_fantasia}  |  Orden de Compra${textoPagina}`, pageWidth / 2, footerY + 4, { align: 'center' })
 
   // Guardar - Proveedor primero, luego número de OC, y RECIBIDA si corresponde
   const proveedorNombre = orden.proveedor_nombre.replace(/\s+/g, '_')

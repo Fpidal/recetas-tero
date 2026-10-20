@@ -58,6 +58,7 @@ src/
 │   ├── menus-ejecutivos/   # Menús ejecutivos (menú del día)
 │   ├── menus-especiales/   # Menús para eventos especiales
 │   ├── ordenes-compra/     # Órdenes de compra a proveedores
+│   ├── configuracion/      # Datos de la empresa (V.63)
 │   ├── papelera/           # Items eliminados (soft delete)
 │   ├── platos/             # Recetas y platos
 │   ├── proveedores/        # Gestión de proveedores
@@ -93,6 +94,8 @@ src/
 - **comparacion_items**: Items con precios de cada proveedor
 - **menus_ejecutivos**: Menús del día
 - **menus_especiales**: Menús para eventos
+- **restaurantes**: Datos de la empresa (nombre, razón social, domicilio, logo). Se leen con
+  `obtenerEmpresa()` de `src/lib/empresa.ts` — nunca escribir el nombre o la dirección en el código
 - **inventario_conteos**: Cada vez que se cuenta la cámara
 - **inventario_conteo_items**: Lo contado de cada insumo, contra lo que decía el sistema
 

@@ -8,7 +8,7 @@ import { HOJA_COLORES } from '@/lib/colores'
  *
  * Son FIJAS: un PDF armado a mano por categoría, en public/hojas/, con los
  * artículos agrupados por rubro y columnas de stock, pedido y recibido. Hasta
- * V.61 se autogeneraban con generar-pdf-stock.ts, que listaba todo lo que
+ * V.61 se autogeneraban con un generador —ya borrado— que listaba todo lo que
  * tuviera la categoría y salía desordenado. La de carnes incluye pollo, cerdo,
  * pescados y mariscos, así que no hay hoja aparte de Pescados.
  *

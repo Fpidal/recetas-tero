@@ -55,6 +55,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Estadísticas** | Dashboard consolidado (6 pestañas: las 4 de compras y precios, más **Cierre de mes** (V.25) y **ABC de insumos** (V.28)) |
 | **Inventario** | Stock calculado: último conteo + compras − consumo, sin tabla de stock que se desfase (V.48). Cuatro solapas: existencias, conteo con ajuste y motivo, estadística de diferencias, y las **hojas de inventario** para contar a mano: son cuatro hojas fijas —carnes, almacén, verduras, lácteos y fiambres—, armadas a mano y ordenadas por rubro (V.62). Reemplazan a las autogeneradas, que listaban todo lo de la categoría y salían desordenadas. Descuenta **en bruto** —7 kg de cebolla pelada son 7,78 de la cámara— y convierte las compras por caja a unidades sueltas. Todo **valorizado a costo final** (V.49), que es lo que permite ordenar por plata: 200 g de reggianito y 200 g de salmón no son lo mismo |
 | **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
+| **Configuración** | Los datos del restaurante (V.63): nombre, razón social, CUIT, domicilio, contacto, horario y condiciones de la OC, y el logo, con tildes para usarlo en la OC y en los informes. Tabla `restaurantes`, leída sólo por `src/lib/empresa.ts`. Es la primera pieza del multiusuario |
 
 ### Convenciones que no se negocian
 
@@ -112,7 +113,7 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   hacía desaparecer de la carta en silencio. Desde V.55 cada bloque se mide contra el tope de su
   columna y salta a la columna o a la carilla siguiente; se verifica generando la carta
   duplicada y triplicada y contando que salgan todos. Cualquier PDF que arme listas largas
-  —`generar-pdf-carta.ts`, `generar-pdf-stock.ts`, `generar-pdf-oc.ts`— tiene el mismo riesgo.
+  —`generar-pdf-carta.ts`, `generar-pdf-oc.ts`— tiene el mismo riesgo.
 
 - **El push va por SSH, y el `pull` andando no prueba nada.** El remote es
   `git@github.com:Fpidal/recetas-tero.git`. Por HTTPS el push necesita el llavero de macOS y
@@ -353,6 +354,23 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 - **Multiusuario.** Mapeado el 19/08/26 con `npm run consultar -- aislado-por-cliente`.
 
+  **Hecho en V.63: la tabla `restaurantes`.** Es a donde va a apuntar el `restaurante_id` de
+  cada tabla. Hoy tiene una fila, la de Tero, y la app lee esa. Los datos de la empresa ya no
+  están en el código: la razón social y el CUIT vivían en `generar-pdf-oc.ts`, "Tero Restó"
+  en diez lugares, y el logo de cinco PDF era el primer archivo del bucket "fotos platos".
+  Cuando haya un segundo restaurante, lo único que cambia de ese lado es el filtro de
+  `obtenerEmpresa()`.
+
+  **Siguiente: Configuración → Usuarios.** Alta y baja sin SQL. Necesita decidir dónde vive
+  la clave `service_role`: crear o borrar usuarios no se puede con la clave pública. La
+  forma estándar es una variable sólo del servidor en Vercel, usada por una server action
+  que primero verifica que quien llama sea admin. La alternativa es que la solapa sólo
+  muestre quién tiene acceso, y el alta y la baja sigan por el SQL Editor.
+
+  Quedan con "Tero Restó" fijo el **login** y el **título de la pestaña**: se muestran antes de
+  saber de qué restaurante es el usuario, así que necesitan un nombre propio del sistema,
+  que todavía no está decidido.
+
   **No son tablas separadas por cliente.** Son las mismas tablas con una columna `restaurante_id`,
   y la RLS haciendo de pared. O sea que la RLS deja de ser una formalidad y pasa a ser lo único
   que separa un restaurante de otro.
@@ -410,6 +428,23 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 3. Decisiones tomadas
 
 Registradas para no volver a discutirlas.
+
+- **Los datos de la empresa viven en la base, no en el código** (20/10/26, V.63). Tabla
+  `restaurantes`, editable desde Configuración. Un solo nombre —el de fantasía— para el menú,
+  los PDF y el Excel. Si los datos no se pueden leer, **la OC no se genera**: mejor un aviso
+  que una orden sin domicilio de entrega. Los informes internos sí salen igual.
+
+- **El logo va en blanco sobre la franja, y cada PDF elige si lo usa** (20/10/26, V.63).
+  Antes se dibujaba como estaba —negro sobre terracota— y en un cuadrado fijo, así que un
+  logo apaisado salía aplastado. Ahora se tiñe de blanco conservando la forma y se respeta
+  su proporción. Dos tildes en Configuración: orden de compra e informes. Donde no va, el
+  encabezado lleva el nombre en cursiva. El logo se guarda dentro de la fila (data URL) y
+  no en un bucket, para no sumar otro lugar con permisos que mantener.
+
+- **La OC se escribe en Lato** (20/10/26, V.63). jsPDF sólo trae Helvetica, Times y Courier;
+  el diseño pedido usa una sans más cálida. Lato (licencia OFL) va embebida y recortada a
+  Latin-1 —tildes, ñ, °— para que pese 45 KB por variante en vez de 650. No es una librería:
+  es un archivo de datos que se carga sólo al generar la orden.
 
 - **El margen bruto es ventas − compras** (18/10/26, V.61). El Dashboard lo calculaba con la
   incidencia real: la venta del mes menos el costo de los servicios con consumo cargado. Como

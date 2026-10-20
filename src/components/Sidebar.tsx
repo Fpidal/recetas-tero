@@ -23,10 +23,12 @@ import {
   User,
   DollarSign,
   TrendingUp,
-  History
+  History,
+  Settings
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { APP_VERSION, APP_FECHA, CHANGELOG } from '@/lib/version'
+import { useNombreEmpresa } from '@/lib/empresa'
 import Modal from './ui/Modal'
 
 /**
@@ -34,7 +36,8 @@ import Modal from './ui/Modal'
  *
  * Son los MISMOS catorce destinos de antes: no se agregó ni se quitó ninguno,
  * solo se ordenaron y se les puso un título arriba. Catorce ítems seguidos no
- * dicen qué hace el sistema; agrupados se pueden escanear.
+ * dicen qué hace el sistema; agrupados se pueden escanear. En V.63 se sumó el
+ * decimoquinto, Configuración, abajo con Papelera.
  *
  * POR QUÉ NO ES UN ACORDEÓN: las pantallas tienen 26 solapas entre todas
  * (Estadísticas 6, Análisis 5, Carta 4…). Desplegarlas acá llevaría el Sidebar
@@ -103,7 +106,11 @@ const navigation: GrupoNav[] = [
   },
   {
     titulo: null,
-    items: [{ name: 'Papelera', href: '/papelera', icon: Trash2 }],
+    items: [
+      { name: 'Papelera', href: '/papelera', icon: Trash2 },
+      // V.63: los datos de la empresa. Va abajo de todo porque se toca una vez
+      { name: 'Configuración', href: '/configuracion', icon: Settings },
+    ],
   },
 ]
 
@@ -115,6 +122,7 @@ export default function Sidebar() {
   const [userName, setUserName] = useState('')
   const [userRole, setUserRole] = useState('')
   const [changelogOpen, setChangelogOpen] = useState(false)
+  const nombreEmpresa = useNombreEmpresa()
 
   useEffect(() => {
     fetchPapeleraCount()
@@ -173,7 +181,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/10 px-4">
         <div>
-          <h1 className="font-serif text-[20px] text-white tracking-tight leading-none">Tero Restó</h1>
+          <h1 className="font-serif text-[20px] text-white tracking-tight leading-none">{nombreEmpresa}</h1>
           <button
             onClick={() => setChangelogOpen(true)}
             className="text-[10px] text-white/35 hover:text-white/70 font-mono tracking-wide mt-1 transition-colors cursor-pointer text-left inline-flex items-center gap-1"
@@ -196,9 +204,9 @@ export default function Sidebar() {
       {/* min-h-0 es lo que permite que el scroll viva DENTRO del nav.
           Sin eso, un item flex no baja de la altura de su contenido (min-height:auto),
           el nav crece con la lista y empuja el bloque del usuario fuera de pantalla. */}
-      <nav className="flex-1 min-h-0 px-3 py-2 overflow-y-auto">
+      <nav className="flex-1 min-h-0 px-3 py-1.5 overflow-y-auto">
         {navigation.map((grupo, i) => (
-          <div key={grupo.titulo ?? `sin-titulo-${i}`} className={i > 0 ? 'mt-2.5' : ''}>
+          <div key={grupo.titulo ?? `sin-titulo-${i}`} className={i > 0 ? 'mt-2' : ''}>
             {grupo.titulo && (
               <div className="px-3 pb-0.5 text-[9.5px] font-bold uppercase tracking-[0.11em] text-white/30">
                 {grupo.titulo}
@@ -214,7 +222,7 @@ export default function Sidebar() {
               key={item.name}
               href={item.href}
               onClick={() => setMobileMenuOpen(false)}
-              className={`group flex items-center rounded-lg px-3 py-2.5 lg:py-[5px] text-base lg:text-[13px] font-medium transition-all ${
+              className={`group flex items-center rounded-lg px-3 py-2.5 lg:py-1 text-base lg:text-[13px] font-medium transition-all ${
                 isActive
                   ? 'bg-white/[0.09] text-white'
                   : 'text-white/65 hover:bg-white/[0.04] hover:text-white'
@@ -280,7 +288,7 @@ export default function Sidebar() {
         >
           <Menu className="h-6 w-6" />
         </button>
-        <h1 className="ml-3 font-serif text-lg text-white tracking-tight">Tero Restó</h1>
+        <h1 className="ml-3 font-serif text-lg text-white tracking-tight">{nombreEmpresa}</h1>
       </div>
 
       {/* Overlay para mobile */}

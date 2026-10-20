@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { supabase } from './supabase'
 import { PALETA, rgb } from './colores'
+import { datosMarcaPDF, encajarLogo } from './empresa'
 import {
   CATEGORIAS_LABEL,
   CATEGORIAS_ORDEN,
@@ -53,25 +53,6 @@ export interface DatosResumenPDF {
   costoTotal: number
 }
 
-async function cargarLogo(): Promise<string | null> {
-  try {
-    const { data: files } = await supabase.storage.from('fotos platos').list('', { limit: 1 })
-    if (!files?.length) return null
-    const { data: urlData } = supabase.storage.from('fotos platos').getPublicUrl(files[0].name)
-    if (!urlData?.publicUrl) return null
-    const res = await fetch(urlData.publicUrl)
-    if (!res.ok) return null
-    const blob = await res.blob()
-    return await new Promise<string>((resolve) => {
-      const r = new FileReader()
-      r.onload = () => resolve(r.result as string)
-      r.readAsDataURL(blob)
-    })
-  } catch {
-    return null
-  }
-}
-
 /** Agrupa por categoría respetando el orden fijo; las no listadas van al final */
 function agrupar(items: ItemDesglosado[]): [string, ItemDesglosado[]][] {
   const mapa = new Map<string, ItemDesglosado[]>()
@@ -98,7 +79,8 @@ export async function generarPDFResumenConsumo(datos: DatosResumenPDF): Promise<
   const contentWidth = pageWidth - margin * 2
   const rightX = pageWidth - margin - 4
 
-  const logo = await cargarLogo()
+  const marca = await datosMarcaPDF()
+  const logo = marca.logo
   let y = margin
 
   // === HEADER ===
@@ -107,14 +89,19 @@ export async function generarPDFResumenConsumo(datos: DatosResumenPDF): Promise<
   doc.rect(margin, y, contentWidth, h, 'F')
 
   let textX = margin + 4
+  // Logo en blanco, con su proporción y centrado en la franja (V.63)
   if (logo) {
-    try { doc.addImage(logo, 'PNG', margin + 3, y + 3, 16, 16); textX = margin + 23 } catch {}
+    const { ancho, alto } = encajarLogo(logo.proporcion, 28, 14)
+    try {
+      doc.addImage(logo.imagen, 'PNG', margin + 4, y + (h - alto) / 2, ancho, alto)
+      textX = margin + 4 + ancho + 6
+    } catch {}
   }
 
   doc.setFont('times', 'bolditalic'); doc.setFontSize(14); doc.setTextColor(255, 255, 255)
-  doc.text('Tero', textX, y + 10)
+  if (!logo) doc.text(marca.nombre, textX, y + 10)
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9)
-  doc.text('Consumo de la semana', textX, y + 16.5)
+  doc.text('Consumo de la semana', textX, logo ? y + h / 2 + 1.5 : y + 16.5)
 
   doc.setFont('helvetica', 'bold'); doc.setFontSize(12)
   doc.text(`${fmtFecha(desde)} — ${fmtFecha(hasta)}`, rightX, y + 10, { align: 'right' })
@@ -220,7 +207,7 @@ export async function generarPDFResumenConsumo(datos: DatosResumenPDF): Promise<
     doc.setDrawColor(214, 165, 145); doc.setLineWidth(0.3)
     doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12)
     doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(130, 130, 130)
-    doc.text('Tero Restó · Consumo de la semana, para armar los pedidos', margin, pageHeight - 8)
+    doc.text(`${marca.nombre} · Consumo de la semana, para armar los pedidos`, margin, pageHeight - 8)
     doc.text(
       `Generado el ${dd}/${mm}/${ahora.getFullYear()}${paginas > 1 ? `  ·  ${p} de ${paginas}` : ''}`,
       rightX, pageHeight - 8, { align: 'right' }

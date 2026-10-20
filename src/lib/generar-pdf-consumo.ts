@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { supabase } from './supabase'
 import { PALETA, rgb } from './colores'
+import { datosMarcaPDF, encajarLogo } from './empresa'
 import {
   SERVICIO_LABEL,
   TIPO_CONFIG,
@@ -48,25 +48,6 @@ function fmtFecha(fecha: string): string {
   return `${dd}/${mm}/${yyyy}`
 }
 
-async function cargarLogo(): Promise<string | null> {
-  try {
-    const { data: files } = await supabase.storage.from('fotos platos').list('', { limit: 1 })
-    if (!files || files.length === 0) return null
-    const { data: urlData } = supabase.storage.from('fotos platos').getPublicUrl(files[0].name)
-    if (!urlData?.publicUrl) return null
-    const response = await fetch(urlData.publicUrl)
-    if (!response.ok) return null
-    const blob = await response.blob()
-    return await new Promise<string>((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.readAsDataURL(blob)
-    })
-  } catch {
-    return null
-  }
-}
-
 export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
   const { fecha, servicio, items, confirmado } = datos
 
@@ -76,7 +57,8 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
   const contentWidth = pageWidth - margin * 2
 
   const totalCosto = items.reduce((acc, it) => acc + Number(it.subtotal), 0)
-  const logoDataUrl = await cargarLogo()
+  const marca = await datosMarcaPDF()
+  const logoDataUrl = marca.logo
 
   let y = margin
 
@@ -86,21 +68,23 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
   doc.rect(margin, y, contentWidth, headerHeight, 'F')
 
   let textX = margin + 4
+  // Logo en blanco, con su proporción y centrado en la franja (V.63)
   if (logoDataUrl) {
+    const { ancho, alto } = encajarLogo(logoDataUrl.proporcion, 28, 14)
     try {
-      doc.addImage(logoDataUrl, 'PNG', margin + 3, y + 2, 16, 16)
-      textX = margin + 23
+      doc.addImage(logoDataUrl.imagen, 'PNG', margin + 4, y + (headerHeight - alto) / 2, ancho, alto)
+      textX = margin + 4 + ancho + 6
     } catch {}
   }
 
   doc.setFont('times', 'bolditalic')
   doc.setFontSize(14)
   doc.setTextColor(255, 255, 255)
-  doc.text('Tero', textX, y + 9)
+  if (!logoDataUrl) doc.text(marca.nombre, textX, y + 9)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
-  doc.text('Consumo del servicio', textX, y + 15.5)
+  doc.text('Consumo del servicio', textX, logoDataUrl ? y + headerHeight / 2 + 1.5 : y + 15.5)
 
   const rightX = pageWidth - margin - 4
   doc.setFont('helvetica', 'bold')
@@ -278,7 +262,7 @@ export async function generarPDFConsumo(datos: DatosConsumoPDF): Promise<void> {
       doc.setFontSize(6.5)
       doc.setTextColor(130, 130, 130)
       doc.text(
-        `Tero · Consumo ${fmtFecha(fecha)} ${SERVICIO_LABEL[servicio]} · Costos con IVA incluido`,
+        `${marca.nombre} · Consumo ${fmtFecha(fecha)} ${SERVICIO_LABEL[servicio]} · Costos con IVA incluido`,
         margin,
         footerY
       )

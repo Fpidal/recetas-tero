@@ -1,15 +1,15 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { supabase } from './supabase'
 import { variacion, nombreMes, diaMes, type CierreMes } from './cierre-mes-queries'
 import { CATEGORIAS_LABEL, SERVICIO_LABEL } from '@/types/analisis'
 import { PALETA, rgb } from './colores'
+import { datosMarcaPDF, encajarLogo } from './empresa'
 
 /**
  * PDF del Cierre de Mes — la foto del mes en una carilla A4.
  *
- * Comparte la base visual con generar-pdf-consumo.ts (terracota, logo del
- * storage, autoTable): el generador de la orden de compra es A5 y está escrito
+ * Comparte la base visual con generar-pdf-consumo.ts (terracota, logo de
+ * Configuración → Empresa, autoTable): el generador de la orden de compra es A5 y está escrito
  * como una sola función de 754 líneas específica de una OC, así que no había
  * nada reutilizable ahí sin refactorizarlo.
  */
@@ -27,25 +27,6 @@ function fmtVar(v: number | null, unidad = '%'): string {
   return `${v > 0 ? '+' : ''}${v.toFixed(1)}${unidad}`
 }
 
-async function cargarLogo(): Promise<string | null> {
-  try {
-    const { data: files } = await supabase.storage.from('fotos platos').list('', { limit: 1 })
-    if (!files || files.length === 0) return null
-    const { data: urlData } = supabase.storage.from('fotos platos').getPublicUrl(files[0].name)
-    if (!urlData?.publicUrl) return null
-    const response = await fetch(urlData.publicUrl)
-    if (!response.ok) return null
-    const blob = await response.blob()
-    return await new Promise<string>((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.readAsDataURL(blob)
-    })
-  } catch {
-    return null
-  }
-}
-
 export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
   const pageWidth = 210
@@ -54,7 +35,8 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
   const contentWidth = pageWidth - margin * 2
   const rightX = pageWidth - margin - 4
 
-  const logoDataUrl = await cargarLogo()
+  const marca = await datosMarcaPDF()
+  const logoDataUrl = marca.logo
   const inc = data.incidencia
   const incPrev = data.incidenciaPrevia
   const totalCompras = data.compras.mes
@@ -69,21 +51,23 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
   doc.rect(margin, y, contentWidth, headerHeight, 'F')
 
   let textX = margin + 4
+  // Logo en blanco, con su proporción y centrado en la franja (V.63)
   if (logoDataUrl) {
+    const { ancho, alto } = encajarLogo(logoDataUrl.proporcion, 28, 14)
     try {
-      doc.addImage(logoDataUrl, 'PNG', margin + 3, y + 3, 16, 16)
-      textX = margin + 23
+      doc.addImage(logoDataUrl.imagen, 'PNG', margin + 4, y + (headerHeight - alto) / 2, ancho, alto)
+      textX = margin + 4 + ancho + 6
     } catch {}
   }
 
   doc.setFont('times', 'bolditalic')
   doc.setFontSize(14)
   doc.setTextColor(255, 255, 255)
-  doc.text('Tero', textX, y + 10)
+  if (!logoDataUrl) doc.text(marca.nombre, textX, y + 10)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
-  doc.text('Cierre de mes', textX, y + 16.5)
+  doc.text('Cierre de mes', textX, logoDataUrl ? y + headerHeight / 2 + 1.5 : y + 16.5)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(15)
@@ -310,7 +294,7 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(6)
   doc.setTextColor(130, 130, 130)
-  doc.text('Tero Restó · Cierre de mes', margin, pageHeight - 8)
+  doc.text(`${marca.nombre} · Cierre de mes`, margin, pageHeight - 8)
   doc.text(
     `Generado el ${dd}/${mm}/${ahora.getFullYear()} a las ${hh}:${mi}`,
     rightX,

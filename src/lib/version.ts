@@ -10,6 +10,19 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.63',
+    fecha: '20/10/26',
+    cambios: [
+      'Nueva pantalla Configuración, al pie del menú: los datos del restaurante (nombre de fantasía, razón social, CUIT, condición de IVA, domicilio, teléfono y mail de compras) se cargan ahí, con una vista previa de cómo sale la orden de compra',
+      'Configuración: el horario de entrega y las condiciones de la orden de compra se editan desde la pantalla, una condición por renglón',
+      'Configuración: el logo se sube desde la pantalla, con un tilde para elegir si va en la orden de compra y otro para los informes (consumo, resumen semanal, cierre de mes). Donde no va, sale el nombre',
+      'El nombre del restaurante sale de Configuración en el menú, las órdenes de compra, las fichas de receta y elaboración, los informes en PDF, la comparación de precios y el Excel',
+      'Orden de compra en PDF con diseño nuevo: franja con el logo en blanco, cajas de proveedor y entrega más limpias, tabla sin relleno de color, total destacado y condiciones con viñetas, en tipografía Lato',
+      'Los informes en PDF muestran el logo en blanco y sin deformar; antes se estiraba en un cuadrado y salía oscuro sobre la franja',
+      'Menú lateral: un poco más compacto, para que entre entero sin hacer scroll',
+    ],
+  },
+  {
     version: 'V.62',
     fecha: '19/10/26',
     cambios: [

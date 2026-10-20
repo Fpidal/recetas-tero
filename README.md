@@ -60,6 +60,7 @@ Las clases están en `src/app/globals.css`, sección *LISTADOS*.
 src/
 ├── app/                          # Rutas (App Router)
 │   ├── carta/                    # Carta/Menú del restaurante
+│   ├── configuracion/            # Datos de la empresa (V.63)
 │   ├── estadisticas/             # Dashboard de estadísticas
 │   ├── facturas/                 # Gestión de facturas de proveedores
 │   │   ├── nueva/
@@ -105,6 +106,7 @@ src/
 │
 ├── lib/
 │   ├── supabase.ts               # Cliente Supabase
+│   ├── empresa.ts                # Datos del restaurante: nombre, domicilio, logo
 │   ├── formato-numeros.ts        # Formateo de números/moneda (AR)
 │   ├── oc-numero.ts              # Numeración de órdenes de compra
 │   ├── ventas-queries.ts         # Queries y cálculos del módulo Ventas
@@ -113,7 +115,7 @@ src/
 │   ├── generar-pdf-carta-vinos.ts
 │   ├── generar-pdf-oc.ts
 │   ├── generar-pdf-comparacion.ts
-│   └── generar-pdf-stock.ts
+│   └── fonts/                    # Tipografías embebidas para jsPDF (Playfair, Lato)
 │
 └── types/
     ├── database.ts               # Tipos TypeScript para la DB
@@ -164,8 +166,11 @@ Creación de OC con numeración automática, estados (borrador, enviada, recibid
   *"marca La Serenísima"*—. Se carga al armar o editar la orden, sale en el PDF debajo del
   insumo y sirve para controlar que la entrega corresponda al pedido. Es de la orden y nada
   más: no pasa a la factura ni entra en ninguna cuenta. La OC de faltantes la hereda.
-- **PDF**: el horario de entrega (lunes a sábado de 10.00 a 16.00) va primero en las
-  condiciones, en negrita. Las observaciones de la orden salen en su propia caja, sólo si hay.
+- **PDF**: el horario de entrega va primero en las condiciones, en negrita. Las
+  observaciones de la orden salen en su propia caja, sólo si hay. Desde V.63 todo lo que es
+  de la empresa —nombre, razón social, CUIT, domicilio, contacto, horario, condiciones y
+  logo— sale de **Configuración**, y el diseño es el de franja con el logo en blanco, cajas
+  crema con filete terracota y la tipografía Lato embebida (`src/lib/fonts/lato.ts`).
 
 **OC Recibida con comparación vs Factura:**
 - Muestra cantidades y precios reales de la factura
@@ -233,6 +238,21 @@ Desde el **Resumen** se baja el consumo de la semana en PDF, agrupado por rubro 
 
 ### Papelera (`/papelera`)
 Recuperación de items eliminados (soft delete).
+
+### Configuración (`/configuracion`)
+Los datos del restaurante (V.63): nombre de fantasía, razón social, CUIT, condición de IVA,
+domicilio, teléfono y mail de compras, horario de entrega y condiciones de la OC, y el logo
+con dos tildes —en la orden de compra, en los informes—. Se guardan en la tabla
+`restaurantes` y los lee `src/lib/empresa.ts`, que es lo único que usan los PDF, el menú y el
+Excel: no hay ningún dato de la empresa escrito en el código.
+
+- **Sólo el admin guarda**: lo frena la policy de la tabla, no la pantalla.
+- **El logo** se achica a 400 px y se guarda como imagen dentro de la fila. En los PDF se
+  tiñe de blanco para ir sobre la franja terracota, así que tiene que tener fondo
+  transparente.
+- **Si no se pueden leer los datos, la OC no se genera** (avisa): una orden sin "Entregar en"
+  no se manda. Los informes internos, en cambio, salen igual sin logo.
+- Falta la solapa **Usuarios** —alta y baja sin SQL—. Ver ROADMAP.
 
 ## Correr el Proyecto Localmente
 
@@ -325,6 +345,7 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 | `menus_especiales` | Menús para eventos |
 | `vinos` | Vinos: bodega, cepa, zona, categoría, precio de caja y descuento |
 | `carta_vinos` | Qué vinos están en carta, con su `precio_carta` y si son recomendados |
+| `restaurantes` | Datos de la empresa: nombre, razón social, domicilio, logo (V.63) |
 | `inventario_conteos` | Cada vez que se cuenta la cámara |
 | `inventario_conteo_items` | Lo contado de cada insumo, contra lo que decía el sistema |
 | `ventas_diarias` | Ventas y cubiertos por día (mediodía/noche/eventos) |

@@ -10,6 +10,7 @@ import { costoFinalInsumo } from '@/lib/costos'
 import { parsearNumero, formatearInputCantidad, cantidadEditable } from '@/lib/formato-numeros'
 import { Button, BuscadorItem } from '@/components/ui'
 import { PALETA } from '@/lib/colores'
+import { datosMarcaPDF } from '@/lib/empresa'
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Carnes': '#9B2C2C',
@@ -303,6 +304,9 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
       return `${cantStr} ${unidad}`
     }
 
+    // Nombre del restaurante, de Configuración → Empresa
+    const marca = await datosMarcaPDF()
+
     // Logo desde Supabase (pre-fetch)
     let logoDataUrl: string | null = null
     try {
@@ -340,11 +344,11 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
     drawPageFrame()
     let y = 10
 
-    // === HEADER: "Tero Restó" centrado, serif cursiva ===
+    // === HEADER: nombre del restaurante centrado, serif cursiva ===
     doc.setFont('times', 'bolditalic')
     doc.setFontSize(13)
     doc.setTextColor(...GREEN)
-    doc.text('Tero Restó', pageWidth / 2, y, { align: 'center' })
+    doc.text(marca.nombre, pageWidth / 2, y, { align: 'center' })
     y += 4
 
     // Línea separadora fina
@@ -490,7 +494,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
       const fecha = new Date().toLocaleDateString('es-AR')
       doc.text(`Última revisión: ${fecha}`, margin, pageHeight - 8.5)
 
-      // Logo Tero
+      // Logo del restaurante
       if (logoDataUrl) {
         const logoSize = 8
         doc.addImage(logoDataUrl, 'PNG', pageWidth - margin - logoSize, pageHeight - 16, logoSize, logoSize)
@@ -498,7 +502,7 @@ export default function EditarRecetaBasePage({ params }: { params: { id: string 
         doc.setFont('times', 'bolditalic')
         doc.setFontSize(6)
         doc.setTextColor(...GREEN)
-        doc.text('Tero Restó', pageWidth - margin, pageHeight - 10, { align: 'right' })
+        doc.text(marca.nombre, pageWidth - margin, pageHeight - 10, { align: 'right' })
       }
     }
 

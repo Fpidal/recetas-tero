@@ -23,6 +23,7 @@
  */
 
 import { PALETA, argb } from './colores'
+import { datosMarcaPDF } from './empresa'
 
 const TERRACOTA = argb(PALETA.terracotta)
 const GRIS_FILA = argb(PALETA.creamDark)
@@ -94,7 +95,8 @@ export async function descargarExcel({ nombreArchivo, hojas, descripcion }: Opci
   const ExcelJS = (await import('exceljs')).default
 
   const wb = new ExcelJS.Workbook()
-  wb.creator = 'Tero Restó'
+  const marca = await datosMarcaPDF()
+  wb.creator = marca.nombre
   wb.created = new Date()
 
   for (const hoja of hojas) {
@@ -174,6 +176,7 @@ export async function descargarExcel({ nombreArchivo, hojas, descripcion }: Opci
   const ahora = new Date()
   const filas: [string, string][] = [
     ['Sistema', 'Recetas Tero'],
+    ['Empresa', marca.nombre],
     ['Generado', ahora.toLocaleString('es-AR')],
     ['Contenido', descripcion || hojas.map((h) => h.nombre).join(', ')],
     ['Hojas', String(hojas.length)],

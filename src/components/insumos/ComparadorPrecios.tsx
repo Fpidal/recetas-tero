@@ -7,6 +7,7 @@ import { Button, Modal, Input } from '@/components/ui'
 import { formatearMoneda, formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import { generarPDFComparacion } from '@/lib/generar-pdf-comparacion'
 import { coincideBusqueda } from '@/lib/buscar'
+import { useNombreEmpresa } from '@/lib/empresa'
 
 interface Comparacion {
   id: string
@@ -63,6 +64,7 @@ const CATEGORIAS = [
 ]
 
 export default function ComparadorPrecios() {
+  const nombreEmpresa = useNombreEmpresa()
   // Comparaciones
   const [comparaciones, setComparaciones] = useState<Comparacion[]>([])
   const [activeComparacionId, setActiveComparacionId] = useState<string | null>(null)
@@ -574,6 +576,7 @@ export default function ComparadorPrecios() {
 
     generarPDFComparacion({
       nombre: activeComparacion.nombre,
+      nombreEmpresa,
       categoria: CATEGORIAS.find(c => c.value === activeComparacion.categoria)?.label || activeComparacion.categoria,
       proveedores: proveedoresComparacion.map(p => ({ id: p.id, nombre: p.nombre || '' })),
       insumos: insumosData,

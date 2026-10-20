@@ -26,6 +26,8 @@ interface PrecioCell {
 
 interface ComparacionData {
   nombre: string
+  /** Nombre del restaurante, de Configuración → Empresa */
+  nombreEmpresa: string
   categoria: string
   insumos: InsumoRow[]
   proveedores: ProveedorCol[]
@@ -33,7 +35,7 @@ interface ComparacionData {
 }
 
 export function generarPDFComparacion(data: ComparacionData): void {
-  const { nombre, categoria, insumos, proveedores, precios } = data
+  const { nombre, nombreEmpresa, categoria, insumos, proveedores, precios } = data
 
   if (insumos.length === 0 || proveedores.length === 0) {
     throw new Error('La comparación debe tener al menos un insumo y un proveedor')
@@ -107,12 +109,15 @@ export function generarPDFComparacion(data: ComparacionData): void {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
   doc.setTextColor(255, 255, 255)
-  doc.text('TERO', margin, 12)
+  const marca = nombreEmpresa.toUpperCase()
+  doc.text(marca, margin, 12)
+  // El título arranca donde termina el nombre, que ya no es siempre "TERO"
+  const tituloX = margin + (marca ? doc.getTextWidth(marca) + 7 : 0)
 
   // Título del documento
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(11)
-  doc.text('Análisis Comparativo de Precios', margin + 25, 12)
+  doc.text('Análisis Comparativo de Precios', tituloX, 12)
 
   // Fecha a la derecha
   doc.setFontSize(9)

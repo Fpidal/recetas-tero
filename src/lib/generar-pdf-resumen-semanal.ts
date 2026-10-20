@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { supabase } from './supabase'
 import { PALETA, rgb } from './colores'
+import { datosMarcaPDF, encajarLogo } from './empresa'
 import {
   UMBRAL_PRECIO, DIAS_SIN_FACTURA, claveNota,
   type AuditoriaSemanal, type BloqueAuditoria, type MapaNotas,
@@ -25,25 +25,6 @@ const GRIS_CLARO = rgb(PALETA.creamDark)
 const fmt = (n: number) => `$${Math.round(n).toLocaleString('es-AR')}`
 const cant = (n: number) => Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fecha = (f: string) => { const [a, m, d] = f.split('-'); return `${d}/${m}` }
-
-async function cargarLogo(): Promise<string | null> {
-  try {
-    const { data: files } = await supabase.storage.from('fotos platos').list('', { limit: 1 })
-    if (!files?.length) return null
-    const { data: urlData } = supabase.storage.from('fotos platos').getPublicUrl(files[0].name)
-    if (!urlData?.publicUrl) return null
-    const res = await fetch(urlData.publicUrl)
-    if (!res.ok) return null
-    const blob = await res.blob()
-    return await new Promise<string>((resolve) => {
-      const r = new FileReader()
-      r.onload = () => resolve(r.result as string)
-      r.readAsDataURL(blob)
-    })
-  } catch {
-    return null
-  }
-}
 
 export async function generarPDFResumenSemanal(
   data: AuditoriaSemanal,
@@ -70,7 +51,8 @@ export async function generarPDFResumenSemanal(
   const contentWidth = pageWidth - margin * 2
   const rightX = pageWidth - margin - 4
 
-  const logo = await cargarLogo()
+  const marca = await datosMarcaPDF()
+  const logo = marca.logo
   let y = margin
 
   // === HEADER ===
@@ -79,14 +61,19 @@ export async function generarPDFResumenSemanal(
   doc.rect(margin, y, contentWidth, h, 'F')
 
   let textX = margin + 4
+  // Logo en blanco, con su proporción y centrado en la franja (V.63)
   if (logo) {
-    try { doc.addImage(logo, 'PNG', margin + 3, y + 3, 16, 16); textX = margin + 23 } catch {}
+    const { ancho, alto } = encajarLogo(logo.proporcion, 28, 14)
+    try {
+      doc.addImage(logo.imagen, 'PNG', margin + 4, y + (h - alto) / 2, ancho, alto)
+      textX = margin + 4 + ancho + 6
+    } catch {}
   }
 
   doc.setFont('times', 'bolditalic'); doc.setFontSize(14); doc.setTextColor(255, 255, 255)
-  doc.text('Tero', textX, y + 10)
+  if (!logo) doc.text(marca.nombre, textX, y + 10)
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9)
-  doc.text('Resumen semanal de compras', textX, y + 16.5)
+  doc.text('Resumen semanal de compras', textX, logo ? y + h / 2 + 1.5 : y + 16.5)
 
   doc.setFontSize(13)
   doc.text(`${fecha(data.desde)} — ${fecha(data.hasta)}`, rightX, y + 10, { align: 'right' })
@@ -246,7 +233,7 @@ export async function generarPDFResumenSemanal(
     doc.setDrawColor(214, 165, 145); doc.setLineWidth(0.3)
     doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12)
     doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(130, 130, 130)
-    doc.text('Tero Restó · Resumen semanal de compras', margin, pageHeight - 8)
+    doc.text(`${marca.nombre} · Resumen semanal de compras`, margin, pageHeight - 8)
     doc.text(
       `Generado el ${dd}/${mm}/${ahora.getFullYear()}${total > 1 ? `  ·  ${p} de ${total}` : ''}`,
       rightX, pageHeight - 8, { align: 'right' }

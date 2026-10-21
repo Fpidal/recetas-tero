@@ -18,10 +18,10 @@ import { obtenerIncidenciasMes, formatearMonedaAnalisis,
 import {
   type Servicio,
   SERVICIO_LABEL,
-  OBJETIVO_INCIDENCIA_REAL,
   getEstadoIncidenciaReal,
   getColorEstado,
 } from '@/types/analisis'
+import { useObjetivos } from '@/lib/empresa'
 
 interface ResumenMes {
   label: string
@@ -43,6 +43,7 @@ const MESES_LARGO = [
 ]
 
 export default function Historico() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const [servicio, setServicio] = useState<Servicio>('mediodia')
   const [resumenes, setResumenes] = useState<ResumenMes[]>([])
   const [cargando, setCargando] = useState(true)
@@ -98,7 +99,7 @@ export default function Historico() {
   const datosGrafico = resumenes.map((r) => ({
     nombre: `${MESES_CORTO[r.mes - 1]} ${String(r.año).slice(2)}`,
     incidencia: r.incidencia > 0 ? Number(r.incidencia.toFixed(1)) : null,
-    objetivo: OBJETIVO_INCIDENCIA_REAL,
+    objetivo: obj.incidencia,
   }))
 
   return (
@@ -151,11 +152,11 @@ export default function Historico() {
                 <Tooltip formatter={(v: any) => (v === null ? 'sin datos' : `${Number(v).toFixed(1)}%`)} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <ReferenceLine
-                  y={OBJETIVO_INCIDENCIA_REAL}
+                  y={obj.incidencia}
                   stroke="#3D8B5E"
                   strokeDasharray="5 5"
                   label={{
-                    value: `Objetivo ${OBJETIVO_INCIDENCIA_REAL}%`,
+                    value: `Objetivo ${obj.incidencia}%`,
                     fontSize: 10,
                     fill: '#3D8B5E',
                     position: 'right',
@@ -186,9 +187,9 @@ export default function Historico() {
                     leyenda enseñaba un código que en la tabla no existía. */}
                 <span className="text-gray-500">Semáforo:</span>{' '}
                 {[
-                  { estado: 'ok' as const, rango: `≤ ${OBJETIVO_INCIDENCIA_REAL}%` },
-                  { estado: 'warning' as const, rango: `${OBJETIVO_INCIDENCIA_REAL + 1}-${OBJETIVO_INCIDENCIA_REAL + 5}%` },
-                  { estado: 'danger' as const, rango: `> ${OBJETIVO_INCIDENCIA_REAL + 5}%` },
+                  { estado: 'ok' as const, rango: `≤ ${obj.incidencia}%` },
+                  { estado: 'warning' as const, rango: `${obj.incidencia + 1}-${obj.incidencia + obj.tolerancia}%` },
+                  { estado: 'danger' as const, rango: `> ${obj.incidencia + obj.tolerancia}%` },
                 ].map(({ estado, rango }, i) => (
                   <span key={estado}>
                     {i > 0 && <span className="text-gray-300 mx-1">·</span>}
@@ -217,7 +218,7 @@ export default function Historico() {
                 <tbody className="divide-y divide-gray-100">
                   {[...resumenes].reverse().map((r) => {
                     const sinDatos = r.ventas === 0 && r.costo === 0
-                    const colorBadge = r.incidencia > 0 ? getColorEstado(getEstadoIncidenciaReal(r.incidencia)).badge : ''
+                    const colorBadge = r.incidencia > 0 ? getColorEstado(getEstadoIncidenciaReal(r.incidencia, obj)).badge : ''
                     return (
                       <tr key={`${r.año}-${r.mes}`} className="hover:bg-gray-50">
                         <td className="py-2.5 px-3 text-gray-900">{r.label}</td>

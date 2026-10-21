@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { agruparSeccion, seccionesQueAgrupanEn } from '@/lib/secciones'
+import { useObjetivos } from '@/lib/empresa'
 
 interface Plato {
   id: string
@@ -51,6 +52,7 @@ function normalizarTipoOpcion(tipo: string): string {
 }
 
 export default function EditarMenuEspecialPage({ params }: { params: { id: string } }) {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const { id } = params
   const router = useRouter()
   const [nombre, setNombre] = useState('')
@@ -224,7 +226,7 @@ export default function EditarMenuEspecialPage({ params }: { params: { id: strin
     setDescripcion(menu.descripcion || '')
     setIsReadOnly(menu.activo === false)
     setComensales((menu as any).comensales || 2)
-    setMargenObjetivo((menu as any).margen_objetivo || 25)
+    setMargenObjetivo((menu as any).margen_objetivo || obj.fcCocina)
     setPrecioVenta((menu as any).precio_venta || 0)
     setCantidades({
       Entradas: (menu as any).cantidad_entradas || 1,

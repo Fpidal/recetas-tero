@@ -88,8 +88,9 @@ export const MARGEN_POR_SECCION: Record<string, number> = {
   Otros: 30,
 }
 
-export function margenDeSeccion(seccion: string): number {
-  return MARGEN_POR_SECCION[seccion] ?? 25
+/** `porDefecto`: el food cost de cocina de Configuración → Objetivos (V.65) */
+export function margenDeSeccion(seccion: string, porDefecto = 25): number {
+  return MARGEN_POR_SECCION[seccion] ?? porDefecto
 }
 
 /**

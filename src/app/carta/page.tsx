@@ -12,6 +12,7 @@ import { exportarCarta } from '@/lib/exportaciones'
 import { parsearNumero, formatearInputNumero } from '@/lib/formato-numeros'
 import { SECCIONES as SECCIONES_ORDEN, agruparSeccion, margenDeSeccion } from '@/lib/secciones'
 import { coincideBusqueda } from '@/lib/buscar'
+import { useObjetivos } from '@/lib/empresa'
 
 
 
@@ -125,6 +126,7 @@ function EstadoFC({ estado, children, className = '' }: { estado: string; childr
 }
 
 export default function CartaPage() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const [items, setItems] = useState<CartaItem[]>([])
   const [itemsFueraCarta, setItemsFueraCarta] = useState<CartaItem[]>([])
   const [platosDisponibles, setPlatosDisponibles] = useState<PlatoConCosto[]>([])
@@ -170,6 +172,10 @@ export default function CartaPage() {
   const [selectedPlato, setSelectedPlato] = useState('')
   const [precioCartaNew, setPrecioCartaNew] = useState('')
   const [margenObjetivoNew, setMargenObjetivoNew] = useState('30')
+  // El valor inicial sale de Configuración → Objetivos; si ya se tipeó otro, no se pisa
+  useEffect(() => {
+    if (obj.cargado) setMargenObjetivoNew((m) => (m === '30' ? String(obj.fcCocina) : m))
+  }, [obj.cargado, obj.fcCocina])
 
   // Form para editar inline
   const [editPrecio, setEditPrecio] = useState('')
@@ -475,7 +481,7 @@ export default function CartaPage() {
 
     setIsSaving(true)
 
-    const margen = parsearNumero(margenObjetivoNew) || 30
+    const margen = parsearNumero(margenObjetivoNew) || obj.fcCocina
     const precio = parsearNumero(precioCartaNew)
     const precioSugerido = calcularPrecioSugerido(plato.costo_total, margen)
     const foodCost = calcularFoodCost(plato.costo_total, precio)
@@ -498,7 +504,7 @@ export default function CartaPage() {
       setIsModalOpen(false)
       setSelectedPlato('')
       setPrecioCartaNew('')
-      setMargenObjetivoNew('30')
+      setMargenObjetivoNew(String(obj.fcCocina))
       fetchData()
     }
 
@@ -532,7 +538,7 @@ export default function CartaPage() {
     const editado = valoresCarta[item.id]
     if (!editado) return
     const precio = editado.precio !== undefined ? parsearNumero(editado.precio) : item.precio_carta
-    const margen = editado.margen !== undefined ? (parsearNumero(editado.margen) || 30) : item.margen_objetivo
+    const margen = editado.margen !== undefined ? (parsearNumero(editado.margen) || obj.fcCocina) : item.margen_objetivo
     if (precio === item.precio_carta && margen === item.margen_objetivo) {
       descartarValorCarta(item.id)
       return
@@ -582,7 +588,7 @@ export default function CartaPage() {
     setIsSaving(true)
 
     const precio = parsearNumero(editPrecio)
-    const margen = parsearNumero(editMargen) || 30
+    const margen = parsearNumero(editMargen) || obj.fcCocina
     const precioSugerido = calcularPrecioSugerido(item.plato_costo, margen)
     const foodCost = calcularFoodCost(item.plato_costo, precio)
 
@@ -742,7 +748,7 @@ export default function CartaPage() {
     if (enEdicion !== undefined) return enEdicion
     return campo === 'precio'
       ? (menu.precio_carta || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })
-      : String(menu.margen_objetivo || 30).replace('.', ',')
+      : String(menu.margen_objetivo || obj.fcCocina).replace('.', ',')
   }
 
   function setValorMenu(id: string, campo: 'precio' | 'margen', valor: string) {
@@ -760,9 +766,9 @@ export default function CartaPage() {
     const editado = valoresMenu[menu.id]
     if (!editado) return
     const precioActual = menu.precio_carta || 0
-    const margenActual = menu.margen_objetivo || 30
+    const margenActual = menu.margen_objetivo || obj.fcCocina
     const precio = editado.precio !== undefined ? parsearNumero(editado.precio) : precioActual
-    const margen = editado.margen !== undefined ? (parsearNumero(editado.margen) || 30) : margenActual
+    const margen = editado.margen !== undefined ? (parsearNumero(editado.margen) || obj.fcCocina) : margenActual
     if (precio === precioActual && margen === margenActual) {
       descartarValorMenu(menu.id)
       return
@@ -791,7 +797,7 @@ export default function CartaPage() {
   function handleStartEditMenu(menu: MenuEjecutivoConCosto) {
     setEditingMenuId(menu.id)
     setEditMenuPrecio(menu.precio_carta?.toString() || '0')
-    setEditMenuMargen(menu.margen_objetivo?.toString() || '30')
+    setEditMenuMargen(menu.margen_objetivo?.toString() || String(obj.fcCocina))
   }
 
   function handleCancelEditMenu() {
@@ -803,7 +809,7 @@ export default function CartaPage() {
   async function handleSaveEditMenu(menu: MenuEjecutivoConCosto) {
     setIsSavingMenu(true)
     const precio = parsearNumero(editMenuPrecio)
-    const margen = parsearNumero(editMenuMargen) || 30
+    const margen = parsearNumero(editMenuMargen) || obj.fcCocina
     const precioSugerido = calcularPrecioSugerido(menu.costo_calculado, margen)
     const foodCost = calcularFoodCost(menu.costo_calculado, precio)
     const { error } = await supabase
@@ -931,7 +937,7 @@ export default function CartaPage() {
   // Preview al agregar
   const platoPreview = platosDisponibles.find(p => p.id === selectedPlato)
   const previewPrecio = parsearNumero(precioCartaNew)
-  const previewMargen = parsearNumero(margenObjetivoNew) || 30
+  const previewMargen = parsearNumero(margenObjetivoNew) || obj.fcCocina
   const previewSugerido = platoPreview ? calcularPrecioSugerido(platoPreview.costo_total, previewMargen) : 0
   const previewFoodCost = platoPreview && previewPrecio > 0
     ? calcularFoodCost(platoPreview.costo_total, previewPrecio)
@@ -1426,9 +1432,9 @@ export default function CartaPage() {
             {/* Vista Móvil - Cards */}
             <div className="lg:hidden space-y-2">
               {menusEjecutivos.map((menu) => {
-                const precioSugerido = calcularPrecioSugerido(menu.costo_calculado, menu.margen_objetivo || 30)
+                const precioSugerido = calcularPrecioSugerido(menu.costo_calculado, menu.margen_objetivo || obj.fcCocina)
                 const foodCost = calcularFoodCost(menu.costo_calculado, menu.precio_carta || 0)
-                const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
+                const estado = getEstadoMargen(foodCost, menu.margen_objetivo || obj.fcCocina)
                 const contribucion = (menu.precio_carta || 0) - menu.costo_calculado
                 return (
                   <div key={menu.id} className="bg-white rounded-lg border p-3">
@@ -1462,7 +1468,7 @@ export default function CartaPage() {
                         <div className="flex items-center justify-between pt-2 border-t">
                           <div className="flex items-center gap-1.5">
                             <EstadoFC estado={estado} className="text-[11px]">FC {foodCost.toFixed(1)}%</EstadoFC>
-                            <span className="text-[10px] font-mono text-gray-500">Obj: {menu.margen_objetivo || 30}%</span>
+                            <span className="text-[10px] font-mono text-gray-500">Obj: {menu.margen_objetivo || obj.fcCocina}%</span>
                           </div>
                           <div className="flex gap-1">
                             <button type="button" className="accion-fila" title="Editar precio" onClick={() => handleStartEditMenu(menu)}><Pencil className="w-4 h-4" strokeWidth={1.5} /></button>
@@ -1492,9 +1498,9 @@ export default function CartaPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {menusEjecutivos.map((menu) => {
-                    const precioSugerido = calcularPrecioSugerido(menu.costo_calculado, menu.margen_objetivo || 30)
+                    const precioSugerido = calcularPrecioSugerido(menu.costo_calculado, menu.margen_objetivo || obj.fcCocina)
                     const foodCost = calcularFoodCost(menu.costo_calculado, menu.precio_carta || 0)
-                    const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
+                    const estado = getEstadoMargen(foodCost, menu.margen_objetivo || obj.fcCocina)
                     const contribucion = (menu.precio_carta || 0) - menu.costo_calculado
                     return (
                       <tr
@@ -1557,7 +1563,7 @@ export default function CartaPage() {
               const costoPorPersona = menu.costo_calculado ?? menu.costo_promedio ?? 0
               const comensales = (menu as any).comensales || 2
               const costoMenu = costoPorPersona * comensales
-              const fcObjetivo = (menu as any).margen_objetivo || 25
+              const fcObjetivo = (menu as any).margen_objetivo || obj.fcCocina
               const precioVenta = (menu as any).precio_venta || 0
               const personas = calculadora?.menuId === menu.id ? parseInt(calculadora.personas) || 0 : 0
               const costoTotalEvento = costoPorPersona * personas
@@ -1583,7 +1589,7 @@ export default function CartaPage() {
                   </div>
                   {/* Análisis de Precios */}
                   {(() => {
-                    const currentMargen = parsearNumero(getEditValueEsp(menu.id, 'margen', fcObjetivo)) || 25
+                    const currentMargen = parsearNumero(getEditValueEsp(menu.id, 'margen', fcObjetivo)) || obj.fcCocina
                     const currentPrecio = parsearNumero(getEditValueEsp(menu.id, 'precio', precioVenta))
                     const currentPrecioSugerido = currentMargen > 0 ? costoPorPersona / (currentMargen / 100) : 0
                     const currentFcReal = currentPrecio > 0 ? (costoPorPersona / currentPrecio * 100) : 0
@@ -1666,7 +1672,7 @@ export default function CartaPage() {
               // Autocompletar margen según sección del plato
               const plato = platosDisponibles.find(p => p.id === platoId)
               if (plato) {
-                setMargenObjetivoNew(getMargenPorSeccion(plato.seccion).toString())
+                setMargenObjetivoNew(getMargenPorSeccion(plato.seccion, obj.fcCocina).toString())
               }
             }}
           />

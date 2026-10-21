@@ -9,6 +9,7 @@ import { parsearNumero } from '@/lib/formato-numeros'
 import { MenuEspecial } from '@/types/database'
 import Link from 'next/link'
 import { agruparSeccion } from '@/lib/secciones'
+import { useObjetivos } from '@/lib/empresa'
 
 interface MenuConOpciones extends MenuEspecial {
   menu_especial_opciones: {
@@ -36,6 +37,7 @@ function normalizarTipoOpcion(tipo: string): string {
 }
 
 export default function MenusEspecialesPage() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const [menus, setMenus] = useState<MenuConOpciones[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [calculadora, setCalculadora] = useState<{ menuId: string; personas: string } | null>(null)
@@ -328,7 +330,7 @@ export default function MenusEspecialesPage() {
             const costoPorPersona = menu.costo_calculado ?? menu.costo_promedio ?? 0
             const comensales = (menu as any).comensales || 2
             const costoMenu = costoPorPersona * comensales
-            const fcObjetivo = (menu as any).margen_objetivo || 25 // Food Cost objetivo
+            const fcObjetivo = (menu as any).margen_objetivo || obj.fcCocina // Food Cost objetivo
             const precioVenta = (menu as any).precio_venta || 0
             // Fórmula igual que carta: Precio = Costo / (FC% / 100)
             const precioSugerido = fcObjetivo > 0 ? costoPorPersona / (fcObjetivo / 100) : 0
@@ -370,7 +372,7 @@ export default function MenusEspecialesPage() {
 
                 {/* Análisis de Precios - igual que Carta */}
                 {(() => {
-                  const currentMargen = parsearNumero(getEditValue(menu.id, 'margen', fcObjetivo)) || 25
+                  const currentMargen = parsearNumero(getEditValue(menu.id, 'margen', fcObjetivo)) || obj.fcCocina
                   const currentPrecio = parsearNumero(getEditValue(menu.id, 'precio', precioVenta))
                   const currentPrecioSugerido = currentMargen > 0 ? costoPorPersona / (currentMargen / 100) : 0
                   const currentFcReal = currentPrecio > 0 ? (costoPorPersona / currentPrecio * 100) : 0

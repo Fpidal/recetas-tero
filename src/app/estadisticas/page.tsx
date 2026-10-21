@@ -245,7 +245,8 @@ function generarOpcionesSemanas(): SemanaOption[] {
 }
 
 export default function EstadisticasPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('compras_semanales')
+  // Cierre de mes primero (V.65): es la foto completa del mes; el resto son cortes de compras
+  const [activeTab, setActiveTab] = useState<TabType>('cierre_mes')
   const [periodo, setPeriodo] = useState('semana_pasada')
   const [isLoading, setIsLoading] = useState(true)
   const [categoriaExpandida, setCategoriaExpandida] = useState<string | null>(null)
@@ -961,11 +962,11 @@ export default function EstadisticasPage() {
   const formatMoney = (v: number) => `$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 
   const tabs = [
+    { id: 'cierre_mes' as TabType, label: 'Cierre de Mes', icon: CalendarCheck },
     { id: 'compras_semanales' as TabType, label: 'Compras Semanales', icon: Calendar },
     { id: 'comparacion_mensual' as TabType, label: 'Comparación Mensual', icon: FileText },
     { id: 'proveedores' as TabType, label: 'Compras por Proveedor', icon: Users },
     { id: 'variacion' as TabType, label: 'Variación de Precios', icon: TrendingUp },
-    { id: 'cierre_mes' as TabType, label: 'Cierre de Mes', icon: CalendarCheck },
     { id: 'abc' as TabType, label: 'ABC de Insumos', icon: Layers },
   ]
 
@@ -1030,7 +1031,8 @@ export default function EstadisticasPage() {
         </nav>
       </div>
 
-      {isLoading ? (
+      {/* Cierre y ABC cargan sus propios datos: no esperan a los de compras */}
+      {isLoading && !tabConFiltroPropio ? (
         <div className="flex items-center justify-center h-64">
           <p className="text-gray-500">Cargando datos...</p>
         </div>

@@ -264,12 +264,16 @@ export const SERVICIO_LABEL: Record<Servicio, string> = {
 // lado de la palabra que ya dice lo mismo. Un icono sirve para reemplazar una
 // palabra, no para acompañarla — ahí solo ensucia. Va SERVICIO_LABEL solo.
 
-// Objetivo de incidencia real (mismo que ventas: 30%)
+// Objetivo de incidencia real por defecto (mismo que ventas: 30%). Desde V.65
+// el que vale es el de Configuración → Objetivos (useObjetivos()).
 export const OBJETIVO_INCIDENCIA_REAL = 30
 
-export function getEstadoIncidenciaReal(inc: number): 'ok' | 'warning' | 'danger' {
-  if (inc <= OBJETIVO_INCIDENCIA_REAL) return 'ok'
-  if (inc <= OBJETIVO_INCIDENCIA_REAL + 5) return 'warning'
+export function getEstadoIncidenciaReal(
+  inc: number,
+  meta: { incidencia: number; tolerancia: number } = { incidencia: OBJETIVO_INCIDENCIA_REAL, tolerancia: 5 },
+): 'ok' | 'warning' | 'danger' {
+  if (inc <= meta.incidencia) return 'ok'
+  if (inc <= meta.incidencia + meta.tolerancia) return 'warning'
   return 'danger'
 }
 

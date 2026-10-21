@@ -196,7 +196,8 @@ Control de stock, con hojas de inventario para imprimir y contar a mano. Son cua
 > imaginaria en pantalla.
 
 ### Estadísticas (`/estadisticas`)
-Dashboard analítico en cinco solapas:
+Dashboard analítico. **Cierre de mes** es la primera solapa y la que abre por defecto (V.65);
+después:
 - Compras semanales por insumo/proveedor
 - Comparación mensual por proveedor y por categoría. El total de cada mes coincide con *Ventas → Detalle por mes*: suma lo que se pagó, con descuentos e IVA de cada línea. Los vinos tienen su propia fila y las percepciones otra, aparte del costo
 - Compras por proveedor
@@ -208,10 +209,10 @@ Dashboard analítico en cinco solapas:
 Carga diaria de ventas y cubiertos, con análisis de incidencia (food cost real). Vista en 3 solapas:
 
 - **Carga diaria**: Form con ventas y cubiertos por servicio (mediodía / noche / eventos). Confirmación de reemplazo cuando la fecha ya existe. Tabla con últimos 15 días editables.
-- **Incidencia**: KPIs del período (Ventas, Compras, **% Incidencia con semáforo**, Margen). Análisis de cubiertos con ticket promedio por servicio. Gráfico de torta por servicio y línea de tendencia con objetivo del 30%. Toggle Mensual / Semanal con navegación.
+- **Incidencia**: KPIs del período (Ventas, Compras, **% Incidencia con semáforo**, Margen). Análisis de cubiertos con ticket promedio por servicio. Gráfico de torta por servicio y línea de tendencia con el objetivo de Configuración. Toggle Mensual / Semanal con navegación.
 - **Histórico**: Gráfico de barras Ventas vs Compras + tabla detallada con incidencia, cubiertos, ticket promedio y margen. Toggle Mensual / Semanal.
 
-**Cálculo de incidencia**: `(suma de facturas activas / ventas totales) × 100`. Objetivo: ≤ 30%. Semáforo: ✅ ≤30% / ⚠️ 31-35% / ❌ >35%.
+**Cálculo de incidencia**: `(suma de facturas activas / ventas totales) × 100`. El objetivo y la tolerancia salen de **Configuración → Objetivos** (hoy 30% y 5 puntos). Semáforo: ✅ hasta el objetivo / ⚠️ hasta objetivo + tolerancia / ❌ por encima.
 
 ### Análisis (`/analisis`)
 Módulo de **food cost real** basado en lo realmente consumido por cocina al final de cada servicio (en vez de lo facturado por proveedores). Vista en 5 solapas:
@@ -252,6 +253,12 @@ Excel: no hay ningún dato de la empresa escrito en el código.
   transparente.
 - **Si no se pueden leer los datos, la OC no se genera** (avisa): una orden sin "Entregar en"
   no se manda. Los informes internos, en cambio, salen igual sin logo.
+- **Objetivos** (V.65): food cost de cocina (25%), beverage cost de tragos (25%), costo de
+  vinos (40%), incidencia (30%) y su tolerancia (5 puntos). Son el valor con que **arranca**
+  un plato, menú o trago nuevo —cada uno puede tener el suyo, porque el precio también lo
+  pone el mercado— y la vara de los semáforos de Ventas, Análisis, Tragos y Vinos. Se leen
+  con `useObjetivos()`; si la tabla no responde, valen los mismos números por defecto.
+  Columnas en `restaurantes`, ver `supabase-restaurantes-objetivos.sql`.
 - Falta la solapa **Usuarios** —alta y baja sin SQL—. Ver ROADMAP.
 
 ## Correr el Proyecto Localmente
@@ -356,7 +363,8 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
 
 - Cálculo automático de costos por plato
 - IVA configurable por insumo (0%, 10%, 21%)
-- Historial de precios con seguimiento de cambios
+- Historial de precios con seguimiento de cambios. El gráfico va **por kilo o litro** (V.65),
+  que es lo que costea la receta; lo facturado se muestra al lado con su presentación
 - Comparador de precios entre proveedores
 - Órdenes de compra con numeración automática y PDF
 - **OC Recibida con comparación vs Factura**:

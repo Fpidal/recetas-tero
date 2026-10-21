@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 import { PALETA, rgb } from './colores'
 import { ivaLineaOrden } from '@/lib/iva'
 import { parseFechaLocal } from '@/lib/fechas'
-import { obtenerEmpresa, condicionesOC, nombreConRazonSocial, logoParaFranja, encajarLogo } from '@/lib/empresa'
+import { obtenerEmpresa, type Empresa, condicionesOC, nombreConRazonSocial, logoParaFranja, encajarLogo } from '@/lib/empresa'
 
 interface OrdenPDF {
   id: string
@@ -43,7 +43,7 @@ interface OrdenPDF {
 export async function generarPDFOrden(ordenId: string) {
   // Sin razón social ni domicilio la orden no se manda: mejor un aviso que un
   // PDF con el "Entregar en" vacío.
-  let empresa
+  let empresa: Empresa
   try {
     empresa = await obtenerEmpresa()
   } catch (e) {
@@ -209,6 +209,55 @@ export async function generarPDFOrden(ordenId: string) {
   const anio = fechaObj.getFullYear()
   const fechaFormateada = [empresa.localidad, `${dia} de ${mes} de ${anio}`].filter(Boolean).join(' ')
 
+  const esRecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
+  const esRecibidaCompleta = orden.tieneFactura && orden.estado === 'recibida'
+  const condiciones = condicionesOC(empresa)
+
+  /**
+   * Medidas del diseño. La compacta achica encabezado, cajas y filas lo justo
+   * para que una orden que no entra por poco quede en una sola hoja: la de
+   * Blancaluna del 20/10 (7 líneas, 5 con nota) salía en dos con la última
+   * línea sola en la segunda. Las órdenes que ya entraban no cambian.
+   */
+  const medidas = (compacta: boolean) => ({
+    header: compacta ? 20 : 26,
+    logoAlto: compacta ? 13 : 17,
+    trasHeader: compacta ? 3 : 4,
+    caja: compacta ? 24 : 28,
+    trasCaja: compacta ? 4 : 5,
+    fila: (esRecibidaCompleta ? 9 : 7) - (compacta ? 1 : 0), // Recibida: 2 líneas de precio
+    nota: compacta ? 2.6 : 3,
+  })
+
+  // Lo que va después de la tabla, medido con las mismas cuentas que lo
+  // dibujan abajo: totales, diferencia, observaciones y condiciones. Antes era
+  // un número fijo (66 mm) que sobraba unos 10 y mandaba la última línea a
+  // otra hoja.
+  function altoCierre(): number {
+    let h = 4 + 4.5 // línea de cierre + subtotal neto
+    if (totalIva21 > 0) h += 4.5
+    if (totalIva105 > 0) h += 4.5
+    h += 1 + 4 + 12 // separador + caja del total
+    if (esRecibidaCalc && Math.abs(diferenciaVsOC) > 0.01) h += 10
+    if (orden.notas) {
+      doc.setFontSize(6.5)
+      h += (doc.splitTextToSize(orden.notas, contentWidth - 6) as string[]).length * 3.5 + 8 + 4
+    }
+    h += 2 + 4.5 // título "Condiciones:"
+    h += (condiciones.length + (empresa.horario_entrega ? 1 : 0)) * 3.6
+    return h
+  }
+  // El pie va fijo abajo; lo último de las condiciones tiene que quedar arriba
+  const footerY = pageHeight - margin - 8
+  const limiteCierre = footerY - 1
+
+  const entraEnUnaHoja = (m: ReturnType<typeof medidas>) => {
+    const inicioTabla = margin + 2 + m.header + m.trasHeader + (esRecibida ? 11 : 0) + m.caja + m.trasCaja + m.fila
+    const filas = orden.items.reduce((t, i) => t + m.fila + (i.nota ? m.nota : 0), 0)
+    return inicioTabla + filas + altoCierre() <= limiteCierre
+  }
+  const M = medidas(!entraEnUnaHoja(medidas(false)))
+
   // Fondo
   doc.setFillColor(255, 255, 255)
   doc.rect(0, 0, pageWidth, pageHeight, 'F')
@@ -218,7 +267,7 @@ export async function generarPDFOrden(ordenId: string) {
 
   // === HEADER ===
   // Logo | Orden de compra | N° y fecha, separados por dos filetes blancos
-  const headerHeight = 26
+  const headerHeight = M.header
   const headerMid = y + headerHeight / 2
   doc.setFillColor(...TERRACOTA)
   doc.roundedRect(margin, y, contentWidth, headerHeight, 2, 2, 'F')
@@ -227,7 +276,7 @@ export async function generarPDFOrden(ordenId: string) {
   const izqX = margin + 5
   let izqFin = izqX
   if (logo) {
-    const { ancho, alto } = encajarLogo(logo.proporcion, 34, 17)
+    const { ancho, alto } = encajarLogo(logo.proporcion, 34, M.logoAlto)
     try {
       doc.addImage(logo.imagen, 'PNG', izqX, headerMid - alto / 2, ancho, alto)
       izqFin = izqX + ancho
@@ -267,10 +316,9 @@ export async function generarPDFOrden(ordenId: string) {
   doc.setFontSize(13)
   doc.text('Orden de compra', (filete1 + filete2) / 2, headerMid + 1.6, { align: 'center' })
 
-  y += headerHeight + 4
+  y += headerHeight + M.trasHeader
 
   // === BADGE "RECIBIDA" si corresponde ===
-  const esRecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
   if (esRecibida) {
     doc.setFillColor(34, 139, 34) // verde
     doc.roundedRect(margin, y, contentWidth, 8, 1.5, 1.5, 'F')
@@ -282,7 +330,9 @@ export async function generarPDFOrden(ordenId: string) {
   }
 
   // === PROVEEDOR + ENTREGAR EN (dos columnas) ===
-  const boxHeight = 28
+  const boxHeight = M.caja
+  // En la compacta los renglones de las cajas van un poco más juntos
+  const k = M.caja / 28
   const halfWidth = (contentWidth - 3) / 2
 
   // Caja: fondo crema, sin borde, con un filete terracota a la izquierda
@@ -294,7 +344,7 @@ export async function generarPDFOrden(ordenId: string) {
     doc.setFont(FUENTE, 'bold')
     doc.setFontSize(5.5)
     doc.setTextColor(...TERRACOTA)
-    doc.text(etiqueta, x + 7, y + 6, { charSpace: 0.35 })
+    doc.text(etiqueta, x + 7, y + 6 * k, { charSpace: 0.35 })
     return x + 7
   }
 
@@ -303,16 +353,16 @@ export async function generarPDFOrden(ordenId: string) {
   doc.setFont(FUENTE, 'bold')
   doc.setFontSize(9)
   doc.setTextColor(40, 40, 40)
-  doc.text(orden.proveedor_nombre, provX, y + 12, { maxWidth: halfWidth - 10 })
+  doc.text(orden.proveedor_nombre, provX, y + 12 * k, { maxWidth: halfWidth - 10 })
 
   doc.setFont(FUENTE, 'normal')
   doc.setFontSize(6.5)
   doc.setTextColor(100, 100, 100)
   if (orden.proveedor_contacto) {
-    doc.text(orden.proveedor_contacto, provX, y + 16.5)
+    doc.text(orden.proveedor_contacto, provX, y + 16.5 * k)
   }
   if (orden.proveedor_telefono) {
-    doc.text(`Tel: ${orden.proveedor_telefono}`, provX, y + 20.5)
+    doc.text(`Tel: ${orden.proveedor_telefono}`, provX, y + 20.5 * k)
   }
 
   // Caja ENTREGAR EN (derecha)
@@ -321,7 +371,7 @@ export async function generarPDFOrden(ordenId: string) {
   doc.setFont(FUENTE, 'bold')
   doc.setFontSize(8)
   doc.setTextColor(40, 40, 40)
-  doc.text(nombreConRazonSocial(empresa), entregaX, y + 11.5, { maxWidth: halfWidth - 10 })
+  doc.text(nombreConRazonSocial(empresa), entregaX, y + 11.5 * k, { maxWidth: halfWidth - 10 })
 
   doc.setFont(FUENTE, 'normal')
   doc.setFontSize(6.2)
@@ -334,14 +384,13 @@ export async function generarPDFOrden(ordenId: string) {
     [empresa.telefono, empresa.email_compras].filter(Boolean).join(' · ') || null,
   ].filter((l): l is string => !!l)
   lineasEntrega.forEach((linea, i) => {
-    doc.text(linea, entregaX, y + 15.5 + i * 3.3, { maxWidth: halfWidth - 10 })
+    doc.text(linea, entregaX, y + (15.5 + i * 3.3) * k, { maxWidth: halfWidth - 10 })
   })
 
-  y += boxHeight + 5
+  y += boxHeight + M.trasCaja
 
   // === TABLA CON PAGINACIÓN ===
-  const esParcialORecibida = orden.tieneFactura && (orden.estado === 'recibida' || orden.estado === 'parcialmente_recibida')
-  const esRecibidaCompleta = orden.tieneFactura && orden.estado === 'recibida'
+  const esParcialORecibida = esRecibida
 
   /**
    * ¿Alguna línea se pide por bultos? Si no, la columna no se dibuja y el PDF
@@ -350,18 +399,17 @@ export async function generarPDFOrden(ordenId: string) {
    * nada al proveedor y le come ancho a la fila del insumo.
    */
   const hayUnidades = orden.items.some((i) => i.unidades != null)
-  const rowH = esRecibidaCompleta ? 9 : 7 // Más alto para OC Recibida (tiene 2 líneas de precio)
+  const rowH = M.fila
 
   // Constantes de paginación
-  // Totales + observaciones + condiciones + footer. Los 60 alcanzan para el
-  // horario y tres condiciones; cada condición más suma un renglón.
-  const condiciones = condicionesOC(empresa)
-  const ESPACIO_FOOTER = 66 + Math.max(0, condiciones.length - 3) * 3.6
-  // Una línea con nota lleva un renglón más debajo del insumo
-  const ALTO_NOTA = 3
-  const altoFila = (item: { nota: string | null }) => rowH + (item.nota ? ALTO_NOTA : 0)
-  const ESPACIO_HEADER_TABLA = 7
   const MARGEN_INFERIOR = margin + 5
+  // Expresado contra el mismo límite que las filas (MARGEN_INFERIOR), así las
+  // comparaciones de abajo no cambian
+  const ESPACIO_FOOTER = altoCierre() + (pageHeight - MARGEN_INFERIOR - limiteCierre)
+  // Una línea con nota lleva un renglón más debajo del insumo
+  const ALTO_NOTA = M.nota
+  const altoFila = (item: { nota: string | null }) => rowH + (item.nota ? ALTO_NOTA : 0)
+  const ESPACIO_HEADER_TABLA = rowH
 
   // Columnas diferentes según estado
   // OC Recibida: muestra INSUMO (con badge) | CANTIDAD | PRECIO (con comparación) | IVA | SUBTOTAL
@@ -415,7 +463,7 @@ export async function generarPDFOrden(ordenId: string) {
     doc.setFontSize(5.8)
     doc.setTextColor(70, 70, 70)
 
-    const hTextY = yPos + 4.5
+    const hTextY = yPos + rowH - 2.5
     doc.text('#', colX.num, hTextY)
     doc.text('INSUMO', colX.insumo, hTextY)
 
@@ -518,7 +566,7 @@ export async function generarPDFOrden(ordenId: string) {
       doc.line(margin, y, pageWidth - margin, y)
     }
 
-    const textY = y + 4.5
+    const textY = y + (rowH === 6 ? 4 : 4.5)
     doc.setFontSize(6.5)
 
     doc.setFont(FUENTE, 'normal')
@@ -813,7 +861,6 @@ export async function generarPDFOrden(ordenId: string) {
   condiciones.forEach((cond) => condicion(cond, false))
 
   // Footer con número de página
-  const footerY = pageHeight - margin - 8
   doc.setDrawColor(...TERRACOTA)
   doc.setLineWidth(0.25)
   doc.line(margin, footerY, pageWidth - margin, footerY)

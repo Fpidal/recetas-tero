@@ -63,22 +63,32 @@ export interface ResumenPeriodo {
 
 export type TipoPeriodo = 'mensual' | 'semanal'
 
-// Objetivo de incidencia (food cost target)
+// Objetivo de incidencia por defecto. Desde V.65 el que vale es el de
+// Configuración → Objetivos (useObjetivos()); éste queda para cuando no llega.
 export const OBJETIVO_INCIDENCIA = 30
 
+/** Objetivo y tolerancia del semáforo, de Configuración → Objetivos */
+export interface MetaIncidencia {
+  incidencia: number
+  tolerancia: number
+}
+
 // Umbrales para semáforo
-export function getEstadoIncidencia(incidencia: number): 'ok' | 'warning' | 'danger' {
-  if (incidencia <= OBJETIVO_INCIDENCIA) return 'ok'
-  if (incidencia <= OBJETIVO_INCIDENCIA + 5) return 'warning'
+export function getEstadoIncidencia(
+  incidencia: number,
+  meta: MetaIncidencia = { incidencia: OBJETIVO_INCIDENCIA, tolerancia: 5 },
+): 'ok' | 'warning' | 'danger' {
+  if (incidencia <= meta.incidencia) return 'ok'
+  if (incidencia <= meta.incidencia + meta.tolerancia) return 'warning'
   return 'danger'
 }
 
-export function getColorIncidencia(incidencia: number): {
+export function getColorIncidencia(incidencia: number, meta?: MetaIncidencia): {
   bg: string
   text: string
   border: string
 } {
-  const estado = getEstadoIncidencia(incidencia)
+  const estado = getEstadoIncidencia(incidencia, meta)
   switch (estado) {
     case 'ok':
       return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' }

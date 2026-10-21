@@ -9,6 +9,7 @@ import { Button } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import Link from 'next/link'
 import { coincideBusqueda } from '@/lib/buscar'
+import { useObjetivos, estadoContraObjetivo } from '@/lib/empresa'
 
 interface TragoConCosto {
   id: string
@@ -30,19 +31,17 @@ interface InsumoEnTragos {
   tragos: { id: string; nombre: string }[]
 }
 
-// BC = costo / precio. Verde ≤22, amarillo ≤28, rojo >28.
+// BC = costo / precio, contra el objetivo del trago: verde si cumple, amarillo
+// hasta 5 puntos arriba, rojo después. Hasta V.65 el corte era fijo (22/28%)
+// y no se enteraba del objetivo de cada trago.
 // El color va en un punto antes del valor; el número queda en tinta.
-function bcPunto(bc: number): string {
-  if (bc <= 22) return 'bg-success'
-  if (bc <= 28) return 'bg-warning'
-  return 'bg-danger'
-}
+const PUNTO = { ok: 'bg-success', warning: 'bg-warning', danger: 'bg-danger' } as const
 
-function BevCost({ bc, precioVenta, className = '' }: { bc: number; precioVenta: number; className?: string }) {
+function BevCost({ bc, objetivo, precioVenta, className = '' }: { bc: number; objetivo: number; precioVenta: number; className?: string }) {
   if (precioVenta <= 0) return <span className={`font-mono text-gray-300 ${className}`}>—</span>
   return (
     <span className={`inline-flex items-center gap-1.5 font-mono font-semibold text-ink ${className}`}>
-      <span className={`punto-estado ${bcPunto(bc)}`} />
+      <span className={`punto-estado ${PUNTO[estadoContraObjetivo(bc, objetivo)]}`} title={`Objetivo ${objetivo}%`} />
       {bc.toFixed(0)}%
     </span>
   )
@@ -53,6 +52,7 @@ function precioSugerido(costo: number, margen: number): number {
 }
 
 export default function TragosPage() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const router = useRouter()
   const [tragos, setTragos] = useState<TragoConCosto[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -66,6 +66,10 @@ export default function TragosPage() {
   // Edición inline: { [id]: { margen, precio } }
   const [editValues, setEditValues] = useState<Record<string, { margen: string; precio: string }>>({})
   const [margenGlobal, setMargenGlobal] = useState('25')
+  // El valor inicial sale de Configuración → Objetivos; si ya se tipeó otro, no se pisa
+  useEffect(() => {
+    if (obj.cargado) setMargenGlobal((m) => (m === '25' ? String(obj.bcTragos).replace('.', ',') : m))
+  }, [obj.cargado, obj.bcTragos])
   const [aplicando, setAplicando] = useState(false)
 
   useEffect(() => {
@@ -158,7 +162,7 @@ export default function TragosPage() {
         ingredientes_texto: nombres.join(' · '),
         costo_total: costo,
         precio_venta: Number(trago.precio_venta) || 0,
-        margen_objetivo: Number(trago.margen_objetivo) || 25,
+        margen_objetivo: Number(trago.margen_objetivo) || obj.bcTragos,
       }
     })
 
@@ -249,7 +253,7 @@ export default function TragosPage() {
 
   // Guardar margen objetivo de un trago (on blur)
   async function handleSaveMargen(trago: TragoConCosto) {
-    const nuevoMargen = parsearNumero(editValues[trago.id]?.margen) || 25
+    const nuevoMargen = parsearNumero(editValues[trago.id]?.margen) || obj.bcTragos
     if (nuevoMargen === trago.margen_objetivo) return
     await supabase.from('tragos').update({ margen_objetivo: nuevoMargen }).eq('id', trago.id)
     setTragos(prev => prev.map(t => t.id === trago.id ? { ...t, margen_objetivo: nuevoMargen } : t))
@@ -265,7 +269,7 @@ export default function TragosPage() {
 
   // Aplicar un margen objetivo a TODOS y ajustar sus precios al sugerido
   async function handleAplicarATodos() {
-    const margen = parsearNumero(margenGlobal) || 25
+    const margen = parsearNumero(margenGlobal) || obj.bcTragos
     if (margen <= 0) { alert('Ingresá un margen objetivo válido'); return }
     if (!confirm(
       `ATENCIÓN: vas a aplicar margen objetivo ${margen}% a ${tragos.length} ` +
@@ -346,7 +350,7 @@ export default function TragosPage() {
           </div>
           <div className="text-right">
             <p className="text-[10px] text-gray-500 mb-0.5">Bev. Cost</p>
-            <BevCost bc={bc} precioVenta={trago.precio_venta} className="text-sm" />
+            <BevCost bc={bc} objetivo={trago.margen_objetivo} precioVenta={trago.precio_venta} className="text-sm" />
           </div>
         </div>
 
@@ -533,7 +537,7 @@ export default function TragosPage() {
                           />
                         </td>
                         <td className="px-3 py-2 text-right text-xs tabular-nums">
-                          <BevCost bc={bc} precioVenta={trago.precio_venta} />
+                          <BevCost bc={bc} objetivo={trago.margen_objetivo} precioVenta={trago.precio_venta} />
                         </td>
                         <td className="px-3 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">

@@ -10,6 +10,19 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.65',
+    fecha: '21/10/26',
+    cambios: [
+      'Configuración → Objetivos: food cost de cocina, beverage cost de tragos, costo de vinos e incidencia (con su tolerancia) se cargan una vez y los usa toda la app. Antes estaban fijos en el código',
+      'Los platos, menús y tragos nuevos arrancan con el objetivo de Configuración; los que ya tenían uno propio lo conservan',
+      'Ventas y Análisis: el semáforo de incidencia y la línea del gráfico usan el objetivo de Configuración, y la tarjeta de Incidencia REAL muestra contra qué objetivo se compara',
+      'Tragos y Vinos: el semáforo compara cada trago o vino contra su propio objetivo, no contra un número fijo',
+      'Estadísticas: Cierre de mes pasa a ser la primera solapa y la que abre por defecto',
+      'Insumos → Historial: el gráfico muestra el precio por kilo o litro, el que se usa en las recetas. Si cambia el envase (pote de 2 lt a litro suelto) ya no parece que el precio bajó a la mitad; lo facturado queda al lado, con su presentación',
+      'Orden de compra en PDF: si no entra en una hoja, se compacta sola para que entre. La de 7 líneas con notas salía en dos hojas con la última línea sola',
+    ],
+  },
+  {
     version: 'V.64',
     fecha: '20/10/26',
     cambios: [

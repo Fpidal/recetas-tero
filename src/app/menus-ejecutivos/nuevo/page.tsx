@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { parsearNumero } from '@/lib/formato-numeros'
+import { useObjetivos } from '@/lib/empresa'
 
 interface Insumo {
   id: string
@@ -51,6 +52,7 @@ interface ItemMenu {
 }
 
 export default function NuevoMenuEjecutivoPage() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const router = useRouter()
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -266,6 +268,8 @@ export default function NuevoMenuEjecutivoPage() {
         nombre: nombre.trim(),
         descripcion: descripcion.trim() || null,
         costo_total: costoTotal,
+        // Sin esto tomaba el 30 por defecto de la columna
+        margen_objetivo: obj.fcCocina,
       })
       .select('id')
       .single()

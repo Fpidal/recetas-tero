@@ -12,6 +12,7 @@ import { generarPDFCartaVinos } from '@/lib/generar-pdf-carta-vinos'
 import * as XLSX from 'xlsx'
 import { hoyISO, formatearFechaCorta } from '@/lib/fechas'
 import { coincideBusqueda } from '@/lib/buscar'
+import { useObjetivos, estadoContraObjetivo } from '@/lib/empresa'
 
 // La carta impresa arma una sección por categoría. Rosados y Dulces existen
 // porque hasta ahora el rosado figuraba entre los tintos y el Late Harvest
@@ -66,15 +67,17 @@ interface VinoConCarta extends Vino {
   costo: number // precio final botella
 }
 
-// FC de un vino en carta: rojo desde 40%, ámbar si pasa el margen objetivo, verde si no.
+// Costo de un vino en carta contra su objetivo: verde si cumple, ámbar hasta 5
+// puntos arriba, rojo después. Hasta V.65 el rojo era fijo desde 40%, así que
+// un vino con objetivo 30 al 39% salía ámbar, y uno con objetivo 50 al 41%, rojo.
 // El color va en un punto antes del valor; el número queda en tinta.
 function fcPunto(foodCost: number, margenObj: number): string {
-  if (Math.round(foodCost) >= 40) return 'bg-danger'
-  if (Math.round(foodCost) > margenObj) return 'bg-warning'
-  return 'bg-success'
+  const estado = estadoContraObjetivo(Math.round(foodCost), margenObj)
+  return estado === 'ok' ? 'bg-success' : estado === 'warning' ? 'bg-warning' : 'bg-danger'
 }
 
 export default function VinosPage() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const [activeTab, setActiveTab] = useState<'vinos' | 'carta'>('vinos')
   const [vinos, setVinos] = useState<Vino[]>([])
   const [vinosConCarta, setVinosConCarta] = useState<VinoConCarta[]>([])
@@ -294,13 +297,13 @@ export default function VinosPage() {
     setEditingCartaId(vino.id)
     setCartaForm({
       precio_carta: vino.carta?.precio_carta?.toString() || '',
-      margen_objetivo: vino.carta?.margen_objetivo?.toString() || '30'
+      margen_objetivo: vino.carta?.margen_objetivo?.toString() || String(obj.costoVinos)
     })
   }
 
   async function handleSaveCarta(vino: VinoConCarta) {
     const precioCarta = parsearNumero(cartaForm.precio_carta)
-    const margenObjetivo = parsearNumero(cartaForm.margen_objetivo) || 30
+    const margenObjetivo = parsearNumero(cartaForm.margen_objetivo) || obj.costoVinos
 
     if (vino.carta) {
       await supabase.from('carta_vinos')
@@ -1070,7 +1073,7 @@ export default function VinosPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {vinosCat.map((vino) => {
-                      const margenObj = vino.carta?.margen_objetivo || 30
+                      const margenObj = vino.carta?.margen_objetivo || obj.costoVinos
                       const precioSugerido = margenObj > 0 ? vino.costo / (margenObj / 100) : 0
                       const precioCarta = vino.carta?.precio_carta || 0
                       const foodCost = precioCarta > 0 ? (vino.costo / precioCarta) * 100 : 0
@@ -1189,7 +1192,7 @@ export default function VinosPage() {
               {/* Mobile */}
               <div className="lg:hidden divide-y">
                 {vinosCat.map((vino) => {
-                  const margenObj = vino.carta?.margen_objetivo || 30
+                  const margenObj = vino.carta?.margen_objetivo || obj.costoVinos
                   const precioCarta = vino.carta?.precio_carta || 0
                   const foodCost = precioCarta > 0 ? (vino.costo / precioCarta) * 100 : 0
                   const contribucion = precioCarta - vino.costo

@@ -9,6 +9,7 @@ import { parsearNumero } from '@/lib/formato-numeros'
 import { MenuEjecutivo, MenuEspecial } from '@/types/database'
 import Link from 'next/link'
 import { agruparSeccion } from '@/lib/secciones'
+import { useObjetivos } from '@/lib/empresa'
 
 // ============ TIPOS ============
 interface MenuConOpciones extends MenuEspecial {
@@ -35,6 +36,7 @@ function normalizarTipoOpcion(tipo: string): string {
 }
 
 export default function MenusPage() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const [activeTab, setActiveTab] = useState<TabType>('ejecutivos')
 
   // ============ ESTADOS EJECUTIVOS ============
@@ -104,7 +106,7 @@ export default function MenusPage() {
   function handleStartEdit(menu: MenuEjecutivo) {
     setEditingId(menu.id)
     setEditPrecio(menu.precio_carta?.toString() || '0')
-    setEditMargen(menu.margen_objetivo?.toString() || '30')
+    setEditMargen(menu.margen_objetivo?.toString() || String(obj.fcCocina))
   }
 
   function handleCancelEdit() {
@@ -116,7 +118,7 @@ export default function MenusPage() {
   async function handleSaveEdit(menu: MenuEjecutivo) {
     setIsSavingEjec(true)
     const precio = parsearNumero(editPrecio)
-    const margen = parsearNumero(editMargen) || 30
+    const margen = parsearNumero(editMargen) || obj.fcCocina
     const precioSugerido = calcularPrecioSugerido(menu.costo_total, margen)
     const foodCost = calcularFoodCost(menu.costo_total, precio)
 
@@ -414,9 +416,9 @@ export default function MenusPage() {
             {/* Vista Móvil - Cards */}
             <div className="lg:hidden space-y-2">
               {menusEjecutivos.map((menu) => {
-                const precioSugerido = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || 30)
+                const precioSugerido = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || obj.fcCocina)
                 const foodCost = calcularFoodCost(menu.costo_total, menu.precio_carta || 0)
-                const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
+                const estado = getEstadoMargen(foodCost, menu.margen_objetivo || obj.fcCocina)
                 const contribucion = (menu.precio_carta || 0) - menu.costo_total
 
                 return (
@@ -480,7 +482,7 @@ export default function MenusPage() {
                           <div className="flex items-center gap-1.5">
                             {getEstadoIcon(estado)}
                             <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium font-mono ${getEstadoClass(estado)}`}>FC: {foodCost.toFixed(1)}%</span>
-                            <span className="text-[10px] text-gray-500 font-mono">Obj: {menu.margen_objetivo || 30}%</span>
+                            <span className="text-[10px] text-gray-500 font-mono">Obj: {menu.margen_objetivo || obj.fcCocina}%</span>
                           </div>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => handleStartEdit(menu)}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -511,9 +513,9 @@ export default function MenusPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {menusEjecutivos.map((menu) => {
-                    const precioSugerido = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || 30)
+                    const precioSugerido = calcularPrecioSugerido(menu.costo_total, menu.margen_objetivo || obj.fcCocina)
                     const foodCost = calcularFoodCost(menu.costo_total, menu.precio_carta || 0)
-                    const estado = getEstadoMargen(foodCost, menu.margen_objetivo || 30)
+                    const estado = getEstadoMargen(foodCost, menu.margen_objetivo || obj.fcCocina)
                     const contribucion = (menu.precio_carta || 0) - menu.costo_total
 
                     return (
@@ -529,7 +531,7 @@ export default function MenusPage() {
                         </td>
                         <td className="px-2 py-2 text-right"><span className="text-xs font-medium font-mono text-green-600 tabular-nums">{fmt(menu.costo_total)}</span></td>
                         <td className="px-2 py-2 text-right">
-                          <span className="text-xs text-gray-500 font-mono tabular-nums">{fmt(editingId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMargen) || 30) : precioSugerido)}</span>
+                          <span className="text-xs text-gray-500 font-mono tabular-nums">{fmt(editingId === menu.id ? calcularPrecioSugerido(menu.costo_total, parsearNumero(editMargen) || obj.fcCocina) : precioSugerido)}</span>
                         </td>
                         <td className="px-2 py-2 text-right">
                           {editingId === menu.id ? (
@@ -542,7 +544,7 @@ export default function MenusPage() {
                           {editingId === menu.id ? (
                             <input type="text" inputMode="decimal" value={editMargen} onChange={(e) => setEditMargen(e.target.value)} className="w-14 rounded border border-gray-300 px-1 py-0.5 text-xs text-center font-mono" />
                           ) : (
-                            <span className="text-xs text-gray-600 font-mono">{menu.margen_objetivo || 30}%</span>
+                            <span className="text-xs text-gray-600 font-mono">{menu.margen_objetivo || obj.fcCocina}%</span>
                           )}
                         </td>
                         <td className="px-2 py-2 text-center">
@@ -597,7 +599,7 @@ export default function MenusPage() {
               const costoPorPersona = menu.costo_calculado ?? menu.costo_promedio ?? 0
               const comensales = (menu as any).comensales || 2
               const costoMenu = costoPorPersona * comensales
-              const fcObjetivo = (menu as any).margen_objetivo || 25
+              const fcObjetivo = (menu as any).margen_objetivo || obj.fcCocina
               const precioVenta = (menu as any).precio_venta || 0
               const personas = calculadora?.menuId === menu.id ? parseInt(calculadora.personas) || 0 : 0
               const costoTotalEvento = costoPorPersona * personas
@@ -621,7 +623,7 @@ export default function MenusPage() {
 
                   {/* Análisis de Precios */}
                   {(() => {
-                    const currentMargen = parsearNumero(getEditValueEsp(menu.id, 'margen', fcObjetivo)) || 25
+                    const currentMargen = parsearNumero(getEditValueEsp(menu.id, 'margen', fcObjetivo)) || obj.fcCocina
                     const currentPrecio = parsearNumero(getEditValueEsp(menu.id, 'precio', precioVenta))
                     const currentPrecioSugerido = currentMargen > 0 ? costoPorPersona / (currentMargen / 100) : 0
                     const currentFcReal = currentPrecio > 0 ? (costoPorPersona / currentPrecio * 100) : 0

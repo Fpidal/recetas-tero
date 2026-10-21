@@ -26,9 +26,9 @@ import { PALETA } from '@/lib/colores'
 import {
   type ResumenPeriodo,
   type TipoPeriodo,
-  OBJETIVO_INCIDENCIA,
   getColorIncidencia,
 } from '@/types/ventas'
+import { useObjetivos } from '@/lib/empresa'
 
 const COLORES_SERVICIO = {
   mediodia: '#A67B3D',
@@ -37,6 +37,7 @@ const COLORES_SERVICIO = {
 }
 
 export default function DashboardIncidencia() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const [tipo, setTipo] = useState<TipoPeriodo>('mensual')
   const [fechaRef, setFechaRef] = useState(new Date())
 
@@ -111,7 +112,7 @@ export default function DashboardIncidencia() {
     ? ((resumen.compras - resumenAnterior.compras) / resumenAnterior.compras) * 100
     : 0
 
-  const colorIncidencia = getColorIncidencia(resumen.incidencia)
+  const colorIncidencia = getColorIncidencia(resumen.incidencia, obj)
 
   // Datos para gráficos
   const datosTorta = [
@@ -123,7 +124,7 @@ export default function DashboardIncidencia() {
   const datosLinea = tendencia.map((p) => ({
     nombre: tipo === 'mensual' ? p.label.split(' ')[0].slice(0, 3) : `S${p.label.split(' ')[1]}`,
     incidencia: Number(p.incidencia.toFixed(1)),
-    objetivo: OBJETIVO_INCIDENCIA,
+    objetivo: obj.incidencia,
   }))
 
   return (
@@ -209,7 +210,7 @@ export default function DashboardIncidencia() {
                 {resumen.incidencia.toFixed(1)}%
               </div>
               <div className={`text-[10px] sm:text-xs mt-1 font-mono ${colorIncidencia.text}`}>
-                Objetivo: ≤ {OBJETIVO_INCIDENCIA}%
+                Objetivo: ≤ {obj.incidencia}%
               </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-5">
@@ -265,10 +266,10 @@ export default function DashboardIncidencia() {
                   />
                   <Tooltip formatter={(v: any) => `${Number(v || 0).toFixed(1)}%`} />
                   <ReferenceLine
-                    y={OBJETIVO_INCIDENCIA}
+                    y={obj.incidencia}
                     stroke="#3D8B5E"
                     strokeDasharray="5 5"
-                    label={{ value: `Objetivo ${OBJETIVO_INCIDENCIA}%`, fontSize: 10, fill: '#3D8B5E', position: 'right' }}
+                    label={{ value: `Objetivo ${obj.incidencia}%`, fontSize: 10, fill: '#3D8B5E', position: 'right' }}
                   />
                   <Line
                     type="monotone"

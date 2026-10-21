@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { seccionesQueAgrupanEn } from '@/lib/secciones'
+import { useObjetivos } from '@/lib/empresa'
 
 interface Plato {
   id: string
@@ -43,6 +44,7 @@ const SECCIONES_MENU = [
 ]
 
 export default function NuevoMenuEspecialPage() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const router = useRouter()
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -60,6 +62,10 @@ export default function NuevoMenuEspecialPage() {
   // Comensales y precios
   const [comensales, setComensales] = useState(2)
   const [margenObjetivo, setMargenObjetivo] = useState(25)
+  // El valor inicial sale de Configuración → Objetivos; si ya se tipeó otro, no se pisa
+  useEffect(() => {
+    if (obj.cargado) setMargenObjetivo((m) => (m === 25 ? obj.fcCocina : m))
+  }, [obj.cargado, obj.fcCocina])
   const [precioVenta, setPrecioVenta] = useState(0)
 
   // Calculadora de eventos

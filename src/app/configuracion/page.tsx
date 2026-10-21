@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   obtenerEmpresa, invalidarEmpresa, condicionesOC, nombreConRazonSocial,
-  CONDICIONES_IVA, type Empresa,
+  CONDICIONES_IVA, OBJETIVOS_POR_DEFECTO, type Empresa,
 } from '@/lib/empresa'
+import { parsearNumero } from '@/lib/formato-numeros'
 
 /**
  * Configuración → Empresa: los datos del restaurante que salen en la orden de
@@ -14,6 +15,9 @@ import {
  * Sólo un admin guarda: lo frena la policy de `restaurantes`, no esta
  * pantalla. Acá se deshabilitan los campos para no dejar tipear algo que
  * después la base va a rechazar.
+ *
+ * Desde V.65 también los Objetivos de costo: el valor con el que arranca un
+ * plato, trago o vino nuevo, y el semáforo de la incidencia real.
  *
  * Usuarios (alta y baja sin SQL) va a ser la segunda solapa de esta pantalla.
  */
@@ -25,7 +29,25 @@ const VACIO: Campos = {
   direccion: null, localidad: null, codigo_postal: null, provincia: null,
   telefono: null, email_compras: null, horario_entrega: null, condiciones_oc: null,
   logo: null, logo_en_oc: true, logo_en_informes: true,
+  objetivo_fc_cocina: OBJETIVOS_POR_DEFECTO.fcCocina,
+  objetivo_bc_tragos: OBJETIVOS_POR_DEFECTO.bcTragos,
+  objetivo_costo_vinos: OBJETIVOS_POR_DEFECTO.costoVinos,
+  objetivo_incidencia: OBJETIVOS_POR_DEFECTO.incidencia,
+  tolerancia_incidencia: OBJETIVOS_POR_DEFECTO.tolerancia,
 }
+
+type CampoObjetivo = 'objetivo_fc_cocina' | 'objetivo_bc_tragos' | 'objetivo_costo_vinos' | 'objetivo_incidencia' | 'tolerancia_incidencia'
+
+/** Los cuatro objetivos, con lo que mueve cada uno y su rango válido */
+const OBJETIVOS: { campo: CampoObjetivo; label: string; ayuda: string; min: number; max: number }[] = [
+  { campo: 'objetivo_fc_cocina', label: 'Food cost de cocina', ayuda: 'Con el que arranca un menú nuevo, y el de un plato cuando su sección no tiene uno propio', min: 1, max: 100 },
+  { campo: 'objetivo_bc_tragos', label: 'Beverage cost de tragos', ayuda: 'Con el que arranca un trago nuevo', min: 1, max: 100 },
+  { campo: 'objetivo_costo_vinos', label: 'Costo de vinos', ayuda: 'Con el que arranca un vino nuevo en carta. Una botella no rinde como un trago', min: 1, max: 100 },
+  { campo: 'objetivo_incidencia', label: 'Incidencia real objetivo', ayuda: 'Hasta acá el semáforo de Ventas y Análisis está en verde', min: 1, max: 100 },
+  { campo: 'tolerancia_incidencia', label: 'Tolerancia', ayuda: 'Puntos por encima del objetivo que todavía son amarillo', min: 0, max: 50 },
+]
+
+const aTexto = (n: number) => String(n).replace('.', ',')
 
 /** El logo se achica a este ancho: alcanza para un PDF y pesa decenas de KB */
 const LOGO_ANCHO_MAX = 400
@@ -61,6 +83,11 @@ export default function ConfiguracionPage() {
   const [error, setError] = useState<string | null>(null)
   const [guardado, setGuardado] = useState(false)
   const inputLogo = useRef<HTMLInputElement>(null)
+  // Los objetivos se tipean con coma: se guarda el texto aparte para no
+  // perder "27," mientras se escribe
+  const [textoObj, setTextoObj] = useState<Record<CampoObjetivo, string>>(
+    Object.fromEntries(OBJETIVOS.map((o) => [o.campo, aTexto(VACIO[o.campo])])) as Record<CampoObjetivo, string>
+  )
 
   useEffect(() => {
     cargar()
@@ -75,6 +102,7 @@ export default function ConfiguracionPage() {
       const { id: idEmpresa, ...resto } = empresa
       setId(idEmpresa)
       setCampos(resto)
+      setTextoObj(Object.fromEntries(OBJETIVOS.map((o) => [o.campo, aTexto(Number(resto[o.campo]))])) as Record<CampoObjetivo, string>)
       if (user) {
         const { data: perfil } = await supabase.from('perfiles').select('rol').eq('id', user.id).single()
         setEsAdmin(perfil?.rol === 'admin')
@@ -107,6 +135,13 @@ export default function ConfiguracionPage() {
     if (!campos.nombre_fantasia.trim()) {
       setError('El nombre de fantasía no puede quedar vacío: es el que sale en el menú y en todos los PDF.')
       return
+    }
+    for (const o of OBJETIVOS) {
+      const v = parsearNumero(textoObj[o.campo])
+      if (!(v >= o.min && v <= o.max) || textoObj[o.campo].trim() === '') {
+        setError(`${o.label}: tiene que ser un número entre ${o.min} y ${o.max}.`)
+        return
+      }
     }
     setGuardando(true)
     setError(null)
@@ -261,6 +296,23 @@ export default function ConfiguracionPage() {
                 label="Informes: consumo, resumen semanal y cierre de mes" />
               <span className="text-xs text-ink-muted">Donde no va el logo, el encabezado lleva el nombre de fantasía.</span>
             </div>
+          </Seccion>
+
+          <Seccion titulo="Objetivos" descripcion="El valor con el que arranca cada plato, trago o vino nuevo, y el semáforo de la incidencia. Cambiarlos no toca los que ya tienen el suyo">
+            {OBJETIVOS.map((o) => (
+              <Campo key={o.campo} label={o.label} ayuda={o.ayuda} span={o.campo === 'tolerancia_incidencia' ? 2 : o.campo === 'objetivo_incidencia' ? 4 : 2}>
+                <div className="relative">
+                  <input id={o.campo} className="input font-mono pr-8" inputMode="decimal" disabled={deshabilitado}
+                    value={textoObj[o.campo]}
+                    onChange={(e) => {
+                      const t = e.target.value.replace(/[^\d,.]/g, '')
+                      setTextoObj((x) => ({ ...x, [o.campo]: t }))
+                      cambiar(o.campo, parsearNumero(t))
+                    }} />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-ink-muted">{o.campo === 'tolerancia_incidencia' ? 'pts' : '%'}</span>
+                </div>
+              </Campo>
+            ))}
           </Seccion>
 
           {esAdmin && (

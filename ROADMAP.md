@@ -52,10 +52,10 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 | **Ventas** | Carga diaria de ventas. **Nivel grueso:** ventas vs compras del período |
 | **Análisis** | **Importación del informe de ventas** (V.44): un Excel del salón carga la venta del turno, los cubiertos y el consumo producto por producto. Los enlaces se resuelven una vez y quedan guardados. Carga del consumo real por servicio: insumos, elaboraciones, recetas, menús ejecutivos, tragos y vinos, con el costo separado en Cocina y Barra (V.23). **Nivel fino:** consumo real vs ventas, incidencia por insumo. Desde Resumen se baja la planilla de pedido de la semana, con la cantidad **a comprar** ajustada por merma (V.30) |
 | **Análisis · Ranking** | Ranking de productos vendidos e **ingeniería de menú** (V.37). Unidades, facturación, costo y contribución por producto, con la matriz estrella/caballo/rompecabezas/perro por sección. La contribución va **en pesos, no en food cost**: un plato con 40% de FC que deja $15.000 rinde más que uno con 20% que deja $3.000, y con el eje en porcentaje la matriz recomienda sacar justo lo que más deja |
-| **Estadísticas** | Dashboard consolidado (6 pestañas: las 4 de compras y precios, más **Cierre de mes** (V.25) y **ABC de insumos** (V.28)) |
+| **Estadísticas** | Dashboard consolidado (6 pestañas: **Cierre de mes** (V.25, primera desde V.65), las 4 de compras y precios y **ABC de insumos** (V.28)) |
 | **Inventario** | Stock calculado: último conteo + compras − consumo, sin tabla de stock que se desfase (V.48). Cuatro solapas: existencias, conteo con ajuste y motivo, estadística de diferencias, y las **hojas de inventario** para contar a mano: son cuatro hojas fijas —carnes, almacén, verduras, lácteos y fiambres—, armadas a mano y ordenadas por rubro (V.62). Reemplazan a las autogeneradas, que listaban todo lo de la categoría y salían desordenadas. Descuenta **en bruto** —7 kg de cebolla pelada son 7,78 de la cámara— y convierte las compras por caja a unidades sueltas. Todo **valorizado a costo final** (V.49), que es lo que permite ordenar por plata: 200 g de reggianito y 200 g de salmón no son lo mismo |
 | **Papelera** | Recuperación de items borrados (soft delete vía campo `activo`) |
-| **Configuración** | Los datos del restaurante (V.63): nombre, razón social, CUIT, domicilio, contacto, horario y condiciones de la OC, y el logo, con tildes para usarlo en la OC y en los informes. Tabla `restaurantes`, leída sólo por `src/lib/empresa.ts`. Es la primera pieza del multiusuario |
+| **Configuración** | Los datos del restaurante (V.63): nombre, razón social, CUIT, domicilio, contacto, horario y condiciones de la OC, y el logo, con tildes para usarlo en la OC y en los informes. **Objetivos** (V.65): FC cocina, BC tragos, costo de vinos e incidencia con tolerancia. Tabla `restaurantes`, leída sólo por `src/lib/empresa.ts`. Es la primera pieza del multiusuario |
 
 ### Convenciones que no se negocian
 
@@ -349,6 +349,14 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 
 - **Objetivo de food cost por categoría.** Hoy Análisis dice *cuánto* se consumió, pero no si
   está bien o mal. Definir un target por categoría convierte el dato en alerta accionable.
+  **Primer paso hecho en V.65**: los objetivos por área (cocina, tragos, vinos, incidencia)
+  viven en Configuración y mueven los semáforos.
+
+- **Cierre de mes: tres agregados** (propuestos 21/10/26, falta la maqueta). Restaurante
+  contra eventos por separado —un mes con eventos distorsiona el ratio compras/ventas—,
+  incidencia contra objetivo por servicio, y **"tu inflación"**: la canasta de compras
+  ponderada por gasto contra el IPC. Medida a mano el 21/10: +9,1% de mayo a octubre,
+  igual que el ticket (+9%); verduras +50%, carnes −3%.
 
 ### Más adelante
 
@@ -430,6 +438,21 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
 ## 3. Decisiones tomadas
 
 Registradas para no volver a discutirlas.
+
+- **El precio de un insumo se mira por kilo o litro, no por unidad facturada** (21/10/26,
+  V.65). Un cambio de envase —pote de 2 lt de un proveedor, litro suelto del otro— parecía
+  una baja a la mitad en el Historial. El gráfico usa el precio guardado en `precios_insumo`,
+  el mismo que costea la receta, aunque arrastre un error viejo: el Historial muestra lo que
+  el sistema usó, no lo esconde.
+
+- **Los objetivos son el punto de partida, no un tope** (21/10/26, V.65). Cada plato puede
+  tener su margen: hay platos muy rentables que no se pueden cobrar más sin quedar
+  descolgados de la carta. Configuración da el valor con que arranca uno nuevo y la vara del
+  semáforo; el análisis es el promedio ponderado y la contribución, no plato por plato.
+
+- **La OC entra en una hoja si se puede** (21/10/26, V.65). El espacio del cierre (totales,
+  observaciones, condiciones) se mide con cada orden; si no entra, el PDF pasa a una versión
+  compacta. Las órdenes que ya entraban no cambian.
 
 - **Los usuarios se administran desde la app** (20/10/26). Con un restaurante por cliente y
   un usuario por persona, el alta y la baja por SQL Editor no escalan. La clave

@@ -6,7 +6,7 @@ import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, LineChart as Lin
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
-import { costoFinalInsumo } from '@/lib/costos'
+import { costoFinalInsumo, contenidoDeLinea, precioPorUnidadBase } from '@/lib/costos'
 import { obtenerHistorialPrecios } from '@/lib/precios-queries'
 import { Button, Input, Modal, Select, BotonExportar } from '@/components/ui'
 import { exportarInsumos } from '@/lib/exportaciones'
@@ -115,7 +115,12 @@ const initialForm: InsumoForm = {
 
 interface HistorialPrecio {
   fecha: string
+  /** Por kilo, litro o unidad, con IVA: el número con el que se costea la receta */
   precio: number
+  /** Lo que dice la factura por unidad facturada, con IVA */
+  precioFacturado: number
+  /** Cuánto trae cada unidad facturada (pote de 2 lt → 2) */
+  contenido: number
   proveedor: string
   cantidad: number | null
 }
@@ -157,6 +162,7 @@ export default function InsumosPage() {
   const [showHistorial, setShowHistorial] = useState(false)
   const [historialData, setHistorialData] = useState<HistorialPrecio[]>([])
   const [historialNombre, setHistorialNombre] = useState('')
+  const [historialUnidad, setHistorialUnidad] = useState('')
   const [historialLoading, setHistorialLoading] = useState(false)
 
   useEffect(() => {
@@ -430,15 +436,23 @@ export default function InsumosPage() {
 
   async function fetchHistorial(insumo: InsumoCompleto) {
     setHistorialNombre(insumo.nombre)
+    setHistorialUnidad(insumo.unidad_medida === 'unidad' ? 'u.' : insumo.unidad_medida)
     setHistorialLoading(true)
     setShowHistorial(true)
 
-    // Obtener historial desde factura_items con datos de factura y proveedor
+    // El gráfico va por kilo/litro, no por unidad facturada: si el proveedor
+    // cambia de pote de 2 lt a litro suelto, el precio facturado cae a la mitad
+    // sin que nada haya bajado. El precio por unidad base sale del guardado en
+    // precios_insumo (el que costeó las recetas), y si la línea no lo tiene,
+    // de la cuenta con su contenido.
     const { data } = await supabase
       .from('factura_items')
       .select(`
         cantidad,
         precio_unitario,
+        descuento,
+        contenido_override,
+        precios_insumo (precio),
         facturas_proveedor!inner (
           fecha,
           proveedores (nombre)
@@ -450,12 +464,29 @@ export default function InsumosPage() {
     if (data) {
       const ivaPorcentaje = insumo.iva_porcentaje || 0
       setHistorialData(
-        data.map((d: any) => ({
-          fecha: formatearFechaCorta(d.facturas_proveedor.fecha),
-          precio: Math.round(d.precio_unitario * (1 + ivaPorcentaje / 100)), // Precio con IVA incluido, sin decimales
-          proveedor: d.facturas_proveedor.proveedores?.nombre || '-',
-          cantidad: d.cantidad,
-        }))
+        data.map((d: any) => {
+          const conIva = 1 + ivaPorcentaje / 100
+          const bruto = Number(d.precio_unitario) || 0
+          const guardado = Number((Array.isArray(d.precios_insumo) ? d.precios_insumo[0] : d.precios_insumo)?.precio)
+          // El trigger anterior al 26/09/26 no aplicaba el descuento de la línea,
+          // así que el contenido se deduce contra el neto o contra el bruto, el
+          // que dé una presentación redonda (2 lt, no 1,94)
+          const candidatos = [contenidoDeLinea(d), guardado > 0 ? bruto / guardado : null]
+            .filter((c): c is number => c != null && c > 0)
+          const redondez = (c: number) => Math.abs(c - Math.round(c * 10) / 10)
+          const contenido = candidatos.length
+            ? Math.round(candidatos.reduce((m, c) => (redondez(c) < redondez(m) ? c : m)) * 100) / 100
+            : 1
+          const porUnidad = guardado > 0 ? guardado : precioPorUnidadBase(bruto, d.descuento, contenido)
+          return {
+            fecha: formatearFechaCorta(d.facturas_proveedor.fecha),
+            precio: Math.round(porUnidad * conIva),
+            precioFacturado: Math.round(bruto * conIva),
+            contenido,
+            proveedor: d.facturas_proveedor.proveedores?.nombre || '-',
+            cantidad: d.cantidad,
+          }
+        })
       )
     }
     setHistorialLoading(false)
@@ -1101,13 +1132,16 @@ export default function InsumosPage() {
           </div>
         ) : (
           <div>
+            <p className="text-xs text-gray-500">
+              Precio por <span className="font-mono">{historialUnidad}</span> con IVA, el que se usa para costear las recetas
+            </p>
             <div className="h-48 sm:h-64 mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={historialData}>
                   <XAxis dataKey="fecha" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
                   <YAxis tick={{ fontSize: 10, fontFamily: 'monospace' }} tickFormatter={(v) => `$${v}`} />
                   <Tooltip
-                    formatter={(value: any) => [`$${Number(value).toLocaleString('es-AR')}`, 'Precio']}
+                    formatter={(value: any) => [`$${Number(value).toLocaleString('es-AR')}`, `Por ${historialUnidad}`]}
                     labelFormatter={(label) => `Fecha: ${label}`}
                     contentStyle={{ fontFamily: 'monospace' }}
                   />
@@ -1129,7 +1163,8 @@ export default function InsumosPage() {
                   <tr>
                     <th className="px-3 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">Fecha</th>
                     <th className="px-3 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Cant.</th>
-                    <th className="px-3 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Precio</th>
+                    <th className="px-3 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Facturado</th>
+                    <th className="px-3 py-1.5 text-right text-[10px] font-medium text-gray-500 uppercase">Por {historialUnidad}</th>
                     <th className="px-3 py-1.5 text-left text-[10px] font-medium text-gray-500 uppercase">Proveedor</th>
                   </tr>
                 </thead>
@@ -1138,6 +1173,10 @@ export default function InsumosPage() {
                     <tr key={idx} className={idx === 0 ? 'bg-blue-50' : ''}>
                       <td className="px-3 py-1 font-mono">{item.fecha}</td>
                       <td className="px-3 py-1 text-right font-mono">{item.cantidad ? formatearCantidad(item.cantidad) : '-'}</td>
+                      <td className="px-3 py-1 text-right font-mono text-gray-500 whitespace-nowrap">
+                        ${item.precioFacturado.toLocaleString('es-AR')}
+                        {item.contenido !== 1 && <span className="text-gray-400"> × {formatearCantidad(item.contenido)} {historialUnidad}</span>}
+                      </td>
                       <td className="px-3 py-1 text-right font-mono font-medium">${item.precio.toLocaleString('es-AR')}</td>
                       <td className="px-3 py-1 text-gray-600">{item.proveedor}</td>
                     </tr>

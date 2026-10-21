@@ -34,10 +34,16 @@ export interface Empresa {
   logo_en_oc: boolean
   /** El logo va en los informes internos (consumo, resúmenes, cierre de mes) */
   logo_en_informes: boolean
+  // Objetivos (V.65). Ver useObjetivos()
+  objetivo_fc_cocina: number
+  objetivo_bc_tragos: number
+  objetivo_costo_vinos: number
+  objetivo_incidencia: number
+  tolerancia_incidencia: number
 }
 
 export const COLUMNAS_EMPRESA =
-  'id, nombre_fantasia, razon_social, cuit, condicion_iva, direccion, localidad, codigo_postal, provincia, telefono, email_compras, horario_entrega, condiciones_oc, logo, logo_en_oc, logo_en_informes'
+  'id, nombre_fantasia, razon_social, cuit, condicion_iva, direccion, localidad, codigo_postal, provincia, telefono, email_compras, horario_entrega, condiciones_oc, logo, logo_en_oc, logo_en_informes, objetivo_fc_cocina, objetivo_bc_tragos, objetivo_costo_vinos, objetivo_incidencia, tolerancia_incidencia'
 
 export const CONDICIONES_IVA = ['Responsable inscripto', 'Monotributo', 'Exento']
 
@@ -93,6 +99,68 @@ export function useNombreEmpresa(): string {
     }
   }, [])
   return nombre
+}
+
+/**
+ * Los objetivos de costo del restaurante, de Configuración → Objetivos.
+ *
+ * Son el valor con el que ARRANCA un plato, trago o vino nuevo —cada uno
+ * después tiene el suyo, y cambiar estos no lo toca— y el semáforo de la
+ * incidencia real en Ventas y Análisis. Hasta V.65 estaban escritos en unos
+ * 40 lugares, y no siempre iguales: 30 en Carta, 25 en Tragos, 30 en Vinos.
+ */
+export interface Objetivos {
+  /** Food cost de platos y menús nuevos, en % */
+  fcCocina: number
+  /** Beverage cost de tragos nuevos, en % */
+  bcTragos: number
+  /** Costo sobre precio de vinos nuevos en carta, en % */
+  costoVinos: number
+  /** Incidencia real objetivo: hasta acá es verde */
+  incidencia: number
+  /** Puntos por encima del objetivo que todavía son amarillo */
+  tolerancia: number
+}
+
+/** Mientras cargan, y si la lectura falla: los mismos valores que trae la base */
+export const OBJETIVOS_POR_DEFECTO: Objetivos = {
+  fcCocina: 25, bcTragos: 25, costoVinos: 40, incidencia: 30, tolerancia: 5,
+}
+
+export function objetivosDe(e: Empresa): Objetivos {
+  const n = (v: unknown, def: number) => (v == null || isNaN(Number(v)) ? def : Number(v))
+  const d = OBJETIVOS_POR_DEFECTO
+  return {
+    fcCocina: n(e.objetivo_fc_cocina, d.fcCocina),
+    bcTragos: n(e.objetivo_bc_tragos, d.bcTragos),
+    costoVinos: n(e.objetivo_costo_vinos, d.costoVinos),
+    incidencia: n(e.objetivo_incidencia, d.incidencia),
+    tolerancia: n(e.tolerancia_incidencia, d.tolerancia),
+  }
+}
+
+/**
+ * Los objetivos para usar en una pantalla. `cargado` pasa a true cuando llegan
+ * de la base: los formularios de alta lo usan para poner el valor inicial una
+ * sola vez, sin pisar lo que el usuario ya tipeó.
+ */
+export function useObjetivos(): Objetivos & { cargado: boolean } {
+  const [obj, setObj] = useState<Objetivos & { cargado: boolean }>({ ...OBJETIVOS_POR_DEFECTO, cargado: false })
+  useEffect(() => {
+    let vivo = true
+    const leer = () => {
+      obtenerEmpresa()
+        .then((e) => { if (vivo) setObj({ ...objetivosDe(e), cargado: true }) })
+        .catch(() => { if (vivo) setObj((o) => ({ ...o, cargado: true })) })
+    }
+    leer()
+    window.addEventListener(EVENTO_ACTUALIZADA, leer)
+    return () => {
+      vivo = false
+      window.removeEventListener(EVENTO_ACTUALIZADA, leer)
+    }
+  }, [])
+  return obj
 }
 
 /** Las condiciones de la OC, una por renglón, sin renglones vacíos. */
@@ -167,4 +235,20 @@ export function logoParaFranja(logo: string): Promise<{ imagen: string; proporci
 export function encajarLogo(proporcion: number, anchoMax: number, altoMax: number) {
   const ancho = Math.min(anchoMax, altoMax * proporcion)
   return { ancho, alto: ancho / proporcion }
+}
+
+/**
+ * Semáforo de un costo contra su objetivo: verde si cumple, amarillo hasta
+ * `tolerancia` puntos arriba, rojo después. Es la regla de Carta y Menús.
+ * Tragos y Vinos tenían el corte escrito a mano (22/28% y 40% fijo) y no
+ * miraban el objetivo de cada uno (V.65).
+ */
+export function estadoContraObjetivo(
+  porcentaje: number,
+  objetivo: number,
+  tolerancia = 5,
+): 'ok' | 'warning' | 'danger' {
+  if (porcentaje <= objetivo) return 'ok'
+  if (porcentaje <= objetivo + tolerancia) return 'warning'
+  return 'danger'
 }

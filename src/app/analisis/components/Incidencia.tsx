@@ -15,10 +15,10 @@ import {
   type IncidenciaDia,
   type Servicio,
   SERVICIO_LABEL,
-  OBJETIVO_INCIDENCIA_REAL,
   getEstadoIncidenciaReal,
   getColorEstado,
 } from '@/types/analisis'
+import { useObjetivos } from '@/lib/empresa'
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
@@ -35,6 +35,7 @@ interface Props {
 }
 
 export default function Incidencia({ fecha, setFecha, servicio, setServicio }: Props) {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   // Carga manual de venta del día: usa fecha + servicio compartidos
   const fechaCarga = fecha
   const setFechaCarga = setFecha
@@ -124,7 +125,7 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
   const totales = resumirIncidencias(incidencias)
   const incidenciaMes = totales.incidencia
   const margenMes = totales.margen
-  const colorMes = getColorEstado(getEstadoIncidenciaReal(incidenciaMes))
+  const colorMes = getColorEstado(getEstadoIncidenciaReal(incidenciaMes, obj))
 
   return (
     <div className="space-y-6">
@@ -266,7 +267,14 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
           <div className={`text-lg sm:text-2xl font-bold mt-1 font-mono ${colorMes.text}`}>
             {totales.diasConCarga > 0 ? `${incidenciaMes.toFixed(1)}%` : '—'}
           </div>
-          <div className={`text-[10px] mt-1 ${colorMes.text}`}>
+          {/* El objetivo de Configuración → Objetivos, y cuánto se está por encima o por debajo */}
+          <div className={`text-[10px] mt-1 font-mono ${colorMes.text}`}>
+            Objetivo ≤ {obj.incidencia}%
+            {totales.diasConCarga > 0 && (
+              <> · {incidenciaMes - obj.incidencia > 0 ? '+' : ''}{(incidenciaMes - obj.incidencia).toFixed(1)} pts</>
+            )}
+          </div>
+          <div className={`text-[10px] mt-0.5 ${colorMes.text}`}>
             {totales.diasConCarga > 0 ? (
               <span className="font-mono">
                 Muestreo: {totales.diasConCarga} de {totales.diasConVenta} días
@@ -285,6 +293,10 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
             {totales.ventaConCosto > 0
               ? `${((margenMes / totales.ventaConCosto) * 100).toFixed(1)}% · ${totales.diasConCarga} servicios cargados`
               : 'Sin costos cargados'}
+          </div>
+          {/* Es el complemento de la incidencia: con 30% de objetivo, el margen objetivo es 70% */}
+          <div className="text-[10px] text-gray-500 mt-0.5 font-mono">
+            Objetivo ≥ {100 - obj.incidencia}%
           </div>
         </div>
       </div>
@@ -340,9 +352,10 @@ export default function Incidencia({ fecha, setFecha, servicio, setServicio }: P
 }
 
 function FilaIncidencia({ d }: { d: IncidenciaDia }) {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const dia = DIAS_SEMANA[new Date(d.fecha + 'T12:00:00').getDay()]
   const sinDatos = !d.tiene_venta && !d.tiene_consumo
-  const colorBadge = d.incidencia > 0 ? getColorEstado(getEstadoIncidenciaReal(d.incidencia)).badge : ''
+  const colorBadge = d.incidencia > 0 ? getColorEstado(getEstadoIncidenciaReal(d.incidencia, obj)).badge : ''
 
   return (
     <tr className={`hover:bg-gray-50 ${sinDatos ? 'bg-gray-50/50' : ''}`}>
@@ -373,8 +386,9 @@ function FilaIncidencia({ d }: { d: IncidenciaDia }) {
 }
 
 function CardIncidenciaMobile({ d }: { d: IncidenciaDia }) {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const dia = DIAS_SEMANA[new Date(d.fecha + 'T12:00:00').getDay()]
-  const colorBadge = d.incidencia > 0 ? getColorEstado(getEstadoIncidenciaReal(d.incidencia)).badge : ''
+  const colorBadge = d.incidencia > 0 ? getColorEstado(getEstadoIncidenciaReal(d.incidencia, obj)).badge : ''
 
   return (
     <div className="p-3">

@@ -9,6 +9,7 @@ import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import { PALETA } from '@/lib/colores'
+import { useObjetivos, estadoContraObjetivo } from '@/lib/empresa'
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Carnes': '#9B2C2C',
@@ -59,6 +60,7 @@ function unidadDisplay(unidad: string): string {
 }
 
 export default function NuevoTragoPage() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const router = useRouter()
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -67,6 +69,10 @@ export default function NuevoTragoPage() {
   const [pasoAPaso, setPasoAPaso] = useState('')
   const [precioVenta, setPrecioVenta] = useState('')
   const [margenObjetivo, setMargenObjetivo] = useState('25')
+  // El valor inicial sale de Configuración → Objetivos; si ya se tipeó otro, no se pisa
+  useEffect(() => {
+    if (obj.cargado) setMargenObjetivo((m) => (m === '25' ? String(obj.bcTragos).replace('.', ',') : m))
+  }, [obj.cargado, obj.bcTragos])
   const [ingredientes, setIngredientes] = useState<Ingrediente[]>([])
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [recetasBase, setRecetasBase] = useState<RecetaBase[]>([])
@@ -209,12 +215,14 @@ export default function NuevoTragoPage() {
   const precioVentaNum = parsearNumero(precioVenta)
   const beverageCost = precioVentaNum > 0 ? (costoTotal / precioVentaNum) * 100 : 0
   const markup = costoTotal > 0 && precioVentaNum > 0 ? precioVentaNum / costoTotal : 0
-  const margenObjetivoNum = parsearNumero(margenObjetivo) || 25
+  const margenObjetivoNum = parsearNumero(margenObjetivo) || obj.bcTragos
   const precioSugerido = costoTotal > 0 && margenObjetivoNum > 0 ? costoTotal / (margenObjetivoNum / 100) : 0
 
   function bcClasses(bc: number): string {
-    if (bc <= 22) return 'text-green-600'
-    if (bc <= 28) return 'text-amber-500'
+    // Contra el objetivo del trago, no contra un corte fijo (V.65)
+    const estado = estadoContraObjetivo(bc, margenObjetivoNum)
+    if (estado === 'ok') return 'text-green-600'
+    if (estado === 'warning') return 'text-amber-500'
     return 'text-red-600'
   }
 

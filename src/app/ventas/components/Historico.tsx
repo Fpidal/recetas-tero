@@ -16,9 +16,9 @@ import { PALETA } from '@/lib/colores'
 import {
   type ResumenPeriodo,
   type TipoPeriodo,
-  OBJETIVO_INCIDENCIA,
   getEstadoIncidencia,
 } from '@/types/ventas'
+import { useObjetivos } from '@/lib/empresa'
 
 /** Badge por estado del semáforo. Lo usan la leyenda y la columna "Incid.":
  *  si viven separados, un día dicen cosas distintas. */
@@ -29,6 +29,7 @@ const BADGE_ESTADO: Record<'ok' | 'warning' | 'danger', string> = {
 }
 
 export default function Historico() {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const [tipo, setTipo] = useState<TipoPeriodo>('mensual')
   const [datos, setDatos] = useState<ResumenPeriodo[]>([])
   const [cargando, setCargando] = useState(true)
@@ -134,9 +135,9 @@ export default function Historico() {
                     fondos de color: enseñaba un código que no se usaba. */}
                 <span className="text-gray-500">Semáforo:</span>{' '}
                 {[
-                  { estado: 'ok' as const, rango: `≤ ${OBJETIVO_INCIDENCIA}%` },
-                  { estado: 'warning' as const, rango: `${OBJETIVO_INCIDENCIA + 1}-${OBJETIVO_INCIDENCIA + 5}%` },
-                  { estado: 'danger' as const, rango: `> ${OBJETIVO_INCIDENCIA + 5}%` },
+                  { estado: 'ok' as const, rango: `≤ ${obj.incidencia}%` },
+                  { estado: 'warning' as const, rango: `${obj.incidencia + 1}-${obj.incidencia + obj.tolerancia}%` },
+                  { estado: 'danger' as const, rango: `> ${obj.incidencia + obj.tolerancia}%` },
                 ].map(({ estado, rango }, i) => (
                   <span key={estado}>
                     {i > 0 && <span className="text-gray-300 mx-1">·</span>}
@@ -165,7 +166,7 @@ export default function Historico() {
                 </thead>
                 <tbody className="text-sm divide-y divide-gray-100">
                   {[...datos].reverse().map((p) => {
-                    const colorBadge = BADGE_ESTADO[getEstadoIncidencia(p.incidencia)]
+                    const colorBadge = BADGE_ESTADO[getEstadoIncidencia(p.incidencia, obj)]
 
                     const sinDatos = p.ventasTotal === 0 && p.compras === 0
                     return (

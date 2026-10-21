@@ -9,6 +9,7 @@ import { costoFinalInsumo } from '@/lib/costos'
 import { Button, Input, Select } from '@/components/ui'
 import { formatearInputNumero, parsearNumero } from '@/lib/formato-numeros'
 import { PALETA } from '@/lib/colores'
+import { useObjetivos, estadoContraObjetivo } from '@/lib/empresa'
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Carnes': '#9B2C2C',
@@ -63,6 +64,7 @@ function baseADisplayStr(base: number, unidad: string): string {
 }
 
 export default function EditarTragoPage({ params }: { params: { id: string } }) {
+  const obj = useObjetivos() // Configuración → Objetivos (V.65)
   const { id } = params
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -156,7 +158,7 @@ export default function EditarTragoPage({ params }: { params: { id: string } }) 
     setTecnica(trago.tecnica || '')
     setPasoAPaso(trago.paso_a_paso || '')
     setPrecioVenta(trago.precio_venta ? baseADisplayStr(Number(trago.precio_venta), 'unidad') : '')
-    setMargenObjetivo(trago.margen_objetivo ? baseADisplayStr(Number(trago.margen_objetivo), 'unidad') : '25')
+    setMargenObjetivo(trago.margen_objetivo ? baseADisplayStr(Number(trago.margen_objetivo), 'unidad') : String(obj.bcTragos).replace('.', ','))
     setIsInPapelera(trago.activo === false)
     setIsReadOnly(trago.activo === false || viewMode)
 
@@ -311,12 +313,14 @@ export default function EditarTragoPage({ params }: { params: { id: string } }) 
   const precioVentaNum = parsearNumero(precioVenta)
   const beverageCost = precioVentaNum > 0 ? (costoTotal / precioVentaNum) * 100 : 0
   const markup = costoTotal > 0 && precioVentaNum > 0 ? precioVentaNum / costoTotal : 0
-  const margenObjetivoNum = parsearNumero(margenObjetivo) || 25
+  const margenObjetivoNum = parsearNumero(margenObjetivo) || obj.bcTragos
   const precioSugerido = costoTotal > 0 && margenObjetivoNum > 0 ? costoTotal / (margenObjetivoNum / 100) : 0
 
   function bcClasses(bc: number): string {
-    if (bc <= 22) return 'text-green-600'
-    if (bc <= 28) return 'text-amber-500'
+    // Contra el objetivo del trago, no contra un corte fijo (V.65)
+    const estado = estadoContraObjetivo(bc, margenObjetivoNum)
+    if (estado === 'ok') return 'text-green-600'
+    if (estado === 'warning') return 'text-amber-500'
     return 'text-red-600'
   }
 

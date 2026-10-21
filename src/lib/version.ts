@@ -10,6 +10,18 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.66',
+    fecha: '21/10/26',
+    cambios: [
+      'Cierre de mes → Los 10 proveedores del mes: cuánto se le compró a cada uno, contra el mes anterior, si subió o bajó de puesto y quiénes salieron del top 10',
+      'Cierre de mes → Restaurante y eventos: la venta separada en mediodía, noche, restaurante y eventos, con ticket y comparación contra el mes anterior. Reemplaza a "Ventas por servicio"',
+      'Cierre de mes → Incidencia real por servicio: mediodía, noche y eventos en los últimos cinco meses, contra el objetivo de Configuración',
+      'Cierre de mes → Tu inflación: cuánto subió lo que comprás (ponderado por lo que gastás en cada insumo) contra lo que subió tu ticket, mes a mes y por rubro',
+      'Cierre de mes: el mes en curso se compara contra el anterior cortado el mismo día. Octubre al 21 contra septiembre entero mostraba las compras en −28%',
+      'Cierre de mes en PDF: dos hojas, la primera con el análisis y la segunda con el detalle de compras. Los porcentajes salen con coma',
+    ],
+  },
+  {
     version: 'V.65',
     fecha: '21/10/26',
     cambios: [

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { FileDown, TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react'
 import {
   obtenerCierreMes,
@@ -362,84 +362,182 @@ function TopInsumos({ data }: { data: CierreMesData }) {
 }
 
 // =====================================================
-// 5 · LOS 10 PROVEEDORES DEL MES (V.66)
+// Secciones de análisis (V.66) — siguen la maqueta aprobada el 21/10/26:
+// tarjetas con la cifra arriba y el detalle abajo, no tablas sueltas
+// =====================================================
+
+function Seccion({ titulo, descripcion, children }: { titulo: string; descripcion?: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3 pt-2">
+      <div>
+        <h3 className="text-base font-semibold text-gray-900">{titulo}</h3>
+        {descripcion && <p className="text-sm text-gray-500 mt-0.5 max-w-3xl">{descripcion}</p>}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function Tarjeta({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <div className={`bg-white rounded-lg border border-gray-200 shadow-sm p-4 min-w-0 ${className}`}>{children}</div>
+}
+
+function Etiqueta({ children }: { children: React.ReactNode }) {
+  return <div className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">{children}</div>
+}
+
+function CifraGrande({ children }: { children: React.ReactNode }) {
+  return <div className="text-2xl font-semibold text-gray-900 mt-1 font-mono break-all">{children}</div>
+}
+
+/** "al 21/10" para el mes en curso, nada para un mes cerrado */
+function sufijoCorte(data: CierreMesData) {
+  return data.hastaDia ? ` al ${String(data.hastaDia).padStart(2, '0')}/${data.mes.slice(5, 7)}` : ''
+}
+
+// =====================================================
+// 5 · LOS 10 PROVEEDORES DEL MES
 // =====================================================
 
 function ProveedoresDelMes({ data }: { data: CierreMesData }) {
   const top = data.proveedores || []
   if (top.length === 0) {
-    return <Bloque titulo="Los 10 proveedores del mes"><Aviso>No hay compras cargadas en este mes.</Aviso></Bloque>
+    return (
+      <Seccion titulo="Los 10 proveedores del mes">
+        <Tarjeta><span className="text-sm text-gray-500">No hay compras cargadas en este mes.</span></Tarjeta>
+      </Seccion>
+    )
   }
   const total = data.compras.mes
   const sumaTop = top.reduce((t, p) => t + p.monto, 0)
+  const maximo = top[0]?.monto || 1
   const salieron = data.proveedoresSalieron || []
+  const cuenta = data.proveedoresConCompras
 
   return (
-    <Bloque
+    <Seccion
       titulo="Los 10 proveedores del mes"
-      nota={`Con IVA y percepciones, neto de notas de crédito, igual que el total de compras. Se compara contra ${nombreMes(data.mesPrevio)}; el puesto es el que tenía cada proveedor ese mes.`}
+      descripcion={`A quién le compraste más este mes y cómo cambió contra ${nombreMes(data.mesPrevio)}${data.hastaDia ? ' cortado al mismo día' : ''}. El puesto compara el lugar de cada proveedor en el ranking.`}
     >
-      <Tabla
-        cabeceras={['#', 'Proveedor', 'Mes', '% compras', 'Mes anterior', 'Var.', 'Puesto']}
-        alineacion={['right', 'left', 'right', 'right', 'right', 'right', 'right']}
-      >
-        {top.map((p) => (
-          <tr key={p.nombre} className="hover:bg-gray-50">
-            <td className="py-2 px-3 text-right font-mono text-gray-400">{p.puesto}</td>
-            <td className="py-2 px-3 text-gray-900">{p.nombre}</td>
-            <td className="py-2 px-3 text-right font-mono font-medium">{fmt(p.monto)}</td>
-            <td className="py-2 px-3 text-right font-mono text-gray-600">{total > 0 ? `${pct(p.monto / total * 100)}%` : '—'}</td>
-            <td className="py-2 px-3 text-right font-mono text-gray-500">{p.montoPrevio > 0 ? fmt(p.montoPrevio) : '—'}</td>
-            <td className="py-2 px-3 text-right font-mono">
-              <TextoVariacion valor={p.montoPrevio > 0 ? variacion(p.monto, p.montoPrevio) : null} invertido />
-            </td>
-            <td className="py-2 px-3 text-right"><Puesto actual={p.puesto} previo={p.puestoPrevio} /></td>
-          </tr>
-        ))}
-      </Tabla>
-      <PieTotal etiqueta={`Los 10 primeros · ${total > 0 ? pct(sumaTop / total * 100) : '—'}% de las compras`} valor={fmt(sumaTop)} />
-      {salieron.length > 0 && (
-        <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-600">
-          <span className="font-semibold text-gray-700">Salieron del top 10: </span>
-          {salieron.map((p, i) => (
-            <span key={p.nombre}>
-              {i > 0 && ' · '}
-              {p.nombre} <span className="text-gray-400">({p.puestoPrevio}° el mes anterior, {p.monto > 0 ? `hoy ${p.puesto}°` : 'sin compras'})</span>
-            </span>
-          ))}
-        </div>
-      )}
-    </Bloque>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Tarjeta>
+          <Etiqueta>Compras{sufijoCorte(data)}</Etiqueta>
+          <CifraGrande>{fmt(total)}</CifraGrande>
+          <div className="text-xs text-gray-500 mt-1 flex items-center gap-1.5 flex-wrap">
+            {nombreMes(data.mesPrevio).split(' ')[0]}: <span className="font-mono">{fmt(data.compras.previo)}</span>
+            <TextoVariacion valor={variacion(total, data.compras.previo)} invertido />
+          </div>
+        </Tarjeta>
+        <Tarjeta>
+          <Etiqueta>Los 10 primeros</Etiqueta>
+          <CifraGrande>{total > 0 ? `${pct((sumaTop / total) * 100, 0)}%` : '—'}</CifraGrande>
+          <div className="text-xs text-gray-500 mt-1"><span className="font-mono">{fmt(sumaTop)}</span> de las compras del mes</div>
+        </Tarjeta>
+        <Tarjeta>
+          <Etiqueta>Proveedores con factura</Etiqueta>
+          <CifraGrande>{cuenta ? cuenta.mes : '—'}</CifraGrande>
+          {cuenta && (
+            <div className="text-xs text-gray-500 mt-1">
+              {nombreMes(data.mesPrevio).split(' ')[0]}: <span className="font-mono">{cuenta.previo}</span>
+            </div>
+          )}
+        </Tarjeta>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <Tarjeta className="lg:col-span-2 !p-0 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-[10px] text-gray-500 uppercase">
+                  <th className="py-2 px-3 font-medium text-right w-8"></th>
+                  <th className="py-2 px-3 font-medium text-left">Proveedor</th>
+                  <th className="py-2 px-3 font-medium text-right">Mes</th>
+                  <th className="py-2 px-3 font-medium text-right">% mes</th>
+                  <th className="py-2 px-3 font-medium text-right">Anterior</th>
+                  <th className="py-2 px-3 font-medium text-right">Var.</th>
+                  <th className="py-2 px-3 font-medium text-right">Puesto</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {top.map((p) => (
+                  <tr key={p.nombre} className="hover:bg-gray-50">
+                    <td className="py-2 px-3 text-right font-mono text-gray-400">{p.puesto}</td>
+                    <td className="py-2 px-3 text-gray-900 min-w-[140px]">
+                      {p.nombre}
+                      <div className="h-1.5 rounded-full bg-forest/70 mt-1" style={{ width: `${(p.monto / maximo) * 100}%` }} />
+                    </td>
+                    <td className="py-2 px-3 text-right font-mono font-medium">{fmt(p.monto)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-gray-600">{total > 0 ? `${pct((p.monto / total) * 100)}%` : '—'}</td>
+                    <td className="py-2 px-3 text-right font-mono text-gray-500">{p.montoPrevio > 0 ? fmt(p.montoPrevio) : '—'}</td>
+                    <td className="py-2 px-3 text-right font-mono">
+                      <TextoVariacion valor={p.montoPrevio > 0 ? variacion(p.monto, p.montoPrevio) : null} invertido />
+                    </td>
+                    <td className="py-2 px-3 text-right"><Puesto actual={p.puesto} previo={p.puestoPrevio} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="px-4 py-2.5 text-[11px] text-gray-500 bg-gray-50 border-t border-gray-100">
+            Con IVA y percepciones, neto de notas de crédito, igual que el total de compras.
+          </p>
+        </Tarjeta>
+
+        <Tarjeta>
+          <Etiqueta>Salieron del top 10</Etiqueta>
+          {salieron.length === 0 ? (
+            <p className="text-sm text-gray-500 mt-2">Los mismos diez que el mes anterior.</p>
+          ) : (
+            <div className="mt-1 divide-y divide-gray-100">
+              {salieron.map((p) => (
+                <div key={p.nombre} className="flex justify-between gap-3 py-2.5 text-sm">
+                  <div className="min-w-0">
+                    <div className="text-gray-900">{p.nombre}</div>
+                    <div className="text-[11px] text-gray-400">{p.puestoPrevio}° el mes anterior</div>
+                  </div>
+                  <div className="text-right font-mono text-xs">
+                    <div>{fmt(p.montoPrevio)} → {fmt(p.monto)}</div>
+                    <div className="text-[11px] text-gray-400">
+                      {p.monto > 0 ? <>hoy {p.puesto}° · <TextoVariacion valor={variacion(p.monto, p.montoPrevio)} invertido /></> : 'sin compras'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Tarjeta>
+      </div>
+    </Seccion>
   )
 }
 
 function Puesto({ actual, previo }: { actual: number | null; previo: number | null }) {
   if (previo === null) {
-    return <span className="text-[11px] font-semibold text-terracotta bg-terracotta-bg px-1.5 py-0.5 rounded">nuevo</span>
+    return <span className="text-[11px] font-semibold text-terracotta bg-terracotta-bg px-1.5 py-0.5 rounded-full">nuevo</span>
   }
   if (actual === null || actual === previo) return <span className="text-gray-300 font-mono text-xs">=</span>
   const sube = actual < previo
   return (
     <span className={`inline-flex items-center gap-0.5 font-mono text-xs ${sube ? 'text-green-600' : 'text-red-600'}`}>
-      {sube ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-      {Math.abs(previo - actual)}
+      {sube ? '▲' : '▼'} {Math.abs(previo - actual)}
     </span>
   )
 }
 
 // =====================================================
-// 6 · RESTAURANTE Y EVENTOS (V.66, reemplaza a "Ventas por servicio")
+// 6 · RESTAURANTE Y EVENTOS (reemplaza a "Ventas por servicio")
 // =====================================================
 
 function RestauranteYEventos({ data }: { data: CierreMesData }) {
   if (data.faltaVentas) {
     return (
-      <Bloque titulo="Restaurante y eventos">
+      <Seccion titulo="Restaurante y eventos">
         <Aviso tono="atencion">
           No hay ventas cargadas en {nombreMes(data.mes)}. Cargalas en la sección{' '}
           <strong>Ventas</strong> para ver este bloque y la incidencia real.
         </Aviso>
-      </Bloque>
+      </Seccion>
     )
   }
 
@@ -452,131 +550,255 @@ function RestauranteYEventos({ data }: { data: CierreMesData }) {
   const noc = de(data.ventasPorServicio, 'noche')
   const eve = de(data.ventasPorServicio, 'eventos')
   const rest = suma(med, noc)
-  const filas: { nombre: string; actual: Par; previo: Par | null; destacada?: boolean }[] = [
-    { nombre: SERVICIO_LABEL.mediodia, actual: med, previo: prev ? de(prev, 'mediodia') : null },
-    { nombre: SERVICIO_LABEL.noche, actual: noc, previo: prev ? de(prev, 'noche') : null },
-    { nombre: 'Restaurante', actual: rest, previo: prev ? suma(de(prev, 'mediodia'), de(prev, 'noche')) : null, destacada: true },
-    { nombre: SERVICIO_LABEL.eventos, actual: eve, previo: prev ? de(prev, 'eventos') : null, destacada: true },
-  ]
+  const restPrev = prev ? suma(de(prev, 'mediodia'), de(prev, 'noche')) : null
+  const evePrev = prev ? de(prev, 'eventos') : null
   const total = data.ventas.mes
   const compras = data.compras.mes
-  const nota =
-    total > 0
-      ? eve.venta > 0 && rest.venta > 0
-        ? `Compras sobre venta: ${pct(compras / total * 100)}% de la venta total y ${pct(compras / rest.venta * 100)}% de la del restaurante. Ninguno es el real: las facturas no dicen si la compra fue para el salón o para un evento.`
-        : `Compras sobre venta: ${pct(compras / total * 100)}%. Sin eventos en el mes, es todo del restaurante.`
-      : undefined
+  const pRest = total > 0 ? (rest.venta / total) * 100 : 0
+  const pEve = total > 0 ? (eve.venta / total) * 100 : 0
+  const ticket = (p: Par) => (p.cubiertos > 0 ? fmt(p.venta / p.cubiertos) : '—')
+  const mesPrevio = nombreMes(data.mesPrevio).split(' ')[0]
+
+  const lineas: { nombre: string; actual: Par; previo: Par | null; sub?: boolean }[] = [
+    { nombre: 'Restaurante', actual: rest, previo: restPrev },
+    { nombre: SERVICIO_LABEL.mediodia, actual: med, previo: prev ? de(prev, 'mediodia') : null, sub: true },
+    { nombre: SERVICIO_LABEL.noche, actual: noc, previo: prev ? de(prev, 'noche') : null, sub: true },
+    { nombre: SERVICIO_LABEL.eventos, actual: eve, previo: evePrev },
+  ]
 
   return (
-    <Bloque titulo="Restaurante y eventos" nota={nota}>
-      {total > 0 && (
-        <div className="px-4 pt-4">
-          <div className="flex h-6 rounded overflow-hidden text-[11px] font-semibold text-white">
-            {rest.venta > 0 && (
-              <div className="bg-forest flex items-center px-2 whitespace-nowrap" style={{ width: `${(rest.venta / total) * 100}%` }}>
-                Restaurante {pct(rest.venta / total * 100, 0)}%
+    <Seccion
+      titulo="Restaurante y eventos"
+      descripcion="Los eventos venden mucho en pocos días y con otro ticket. Mezclados con el salón, mueven todos los promedios del mes."
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <Tarjeta>
+          <Etiqueta>Venta del mes{sufijoCorte(data)}</Etiqueta>
+          <CifraGrande>{fmt(total)}</CifraGrande>
+          <div className="flex h-7 rounded-md overflow-hidden text-[11px] font-semibold text-white mt-3 mb-2 bg-gray-100">
+            {pRest > 0 && (
+              <div className="bg-forest flex items-center px-2 whitespace-nowrap overflow-hidden" style={{ width: `${pRest}%` }}>
+                {pct(pRest, 0)}%
               </div>
             )}
-            {eve.venta > 0 && (
-              <div className="bg-terracotta flex items-center px-2 whitespace-nowrap" style={{ width: `${(eve.venta / total) * 100}%` }}>
-                Eventos {pct(eve.venta / total * 100, 0)}%
+            {pEve > 0 && (
+              <div className="bg-terracotta flex items-center px-2 whitespace-nowrap overflow-hidden" style={{ width: `${pEve}%` }}>
+                {pct(pEve, 0)}%
               </div>
             )}
           </div>
-        </div>
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-forest inline-block" />Restaurante (mediodía y noche)</span>
+            <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-terracotta inline-block" />Eventos</span>
+          </div>
+          <div className="mt-3 divide-y divide-gray-100">
+            {lineas.map((l) => (
+              <div key={l.nombre} className={`flex justify-between gap-3 py-2 text-sm ${l.sub ? 'pl-3 text-gray-500' : ''}`}>
+                <span className={l.sub ? '' : 'font-medium text-gray-800'}>{l.nombre}</span>
+                <span className="text-right font-mono text-xs">
+                  {fmt(l.actual.venta)} · {l.actual.cubiertos.toLocaleString('es-AR')} cub. · ticket {ticket(l.actual)}
+                  {l.previo && l.previo.venta > 0 && (
+                    <span className="block text-[11px] text-gray-400">
+                      {mesPrevio}: {fmt(l.previo.venta)} · <TextoVariacion valor={variacion(l.actual.venta, l.previo.venta)} />
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Tarjeta>
+
+        <Tarjeta>
+          <Etiqueta>Compras sobre venta</Etiqueta>
+          <div className="mt-1 divide-y divide-gray-100">
+            <Ratio
+              titulo="Sobre la venta total"
+              valor={total > 0 ? (compras / total) * 100 : null}
+              detalle={eve.venta > 0 ? `${fmt(compras)} de compras ÷ ${fmt(total)}. Lo baja la venta de eventos.` : `${fmt(compras)} de compras ÷ ${fmt(total)}.`}
+            />
+            {eve.venta > 0 && (
+              <Ratio
+                titulo="Sobre la venta del restaurante"
+                valor={rest.venta > 0 ? (compras / rest.venta) * 100 : null}
+                detalle={`Las mismas compras ÷ ${fmt(rest.venta)}. Lo sube lo comprado para los eventos.`}
+              />
+            )}
+            {data.ventas.previo > 0 && (
+              <Ratio
+                titulo={`${nombreMes(data.mesPrevio)}${evePrev && evePrev.venta === 0 ? ', sin eventos' : ''}`}
+                valor={(data.compras.previo / data.ventas.previo) * 100}
+                detalle={`${fmt(data.compras.previo)} ÷ ${fmt(data.ventas.previo)}${data.hastaDia ? ', al mismo día' : ''}.`}
+              />
+            )}
+          </div>
+        </Tarjeta>
+      </div>
+
+      {eve.venta > 0 && (
+        <Aviso tono="atencion">
+          <strong>Ninguno de los dos porcentajes es el real.</strong> Las facturas no dicen si la compra fue
+          para el salón o para un evento, así que la cuenta no se puede separar. La incidencia real (abajo)
+          no tiene este problema: se calcula con el consumo de cada servicio.
+        </Aviso>
       )}
-      <Tabla
-        cabeceras={['', 'Venta', '% venta', 'Cubiertos', 'Ticket', 'Mes anterior', 'Var.']}
-        alineacion={['left', 'right', 'right', 'right', 'right', 'right', 'right']}
-      >
-        {filas.map((f) => (
-          <tr key={f.nombre} className="hover:bg-gray-50">
-            <td className={`py-2 px-3 ${f.destacada ? 'font-semibold text-gray-900' : 'pl-6 text-gray-500'}`}>{f.nombre}</td>
-            <td className="py-2 px-3 text-right font-mono font-medium">{fmt(f.actual.venta)}</td>
-            <td className="py-2 px-3 text-right font-mono text-gray-600">{total > 0 ? `${pct(f.actual.venta / total * 100)}%` : '—'}</td>
-            <td className="py-2 px-3 text-right font-mono text-gray-600">{f.actual.cubiertos.toLocaleString('es-AR')}</td>
-            <td className="py-2 px-3 text-right font-mono">{f.actual.cubiertos > 0 ? fmt(f.actual.venta / f.actual.cubiertos) : '—'}</td>
-            <td className="py-2 px-3 text-right font-mono text-gray-500">{f.previo && f.previo.venta > 0 ? fmt(f.previo.venta) : '—'}</td>
-            <td className="py-2 px-3 text-right font-mono">
-              <TextoVariacion valor={f.previo && f.previo.venta > 0 ? variacion(f.actual.venta, f.previo.venta) : null} />
-            </td>
-          </tr>
-        ))}
-      </Tabla>
-      <PieTotal etiqueta="Total ventas" valor={fmt(total)} />
 
       {data.faltaConsumo && (
-        <div className="px-4 pb-4">
-          <Aviso tono="atencion">
-            No hay consumo cargado en {nombreMes(data.mes)}, así que no se puede calcular la
-            incidencia real. Cargalo en <strong>Análisis → Carga diaria</strong>.
-          </Aviso>
-        </div>
+        <Aviso tono="atencion">
+          No hay consumo cargado en {nombreMes(data.mes)}, así que no se puede calcular la
+          incidencia real. Cargalo en <strong>Análisis → Carga diaria</strong>.
+        </Aviso>
       )}
-    </Bloque>
+    </Seccion>
+  )
+}
+
+function Ratio({ titulo, valor, detalle }: { titulo: string; valor: number | null; detalle: string }) {
+  return (
+    <div className="py-2.5">
+      <div className="flex justify-between items-baseline gap-3">
+        <span className="text-sm text-gray-700">{titulo}</span>
+        <span className="font-mono text-lg font-medium">{valor === null ? '—' : `${pct(valor)}%`}</span>
+      </div>
+      <div className="text-[11px] text-gray-400 mt-0.5">{detalle}</div>
+    </div>
   )
 }
 
 // =====================================================
-// 7 · INCIDENCIA REAL POR SERVICIO (V.66)
+// 7 · INCIDENCIA REAL POR SERVICIO
 // =====================================================
 
 const ESTADO_INCIDENCIA = {
-  ok: { texto: 'Dentro', clase: 'text-green-700 bg-green-50' },
-  warning: { texto: 'En tolerancia', clase: 'text-amber-700 bg-amber-50' },
-  danger: { texto: 'Fuera', clase: 'text-red-700 bg-red-50' },
+  ok: { texto: 'Dentro del objetivo', pill: 'text-green-700 bg-green-50', barra: '#2F7A4F' },
+  warning: { texto: 'En tolerancia', pill: 'text-amber-700 bg-amber-50', barra: '#B7791F' },
+  danger: { texto: 'Fuera del objetivo', pill: 'text-red-700 bg-red-50', barra: '#C0392B' },
 } as const
 
 function IncidenciaPorServicio({ data }: { data: CierreMesData }) {
   const obj = useObjetivos()
   const servicios = data.incidenciaPorServicio || []
   if (servicios.length === 0) return null
-  const meses = servicios[0].historia.map((h) => h.mes)
-  const corto = (f: string) => nombreMes(f).slice(0, 3).toLowerCase()
 
   return (
-    <Bloque
-      titulo={`Incidencia real por servicio · objetivo ${obj.incidencia}% (± ${obj.tolerancia} pts)`}
-      nota="Costo de lo que salió de cocina sobre la venta de ese servicio. Sólo cuenta los servicios con consumo cargado; el muestreo va al lado. El objetivo se cambia en Configuración."
+    <Seccion
+      titulo="Incidencia real por servicio"
+      descripcion={`El costo de lo que salió de cocina sobre la venta de ese servicio, contra el objetivo de Configuración: ${obj.incidencia}%, con ${obj.tolerancia} puntos de tolerancia. Sólo cuenta los servicios con consumo cargado.`}
     >
-      <Tabla
-        cabeceras={['Servicio', ...meses.map(corto), corto(data.mes).toUpperCase(), 'Estado', 'Con consumo']}
-        alineacion={['left', ...meses.map(() => 'right' as const), 'right', 'left', 'right']}
-      >
-        {servicios.map((s) => {
-          const tiene = s.resumen.diasConCarga > 0 && s.resumen.ventaConCosto > 0
-          const estado = tiene
-            ? ESTADO_INCIDENCIA[estadoContraObjetivo(s.resumen.incidencia, obj.incidencia, obj.tolerancia) as keyof typeof ESTADO_INCIDENCIA]
-            : null
-          return (
-            <tr key={s.servicio} className="hover:bg-gray-50">
-              <td className="py-2 px-3 text-gray-900">{SERVICIO_LABEL[s.servicio]}</td>
-              {s.historia.map((h) => (
-                <td key={h.mes} className="py-2 px-3 text-right font-mono text-gray-400">
-                  {h.incidencia === null ? '—' : `${pct(h.incidencia)}%`}
-                </td>
-              ))}
-              <td className="py-2 px-3 text-right font-mono font-semibold">{tiene ? `${pct(s.resumen.incidencia)}%` : '—'}</td>
-              <td className="py-2 px-3">
-                {estado ? (
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${estado.clase}`}>{estado.texto}</span>
-                ) : (
-                  <span className="text-[11px] text-gray-400">Sin consumo</span>
-                )}
-              </td>
-              <td className="py-2 px-3 text-right font-mono text-gray-500 text-xs">
-                {s.resumen.diasConCarga} de {s.resumen.diasConVenta}
-              </td>
-            </tr>
-          )
-        })}
-      </Tabla>
-    </Bloque>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {servicios.map((s) => (
+          <TarjetaServicio key={s.servicio} servicio={s} mes={data.mes} objetivo={obj.incidencia} tolerancia={obj.tolerancia} />
+        ))}
+      </div>
+    </Seccion>
+  )
+}
+
+function TarjetaServicio({
+  servicio: s,
+  mes,
+  objetivo,
+  tolerancia,
+}: {
+  servicio: NonNullable<CierreMesData['incidenciaPorServicio']>[number]
+  mes: string
+  objetivo: number
+  tolerancia: number
+}) {
+  const tiene = s.resumen.diasConCarga > 0 && s.resumen.ventaConCosto > 0
+  const valor = s.resumen.incidencia
+  const estado = tiene ? ESTADO_INCIDENCIA[estadoContraObjetivo(valor, objetivo, tolerancia) as keyof typeof ESTADO_INCIDENCIA] : null
+  // Escala del medidor: de 0 a objetivo + 10 puntos (40% con el objetivo de 30)
+  const tope = objetivo + 10
+  const aPct = (v: number) => `${Math.min(100, Math.max(0, (v / tope) * 100))}%`
+  const serie = [...s.historia, { mes, incidencia: tiene ? valor : null }]
+  const conDato = serie.filter((p) => p.incidencia !== null)
+  const primero = conDato[0]
+  const corto = (f: string) => nombreMes(f).slice(0, 3).toLowerCase()
+
+  let tendencia = ''
+  if (tiene && primero && primero.mes !== mes && primero.incidencia !== null) {
+    const dif = valor - primero.incidencia
+    if (Math.abs(dif) >= 1) tendencia = `${dif > 0 ? 'subió' : 'bajó'} ${pct(Math.abs(dif))} puntos desde ${nombreMes(primero.mes).split(' ')[0].toLowerCase()}`
+  }
+  const cerca = tiene && valor <= objetivo && objetivo - valor < 1.5 ? `a ${pct(objetivo - valor)} puntos del objetivo` : ''
+
+  return (
+    <Tarjeta>
+      <div className="flex justify-between items-start gap-2">
+        <div>
+          <Etiqueta>{SERVICIO_LABEL[s.servicio]}</Etiqueta>
+          <div className={`text-2xl font-semibold mt-1 font-mono ${tiene ? 'text-gray-900' : 'text-gray-300'}`}>
+            {tiene ? `${pct(valor)}%` : '—'}
+          </div>
+        </div>
+        {estado ? (
+          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${estado.pill}`}>{estado.texto}</span>
+        ) : (
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap text-gray-500 bg-gray-100">Sin consumo cargado</span>
+        )}
+      </div>
+
+      {/* Medidor: relleno hasta el valor, franja de tolerancia y línea del objetivo */}
+      <div className="relative h-2.5 rounded-full bg-gray-100 mt-4 mb-1.5" aria-hidden="true">
+        <div
+          className="absolute top-0 bottom-0"
+          style={{
+            left: aPct(objetivo),
+            width: `calc(${aPct(objetivo + tolerancia)} - ${aPct(objetivo)})`,
+            background: 'repeating-linear-gradient(45deg, rgba(183,121,31,.22) 0 4px, transparent 4px 8px)',
+          }}
+        />
+        {tiene && estado && (
+          <div className="absolute left-0 top-0 bottom-0 rounded-full" style={{ width: aPct(valor), background: estado.barra }} />
+        )}
+        <div className="absolute -top-1 -bottom-1 w-0.5 bg-gray-900" style={{ left: aPct(objetivo) }} />
+      </div>
+      <div className="flex justify-between text-[10px] text-gray-400 font-mono">
+        <span>0%</span><span>objetivo {objetivo}%</span><span>{tope}%</span>
+      </div>
+
+      {conDato.length >= 2 && (
+        <div className="h-14 mt-3">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={serie} margin={{ top: 6, right: 6, left: 6, bottom: 0 }}>
+              <XAxis dataKey="mes" hide />
+              <YAxis hide domain={[(min: number) => Math.min(min, objetivo) - 2, (max: number) => Math.max(max, objetivo) + 1]} />
+              <ReferenceLine y={objetivo} stroke="#1A1A1A" strokeDasharray="3 3" strokeWidth={0.8} />
+              <Tooltip
+                formatter={(v: any) => [`${pct(Number(v))}%`, 'Incidencia']}
+                labelFormatter={(l: any) => nombreMes(String(l))}
+                contentStyle={{ fontSize: 11 }}
+              />
+              <Line type="monotone" dataKey="incidencia" stroke={estado?.barra || '#9B948C'} strokeWidth={2} dot={{ r: 2 }} connectNulls />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+      {conDato.length >= 2 && (
+        <div className="flex justify-between text-[10px] text-gray-400 font-mono">
+          <span>{corto(conDato[0].mes)} {pct(conDato[0].incidencia as number)}</span>
+          <span>{corto(conDato[conDato.length - 1].mes)} {pct(conDato[conDato.length - 1].incidencia as number)}</span>
+        </div>
+      )}
+
+      <p className="text-xs text-gray-500 mt-2">
+        {tiene ? (
+          <>
+            {s.resumen.diasConCarga} de {s.resumen.diasConVenta} servicios con consumo
+            {(tendencia || cerca) && <> · <strong className="text-gray-700">{tendencia || cerca}</strong></>}
+          </>
+        ) : s.resumen.diasConVenta > 0 ? (
+          `0 de ${s.resumen.diasConVenta} con consumo. Sin cargar lo que se usó no hay forma de saber si deja margen.`
+        ) : (
+          'Sin ventas en el mes.'
+        )}
+      </p>
+    </Tarjeta>
   )
 }
 
 // =====================================================
-// 8 · TU INFLACIÓN (V.66)
+// 8 · TU INFLACIÓN
 // =====================================================
 
 function TuInflacion({ data }: { data: CierreMesData }) {
@@ -589,47 +811,78 @@ function TuInflacion({ data }: { data: CierreMesData }) {
   const acTicket = acumular(c.meses.map((m) => m.ticket))
   const acIpc = hayIpc ? acumular(c.meses.map((m) => m.ipc)) : null
   const gasto = c.rubros.reduce((t, r) => t + r.gasto, 0)
-
-  let lectura = ''
-  if (acCanasta !== null && acTicket !== null) {
-    lectura =
-      acTicket >= acCanasta
-        ? `Tu ticket subió ${pct(acTicket - acCanasta)} puntos más que lo que comprás: el margen se sostiene.`
-        : `Lo que comprás subió ${pct(acCanasta - acTicket)} puntos más que tu ticket: el margen se achica.`
-  }
+  const desde = nombreMes(c.desde).split(' ')[0].toLowerCase()
+  const hasta = nombreMes(data.mes).split(' ')[0].toLowerCase()
+  const grafico = c.meses.map((m) => ({
+    mes: nombreMes(m.mes).slice(0, 3).toLowerCase(),
+    canasta: m.canasta,
+    ticket: m.ticket,
+    ipc: m.ipc,
+  }))
 
   return (
-    <Bloque
-      titulo={`Tu inflación · ${nombreMes(c.desde)} a ${nombreMes(data.mes)}`}
-      nota={`Canasta: precio por kilo o litro de ${c.insumos} insumos, mediana del mes, ponderado por lo que se gastó en cada uno. Una variación de más de 80% en un mes se deja afuera como sospechosa. Ticket del restaurante: mediodía y noche, sin eventos.`}
+    <Seccion
+      titulo="Tu inflación"
+      descripcion="Cuánto subió lo que comprás, contra lo que subió lo que cobrás. Cada insumo pesa según lo que gastás en él: una suba del morrón importa más que una de la sal."
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
-        <Cifra titulo="Tu canasta" valor={acCanasta} detalle="Cuánto más pagás por lo mismo" invertido />
-        <Cifra titulo="Ticket restaurante" valor={acTicket} detalle="Cuánto más cobrás por cubierto" />
-        {hayIpc && <Cifra titulo="IPC INDEC" valor={acIpc} detalle="Inflación general" invertido />}
+      <div className={`grid grid-cols-1 gap-3 ${hayIpc ? 'sm:grid-cols-3' : 'sm:grid-cols-3'}`}>
+        <Tarjeta>
+          <Etiqueta>Tu canasta, {desde} → {hasta}</Etiqueta>
+          <CifraGrande><TextoVariacion valor={acCanasta} invertido /></CifraGrande>
+          <div className="text-xs text-gray-500 mt-1">Ponderada por gasto, {c.insumos} insumos</div>
+        </Tarjeta>
+        <Tarjeta>
+          <Etiqueta>Ticket restaurante, {desde} → {hasta}</Etiqueta>
+          <CifraGrande><TextoVariacion valor={acTicket} /></CifraGrande>
+          <div className="text-xs text-gray-500 mt-1">Mediodía y noche, sin eventos</div>
+        </Tarjeta>
+        {hayIpc ? (
+          <Tarjeta>
+            <Etiqueta>IPC INDEC, {desde} → {hasta}</Etiqueta>
+            <CifraGrande><TextoVariacion valor={acIpc} invertido /></CifraGrande>
+            <div className="text-xs text-gray-500 mt-1">Inflación general</div>
+          </Tarjeta>
+        ) : (
+          <Tarjeta>
+            <Etiqueta>Lectura</Etiqueta>
+            <p className="text-sm text-gray-700 mt-2">
+              {acCanasta === null || acTicket === null
+                ? 'Faltan meses con datos para comparar.'
+                : acTicket >= acCanasta
+                  ? <>Tu ticket subió <strong className="font-mono">{pct(acTicket - acCanasta)}</strong> puntos más que lo que comprás: el margen se sostiene.</>
+                  : <>Lo que comprás subió <strong className="font-mono">{pct(acCanasta - acTicket)}</strong> puntos más que tu ticket: el margen se achica.</>}
+            </p>
+          </Tarjeta>
+        )}
       </div>
-      {lectura && <p className="px-4 -mt-1 pb-3 text-sm text-gray-700">{lectura}</p>}
-      <div className="grid grid-cols-1 lg:grid-cols-2 border-t border-gray-100">
-        <div className="lg:border-r border-gray-100 min-w-0">
-          <Tabla
-            cabeceras={['Mes', 'Tu canasta', 'Ticket', ...(hayIpc ? ['IPC'] : [])]}
-            alineacion={['left', 'right', 'right', 'right']}
-          >
-            {c.meses.map((m) => (
-              <tr key={m.mes} className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-gray-900">{nombreMes(m.mes)}</td>
-                <td className="py-2 px-3 text-right font-mono"><TextoVariacion valor={m.canasta} invertido /></td>
-                <td className="py-2 px-3 text-right font-mono"><TextoVariacion valor={m.ticket} /></td>
-                {hayIpc && (
-                  <td className="py-2 px-3 text-right font-mono text-gray-500">
-                    {m.ipc === null ? 'sin publicar' : `${pct(m.ipc)}%`}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </Tabla>
-        </div>
-        <div className="min-w-0">
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <Tarjeta>
+          <Etiqueta>Mes a mes</Etiqueta>
+          <div className="h-56 mt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={grafico} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} width={36} />
+                <ReferenceLine y={0} stroke="#9B948C" />
+                <Tooltip formatter={(v: any, n: any) => [v === null ? '—' : `${pct(Number(v))}%`, n]} contentStyle={{ fontSize: 11 }} />
+                <Bar dataKey="canasta" name="Tu canasta" fill={PALETA.terracotta} radius={[2, 2, 0, 0]} />
+                <Bar dataKey="ticket" name="Ticket" fill="#1B3A2D" radius={[2, 2, 0, 0]} />
+                {hayIpc && <Bar dataKey="ipc" name="IPC" fill="#8A8F98" radius={[2, 2, 0, 0]} />}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-1">
+            <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-terracotta inline-block" />Tu canasta</span>
+            <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-forest inline-block" />Ticket restaurante</span>
+            {hayIpc && <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm bg-gray-400 inline-block" />IPC</span>}
+          </div>
+          {data.hastaDia && <p className="text-[11px] text-gray-400 mt-2">{nombreMes(data.mes).split(' ')[0]}, al día {data.hastaDia}.</p>}
+        </Tarjeta>
+
+        <Tarjeta className="!p-0 overflow-hidden">
+          <div className="px-4 pt-4"><Etiqueta>Por rubro, {desde} → {hasta}</Etiqueta></div>
           <Tabla cabeceras={['Rubro', 'Gasto', 'Variación']} alineacion={['left', 'right', 'right']}>
             {[...c.rubros]
               .sort((a, b) => (b.variacion ?? -Infinity) - (a.variacion ?? -Infinity))
@@ -641,22 +894,14 @@ function TuInflacion({ data }: { data: CierreMesData }) {
                 </tr>
               ))}
           </Tabla>
-          <PieTotal etiqueta="Gasto del período" valor={fmt(gasto)} />
-        </div>
+          <PieTotal etiqueta="Total" valor={fmt(gasto)} />
+          <p className="px-4 py-2.5 text-[11px] text-gray-500 bg-gray-50 border-t border-gray-100 leading-snug">
+            Precio por kilo o litro, mediana del mes. Una variación de más de 80% en un mes se deja afuera como
+            sospechosa: casi siempre es un error de carga.
+          </p>
+        </Tarjeta>
       </div>
-    </Bloque>
-  )
-}
-
-function Cifra({ titulo, valor, detalle, invertido }: { titulo: string; valor: number | null; detalle: string; invertido?: boolean }) {
-  return (
-    <div className="rounded-lg border border-gray-200 p-3">
-      <div className="text-[10px] uppercase text-gray-500 font-semibold">{titulo}</div>
-      <div className="text-lg font-bold mt-1 font-mono">
-        <TextoVariacion valor={valor} invertido={invertido} />
-      </div>
-      <div className="text-[11px] text-gray-400 mt-0.5">{detalle}</div>
-    </div>
+    </Seccion>
   )
 }
 

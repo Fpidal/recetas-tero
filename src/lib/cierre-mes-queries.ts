@@ -94,6 +94,8 @@ export interface CierreMes {
   proveedores?: ProveedorMes[]
   /** Los que estaban en el top 10 del mes anterior y este mes no */
   proveedoresSalieron?: ProveedorMes[]
+  /** Cuántos proveedores tuvieron compras en el mes y en el anterior */
+  proveedoresConCompras?: { mes: number; previo: number }
   /** Incidencia real de cada servicio, con los meses anteriores para ver la tendencia */
   incidenciaPorServicio?: IncidenciaServicio[]
   /** Ventas del mes anterior por servicio, para comparar restaurante y eventos */
@@ -264,7 +266,7 @@ export function diaMes(fecha: string): string {
 
 type Analisis = Pick<
   CierreMes,
-  'proveedores' | 'proveedoresSalieron' | 'incidenciaPorServicio' | 'ventasPorServicioPrevio' | 'canasta'
+  'proveedores' | 'proveedoresSalieron' | 'proveedoresConCompras' | 'incidenciaPorServicio' | 'ventasPorServicioPrevio' | 'canasta'
 >
 
 const PAGINA = 1000
@@ -346,7 +348,11 @@ async function proveedoresDelMes(mes: string, hastaDia?: number) {
     .filter((p) => (puestoPrevio.get(p) ?? 99) <= 10 && (puestoMes.get(p) ?? 99) > 10)
     .map(aProveedor)
     .sort((a, b) => (a.puestoPrevio ?? 0) - (b.puestoPrevio ?? 0))
-  return { top, salieron }
+  return {
+    top,
+    salieron,
+    conCompras: { mes: lista.filter((p) => p.mes > 0).length, previo: lista.filter((p) => p.previo > 0).length },
+  }
 }
 
 /** Incidencia real de cada servicio: el mes (con su corte) y los cuatro anteriores */
@@ -544,6 +550,7 @@ export async function obtenerAnalisisCierre(mes: string, hastaDia?: number): Pro
   return {
     proveedores: proveedores.top,
     proveedoresSalieron: proveedores.salieron,
+    proveedoresConCompras: proveedores.conCompras,
     incidenciaPorServicio: incidencia,
     ventasPorServicioPrevio: previas,
     canasta,

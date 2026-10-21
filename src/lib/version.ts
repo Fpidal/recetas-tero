@@ -19,6 +19,7 @@ export const CHANGELOG: VersionEntry[] = [
       'Cierre de mes → Tu inflación: cuánto subió lo que comprás (ponderado por lo que gastás en cada insumo) contra lo que subió tu ticket, mes a mes y por rubro',
       'Cierre de mes: el mes en curso se compara contra el anterior cortado el mismo día. Octubre al 21 contra septiembre entero mostraba las compras en −28%',
       'Cierre de mes en PDF: dos hojas, la primera con el análisis y la segunda con el detalle de compras. Los porcentajes salen con coma',
+      'Cierre de mes: las secciones nuevas en tarjetas, como en la maqueta: barra por proveedor, reparto de la venta entre restaurante y eventos, un medidor por servicio contra el objetivo y el gráfico mes a mes de tu canasta contra tu ticket',
     ],
   },
   {

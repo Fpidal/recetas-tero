@@ -93,47 +93,83 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
   // =====================================================
   // 1 · INDICADORES
   // =====================================================
-  const indicadores: { label: string; valor: string; variacion: string }[] = [
+  // Compras ÷ ventas (la del Dashboard, la que define el resultado) y el margen
+  // bruto arriba; la incidencia real, los cubiertos y el ticket abajo.
+  const incCompras = data.ventas.mes > 0 ? (data.compras.mes / data.ventas.mes) * 100 : null
+  const incComprasPrev = data.ventas.previo > 0 ? (data.compras.previo / data.ventas.previo) * 100 : null
+  const margen = data.ventas.mes - data.compras.mes
+  const margenPrev = data.ventas.previo - data.compras.previo
+  const colorCompras: [number, number, number] | undefined = incCompras === null ? undefined : ({
+    ok: [47, 122, 79], warning: [183, 121, 31], danger: [178, 58, 58],
+  } as const)[estadoContraObjetivo(incCompras, objetivos.incidencia, objetivos.tolerancia)] as [number, number, number]
+
+  type Ind = { label: string; valor: string; variacion: string; nota?: string; color?: [number, number, number] }
+  const principales: Ind[] = [
     { label: 'COMPRAS', valor: fmt(data.compras.mes), variacion: fmtVar(variacion(data.compras.mes, data.compras.previo)) },
     { label: 'VENTAS', valor: fmt(data.ventas.mes), variacion: fmtVar(variacion(data.ventas.mes, data.ventas.previo)) },
+    {
+      label: 'INCIDENCIA COMPRAS',
+      valor: incCompras !== null ? `${dec(incCompras)}%` : '—',
+      variacion: incCompras !== null && incComprasPrev !== null ? fmtVar(incCompras - incComprasPrev, ' pts') : '—',
+      nota: `compras / ventas · obj. ${objetivos.incidencia}%`,
+      color: colorCompras,
+    },
+    {
+      label: 'MARGEN BRUTO',
+      valor: fmt(margen),
+      variacion: margenPrev > 0 ? fmtVar(variacion(margen, margenPrev)) : '—',
+      nota: data.ventas.mes > 0 ? `${dec((margen / data.ventas.mes) * 100)}% de la venta` : undefined,
+    },
+  ]
+  const operativos: Ind[] = [
     {
       label: 'INCIDENCIA REAL',
       valor: inc.diasConCarga > 0 ? `${dec(inc.incidencia)}%` : '—',
       variacion: inc.diasConCarga > 0 && incPrev.diasConCarga > 0
         ? fmtVar(inc.incidencia - incPrev.incidencia, ' pts')
         : '—',
+      nota: 'consumo / venta',
     },
     { label: 'CUBIERTOS', valor: data.ventas.cubiertos.toLocaleString('es-AR'), variacion: fmtVar(variacion(data.ventas.cubiertos, data.ventas.cubiertosPrevio)) },
     { label: 'TICKET PROM.', valor: inc.ticketPromedio > 0 ? fmt(inc.ticketPromedio) : '—', variacion: fmtVar(variacion(inc.ticketPromedio, incPrev.ticketPromedio)) },
   ]
 
-  const cajaW = contentWidth / indicadores.length
-  const cajaH = 17
-  doc.setDrawColor(214, 165, 145)
-  doc.setLineWidth(0.3)
+  const filaIndicadores = (lista: Ind[], cajaH: number, tamValor: number) => {
+    const cajaW = contentWidth / lista.length
+    doc.setDrawColor(214, 165, 145)
+    doc.setLineWidth(0.3)
+    lista.forEach((ind, i) => {
+      const x = margin + i * cajaW
+      doc.setFillColor(...GRIS_CLARO)
+      doc.rect(x, y, cajaW, cajaH, 'FD')
 
-  indicadores.forEach((ind, i) => {
-    const x = margin + i * cajaW
-    doc.setFillColor(...GRIS_CLARO)
-    doc.rect(x, y, cajaW, cajaH, 'FD')
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(5.5)
+      doc.setTextColor(...TERRACOTA)
+      doc.text(ind.label, x + 1.8, y + 4)
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(5.5)
-    doc.setTextColor(...TERRACOTA)
-    doc.text(ind.label, x + 2, y + 4)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(tamValor)
+      doc.setTextColor(...(ind.color ?? [40, 40, 40] as [number, number, number]))
+      doc.text(ind.valor, x + 1.8, y + 10)
 
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.setTextColor(40, 40, 40)
-    doc.text(ind.valor, x + 2, y + 10)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(6.5)
+      doc.setTextColor(110, 110, 110)
+      doc.text(ind.variacion, x + 1.8, y + 14.5)
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(6.5)
-    doc.setTextColor(110, 110, 110)
-    doc.text(ind.variacion, x + 2, y + 14.5)
-  })
+      if (ind.nota) {
+        doc.setFontSize(5)
+        doc.setTextColor(150, 150, 150)
+        doc.text(ind.nota, x + 1.8, y + 17.8)
+      }
+    })
+    y += cajaH
+  }
 
-  y += cajaH + 1.5
+  // Todo en una fila, como en la pantalla
+  filaIndicadores([...principales, ...operativos], 20, 9)
+  y += 1.5
 
   // El muestreo va pegado a la incidencia: un porcentaje sin la muestra al lado miente
   doc.setFont('helvetica', 'italic')

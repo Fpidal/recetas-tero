@@ -10,6 +10,13 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.68',
+    fecha: '22/10/26',
+    cambios: [
+      'Cierre de mes: arriba, en una sola fila, se suman la incidencia de compras (compras ÷ ventas, contra el objetivo, igual que en el Dashboard) y el margen bruto (ventas − compras). La incidencia real queda al lado, aclarada como consumo ÷ venta. También en el PDF',
+    ],
+  },
+  {
     version: 'V.67',
     fecha: '22/10/26',
     cambios: [

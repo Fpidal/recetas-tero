@@ -158,12 +158,41 @@ export default function CierreMes() {
 // =====================================================
 
 function Indicadores({ data }: { data: CierreMesData }) {
+  const obj = useObjetivos()
   const inc = data.incidencia
   const incPrev = data.incidenciaPrevia
 
-  const tarjetas = [
+  // Compras ÷ ventas: la misma cuenta que el Dashboard. Es la que define el
+  // resultado del mes; la incidencia real (consumo ÷ venta) dice cómo se cocinó.
+  const incCompras = data.ventas.mes > 0 ? (data.compras.mes / data.ventas.mes) * 100 : null
+  const incComprasPrev = data.ventas.previo > 0 ? (data.compras.previo / data.ventas.previo) * 100 : null
+  const margen = data.ventas.mes - data.compras.mes
+  const margenPrev = data.ventas.previo - data.compras.previo
+  const estadoCompras = incCompras !== null
+    ? ESTADO_INCIDENCIA[estadoContraObjetivo(incCompras, obj.incidencia, obj.tolerancia) as keyof typeof ESTADO_INCIDENCIA]
+    : null
+
+  const principales: Indicador[] = [
     { label: 'Compras', valor: fmt(data.compras.mes), variacion: variacion(data.compras.mes, data.compras.previo), invertido: true },
     { label: 'Ventas', valor: fmt(data.ventas.mes), variacion: variacion(data.ventas.mes, data.ventas.previo) },
+    {
+      label: 'Incidencia compras',
+      valor: incCompras !== null ? `${pct(incCompras)}%` : '—',
+      variacion: incCompras !== null && incComprasPrev !== null ? incCompras - incComprasPrev : null,
+      unidadVariacion: ' pts',
+      invertido: true,
+      nota: `compras ÷ ventas · objetivo ≤ ${obj.incidencia}%`,
+      colorValor: estadoCompras ? estadoCompras.pill.split(' ')[0] : undefined,
+    },
+    {
+      label: 'Margen bruto',
+      valor: fmt(margen),
+      variacion: margenPrev > 0 ? variacion(margen, margenPrev) : null,
+      nota: data.ventas.mes > 0 ? `ventas − compras · ${pct((margen / data.ventas.mes) * 100)}% de la venta` : 'ventas − compras',
+    },
+  ]
+
+  const operativos: Indicador[] = [
     {
       label: 'Incidencia real',
       valor: inc.diasConCarga > 0 ? `${pct(inc.incidencia)}%` : '—',
@@ -174,7 +203,7 @@ function Indicadores({ data }: { data: CierreMesData }) {
       unidadVariacion: ' pts',
       invertido: true,
       nota: inc.diasConCarga > 0
-        ? `muestreo: ${inc.diasConCarga} de ${inc.diasConVenta} servicios`
+        ? `consumo ÷ venta · muestreo: ${inc.diasConCarga} de ${inc.diasConVenta} servicios`
         : 'sin consumo cargado',
     },
     { label: 'Cubiertos', valor: data.ventas.cubiertos.toLocaleString('es-AR'), variacion: variacion(data.ventas.cubiertos, data.ventas.cubiertosPrevio) },
@@ -182,15 +211,30 @@ function Indicadores({ data }: { data: CierreMesData }) {
   ]
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-      {tarjetas.map((t) => (
-        <div key={t.label} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
-          <div className="text-[10px] uppercase text-gray-500 font-semibold">{t.label}</div>
-          <div className="text-lg font-bold text-gray-900 mt-1 font-mono break-all">{t.valor}</div>
-          <Variacion valor={t.variacion} invertido={t.invertido} unidad={t.unidadVariacion} />
-          {t.nota && <div className="text-[10px] text-gray-400 mt-0.5">{t.nota}</div>}
-        </div>
-      ))}
+    <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
+      {[...principales, ...operativos].map((t) => <TarjetaIndicador key={t.label} t={t} />)}
+    </div>
+  )
+}
+
+interface Indicador {
+  label: string
+  valor: string
+  variacion: number | null
+  invertido?: boolean
+  unidadVariacion?: string
+  nota?: string
+  /** Clase de color del número, para lo que se mide contra un objetivo */
+  colorValor?: string
+}
+
+function TarjetaIndicador({ t }: { t: Indicador }) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
+      <div className="text-[10px] uppercase text-gray-500 font-semibold">{t.label}</div>
+      <div className={`text-lg xl:text-base 2xl:text-lg font-bold mt-1 font-mono break-all ${t.colorValor ?? 'text-gray-900'}`}>{t.valor}</div>
+      <Variacion valor={t.variacion} invertido={t.invertido} unidad={t.unidadVariacion} />
+      {t.nota && <div className="text-[10px] text-gray-400 mt-0.5">{t.nota}</div>}
     </div>
   )
 }

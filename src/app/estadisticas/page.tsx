@@ -964,9 +964,9 @@ export default function EstadisticasPage() {
 
   const tabs = [
     { id: 'cierre_mes' as TabType, label: 'Cierre de Mes', icon: CalendarCheck },
+    { id: 'pedido_facturado' as TabType, label: 'Pedido vs Facturado', icon: Scale },
     { id: 'compras_semanales' as TabType, label: 'Compras Semanales', icon: Calendar },
     { id: 'comparacion_mensual' as TabType, label: 'Comparación Mensual', icon: FileText },
-    { id: 'pedido_facturado' as TabType, label: 'Pedido vs Facturado', icon: Scale },
     { id: 'variacion' as TabType, label: 'Variación de Precios', icon: TrendingUp },
     { id: 'abc' as TabType, label: 'ABC de Insumos', icon: Layers },
   ]

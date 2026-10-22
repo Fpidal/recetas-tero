@@ -7,7 +7,7 @@ import { formatearMoneda, formatearInputNumero, parsearNumero } from '@/lib/form
 import { formatearMonedaAnalisis, obtenerTodasOpciones } from '@/lib/consumo-queries'
 import {
   leerArchivo, obtenerMapeos, guardarMapeo, sugerir, buscar, obtenerCatalogo,
-  aplicarImportacion, guardarVentaDelTurno, ventaCargada, FK_POR_TIPO,
+  aplicarImportacion, guardarVentaDelTurno, ventaCargada, consumoCargado, fechaDelNombre, FK_POR_TIPO,
   type ArchivoVentas, type FilaVenta, type Mapeo, type Producto,
 } from '@/lib/importar-ventas'
 import { SERVICIO_LABEL, TIPO_CONFIG, type OpcionBuscador, type Servicio, type TipoConsumoItem } from '@/types/analisis'
@@ -69,6 +69,7 @@ export default function ImportarVentas({ fecha, setFecha, servicio, setServicio,
   // mano valen exactamente lo mismo.
   const [costos, setCostos] = useState<Map<string, number>>(new Map())
   const [yaCargado, setYaCargado] = useState<{ venta: number; cubiertos: number } | null>(null)
+  const [consumoPrevio, setConsumoPrevio] = useState<Awaited<ReturnType<typeof consumoCargado>>>(null)
   const [cubiertos, setCubiertos] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [aplicando, setAplicando] = useState(false)
@@ -92,8 +93,14 @@ export default function ImportarVentas({ fecha, setFecha, servicio, setServicio,
   useEffect(() => {
     if (!archivo) return
     let vigente = true
-    ventaCargada(fecha, servicio)
-      .then((c) => { if (vigente) setYaCargado(c) })
+    Promise.all([ventaCargada(fecha, servicio), consumoCargado(fecha, servicio)])
+      .then(([c, previo]) => {
+        if (!vigente) return
+        setYaCargado(c)
+        setConsumoPrevio(previo)
+        // Sin cubiertos en el archivo se ofrecen los ya cargados de ESE turno
+        if (archivo.datos.cubiertos === 0) setCubiertos(c?.cubiertos ?? 0)
+      })
       .catch(console.error)
     return () => { vigente = false }
   }, [fecha, servicio, archivo])
@@ -104,9 +111,10 @@ export default function ImportarVentas({ fecha, setFecha, servicio, setServicio,
     setError(null); setResultado(null)
     try {
       const datos = leerArchivo(await f.arrayBuffer())
-      const [mapeos, cargado] = await Promise.all([
+      const [mapeos, cargado, previo] = await Promise.all([
         obtenerMapeos(),
         ventaCargada(fecha, servicio),
+        consumoCargado(fecha, servicio),
       ])
 
       setLineas(datos.filas.map((fila) => {
@@ -122,8 +130,11 @@ export default function ImportarVentas({ fecha, setFecha, servicio, setServicio,
       }))
 
       setArchivo({ nombre: f.name, datos })
-      setCubiertos(datos.cubiertos)
+      // Si el archivo no trae filas de "Cubierto", importar guardaba 0 encima de
+      // los cubiertos cargados a mano. Se propone lo que ya hay.
+      setCubiertos(datos.cubiertos > 0 ? datos.cubiertos : cargado?.cubiertos ?? 0)
       setYaCargado(cargado)
+      setConsumoPrevio(previo)
     } catch (err: any) {
       setError(err?.message || String(err))
       setArchivo(null)
@@ -249,6 +260,10 @@ export default function ImportarVentas({ fecha, setFecha, servicio, setServicio,
   const d = archivo.datos
   const difVenta = yaCargado && Math.abs(yaCargado.venta - d.venta) > 1
   const difCub = yaCargado && yaCargado.cubiertos !== cubiertos
+  // "19-10.xls" cargado en el 20/10: el nombre dice otro día que el elegido
+  const delNombre = fechaDelNombre(archivo.nombre)
+  const [, mesElegido, diaElegido] = fecha.split('-').map(Number)
+  const otroDia = delNombre && (delNombre.dia !== diaElegido || delNombre.mes !== mesElegido)
 
   return (
     <div className="space-y-4">
@@ -273,11 +288,47 @@ export default function ImportarVentas({ fecha, setFecha, servicio, setServicio,
           <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">Cubiertos</div>
           <input type="number" value={cubiertos} onChange={(e) => setCubiertos(Number(e.target.value) || 0)}
             className="font-mono text-lg font-semibold text-gray-900 w-20 border-b border-dashed border-gray-300 focus:outline-none focus:border-primary-500" />
-          <div className="text-xs text-gray-500 mt-0.5">editable</div>
+          <div className="text-xs text-gray-500 mt-0.5">
+            {d.cubiertos === 0 && yaCargado?.cubiertos ? 'los ya cargados · editable' : 'editable'}
+          </div>
         </div>
         <Celda rotulo="A cargar" cifra={String(conteo.listo)} pie="productos" />
         <Celda rotulo="Se omiten" cifra={String(conteo.ignorado)} pie="ya van en menús" />
       </div>
+
+      {otroDia && (
+        <div className="bg-red-50 border border-red-200 border-l-[3px] border-l-red-600 rounded-lg px-4 py-2.5 text-sm text-gray-700 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-red-700 flex-shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-red-800">¿Es el día correcto?</span>{' '}
+            El archivo se llama <span className="font-mono">{archivo.nombre}</span> y lo estás cargando el{' '}
+            <span className="font-mono">{fecha.split('-').reverse().join('/')}</span>. Si es de otro día, cambiá la fecha arriba.
+          </div>
+        </div>
+      )}
+
+      {consumoPrevio && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-gray-700 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-amber-800">
+              Este turno ya tiene consumo cargado.
+            </span>
+            {consumoPrevio.importados > 0 && (
+              <div className="mt-1">
+                <span className="font-mono">{consumoPrevio.importados}</span> productos de una importación anterior
+                (<span className="font-mono">{formatearMoneda(consumoPrevio.costoImportado, true, 0)}</span>):
+                se <strong>reemplazan</strong> por los de este archivo.
+              </div>
+            )}
+            {consumoPrevio.aMano > 0 && (
+              <div className={consumoPrevio.importados > 0 ? '' : 'mt-1'}>
+                <span className="font-mono">{consumoPrevio.aMano}</span> cargados a mano: quedan como están.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {yaCargado && !difVenta && !difCub && (
         <div className="bg-green-50 border border-green-200 border-l-[3px] border-l-green-600 rounded-lg px-4 py-2.5 text-sm text-gray-700">

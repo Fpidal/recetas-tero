@@ -10,6 +10,16 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.67',
+    fecha: '22/10/26',
+    cambios: [
+      'Análisis → Importar: avisa en rojo si el nombre del archivo dice otro día que el elegido (por ejemplo "19-10.xls" cargado en el 20/10)',
+      'Análisis → Importar: avisa si el turno ya tiene consumo cargado, cuánto se reemplaza de la importación anterior y qué queda de lo cargado a mano',
+      'Análisis → Importar: si el archivo no trae cubiertos, propone los ya cargados en vez de 0, para no pisarlos',
+      'Menús: la pantalla vieja de menús ya no existe; su dirección lleva a Carta → Menús',
+    ],
+  },
+  {
     version: 'V.66',
     fecha: '21/10/26',
     cambios: [

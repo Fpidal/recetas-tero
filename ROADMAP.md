@@ -353,17 +353,10 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
   viven en Configuración y mueven los semáforos.
 
 - **Cierre de mes: lo que quedó afuera de V.66.**
-  - **Compras de eventos.** Las facturas no dicen si la compra fue para el salón o para un
-    evento, así que en un mes con eventos el ratio compras/venta no se puede separar (octubre:
-    24,2% sobre el total, 47,6% sobre el restaurante). La salida propuesta es un tilde
-    "Evento" en la factura.
   - **IPC.** La canasta y la pantalla ya tienen la columna (`ipc`), oculta mientras venga en
     null. Para mostrarla hace falta un lugar donde cargar el número del INDEC una vez por mes.
   - **Consumo de eventos.** Ningún evento tiene consumo cargado, así que su incidencia no se
     puede medir.
-- **Pantalla vieja de Menús.** `src/app/menus-ejecutivos/page.tsx` (~600 líneas) quedó sin
-  enlace desde que el listado pasó a Carta → Menús, pero hasta V.66 guardar un menú llevaba
-  ahí. Se arregló el destino; falta decidir si se borra o redirige a `/carta?tab=ejecutivos`.
 
 ### Más adelante
 
@@ -450,6 +443,12 @@ Registradas para no volver a discutirlas.
   ticket sale solo de los datos y responde lo que importa —si el precio acompaña a los
   costos—. El IPC es una referencia de afuera, útil para negociar, pero hay que cargarlo a
   mano; quedó preparado y oculto.
+
+- **Las compras de eventos no se separan de las del restaurante** (22/10/26). Se había
+  propuesto un tilde "Evento" en la factura, pero la mercadería se compra junta y se usa
+  para los dos: una factura no es de uno o del otro. El ratio compras/venta del cierre se
+  lee sobre el total, con el aviso de que en meses con eventos queda inflado si se mira
+  sólo contra el restaurante.
 
 - **El mes en curso se compara al mismo día** (21/10/26, V.66). La solapa Cierre de mes
   comparaba octubre al 21 contra septiembre entero; ahora corta los dos meses igual que el

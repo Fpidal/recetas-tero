@@ -387,3 +387,42 @@ export async function ventaCargada(
   if (!data) return null
   return { venta: Number((data as any)[campoVenta]) || 0, cubiertos: Number((data as any)[campoCub]) || 0 }
 }
+
+/**
+ * Qué consumo tiene ya ese turno, separado en lo que vino de una importación
+ * (se reemplaza al volver a importar) y lo cargado a mano (queda). Sirve para
+ * avisar ANTES de importar: el 22/10/26 se subió el archivo del 19 en el día 20
+ * y nada lo advirtió, porque el cartel sólo comparaba la venta.
+ */
+export async function consumoCargado(
+  fecha: string,
+  servicio: Servicio
+): Promise<{ importados: number; aMano: number; costoImportado: number } | null> {
+  const { data } = await supabase
+    .from('consumo_diario')
+    .select('consumo_items (origen_codigo, subtotal)')
+    .eq('fecha', fecha)
+    .eq('servicio', servicio)
+    .maybeSingle()
+
+  const items = ((data as any)?.consumo_items ?? []) as { origen_codigo: string | null; subtotal: number | null }[]
+  if (items.length === 0) return null
+  const importados = items.filter((i) => i.origen_codigo != null)
+  return {
+    importados: importados.length,
+    aMano: items.length - importados.length,
+    costoImportado: importados.reduce((s, i) => s + (Number(i.subtotal) || 0), 0),
+  }
+}
+
+/**
+ * La fecha que dice el nombre del archivo ("19-10.xls", "ventas 19_10.xlsx"),
+ * como día y mes. Null si el nombre no trae una.
+ */
+export function fechaDelNombre(nombre: string): { dia: number; mes: number } | null {
+  const m = nombre.match(/(?:^|\D)(\d{1,2})[-_.](\d{1,2})(?:\D|$)/)
+  if (!m) return null
+  const dia = Number(m[1]), mes = Number(m[2])
+  if (dia < 1 || dia > 31 || mes < 1 || mes > 12) return null
+  return { dia, mes }
+}

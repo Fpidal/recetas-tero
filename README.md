@@ -67,7 +67,7 @@ src/
 │   │   └── [id]/editar/
 │   ├── insumos/                  # Gestión de insumos/ingredientes
 │   ├── inventario/               # Control de inventario
-│   ├── menus-ejecutivos/         # Alta y edición de menús ejecutivos; el listado vive en Carta → Menús (el page.tsx de la raíz es la pantalla vieja, sin enlace)
+│   ├── menus-ejecutivos/         # Alta y edición de menús ejecutivos; el listado vive en Carta → Menús (la raíz redirige ahí)
 │   │   ├── nuevo/
 │   │   └── [id]/
 │   ├── menus-especiales/         # Menús especiales (accesible desde Carta)

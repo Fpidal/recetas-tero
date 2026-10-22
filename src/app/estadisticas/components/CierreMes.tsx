@@ -502,8 +502,8 @@ function PedidoVsFacturado({ data }: { data: CierreMesData }) {
       </div>
       {r.aRevisar > 0 && (
         <p className="text-xs text-gray-500">
-          <span className="font-mono">{r.aRevisar}</span> {r.aRevisar === 1 ? 'línea difiere' : 'líneas difieren'} 50% o más y no se suman:
-          pueden ser una unidad distinta entre la OC y la factura, y conviene revisarlas.
+          <span className="font-mono">{r.aRevisar}</span> {r.aRevisar === 1 ? 'línea no se suma' : 'líneas no se suman'}: difieren 50% o más
+          y también cambió mucho la cantidad, que suele ser una unidad distinta entre la OC y la factura. Están en la solapa Pedido vs facturado.
         </p>
       )}
     </Seccion>

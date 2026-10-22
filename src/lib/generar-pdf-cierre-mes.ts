@@ -417,7 +417,7 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
     nota(
       'Precio de la OC contra el de la factura, sólo por lo entregado: lo que no llegó no cuenta como cobrado de menos. ' +
       'Netos, con el descuento del proveedor y sin IVA.' +
-      (pvf.aRevisar > 0 ? ` ${pvf.aRevisar} líneas con 50% o más de diferencia no se suman: casi siempre es la unidad, no el precio.` : '')
+      (pvf.aRevisar > 0 ? ` ${pvf.aRevisar} líneas no se suman: difieren 50% o más y además cambió mucho la cantidad, que suele ser una unidad distinta.` : '')
     )
     y += 2
   }

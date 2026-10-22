@@ -23,11 +23,16 @@ import { claveItem } from './auditoria-semanal'
 export const UMBRAL_AL_PRECIO = 0.5 // %
 
 /**
- * Desde acá la diferencia casi nunca es precio sino unidad: el queso crema del
- * 09/09/26 se pidió 1 a $13.658 y se facturaron 3,5 a $6.426. Esas líneas se
- * muestran aparte, para revisar, y NO se suman a los totales.
+ * Una línea va a REVISAR —se muestra aparte y NO suma— cuando la diferencia de
+ * precio pasa este umbral Y ADEMÁS la cantidad cambió a menos de la mitad o a
+ * más del doble. Esa combinación es la de una unidad distinta entre OC y
+ * factura: el queso crema del 09/09/26 se pidió 1 a $13.658 y se facturaron
+ * 3,5 a $6.426. Sólo con el precio no alcanza: en septiembre 11 de 13 líneas
+ * de +50% eran verdura con subas reales (el cebollón de $23.500 a $45.000 la
+ * bolsa) y apartarlas escondía $82.005 cobrados de más. Decidido el 22/10/26.
  */
 export const UMBRAL_A_REVISAR = 50 // %
+export const FACTOR_CANTIDAD_A_REVISAR = 2
 
 export interface LineaComparada {
   clave: string
@@ -125,6 +130,12 @@ function acumular(items: any[], conDescuento: boolean) {
   return m
 }
 
+function cambioDeCantidad(pedida: number, facturada: number): boolean {
+  if (pedida <= 0) return true
+  const r = facturada / pedida
+  return r >= FACTOR_CANTIDAD_A_REVISAR || r <= 1 / FACTOR_CANTIDAD_A_REVISAR
+}
+
 export async function compararPedidoFacturado(desde: string, hasta: string): Promise<ComparacionPedidoFacturado> {
   const facturas = await traerPaginado<any>((a, b) =>
     supabase
@@ -200,7 +211,7 @@ export async function compararPedidoFacturado(desde: string, hasta: string): Pro
         precioFacturado: fi.precio,
         diferencia: (fi.precio - oc.precio) * fi.cantidad,
         variacion,
-        aRevisar: Math.abs(variacion) >= UMBRAL_A_REVISAR,
+        aRevisar: Math.abs(variacion) >= UMBRAL_A_REVISAR && cambioDeCantidad(oc.cantidad, fi.cantidad),
       })
     })
   }

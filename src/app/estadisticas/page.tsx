@@ -4,9 +4,10 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Select, Input } from '@/components/ui'
-import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Calendar, CalendarCheck, Layers } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Users, Package, DollarSign, ChevronRight, ChevronDown, Search, AlertTriangle, Lightbulb, FileText, Calendar, CalendarCheck, Layers, Scale } from 'lucide-react'
 import CierreMes from './components/CierreMes'
 import AbcInsumos from './components/AbcInsumos'
+import PedidoVsFacturado from './components/PedidoVsFacturado'
 import { PALETA } from '@/lib/colores'
 import { dateToString, parseFechaLocal } from '@/lib/fechas'
 
@@ -144,7 +145,7 @@ const CATEG_COLORES: Record<string, string> = {
   Salsas_Recetas: PALETA.terracotta,
 }
 
-type TabType = 'proveedores' | 'variacion' | 'compras_semanales' | 'comparacion_mensual' | 'cierre_mes' | 'abc'
+type TabType = 'pedido_facturado' | 'variacion' | 'compras_semanales' | 'comparacion_mensual' | 'cierre_mes' | 'abc'
 
 interface FacturaResumenProveedor {
   proveedor_id: string
@@ -965,7 +966,7 @@ export default function EstadisticasPage() {
     { id: 'cierre_mes' as TabType, label: 'Cierre de Mes', icon: CalendarCheck },
     { id: 'compras_semanales' as TabType, label: 'Compras Semanales', icon: Calendar },
     { id: 'comparacion_mensual' as TabType, label: 'Comparación Mensual', icon: FileText },
-    { id: 'proveedores' as TabType, label: 'Compras por Proveedor', icon: Users },
+    { id: 'pedido_facturado' as TabType, label: 'Pedido vs Facturado', icon: Scale },
     { id: 'variacion' as TabType, label: 'Variación de Precios', icon: TrendingUp },
     { id: 'abc' as TabType, label: 'ABC de Insumos', icon: Layers },
   ]
@@ -1024,7 +1025,7 @@ export default function EstadisticasPage() {
               >
                 <Icon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'comparacion_mensual' ? 'Mensual' : tab.id === 'proveedores' ? 'Compras' : tab.id === 'cierre_mes' ? 'Cierre' : tab.id === 'abc' ? 'ABC' : 'Variación'}</span>
+                <span className="sm:hidden">{tab.id === 'compras_semanales' ? 'Semanal' : tab.id === 'comparacion_mensual' ? 'Mensual' : tab.id === 'pedido_facturado' ? 'Pedido' : tab.id === 'cierre_mes' ? 'Cierre' : tab.id === 'abc' ? 'ABC' : 'Variación'}</span>
               </button>
             )
           })}
@@ -1320,167 +1321,9 @@ export default function EstadisticasPage() {
             </div>
           </div>
         </div>
-      ) : activeTab === 'proveedores' ? (
-        /* ============ TAB PROVEEDORES ============ */
-        <div className="space-y-4 sm:space-y-6 overflow-hidden">
-          {/* Resumen rápido */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
-                <DollarSign className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                <span className="text-[10px] sm:text-xs">Total Compras</span>
-              </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{formatMoney(totalCompras)}</p>
-            </div>
-            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
-                <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                <span className="text-[10px] sm:text-xs">Proveedores</span>
-              </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{datosProveedores.length}</p>
-            </div>
-            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
-                <Package className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                <span className="text-[10px] sm:text-xs">Categorías</span>
-              </div>
-              <p className="text-base sm:text-xl font-bold text-gray-900 font-mono">{datosPorCategoria.length}</p>
-            </div>
-            <div className="bg-white rounded-lg border p-2.5 sm:p-4">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1">
-                <TrendingUp className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                <span className="text-[10px] sm:text-xs">Principal</span>
-              </div>
-              <p className="text-sm sm:text-lg font-bold text-gray-900 truncate">{datosProveedores[0]?.nombre || '-'}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {/* Distribución por proveedor */}
-            <div className="bg-white rounded-lg border p-3 sm:p-4 overflow-hidden">
-              <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Distribución por Proveedor</h3>
-              {datosPieProveedores.length > 0 ? (
-                <div className="h-48 sm:h-64 overflow-hidden">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={datosPieProveedores}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={30}
-                        outerRadius={50}
-                        dataKey="value"
-                        label={false}
-                      >
-                        {datosPieProveedores.map((entry, idx) => (
-                          <Cell key={idx} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v: any) => formatMoney(v || 0)} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-gray-400 text-center py-8 sm:py-12 text-sm">Sin datos</p>
-              )}
-            </div>
-
-            {/* Ranking proveedores */}
-            <div className="bg-white rounded-lg border p-3 sm:p-4 overflow-hidden">
-              <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Ranking de Proveedores</h3>
-              <div className="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto">
-                {datosProveedores.map((prov, idx) => (
-                  <div key={prov.nombre} className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded hover:bg-gray-50">
-                    <span className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] sm:text-xs font-bold text-gray-500 font-mono">
-                      {idx + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{prov.nombre}</p>
-                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
-                        <span className="text-[9px] sm:text-[10px] text-gray-500 flex items-center gap-0.5 font-mono">
-                          <FileText className="w-2.5 sm:w-3 h-2.5 sm:h-3" />
-                          {prov.cantidadFacturas}
-                        </span>
-                        <span className="text-[9px] sm:text-[10px] text-gray-500 hidden sm:inline font-mono">
-                          Ticket: {formatMoney(prov.ticketPromedio)}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1 sm:h-1.5 mt-1">
-                        <div
-                          className="h-1 sm:h-1.5 rounded-full"
-                          style={{
-                            width: `${(prov.total / totalCompras) * 100}%`,
-                            backgroundColor: COLORES[idx % COLORES.length],
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs sm:text-sm font-bold text-gray-900 font-mono">{formatMoney(prov.total)}</p>
-                      <p className="text-[9px] sm:text-[10px] text-gray-500 font-mono">{((prov.total / totalCompras) * 100).toFixed(0)}%</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Evolución mensual - solo en desktop */}
-          {evolucionMensual.length > 0 && (
-            <div className="bg-white rounded-lg border p-3 sm:p-4 hidden sm:block">
-              <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Evolución Mensual (Últimos 6 meses)</h3>
-              <div className="h-56 sm:h-72 overflow-hidden">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={evolucionMensual}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                    <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
-                    <Tooltip formatter={(v: any) => formatMoney(v || 0)} />
-                    <Legend wrapperStyle={{ fontSize: '10px' }} />
-                    {datosProveedores.slice(0, 5).map((prov, idx) => (
-                      <Bar
-                        key={prov.nombre}
-                        dataKey={prov.nombre}
-                        fill={COLORES[idx % COLORES.length]}
-                        stackId="a"
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
-          {/* Compras por categoría */}
-          <div className="bg-white rounded-lg border p-3 sm:p-4 overflow-hidden">
-            <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3 sm:mb-4">Compras por Categoría</h3>
-            <div className="space-y-3 sm:space-y-4">
-              {datosPorCategoria.map(cat => (
-                <div key={cat.categoria} className="border-b pb-2.5 sm:pb-3 last:border-0">
-                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <span
-                        className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: CATEG_COLORES[cat.categoria] || '#6b7280' }}
-                      />
-                      <span className="text-xs sm:text-sm font-medium text-gray-900">
-                        {CATEG_LABELS[cat.categoria] || cat.categoria}
-                      </span>
-                    </div>
-                    <span className="text-xs sm:text-sm font-bold text-gray-900 font-mono">{formatMoney(cat.total)}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                    {cat.proveedoresList.slice(0, 3).map(p => (
-                      <span key={p.nombre} className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 bg-gray-100 rounded text-gray-600 font-mono">
-                        {p.nombre}: {formatMoney(p.total)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      ) : activeTab === 'pedido_facturado' ? (
+        /* ============ TAB PEDIDO VS FACTURADO (V.69, reemplaza a Compras por Proveedor) ============ */
+        <PedidoVsFacturado desde={rangoFechas.desde} hasta={rangoFechas.hasta} />
       ) : activeTab === 'variacion' ? (
         /* ============ TAB VARIACIÓN ============ */
         <div className="space-y-4">

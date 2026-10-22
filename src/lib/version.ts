@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.70',
+    fecha: '22/10/26',
+    cambios: [
+      'Estadísticas → Pedido vs Facturado: reemplaza a "Compras por Proveedor". Por proveedor, cuánto cobró de más y de menos respecto de la orden de compra y qué parte llegó al precio pedido; tocando uno se ven sus productos con diferencia y la factura de cada uno',
+      'Pedido contra facturado: sólo se apartan para revisar las líneas que difieren 50% o más Y además cambiaron mucho de cantidad (una unidad distinta entre OC y factura). Las subas grandes de verdura ahora sí suman',
+    ],
+  },
+  {
     version: 'V.69',
     fecha: '22/10/26',
     cambios: [

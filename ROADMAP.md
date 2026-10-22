@@ -357,10 +357,6 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
     null. Para mostrarla hace falta un lugar donde cargar el número del INDEC una vez por mes.
   - **Consumo de eventos.** Ningún evento tiene consumo cargado, así que su incidencia no se
     puede medir.
-- **Solapa Pedido vs facturado** (maqueta del 22/10/26). Reemplaza a "Compras por Proveedor":
-  la tabla por proveedor de `compararPedidoFacturado()` con selector de período, el detalle de
-  líneas con su factura y la lista a revisar. Pendiente decidir qué se aparta: hoy todo lo de
-  50% o más, pero 11 de las 13 líneas de septiembre eran verdura con subas reales ($82.005).
 
 ### Más adelante
 
@@ -447,6 +443,11 @@ Registradas para no volver a discutirlas.
   ticket sale solo de los datos y responde lo que importa —si el precio acompaña a los
   costos—. El IPC es una referencia de afuera, útil para negociar, pero hay que cargarlo a
   mano; quedó preparado y oculto.
+
+- **Pedido vs facturado aparta sólo los cambios de unidad** (22/10/26, V.70). Una línea va a
+  revisar —y no suma— si difiere 50% o más Y la cantidad cambió a menos de la mitad o más del
+  doble. Con sólo el precio, 11 de las 13 líneas de septiembre eran verdura con subas reales
+  (cebollón de $23.500 a $45.000) y se escondían $82.005 cobrados de más.
 
 - **Las compras de eventos no se separan de las del restaurante** (22/10/26). Se había
   propuesto un tilde "Evento" en la factura, pero la mercadería se compra junta y se usa

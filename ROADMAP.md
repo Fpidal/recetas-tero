@@ -449,6 +449,11 @@ Registradas para no volver a discutirlas.
   doble. Con sólo el precio, 11 de las 13 líneas de septiembre eran verdura con subas reales
   (cebollón de $23.500 a $45.000) y se escondían $82.005 cobrados de más.
 
+- **Pedido vs facturado: gris al precio, rojo de más, verde de menos** (22/10/26, V.71). Antes
+  "al precio" y "de menos" eran los dos verdes y no se distinguía cuál era cuál. Un color por
+  resultado en barras, leyendas y montos. El ranking de "lo que más se cobró de más" suma por
+  producto y proveedor, así una suba y una baja del mismo producto se compensan.
+
 - **Las compras de eventos no se separan de las del restaurante** (22/10/26). Se había
   propuesto un tilde "Evento" en la factura, pero la mercadería se compra junta y se usa
   para los dos: una factura no es de uno o del otro. El ratio compras/venta del cierre se

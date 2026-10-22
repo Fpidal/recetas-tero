@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { formatearMoneda } from '@/lib/formato-numeros'
 import { formatearFechaCorta } from '@/lib/fechas'
+import { corteDelMesEnCurso, nombreMes } from '@/lib/cierre-mes-queries'
 import {
   compararPedidoFacturado, UMBRAL_AL_PRECIO,
   type ComparacionPedidoFacturado, type LineaComparada, type TotalesComparacion,
@@ -21,7 +22,74 @@ const pct = (v: number, d = 1) => v.toFixed(d).replace('.', ',')
 const conSigno = (v: number) => `${v >= 0 ? '+' : '−'}${fmt(Math.abs(v))}`
 const cant = (v: number) => v.toLocaleString('es-AR', { maximumFractionDigits: 2 })
 
-export default function PedidoVsFacturado({ desde, hasta }: { desde: string; hasta: string }) {
+/**
+ * Un color por resultado, el mismo en barras, leyendas, columnas y montos:
+ * rojo cobrado de más, verde cobrado de menos, gris al precio de la OC.
+ * Antes "al precio" también era verde y no se distinguía de "de menos".
+ */
+const COLOR = {
+  alPrecio: { barra: 'bg-gray-400', texto: 'text-gray-600' },
+  masCara: { barra: 'bg-red-600', texto: 'text-red-700' },
+  masBarata: { barra: 'bg-green-600', texto: 'text-green-700' },
+}
+
+/** Los últimos 24 meses, del más reciente al más viejo: "2026-10" */
+function mesesDisponibles(): string[] {
+  const hoy = new Date()
+  return Array.from({ length: 24 }, (_, i) => {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+}
+
+function rangoDelMes(mes: string): { desde: string; hasta: string } {
+  const [a, m] = mes.split('-').map(Number)
+  const ultimo = new Date(a, m, 0).getDate()
+  return { desde: `${mes}-01`, hasta: `${mes}-${String(ultimo).padStart(2, '0')}` }
+}
+
+interface ProductoDeMas {
+  clave: string
+  nombre: string
+  proveedor: string
+  unidad: string
+  diferencia: number
+  lineas: LineaComparada[]
+}
+
+/** Neto por producto y proveedor (una papa que subió y bajó se compensa), los 5 que más sumaron */
+function masCobradosDeMas(lineas: LineaComparada[]): ProductoDeMas[] {
+  const m = new Map<string, ProductoDeMas>()
+  for (const l of lineas) {
+    if (l.aRevisar) continue
+    const k = `${l.proveedorId}|${l.clave}`
+    let p = m.get(k)
+    if (!p) { p = { clave: k, nombre: l.nombre, proveedor: l.proveedor, unidad: l.unidad, diferencia: 0, lineas: [] }; m.set(k, p) }
+    p.diferencia += l.diferencia
+    p.lineas.push(l)
+  }
+  return Array.from(m.values()).filter((p) => p.diferencia > 0).sort((a, b) => b.diferencia - a.diferencia).slice(0, 5)
+}
+
+function detalleProducto(p: ProductoDeMas): string {
+  const porUnidad = p.unidad ? ` por ${p.unidad}` : ''
+  if (p.lineas.length === 1) {
+    const l = p.lineas[0]
+    return `${fmt(l.precioPedido)} → ${fmt(l.precioFacturado)}${porUnidad} (${l.variacion >= 0 ? '+' : '−'}${pct(Math.abs(l.variacion))}%) · ${cant(l.cantidad)}${p.unidad ? ' ' + p.unidad : ''}`
+  }
+  const subas = p.lineas.filter((l) => l.variacion >= UMBRAL_AL_PRECIO).map((l) => l.variacion)
+  const bajas = p.lineas.filter((l) => l.variacion <= -UMBRAL_AL_PRECIO).map((l) => l.variacion)
+  const partes = [`${p.lineas.length} entregas`]
+  if (subas.length) partes.push(`hasta +${pct(Math.max(...subas))}%`)
+  if (bajas.length) partes.push(`${bajas.length === 1 ? 'una baja' : `${bajas.length} bajas`} de hasta −${pct(Math.abs(Math.min(...bajas)))}%`)
+  return partes.join(' · ')
+}
+
+export default function PedidoVsFacturado() {
+  const meses = useMemo(mesesDisponibles, [])
+  const [mes, setMes] = useState(meses[0])
+  const { desde, hasta } = useMemo(() => rangoDelMes(mes), [mes])
+  const hastaDia = mes === meses[0] ? corteDelMesEnCurso() : undefined
   const [datos, setDatos] = useState<ComparacionPedidoFacturado | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [abierto, setAbierto] = useState<string | null>(null)
@@ -49,15 +117,41 @@ export default function PedidoVsFacturado({ desde, hasta }: { desde: string; has
     return m
   }, [datos])
 
+  const selector = (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+      <div className="w-full sm:w-64">
+        <label className="block text-xs font-medium text-gray-700 mb-1">Mes</label>
+        <select
+          value={mes}
+          onChange={(e) => setMes(e.target.value)}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+        >
+          {meses.map((m) => (
+            <option key={m} value={m}>{nombreMes(`${m}-01`)}</option>
+          ))}
+        </select>
+        {hastaDia && <p className="text-[11px] text-gray-500 mt-1">Mes en curso: facturas cargadas hasta hoy</p>}
+      </div>
+    </div>
+  )
+
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
-        No se pudo armar la comparación: <span className="font-mono">{error}</span>
+      <div className="space-y-6">
+        {selector}
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
+          No se pudo armar la comparación: <span className="font-mono">{error}</span>
+        </div>
       </div>
     )
   }
   if (!datos) {
-    return <div className="flex items-center justify-center h-48 text-gray-500 text-sm">Comparando órdenes y facturas…</div>
+    return (
+      <div className="space-y-6">
+        {selector}
+        <div className="flex items-center justify-center h-48 text-gray-500 text-sm">Comparando órdenes y facturas…</div>
+      </div>
+    )
   }
 
   const t = datos.totales
@@ -66,15 +160,10 @@ export default function PedidoVsFacturado({ desde, hasta }: { desde: string; has
 
   return (
     <div className="space-y-6">
+      {selector}
       <p className="text-sm text-gray-500 max-w-3xl">
         El precio de cada producto en la orden de compra contra el de la factura, sólo por lo que se entregó.
-        Netos, con el descuento del proveedor y sin IVA. Entran <span className="font-mono">{datos.facturasConOC}</span> de{' '}
-        <span className="font-mono">{datos.facturasDelPeriodo}</span> facturas, las que tienen OC.
-        {(datos.sinOC.cantidad > 0 || datos.noPedidos.cantidad > 0) && ' Quedan afuera '}
-        {datos.sinOC.cantidad > 0 && <>{datos.sinOC.cantidad} {datos.sinOC.cantidad === 1 ? 'factura' : 'facturas'} sin OC (<span className="font-mono">{fmt(datos.sinOC.monto)}</span>)</>}
-        {datos.sinOC.cantidad > 0 && datos.noPedidos.cantidad > 0 && ' y '}
-        {datos.noPedidos.cantidad > 0 && <>{datos.noPedidos.cantidad} {datos.noPedidos.cantidad === 1 ? 'producto que llegó' : 'productos que llegaron'} sin pedirse (<span className="font-mono">{fmt(datos.noPedidos.monto)}</span>)</>}
-        {(datos.sinOC.cantidad > 0 || datos.noPedidos.cantidad > 0) && '.'}
+        Netos, con el descuento del proveedor y sin IVA.
       </p>
 
       {t.lineas === 0 ? (
@@ -85,12 +174,20 @@ export default function PedidoVsFacturado({ desde, hasta }: { desde: string; has
         <>
           <Totales t={t} mayorDeMenos={[...datos.proveedores].sort((a, b) => a.deMenos - b.deMenos)[0]} />
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <Reparto datos={datos} />
+            <MasCobrados productos={masCobradosDeMas(datos.lineas)} />
+          </div>
+
           <section className="space-y-3">
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">Por proveedor</h3>
-              <p className="text-sm text-gray-500 mt-0.5">
-                Ordenados por lo que cobraron de más. Tocá un proveedor para ver sus líneas con diferencia y la factura de cada una.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Por proveedor</h3>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Ordenados por lo que cobraron de más. Tocá un proveedor para ver sus líneas con diferencia y la factura de cada una.
+                </p>
+              </div>
+              <div className="sm:shrink-0"><Leyenda /></div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
               <table className="w-full text-sm min-w-[760px]">
@@ -156,7 +253,7 @@ export default function PedidoVsFacturado({ desde, hasta }: { desde: string; has
               </table>
             </div>
             <p className="text-xs text-gray-400">
-              El neto en verde si quedó a tu favor o en ±0,5%, amarillo hasta 2% de más, rojo por encima.
+              El neto en verde si quedó a tu favor, gris si quedó en ±0,5%, amarillo hasta 2% de más y rojo por encima.
               El precio de la OC es el que tenía el sistema al armarla: en productos de mercado, como la verdura, la diferencia suele ser el precio del día.
             </p>
           </section>
@@ -220,18 +317,91 @@ function Totales({ t, mayorDeMenos }: { t: TotalesComparacion; mayorDeMenos?: { 
   )
 }
 
-/** Barra verde / roja / verde claro: al precio, más caras, más baratas */
-function Cumplimiento({ t }: { t: TotalesComparacion }) {
+function Leyenda({ t }: { t?: TotalesComparacion }) {
+  const items = [
+    { c: COLOR.alPrecio.barra, label: 'Al precio de la OC', n: t?.alPrecio },
+    { c: COLOR.masCara.barra, label: 'Cobrado de más', n: t?.masCaras },
+    { c: COLOR.masBarata.barra, label: 'Cobrado de menos', n: t?.masBaratas },
+  ]
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+      {items.map((i) => (
+        <span key={i.label} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <i className={`inline-block w-2.5 h-2.5 rounded-sm ${i.c}`} />
+          {i.label}{i.n !== undefined && <> · <span className="font-mono">{i.n}</span></>}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function Barra({ t, className }: { t: TotalesComparacion; className: string }) {
   const ok = (t.alPrecio / t.lineas) * 100
   const sube = (t.masCaras / t.lineas) * 100
   const baja = 100 - ok - sube
   return (
-    <div>
-      <div className="flex h-2 w-28 rounded overflow-hidden bg-gray-100">
-        <div className="bg-green-700" style={{ width: `${ok}%` }} />
-        <div className="bg-red-600" style={{ width: `${sube}%` }} />
-        <div className="bg-green-300" style={{ width: `${baja}%` }} />
+    <div
+      className={`flex rounded overflow-hidden bg-gray-100 ${className}`}
+      role="img"
+      aria-label={`${t.alPrecio} al precio, ${t.masCaras} más caras, ${t.masBaratas} más baratas`}
+    >
+      <div className={COLOR.alPrecio.barra} style={{ width: `${ok}%` }} />
+      <div className={COLOR.masCara.barra} style={{ width: `${sube}%` }} />
+      <div className={COLOR.masBarata.barra} style={{ width: `${baja}%` }} />
+    </div>
+  )
+}
+
+function Reparto({ datos }: { datos: ComparacionPedidoFacturado }) {
+  const t = datos.totales
+  const afuera: string[] = []
+  if (datos.sinOC.cantidad > 0) afuera.push(`${datos.sinOC.cantidad} ${datos.sinOC.cantidad === 1 ? 'factura' : 'facturas'} sin OC (${fmt(datos.sinOC.monto)})`)
+  if (datos.noPedidos.cantidad > 0) afuera.push(`${datos.noPedidos.cantidad} ${datos.noPedidos.cantidad === 1 ? 'producto que llegó' : 'productos que llegaron'} sin haberse pedido (${fmt(datos.noPedidos.monto)})`)
+  if (datos.aRevisar.length > 0) afuera.push(`${datos.aRevisar.length} ${datos.aRevisar.length === 1 ? 'línea' : 'líneas'} a revisar (abajo)`)
+  afuera.push('todo lo que no se entregó')
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-4 min-w-0">
+      <div className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">
+        Cómo se repartieron las <span className="font-mono">{t.lineas}</span> líneas
       </div>
+      <Barra t={t} className="h-3 w-full mt-3 mb-2" />
+      <Leyenda t={t} />
+      <div className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-100 space-y-1 leading-relaxed">
+        <p><b className="text-gray-700">Qué entra:</b> <span className="font-mono">{datos.facturasConOC}</span> de las <span className="font-mono">{datos.facturasDelPeriodo}</span> facturas del mes, las que tienen OC asociada.</p>
+        <p><b className="text-gray-700">Qué queda afuera:</b> {afuera.length > 1 ? `${afuera.slice(0, -1).join(', ')} y ${afuera[afuera.length - 1]}` : afuera[0]}.</p>
+        <p><b className="text-gray-700">Precio de la OC:</b> el último que tenía el sistema al armarla (o el que se corrigió a mano).</p>
+      </div>
+    </div>
+  )
+}
+
+function MasCobrados({ productos }: { productos: ProductoDeMas[] }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-4 min-w-0">
+      <div className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Lo que más se cobró de más</div>
+      {productos.length === 0 ? (
+        <p className="text-sm text-gray-500 mt-3">Ningún producto quedó por encima del precio de la OC.</p>
+      ) : (
+        <ul className="mt-1">
+          {productos.map((p) => (
+            <li key={p.clave} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 py-2 border-t border-gray-100 first:border-0 text-sm">
+              <span className="text-gray-900 truncate">{p.nombre} <span className="text-gray-400">· {p.proveedor}</span></span>
+              <span className={`font-mono ${COLOR.masCara.texto}`}>+{fmt(p.diferencia)}</span>
+              <span className="col-span-2 text-xs text-gray-500 font-mono">{detalleProducto(p)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/** Barra chica de cada proveedor, con los mismos colores que la leyenda */
+function Cumplimiento({ t }: { t: TotalesComparacion }) {
+  const ok = (t.alPrecio / t.lineas) * 100
+  return (
+    <div>
+      <Barra t={t} className="h-2 w-28" />
       <div className="text-xs font-mono text-gray-600 mt-1">
         {Math.round(ok)}% · {t.masCaras} {t.masCaras === 1 ? 'más cara' : 'más caras'}
       </div>
@@ -241,7 +411,7 @@ function Cumplimiento({ t }: { t: TotalesComparacion }) {
 
 function ChipNeto({ neto, pedido }: { neto: number; pedido: number }) {
   const p = pedido > 0 ? (neto / pedido) * 100 : 0
-  const clase = p <= 0.5 ? 'text-green-700 bg-green-50' : p <= 2 ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'
+  const clase = p < -0.5 ? 'text-green-700 bg-green-50' : p <= 0.5 ? 'text-gray-600 bg-gray-100' : p <= 2 ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'
   return <span className={`text-xs font-semibold font-mono px-2 py-0.5 rounded-full ${clase}`}>{p >= 0 ? '+' : '−'}{pct(Math.abs(p))}%</span>
 }
 
@@ -264,7 +434,7 @@ function TablaLineas({ lineas, conProveedor }: { lineas: LineaComparada[]; conPr
         </thead>
         <tbody>
           {lineas.map((l) => {
-            const color = l.diferencia > 0 ? 'text-red-700' : 'text-green-700'
+            const color = l.diferencia > 0 ? COLOR.masCara.texto : COLOR.masBarata.texto
             return (
               <tr key={`${l.facturaId}-${l.clave}`} className="border-b border-gray-100 last:border-0">
                 <td className="py-1.5 pr-3 font-mono text-gray-600">{formatearFechaCorta(l.fecha)}</td>

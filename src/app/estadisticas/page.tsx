@@ -972,7 +972,7 @@ export default function EstadisticasPage() {
   ]
 
   // Solapas que traen su propio selector de período
-  const tabConFiltroPropio = activeTab === 'cierre_mes' || activeTab === 'abc'
+  const tabConFiltroPropio = activeTab === 'cierre_mes' || activeTab === 'abc' || activeTab === 'pedido_facturado'
 
   return (
     <div className="overflow-x-hidden">
@@ -981,7 +981,7 @@ export default function EstadisticasPage() {
           <h1>Estadísticas</h1>
           <p className="text-sm text-gray-600">
             {tabConFiltroPropio ? (
-              activeTab === 'cierre_mes' ? 'La foto del mes, contra el mes anterior' : 'Dónde se va la plata de las compras'
+              activeTab === 'cierre_mes' ? 'La foto del mes, contra el mes anterior' : activeTab === 'pedido_facturado' ? 'Lo que se pidió contra lo que se facturó' : 'Dónde se va la plata de las compras'
             ) : rangoFechas.desde && rangoFechas.hasta ? (
               <>
                 {new Date(rangoFechas.desde + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
@@ -991,7 +991,7 @@ export default function EstadisticasPage() {
             ) : 'Análisis de compras y precios'}
           </p>
         </div>
-        {/* Cierre de Mes y ABC tienen su propio filtro, con otra granularidad:
+        {/* Cierre de Mes, Pedido vs Facturado y ABC tienen su propio filtro, con otra granularidad:
             uno pide un mes puntual (y lo compara contra el anterior) y el otro
             una ventana de varios meses. Un control único no le serviría bien a
             ninguno de los tres, así que en esas solapas este se esconde en vez
@@ -1323,7 +1323,7 @@ export default function EstadisticasPage() {
         </div>
       ) : activeTab === 'pedido_facturado' ? (
         /* ============ TAB PEDIDO VS FACTURADO (V.69, reemplaza a Compras por Proveedor) ============ */
-        <PedidoVsFacturado desde={rangoFechas.desde} hasta={rangoFechas.hasta} />
+        <PedidoVsFacturado />
       ) : activeTab === 'variacion' ? (
         /* ============ TAB VARIACIÓN ============ */
         <div className="space-y-4">

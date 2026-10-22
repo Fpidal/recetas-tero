@@ -37,6 +37,8 @@ export const FACTOR_CANTIDAD_A_REVISAR = 2
 export interface LineaComparada {
   clave: string
   nombre: string
+  /** kg, lt, unidad… vacío en vinos */
+  unidad: string
   proveedorId: string
   proveedor: string
   facturaId: string
@@ -169,9 +171,10 @@ export async function compararPedidoFacturado(desde: string, hasta: string): Pro
   const idsInsumo = Array.from(claves).filter((k) => k.startsWith('i:')).map((k) => k.slice(2))
   const idsVino = Array.from(claves).filter((k) => k.startsWith('v:')).map((k) => k.slice(2))
   const nombres = new Map<string, string>()
+  const unidades = new Map<string, string>()
   for (let i = 0; i < idsInsumo.length; i += 200) {
-    const { data } = await supabase.from('insumos').select('id, nombre').in('id', idsInsumo.slice(i, i + 200))
-    ;(data ?? []).forEach((x: any) => nombres.set(`i:${x.id}`, x.nombre))
+    const { data } = await supabase.from('insumos').select('id, nombre, unidad_medida').in('id', idsInsumo.slice(i, i + 200))
+    ;(data ?? []).forEach((x: any) => { nombres.set(`i:${x.id}`, x.nombre); unidades.set(`i:${x.id}`, x.unidad_medida ?? '') })
   }
   for (let i = 0; i < idsVino.length; i += 200) {
     const { data } = await supabase.from('vinos').select('id, nombre, bodega').in('id', idsVino.slice(i, i + 200))
@@ -200,6 +203,7 @@ export async function compararPedidoFacturado(desde: string, hasta: string): Pro
       lineas.push({
         clave,
         nombre: nombres.get(clave) ?? '(eliminado)',
+        unidad: unidades.get(clave) ?? '',
         proveedorId: f.proveedor_id,
         proveedor,
         facturaId: f.id,

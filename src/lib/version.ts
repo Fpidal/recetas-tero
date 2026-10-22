@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.71',
+    fecha: '22/10/26',
+    cambios: [
+      'Pedido vs Facturado: ahora se elige el mes, y la solapa está al lado de Cierre de Mes',
+      'Pedido vs Facturado: cómo se repartieron las líneas (al precio, de más, de menos), qué facturas entran y cuáles quedan afuera, y los 5 productos que más se cobraron de más',
+      'Pedido vs Facturado: colores claros y con leyenda — gris al precio de la OC, rojo cobrado de más, verde cobrado de menos',
+    ],
+  },
+  {
     version: 'V.70',
     fecha: '22/10/26',
     cambios: [

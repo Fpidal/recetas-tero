@@ -10,6 +10,13 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.69',
+    fecha: '22/10/26',
+    cambios: [
+      'Cierre de mes → Pedido contra facturado: cuánto te cobraron de más y de menos respecto del precio de la orden de compra, el neto y qué parte de los productos llegó al precio pedido. Sólo cuenta lo entregado, así una entrega incompleta no aparece como "cobrado de menos". También en el PDF',
+    ],
+  },
+  {
     version: 'V.68',
     fecha: '22/10/26',
     cambios: [

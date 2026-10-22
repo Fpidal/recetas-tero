@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { obtenerIncidenciasMes, resumirIncidencias, type ResumenIncidencia } from './consumo-queries'
 import type { Servicio } from '@/types/analisis'
+import { compararPedidoFacturado, type TotalesComparacion } from './pedido-vs-facturado'
 
 /**
  * Datos del Cierre de Mes — la foto del mes.
@@ -101,6 +102,19 @@ export interface CierreMes {
   /** Ventas del mes anterior por servicio, para comparar restaurante y eventos */
   ventasPorServicioPrevio?: VentaServicio[]
   canasta?: Canasta
+  /** Precio de la OC contra el de la factura, sólo por lo entregado (V.69) */
+  pedidoVsFacturado?: ResumenPedidoFacturado
+}
+
+export interface ResumenPedidoFacturado {
+  /** Sin las líneas a revisar */
+  totales: TotalesComparacion
+  facturasDelPeriodo: number
+  facturasConOC: number
+  /** Líneas con 50% o más de diferencia: casi siempre unidad distinta. No suman */
+  aRevisar: number
+  /** El proveedor que más cobró de menos, para leer el número sin ir a la solapa */
+  mayorDeMenos: { proveedor: string; monto: number } | null
 }
 
 export interface ProveedorMes {
@@ -266,7 +280,7 @@ export function diaMes(fecha: string): string {
 
 type Analisis = Pick<
   CierreMes,
-  'proveedores' | 'proveedoresSalieron' | 'proveedoresConCompras' | 'incidenciaPorServicio' | 'ventasPorServicioPrevio' | 'canasta'
+  'proveedores' | 'proveedoresSalieron' | 'proveedoresConCompras' | 'incidenciaPorServicio' | 'ventasPorServicioPrevio' | 'canasta' | 'pedidoVsFacturado'
 >
 
 const PAGINA = 1000
@@ -541,12 +555,16 @@ async function ventasPrevias(mes: string, hastaDia?: number): Promise<VentaServi
 
 /** Las secciones de análisis del Cierre de mes. Mismo `hastaDia` que obtenerCierreMes() */
 export async function obtenerAnalisisCierre(mes: string, hastaDia?: number): Promise<Analisis> {
-  const [proveedores, incidencia, canasta, previas] = await Promise.all([
+  const actual = moverMes(mes, 0)
+  const hasta = hastaDia ? `${actual.clave}-${String(hastaDia).padStart(2, '0')}` : actual.hasta
+  const [proveedores, incidencia, canasta, previas, comparacion] = await Promise.all([
     proveedoresDelMes(mes, hastaDia),
     incidenciaPorServicio(mes, hastaDia),
     canastaDelMes(mes),
     ventasPrevias(mes, hastaDia),
+    compararPedidoFacturado(actual.desde, hasta),
   ])
+  const mayorDeMenos = [...comparacion.proveedores].sort((a, b) => a.deMenos - b.deMenos)[0]
   return {
     proveedores: proveedores.top,
     proveedoresSalieron: proveedores.salieron,
@@ -554,5 +572,14 @@ export async function obtenerAnalisisCierre(mes: string, hastaDia?: number): Pro
     incidenciaPorServicio: incidencia,
     ventasPorServicioPrevio: previas,
     canasta,
+    pedidoVsFacturado: {
+      totales: comparacion.totales,
+      facturasDelPeriodo: comparacion.facturasDelPeriodo,
+      facturasConOC: comparacion.facturasConOC,
+      aRevisar: comparacion.aRevisar.length,
+      mayorDeMenos: mayorDeMenos && mayorDeMenos.deMenos < 0
+        ? { proveedor: mayorDeMenos.proveedor, monto: mayorDeMenos.deMenos }
+        : null,
+    },
   }
 }

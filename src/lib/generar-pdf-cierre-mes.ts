@@ -394,6 +394,35 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
   }
 
   // =====================================================
+  // PEDIDO CONTRA FACTURADO (V.69): sólo las cuatro cifras; el detalle por
+  // proveedor vive en la solapa de Estadísticas
+  // =====================================================
+  const pvf = data.pedidoVsFacturado
+  if (pvf && pvf.totales.lineas > 0) {
+    const t = pvf.totales
+    const cuarto = (contentWidth - GAP * 3) / 4
+    const altoC = 21
+    titulo(`PEDIDO CONTRA FACTURADO  ·  ${pvf.facturasConOC} DE ${pvf.facturasDelPeriodo} FACTURAS CON OC`, altoC + 14)
+    y += 1
+    const signo = (n: number) => (n >= 0 ? '+' : '-') + fmt(Math.abs(n))
+    tarjetaCifra(margin, cuarto, altoC, 'Cobrado de más', fmt(t.deMas),
+      `${t.masCaras} líneas sobre el precio de la OC · ${dec(t.pedido > 0 ? (t.deMas / t.pedido) * 100 : 0)}% de lo pedido`, ROJO)
+    tarjetaCifra(margin + (cuarto + GAP), cuarto, altoC, 'Cobrado de menos', '-' + fmt(Math.abs(t.deMenos)),
+      `${t.masBaratas} líneas` + (pvf.mayorDeMenos ? ` · la mayor, ${pvf.mayorDeMenos.proveedor} (-${fmt(Math.abs(pvf.mayorDeMenos.monto))})` : ''), VERDE)
+    tarjetaCifra(margin + (cuarto + GAP) * 2, cuarto, altoC, 'Neto', signo(t.neto),
+      `pedido ${fmt(t.pedido)} · facturado ${fmt(t.facturado)}`)
+    tarjetaCifra(margin + (cuarto + GAP) * 3, cuarto, altoC, 'Al precio de la OC', `${Math.round((t.alPrecio / t.lineas) * 100)}%`,
+      `${t.alPrecio} de ${t.lineas} líneas sin diferencia`)
+    y += altoC + 4
+    nota(
+      'Precio de la OC contra el de la factura, sólo por lo entregado: lo que no llegó no cuenta como cobrado de menos. ' +
+      'Netos, con el descuento del proveedor y sin IVA.' +
+      (pvf.aRevisar > 0 ? ` ${pvf.aRevisar} líneas con 50% o más de diferencia no se suman: casi siempre es la unidad, no el precio.` : '')
+    )
+    y += 2
+  }
+
+  // =====================================================
   // 3 · RESTAURANTE Y EVENTOS
   // =====================================================
   if (data.faltaVentas) {

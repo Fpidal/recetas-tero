@@ -139,6 +139,7 @@ export default function CierreMes() {
           ) : (
             <>
               <ProveedoresDelMes data={{ ...data, ...analisis }} />
+              <PedidoVsFacturado data={{ ...data, ...analisis }} />
               <RestauranteYEventos data={{ ...data, ...analisis }} />
               <IncidenciaPorServicio data={{ ...data, ...analisis }} />
               <TuInflacion data={{ ...data, ...analisis }} />
@@ -437,6 +438,76 @@ function CifraGrande({ children }: { children: React.ReactNode }) {
 /** "al 21/10" para el mes en curso, nada para un mes cerrado */
 function sufijoCorte(data: CierreMesData) {
   return data.hastaDia ? ` al ${String(data.hastaDia).padStart(2, '0')}/${data.mes.slice(5, 7)}` : ''
+}
+
+// =====================================================
+// PEDIDO CONTRA FACTURADO (V.69)
+// =====================================================
+
+function PedidoVsFacturado({ data }: { data: CierreMesData }) {
+  const r = data.pedidoVsFacturado
+  if (!r) return null
+  const t = r.totales
+  const descripcion =
+    'El precio de cada producto en la orden de compra contra el de la factura, sólo por lo que se entregó: ' +
+    'lo que no llegó no cuenta como "cobrado de menos". Netos, con el descuento del proveedor y sin IVA. ' +
+    `Entran ${r.facturasConOC} de ${r.facturasDelPeriodo} facturas, las que tienen OC.`
+
+  if (t.lineas === 0) {
+    return (
+      <Seccion titulo={`Pedido contra facturado${sufijoCorte(data)}`} descripcion={descripcion}>
+        <Tarjeta><span className="text-sm text-gray-500">No hay facturas con orden de compra en este mes.</span></Tarjeta>
+      </Seccion>
+    )
+  }
+
+  const pctDeMas = t.pedido > 0 ? (t.deMas / t.pedido) * 100 : 0
+  const pctAlPrecio = (t.alPrecio / t.lineas) * 100
+
+  return (
+    <Seccion titulo={`Pedido contra facturado${sufijoCorte(data)}`} descripcion={descripcion}>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Tarjeta className="border-red-200 bg-gradient-to-b from-red-50 to-white">
+          <Etiqueta>Cobrado de más</Etiqueta>
+          <div className="text-2xl font-semibold text-red-700 mt-1 font-mono break-all">{fmt(t.deMas)}</div>
+          <div className="text-xs text-gray-500 mt-1">
+            <span className="font-mono">{t.masCaras}</span> líneas con precio mayor al de la OC ·{' '}
+            <span className="font-mono">{pct(pctDeMas)}%</span> de lo pedido
+          </div>
+        </Tarjeta>
+        <Tarjeta>
+          <Etiqueta>Cobrado de menos</Etiqueta>
+          <div className="text-2xl font-semibold text-green-700 mt-1 font-mono break-all">−{fmt(Math.abs(t.deMenos))}</div>
+          <div className="text-xs text-gray-500 mt-1">
+            <span className="font-mono">{t.masBaratas}</span> líneas
+            {r.mayorDeMenos && (
+              <> · la mayor, {r.mayorDeMenos.proveedor} (<span className="font-mono">−{fmt(Math.abs(r.mayorDeMenos.monto))}</span>)</>
+            )}
+          </div>
+        </Tarjeta>
+        <Tarjeta>
+          <Etiqueta>Neto</Etiqueta>
+          <CifraGrande>{t.neto >= 0 ? '+' : '−'}{fmt(Math.abs(t.neto))}</CifraGrande>
+          <div className="text-xs text-gray-500 mt-1">
+            Pedido <span className="font-mono">{fmt(t.pedido)}</span> · facturado <span className="font-mono">{fmt(t.facturado)}</span>
+          </div>
+        </Tarjeta>
+        <Tarjeta>
+          <Etiqueta>Al precio de la OC</Etiqueta>
+          <CifraGrande>{Math.round(pctAlPrecio)}%</CifraGrande>
+          <div className="text-xs text-gray-500 mt-1">
+            <span className="font-mono">{t.alPrecio}</span> de <span className="font-mono">{t.lineas}</span> líneas sin diferencia
+          </div>
+        </Tarjeta>
+      </div>
+      {r.aRevisar > 0 && (
+        <p className="text-xs text-gray-500">
+          <span className="font-mono">{r.aRevisar}</span> {r.aRevisar === 1 ? 'línea difiere' : 'líneas difieren'} 50% o más y no se suman:
+          pueden ser una unidad distinta entre la OC y la factura, y conviene revisarlas.
+        </p>
+      )}
+    </Seccion>
+  )
 }
 
 // =====================================================

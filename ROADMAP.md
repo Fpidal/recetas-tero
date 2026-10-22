@@ -357,6 +357,10 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
     null. Para mostrarla hace falta un lugar donde cargar el número del INDEC una vez por mes.
   - **Consumo de eventos.** Ningún evento tiene consumo cargado, así que su incidencia no se
     puede medir.
+- **Solapa Pedido vs facturado** (maqueta del 22/10/26). Reemplaza a "Compras por Proveedor":
+  la tabla por proveedor de `compararPedidoFacturado()` con selector de período, el detalle de
+  líneas con su factura y la lista a revisar. Pendiente decidir qué se aparta: hoy todo lo de
+  50% o más, pero 11 de las 13 líneas de septiembre eran verdura con subas reales ($82.005).
 
 ### Más adelante
 

@@ -18,8 +18,9 @@ export const CHANGELOG: VersionEntry[] = [
       'Cierre de mes → Incidencia real por servicio: mediodía, noche y eventos en los últimos cinco meses, contra el objetivo de Configuración',
       'Cierre de mes → Tu inflación: cuánto subió lo que comprás (ponderado por lo que gastás en cada insumo) contra lo que subió tu ticket, mes a mes y por rubro',
       'Cierre de mes: el mes en curso se compara contra el anterior cortado el mismo día. Octubre al 21 contra septiembre entero mostraba las compras en −28%',
-      'Cierre de mes en PDF: dos hojas, la primera con el análisis y la segunda con el detalle de compras. Los porcentajes salen con coma',
+      'Cierre de mes en PDF: igual que en pantalla, con tarjetas, barras por proveedor, el medidor de cada servicio contra el objetivo y el gráfico de tu canasta contra tu ticket. Primero el análisis y después el detalle de compras. Los porcentajes salen con coma',
       'Cierre de mes: las secciones nuevas en tarjetas, como en la maqueta: barra por proveedor, reparto de la venta entre restaurante y eventos, un medidor por servicio contra el objetivo y el gráfico mes a mes de tu canasta contra tu ticket',
+      'Menús: al guardar o crear un menú vuelve a Carta → Menús. Antes llevaba a la pantalla vieja de menús, que ya no está en el menú lateral',
     ],
   },
   {

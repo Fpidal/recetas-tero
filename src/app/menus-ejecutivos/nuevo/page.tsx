@@ -304,7 +304,7 @@ export default function NuevoMenuEjecutivoPage() {
       return
     }
 
-    router.push('/menus-ejecutivos')
+    router.push('/carta?tab=ejecutivos')
   }
 
   const getTipoIcon = (tipo: string) => {

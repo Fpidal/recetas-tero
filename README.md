@@ -67,7 +67,7 @@ src/
 │   │   └── [id]/editar/
 │   ├── insumos/                  # Gestión de insumos/ingredientes
 │   ├── inventario/               # Control de inventario
-│   ├── menus-ejecutivos/         # Menús ejecutivos (accesible desde Carta)
+│   ├── menus-ejecutivos/         # Alta y edición de menús ejecutivos; el listado vive en Carta → Menús (el page.tsx de la raíz es la pantalla vieja, sin enlace)
 │   │   ├── nuevo/
 │   │   └── [id]/
 │   ├── menus-especiales/         # Menús especiales (accesible desde Carta)
@@ -203,7 +203,7 @@ después:
 - Compras por proveedor
 - Variación de precios, con alertas de aumentos
 - **ABC de insumos** — Pareto del gasto: qué insumos son el 80% de las compras (clase A), cuáles el 15% (B) y cuáles el 5% restante (C), con la volatilidad de precio de cada uno. Sirve tanto para saber qué vigilar como para dejar de perder tiempo con lo que no mueve la aguja.
-- **Cierre de mes** — la foto del mes: compras, ventas, incidencia real, cubiertos y ticket promedio contra el mes anterior. Debajo, desde V.66: **los 10 proveedores del mes** (con su puesto del mes anterior), **restaurante y eventos** por separado, **incidencia real por servicio** contra el objetivo, y **tu inflación** —la canasta de compras ponderada por gasto contra el ticket del restaurante—. Al final, compras por rubro, semana por semana y top 10 de insumos. El mes en curso se compara contra el anterior cortado el mismo día. Se baja en un PDF de dos hojas: análisis y detalle.
+- **Cierre de mes** — la foto del mes: compras, ventas, incidencia real, cubiertos y ticket promedio contra el mes anterior. Debajo, desde V.66: **los 10 proveedores del mes** (con su puesto del mes anterior), **restaurante y eventos** por separado, **incidencia real por servicio** contra el objetivo, y **tu inflación** —la canasta de compras ponderada por gasto contra el ticket del restaurante—. Al final, compras por rubro, semana por semana y top 10 de insumos. El mes en curso se compara contra el anterior cortado el mismo día. Se baja en PDF con el mismo diseño que la pantalla —tarjetas, barra por proveedor, medidor por servicio y el gráfico canasta contra ticket—: primero el análisis y después el detalle (tres hojas en un mes completo).
 
   **La canasta** toma el precio por kilo o litro de cada insumo (`precios_insumo`, por fecha de factura), su mediana del mes, y la variación contra el mes anterior ponderada por lo gastado en el período. Los saltos de más de 80% en un mes se descartan: casi siempre son errores de carga. Vive en `obtenerAnalisisCierre()` (`src/lib/cierre-mes-queries.ts`), aparte de `obtenerCierreMes()` para no cargarle consultas al Dashboard.
 

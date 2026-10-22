@@ -218,7 +218,7 @@ export default function EditarMenuEspecialPage({ params }: { params: { id: strin
 
     if (error || !menu) {
       alert('Menú no encontrado')
-      router.push('/menus-especiales')
+      router.push('/carta?tab=especiales')
       return
     }
 
@@ -509,7 +509,7 @@ export default function EditarMenuEspecialPage({ params }: { params: { id: strin
       return
     }
 
-    router.push('/menus-especiales')
+    router.push('/carta?tab=especiales')
   }
 
   if (isLoading) {

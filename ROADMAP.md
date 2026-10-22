@@ -361,6 +361,9 @@ en Supabase. Si el precio entra mal, se propaga a todo el sistema en silencio.
     null. Para mostrarla hace falta un lugar donde cargar el número del INDEC una vez por mes.
   - **Consumo de eventos.** Ningún evento tiene consumo cargado, así que su incidencia no se
     puede medir.
+- **Pantalla vieja de Menús.** `src/app/menus-ejecutivos/page.tsx` (~600 líneas) quedó sin
+  enlace desde que el listado pasó a Carta → Menús, pero hasta V.66 guardar un menú llevaba
+  ahí. Se arregló el destino; falta decidir si se borra o redirige a `/carta?tab=ejecutivos`.
 
 ### Más adelante
 

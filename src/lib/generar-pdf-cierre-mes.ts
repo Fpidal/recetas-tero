@@ -207,130 +207,274 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
   const margenTablas = { left: margin, right: margin, top: margin + 4, bottom: 18 }
 
   // =====================================================
+  // Piezas para dibujar como en pantalla (V.66): tarjetas, barras y medidores.
+  // jsPDF no trae gráficos: todo se arma con rectángulos y líneas.
+  // =====================================================
+  const VERDE: [number, number, number] = [47, 122, 79]
+  const AMARILLO: [number, number, number] = [183, 121, 31]
+  const ROJO: [number, number, number] = [178, 58, 58]
+  const FOREST: [number, number, number] = [27, 58, 45]
+  const GRIS_IPC: [number, number, number] = [138, 143, 152]
+  const BORDE: [number, number, number] = [226, 222, 216]
+  const GAP = 4
+
+  function tarjeta(x: number, yy: number, w: number, h: number) {
+    doc.setFillColor(255, 255, 255)
+    doc.setDrawColor(...BORDE)
+    doc.setLineWidth(0.25)
+    doc.roundedRect(x, yy, w, h, 1.8, 1.8, 'FD')
+  }
+  function etiqueta(texto: string, x: number, yy: number) {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(5.4)
+    doc.setTextColor(125, 120, 115)
+    doc.text(texto.toUpperCase(), x, yy, { charSpace: 0.25 })
+  }
+  function texto(t: string, x: number, yy: number, o: { tam?: number; color?: [number, number, number]; negrita?: boolean; alinear?: 'left' | 'right' | 'center'; ancho?: number } = {}) {
+    doc.setFont('helvetica', o.negrita ? 'bold' : 'normal')
+    doc.setFontSize(o.tam ?? 6.5)
+    doc.setTextColor(...(o.color ?? [60, 60, 60]))
+    const contenido = o.ancho ? (doc.splitTextToSize(t, o.ancho) as string[]) : t
+    doc.text(contenido, x, yy, { align: o.alinear ?? 'left' })
+    return Array.isArray(contenido) ? contenido.length : 1
+  }
+  /** Color de una variación: `invertido` = subir es malo (compras, costos) */
+  function colorDeVariacion(v: number | null, invertido = false): [number, number, number] {
+    if (v === null || !isFinite(v) || Math.abs(v) < 0.05) return [140, 140, 140]
+    return v > 0 === invertido ? ROJO : VERDE
+  }
+  /** Tarjeta chica de cifra: etiqueta, número grande y una línea abajo */
+  function tarjetaCifra(x: number, w: number, h: number, et: string, valor: string, abajo: string, colorValor?: [number, number, number]) {
+    tarjeta(x, y, w, h)
+    etiqueta(et, x + 3.5, y + 5)
+    texto(valor, x + 3.5, y + 11.5, { tam: 12, negrita: true, color: colorValor ?? [30, 30, 30] })
+    texto(abajo, x + 3.5, y + h - 3, { tam: 5.8, color: [125, 125, 125], ancho: w - 7 })
+  }
+  function triangulo(x: number, yy: number, arriba: boolean, color: [number, number, number]) {
+    doc.setFillColor(...color)
+    if (arriba) doc.triangle(x, yy, x + 2, yy, x + 1, yy - 1.8, 'F')
+    else doc.triangle(x, yy - 1.8, x + 2, yy - 1.8, x + 1, yy, 'F')
+  }
+  const tercio = (contentWidth - GAP * 2) / 3
+  const mitad = (contentWidth - GAP) / 2
+
+  // =====================================================
   // 2 · LOS 10 PROVEEDORES DEL MES
   // =====================================================
   if (data.proveedores && data.proveedores.length > 0) {
     const top = data.proveedores
     const sumaTop = top.reduce((t, p) => t + p.monto, 0)
-    titulo('LOS 10 PROVEEDORES DEL MES', 70)
+    const maximo = top[0]?.monto || 1
+    const cuenta = data.proveedoresConCompras
+    const mesPrevioCorto = nombreMes(data.mesPrevio).split(' ')[0]
+    titulo('LOS 10 PROVEEDORES DEL MES', 110)
+    y += 1
+
+    const vCompras = variacion(totalCompras, data.compras.previo)
+    tarjetaCifra(margin, tercio, 19, 'Compras del mes', fmt(totalCompras), `${mesPrevioCorto}: ${fmt(data.compras.previo)}  (${fmtVar(vCompras)})`)
+    tarjetaCifra(margin + tercio + GAP, tercio, 19, 'Los 10 primeros', totalCompras > 0 ? `${dec((sumaTop / totalCompras) * 100)}%` : '—', `${fmt(sumaTop)} de las compras del mes`)
+    tarjetaCifra(margin + (tercio + GAP) * 2, tercio, 19, 'Proveedores con factura', cuenta ? String(cuenta.mes) : '—', cuenta ? `${mesPrevioCorto}: ${cuenta.previo}` : '')
+    y += 19 + GAP
+
+    const anchoTabla = contentWidth - tercio - GAP
+    const yTabla = y
     autoTable(doc, {
       ...estiloTabla,
-      margin: margenTablas,
+      margin: { ...margenTablas, right: pageWidth - margin - anchoTabla },
+      tableWidth: anchoTabla,
       startY: y,
-      head: [['#', 'Proveedor', 'Mes', '% compras', 'Mes anterior', 'Var.', 'Puesto']],
-      body: top.map((p) => {
-        let puesto = '='
-        if (p.puestoPrevio === null) puesto = 'nuevo'
-        else if (p.puesto !== null && p.puestoPrevio > p.puesto) puesto = `sube ${p.puestoPrevio - p.puesto}`
-        else if (p.puesto !== null && p.puestoPrevio < p.puesto) puesto = `baja ${p.puesto - p.puestoPrevio}`
-        return [
-          String(p.puesto ?? ''),
-          p.nombre,
-          fmt(p.monto),
-          pctMes(p.monto, totalCompras),
-          p.montoPrevio > 0 ? fmt(p.montoPrevio) : '—',
-          p.montoPrevio > 0 ? fmtVar(variacion(p.monto, p.montoPrevio)) : '—',
-          puesto,
-        ]
-      }),
-      foot: [['', 'LOS 10 PRIMEROS', fmt(sumaTop), pctMes(sumaTop, totalCompras), '', '', '']],
+      head: [['#', 'Proveedor', 'Mes', '% mes', 'Anterior', 'Var.', 'Puesto']],
+      body: top.map((p) => [
+        String(p.puesto ?? ''),
+        p.nombre,
+        fmt(p.monto),
+        pctMes(p.monto, totalCompras),
+        p.montoPrevio > 0 ? fmt(p.montoPrevio) : '—',
+        p.montoPrevio > 0 ? fmtVar(variacion(p.monto, p.montoPrevio)) : '—',
+        '',
+      ]),
+      bodyStyles: { ...estiloTabla.bodyStyles, minCellHeight: 6.4, valign: 'top', cellPadding: { top: 1.3, bottom: 1.6, left: 1.2, right: 1.2 } },
       columnStyles: {
-        0: { halign: 'right', cellWidth: 7, textColor: [150, 150, 150] },
-        2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' },
-        6: { halign: 'center', cellWidth: 16 },
+        0: { halign: 'right', cellWidth: 6, textColor: [150, 150, 150] },
+        2: { halign: 'right', fontStyle: 'bold' }, 3: { halign: 'right' }, 4: { halign: 'right', textColor: [130, 130, 130] }, 5: { halign: 'right' },
+        6: { cellWidth: 13 },
       },
       didParseCell: (c) => {
+        if (c.section === 'body' && c.column.index === 5) {
+          const col = colorVar(String(c.cell.raw))
+          if (col) c.cell.styles.textColor = col
+        }
+      },
+      didDrawCell: (c) => {
         if (c.section !== 'body') return
-        const t = String(c.cell.raw)
+        const p = top[c.row.index]
+        if (c.column.index === 1) {
+          // Barra del proveedor, proporcional al primero
+          doc.setFillColor(...FOREST)
+          doc.rect(c.cell.x + 1.2, c.cell.y + c.cell.height - 1.9, (c.cell.width - 2.4) * (p.monto / maximo), 0.9, 'F')
+        }
         if (c.column.index === 6) {
-          if (t.startsWith('sube')) c.cell.styles.textColor = [47, 122, 79]
-          else if (t.startsWith('baja')) c.cell.styles.textColor = [178, 58, 58]
-          else if (t === 'nuevo') { c.cell.styles.textColor = [...TERRACOTA]; c.cell.styles.fontStyle = 'bold' }
-          else c.cell.styles.textColor = [150, 150, 150]
+          const cx = c.cell.x + c.cell.width / 2
+          const cy = c.cell.y + 3.9
+          if (p.puestoPrevio === null) {
+            doc.setFillColor(...rgb(PALETA.terracottaBg))
+            doc.roundedRect(cx - 5, cy - 2.6, 10, 3.4, 1.6, 1.6, 'F')
+            texto('nuevo', cx, cy, { tam: 5.5, negrita: true, color: TERRACOTA, alinear: 'center' })
+          } else if (p.puesto === null || p.puesto === p.puestoPrevio) {
+            texto('=', cx, cy, { tam: 6.5, color: [170, 170, 170], alinear: 'center' })
+          } else {
+            const sube = p.puesto < p.puestoPrevio
+            const color = sube ? VERDE : ROJO
+            triangulo(cx - 2.6, cy, sube, color)
+            texto(String(Math.abs(p.puestoPrevio - p.puesto)), cx + 0.4, cy, { tam: 6.3, color })
+          }
         }
       },
     })
-    y = (doc as any).lastAutoTable.finalY + 3
+    const finTabla = (doc as any).lastAutoTable.finalY
 
+    // Al costado: los que salieron del top 10
+    const xS = margin + anchoTabla + GAP
     const salieron = data.proveedoresSalieron || []
-    if (salieron.length > 0) {
-      nota(
-        'Salieron del top 10: ' +
-          salieron
-            .map((p) => `${p.nombre} (${p.puestoPrevio}° el mes anterior, ${p.monto > 0 ? `hoy ${p.puesto}°, ${fmtVar(variacion(p.monto, p.montoPrevio))}` : 'sin compras'})`)
-            .join(' · ') + '.'
-      )
+    tarjeta(xS, yTabla, tercio, finTabla - yTabla)
+    etiqueta('Salieron del top 10', xS + 3.5, yTabla + 5)
+    let yS = yTabla + 10
+    if (salieron.length === 0) {
+      texto('Los mismos diez que el mes anterior.', xS + 3.5, yS, { tam: 6, color: [125, 125, 125], ancho: tercio - 7 })
     }
-    y += 1.5
+    for (const p of salieron) {
+      if (yS > finTabla - 8) break
+      texto(p.nombre, xS + 3.5, yS, { tam: 6.5, negrita: true, color: [40, 40, 40], ancho: tercio - 7 })
+      texto(`${p.puestoPrevio}° el mes anterior`, xS + tercio - 3.5, yS, { tam: 5.3, color: [150, 150, 150], alinear: 'right' })
+      const v = p.monto > 0 ? variacion(p.monto, p.montoPrevio) : null
+      texto(`${fmt(p.montoPrevio)}  a  ${fmt(p.monto)}`, xS + 3.5, yS + 3.6, { tam: 5.8, color: [100, 100, 100] })
+      texto(p.monto > 0 ? `hoy ${p.puesto}° · ${fmtVar(v)}` : 'sin compras', xS + tercio - 3.5, yS + 3.6, { tam: 5.8, color: p.monto > 0 ? colorDeVariacion(v, true) : [150, 150, 150], alinear: 'right' })
+      doc.setDrawColor(238, 234, 228)
+      doc.setLineWidth(0.15)
+      doc.line(xS + 3.5, yS + 6, xS + tercio - 3.5, yS + 6)
+      yS += 9.5
+    }
+    y = finTabla + 7
   }
 
   // =====================================================
   // 3 · RESTAURANTE Y EVENTOS
   // =====================================================
-  // Reemplaza a "Ventas por servicio": las mismas filas, más el subtotal del
-  // restaurante y la comparación con el mes anterior. Los eventos venden mucho
-  // en pocos días y con otro ticket; mezclados, mueven todos los promedios.
-  titulo('RESTAURANTE Y EVENTOS', 40)
   if (data.faltaVentas) {
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7)
-    doc.setTextColor(150, 90, 40)
-    doc.text(`Sin ventas cargadas en ${nombreMes(data.mes)}.`, margin, y + 3)
-    y += 8
+    titulo('RESTAURANTE Y EVENTOS', 20)
+    texto(`Sin ventas cargadas en ${nombreMes(data.mes)}.`, margin, y + 3, { tam: 7, color: [150, 90, 40] })
+    y += 10
   } else {
-    const de = (lista: typeof data.ventasPorServicio | undefined, s: string) =>
+    type Par = { venta: number; cubiertos: number }
+    const de = (lista: typeof data.ventasPorServicio | undefined, s: string): Par =>
       lista?.find((v) => v.servicio === s) || { venta: 0, cubiertos: 0 }
+    const suma = (a: Par, b: Par): Par => ({ venta: a.venta + b.venta, cubiertos: a.cubiertos + b.cubiertos })
     const prev = data.ventasPorServicioPrevio
-    const fila = (nombre: string, actual: { venta: number; cubiertos: number }, previo: { venta: number; cubiertos: number } | null) => [
-      nombre,
-      fmt(actual.venta),
-      pctMes(actual.venta, data.ventas.mes),
-      actual.cubiertos.toLocaleString('es-AR'),
-      actual.cubiertos > 0 ? fmt(actual.venta / actual.cubiertos) : '—',
-      previo && previo.venta > 0 ? fmt(previo.venta) : '—',
-      previo && previo.venta > 0 ? fmtVar(variacion(actual.venta, previo.venta)) : '—',
-    ]
-    const suma = (a: { venta: number; cubiertos: number }, b: { venta: number; cubiertos: number }) => ({
-      venta: a.venta + b.venta,
-      cubiertos: a.cubiertos + b.cubiertos,
-    })
     const med = de(data.ventasPorServicio, 'mediodia')
     const noc = de(data.ventasPorServicio, 'noche')
     const eve = de(data.ventasPorServicio, 'eventos')
     const rest = suma(med, noc)
-    const restPrev = prev ? suma(de(prev, 'mediodia'), de(prev, 'noche')) : null
-    autoTable(doc, {
-      ...estiloTabla,
-      margin: margenTablas,
-      startY: y,
-      head: [['', 'Venta', '% venta', 'Cubiertos', 'Ticket', 'Mes anterior', 'Var.']],
-      body: [
-        fila('   Mediodía', med, prev ? de(prev, 'mediodia') : null),
-        fila('   Noche', noc, prev ? de(prev, 'noche') : null),
-        fila('Restaurante', rest, restPrev),
-        fila('Eventos', eve, prev ? de(prev, 'eventos') : null),
-      ],
-      foot: [fila('TOTAL', { venta: data.ventas.mes, cubiertos: data.ventas.cubiertos }, { venta: data.ventas.previo, cubiertos: data.ventas.cubiertosPrevio })],
-      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
-      didParseCell: (c) => {
-        if (c.section === 'body' && c.row.index >= 2) c.cell.styles.fontStyle = 'bold'
-        if (c.section === 'body' && c.row.index < 2) c.cell.styles.textColor = [110, 110, 110]
-      },
-    })
-    y = (doc as any).lastAutoTable.finalY + 3
+    const evePrev = prev ? de(prev, 'eventos') : null
+    const total = data.ventas.mes
+    const lineas: { nombre: string; actual: Par; previo: Par | null; sub?: boolean }[] = [
+      { nombre: 'Restaurante', actual: rest, previo: prev ? suma(de(prev, 'mediodia'), de(prev, 'noche')) : null },
+      { nombre: 'Mediodía', actual: med, previo: prev ? de(prev, 'mediodia') : null, sub: true },
+      { nombre: 'Noche', actual: noc, previo: prev ? de(prev, 'noche') : null, sub: true },
+      { nombre: 'Eventos', actual: eve, previo: evePrev },
+    ]
+    const altoTarjeta = 31 + lineas.length * 7.4
+    const hayAviso = eve.venta > 0
+    titulo('RESTAURANTE Y EVENTOS', altoTarjeta + (hayAviso ? 16 : 6))
+    y += 1
 
-    // Compras sobre venta: con eventos en el mes, ninguno de los dos números es
-    // el real, porque las facturas no dicen para qué fue cada compra
-    const sobreTotal = data.ventas.mes > 0 ? (totalCompras / data.ventas.mes) * 100 : null
-    const sobreRest = rest.venta > 0 ? (totalCompras / rest.venta) * 100 : null
-    if (sobreTotal !== null) {
-      nota(
-        eve.venta > 0 && sobreRest !== null
-          ? `Compras sobre venta: ${dec(sobreTotal)}% de la venta total y ${dec(sobreRest)}% de la del restaurante. Ninguno es el real: las facturas no dicen si la compra fue para el salón o para un evento.`
-          : `Compras sobre venta: ${dec(sobreTotal)}%. Sin eventos en el mes, es todo del restaurante.`
-      )
+    // Izquierda: la venta y su reparto
+    tarjeta(margin, y, mitad, altoTarjeta)
+    etiqueta(`Venta del mes${data.hastaDia ? ` al día ${data.hastaDia}` : ''}`, margin + 3.5, y + 5)
+    texto(fmt(total), margin + 3.5, y + 12, { tam: 12, negrita: true, color: [30, 30, 30] })
+    const anchoBarra = mitad - 7
+    const pRest = total > 0 ? rest.venta / total : 0
+    const yBarra = y + 15.5
+    doc.setFillColor(240, 238, 234)
+    doc.roundedRect(margin + 3.5, yBarra, anchoBarra, 5, 1, 1, 'F')
+    if (pRest > 0) {
+      doc.setFillColor(...FOREST)
+      doc.rect(margin + 3.5, yBarra, anchoBarra * pRest, 5, 'F')
+      if (pRest > 0.12) texto(`${dec(pRest * 100)}%`, margin + 5, yBarra + 3.5, { tam: 5.8, negrita: true, color: [255, 255, 255] })
     }
-    y += 1.5
+    if (eve.venta > 0) {
+      doc.setFillColor(...TERRACOTA)
+      doc.rect(margin + 3.5 + anchoBarra * pRest, yBarra, anchoBarra * (1 - pRest), 5, 'F')
+      if (1 - pRest > 0.12) texto(`${dec((1 - pRest) * 100)}%`, margin + 5 + anchoBarra * pRest, yBarra + 3.5, { tam: 5.8, negrita: true, color: [255, 255, 255] })
+    }
+    // Leyenda
+    doc.setFillColor(...FOREST); doc.rect(margin + 3.5, yBarra + 7, 2, 2, 'F')
+    texto('Restaurante (mediodía y noche)', margin + 6.5, yBarra + 8.7, { tam: 5.6, color: [120, 120, 120] })
+    doc.setFillColor(...TERRACOTA); doc.rect(margin + 42, yBarra + 7, 2, 2, 'F')
+    texto('Eventos', margin + 45, yBarra + 8.7, { tam: 5.6, color: [120, 120, 120] })
+
+    let yL = yBarra + 15
+    const mesPrevioCorto = nombreMes(data.mesPrevio).split(' ')[0]
+    for (const l of lineas) {
+      const xN = margin + 3.5 + (l.sub ? 3 : 0)
+      texto(l.nombre, xN, yL, { tam: 6.5, negrita: !l.sub, color: l.sub ? [120, 120, 120] : [40, 40, 40] })
+      const ticket = l.actual.cubiertos > 0 ? fmt(l.actual.venta / l.actual.cubiertos) : '—'
+      texto(`${fmt(l.actual.venta)} · ${l.actual.cubiertos.toLocaleString('es-AR')} cub. · ticket ${ticket}`, margin + mitad - 3.5, yL, { tam: 6, color: [50, 50, 50], alinear: 'right' })
+      if (l.previo && l.previo.venta > 0) {
+        const v = variacion(l.actual.venta, l.previo.venta)
+        texto(`${mesPrevioCorto}: ${fmt(l.previo.venta)}  ${fmtVar(v)}`, margin + mitad - 3.5, yL + 2.9, { tam: 5.2, color: colorDeVariacion(v), alinear: 'right' })
+      }
+      yL += 7.4
+    }
+
+    // Derecha: compras sobre venta
+    const xR = margin + mitad + GAP
+    tarjeta(xR, y, mitad, altoTarjeta)
+    etiqueta('Compras sobre venta', xR + 3.5, y + 5)
+    const ratios: { t: string; v: number | null; d: string }[] = [
+      {
+        t: 'Sobre la venta total',
+        v: total > 0 ? (totalCompras / total) * 100 : null,
+        d: `${fmt(totalCompras)} de compras ÷ ${fmt(total)}.${eve.venta > 0 ? ' Lo baja la venta de eventos.' : ''}`,
+      },
+    ]
+    if (eve.venta > 0) {
+      ratios.push({
+        t: 'Sobre la venta del restaurante',
+        v: rest.venta > 0 ? (totalCompras / rest.venta) * 100 : null,
+        d: `Las mismas compras ÷ ${fmt(rest.venta)}. Lo sube lo comprado para eventos.`,
+      })
+    }
+    if (data.ventas.previo > 0) {
+      ratios.push({
+        t: `${nombreMes(data.mesPrevio)}${evePrev && evePrev.venta === 0 ? ', sin eventos' : ''}`,
+        v: (data.compras.previo / data.ventas.previo) * 100,
+        d: `${fmt(data.compras.previo)} ÷ ${fmt(data.ventas.previo)}${data.hastaDia ? ', al mismo día' : ''}.`,
+      })
+    }
+    let yR = y + 12
+    ratios.forEach((r, i) => {
+      if (i > 0) {
+        doc.setDrawColor(238, 234, 228); doc.setLineWidth(0.15)
+        doc.line(xR + 3.5, yR - 5, xR + mitad - 3.5, yR - 5)
+      }
+      texto(r.t, xR + 3.5, yR, { tam: 6.8, color: [60, 60, 60] })
+      texto(r.v === null ? '—' : `${dec(r.v)}%`, xR + mitad - 3.5, yR + 0.5, { tam: 11, negrita: true, color: [30, 30, 30], alinear: 'right' })
+      texto(r.d, xR + 3.5, yR + 3.6, { tam: 5.4, color: [140, 140, 140], ancho: mitad - 28 })
+      yR += 13
+    })
+    y += altoTarjeta + 3
+
+    if (hayAviso) {
+      const msg = 'Ninguno de los dos porcentajes es el real: las facturas no dicen si la compra fue para el salón o para un evento. La incidencia real (abajo) no tiene este problema, porque se calcula con el consumo de cada servicio.'
+      doc.setFontSize(6)
+      const lineasAviso = doc.splitTextToSize(msg, contentWidth - 8) as string[]
+      const h = lineasAviso.length * 2.7 + 4
+      doc.setFillColor(253, 245, 227); doc.setDrawColor(235, 221, 191); doc.setLineWidth(0.25)
+      doc.roundedRect(margin, y, contentWidth, h, 1.5, 1.5, 'FD')
+      texto(msg, margin + 4, y + 4, { tam: 6, color: [94, 69, 18], ancho: contentWidth - 8 })
+      y += h + 3
+    }
+    y += 4
   }
 
   // =====================================================
@@ -338,44 +482,95 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
   // =====================================================
   if (data.incidenciaPorServicio && data.incidenciaPorServicio.length > 0) {
     const servicios = data.incidenciaPorServicio
-    const meses = servicios[0].historia.map((h) => h.mes)
-    titulo(`INCIDENCIA REAL POR SERVICIO  ·  OBJETIVO ${objetivos.incidencia}% (± ${objetivos.tolerancia} PTS)`, 30)
-    const ESTADO_TXT = { ok: 'Dentro', warning: 'En tolerancia', danger: 'Fuera' } as const
-    autoTable(doc, {
-      ...estiloTabla,
-      margin: margenTablas,
-      startY: y,
-      head: [['Servicio', ...meses.map(mesCorto), mesCorto(data.mes).toUpperCase(), 'Estado', 'Servicios con consumo']],
-      body: servicios.map((s) => {
-        const tiene = s.resumen.diasConCarga > 0 && s.resumen.ventaConCosto > 0
-        const estado = tiene ? estadoContraObjetivo(s.resumen.incidencia, objetivos.incidencia, objetivos.tolerancia) : null
-        return [
-          SERVICIO_LABEL[s.servicio] || s.servicio,
-          ...s.historia.map((h) => (h.incidencia === null ? '—' : `${dec(h.incidencia)}%`)),
-          tiene ? `${dec(s.resumen.incidencia)}%` : '—',
-          estado ? ESTADO_TXT[estado as keyof typeof ESTADO_TXT] ?? '' : 'Sin consumo',
-          `${s.resumen.diasConCarga} de ${s.resumen.diasConVenta}`,
-        ]
-      }),
-      columnStyles: Object.fromEntries(
-        Array.from({ length: meses.length + 1 }, (_, i) => [i + 1, { halign: 'right' }])
-      ),
-      didParseCell: (c) => {
-        if (c.section !== 'body') return
-        const colMes = meses.length + 1
-        if (c.column.index < colMes && c.column.index > 0) c.cell.styles.textColor = [130, 130, 130]
-        if (c.column.index === colMes) c.cell.styles.fontStyle = 'bold'
-        if (c.column.index === colMes + 1) {
-          const t = String(c.cell.raw)
-          c.cell.styles.fontStyle = 'bold'
-          c.cell.styles.textColor =
-            t === 'Dentro' ? [47, 122, 79] : t === 'En tolerancia' ? [154, 107, 18] : t === 'Fuera' ? [178, 58, 58] : [150, 150, 150]
+    const altoT = 50
+    titulo(`INCIDENCIA REAL POR SERVICIO  ·  OBJETIVO ${objetivos.incidencia}% (± ${objetivos.tolerancia} PTS)`, altoT + 6)
+    y += 1
+    const ESTADO = {
+      ok: { t: 'Dentro del objetivo', c: VERDE, bg: [234, 244, 238] as [number, number, number] },
+      warning: { t: 'En tolerancia', c: AMARILLO, bg: [253, 245, 227] as [number, number, number] },
+      danger: { t: 'Fuera del objetivo', c: ROJO, bg: [251, 236, 236] as [number, number, number] },
+    } as const
+    const tope = objetivos.incidencia + 10
+
+    servicios.forEach((s, i) => {
+      const x = margin + i * (tercio + GAP)
+      tarjeta(x, y, tercio, altoT)
+      const tiene = s.resumen.diasConCarga > 0 && s.resumen.ventaConCosto > 0
+      const valor = s.resumen.incidencia
+      const est = tiene ? ESTADO[estadoContraObjetivo(valor, objetivos.incidencia, objetivos.tolerancia) as keyof typeof ESTADO] : null
+      etiqueta(SERVICIO_LABEL[s.servicio] || s.servicio, x + 3.5, y + 5)
+      texto(tiene ? `${dec(valor)}%` : '—', x + 3.5, y + 12.5, { tam: 13, negrita: true, color: tiene ? [30, 30, 30] : [190, 190, 190] })
+      // Pastilla de estado
+      const pill = est ? est.t : 'Sin consumo cargado'
+      doc.setFontSize(5.3)
+      const anchoPill = doc.getTextWidth(pill) + 4
+      doc.setFillColor(...(est ? est.bg : ([240, 238, 234] as [number, number, number])))
+      doc.roundedRect(x + tercio - 3.5 - anchoPill, y + 2.6, anchoPill, 3.6, 1.8, 1.8, 'F')
+      texto(pill, x + tercio - 3.5 - anchoPill / 2, y + 5.2, { tam: 5.3, negrita: true, color: est ? est.c : [120, 120, 120], alinear: 'center' })
+
+      // Medidor
+      const gx = x + 3.5
+      const gw = tercio - 7
+      const gy = y + 16.5
+      const aX = (v: number) => gx + gw * Math.min(1, Math.max(0, v / tope))
+      doc.setFillColor(240, 238, 234)
+      doc.roundedRect(gx, gy, gw, 2.2, 1.1, 1.1, 'F')
+      doc.setFillColor(242, 225, 190)
+      doc.rect(aX(objetivos.incidencia), gy, aX(objetivos.incidencia + objetivos.tolerancia) - aX(objetivos.incidencia), 2.2, 'F')
+      if (tiene && est) {
+        doc.setFillColor(...est.c)
+        doc.roundedRect(gx, gy, Math.max(1.2, aX(valor) - gx), 2.2, 1.1, 1.1, 'F')
+      }
+      doc.setFillColor(26, 26, 26)
+      doc.rect(aX(objetivos.incidencia) - 0.25, gy - 1, 0.5, 4.2, 'F')
+      texto('0%', gx, gy + 5.3, { tam: 5, color: [160, 160, 160] })
+      texto(`objetivo ${objetivos.incidencia}%`, aX(objetivos.incidencia), gy + 5.3, { tam: 5, color: [160, 160, 160], alinear: 'center' })
+      texto(`${tope}%`, gx + gw, gy + 5.3, { tam: 5, color: [160, 160, 160], alinear: 'right' })
+
+      // Curva de los meses
+      const serie = [...s.historia, { mes: data.mes, incidencia: tiene ? valor : null }]
+      const puntos = serie.map((p, k) => ({ k, v: p.incidencia, mes: p.mes })).filter((p) => p.v !== null) as { k: number; v: number; mes: string }[]
+      const sy = gy + 9
+      const sh = 10
+      if (puntos.length >= 2) {
+        const vals = [...puntos.map((p) => p.v), objetivos.incidencia]
+        const min = Math.min(...vals) - 2
+        const max = Math.max(...vals) + 1
+        const px = (k: number) => gx + 1.5 + (gw - 3) * (k / (serie.length - 1))
+        const py = (v: number) => sy + sh - ((v - min) / (max - min)) * sh
+        doc.setDrawColor(60, 60, 60); doc.setLineWidth(0.15)
+        ;(doc as any).setLineDashPattern([0.8, 0.8], 0)
+        doc.line(gx, py(objetivos.incidencia), gx + gw, py(objetivos.incidencia))
+        ;(doc as any).setLineDashPattern([], 0)
+        const color = est ? est.c : ([155, 148, 140] as [number, number, number])
+        doc.setDrawColor(...color); doc.setLineWidth(0.5)
+        for (let k = 1; k < puntos.length; k++) {
+          doc.line(px(puntos[k - 1].k), py(puntos[k - 1].v), px(puntos[k].k), py(puntos[k].v))
         }
-      },
+        doc.setFillColor(...color)
+        puntos.forEach((p, k) => doc.circle(px(p.k), py(p.v), k === puntos.length - 1 ? 0.75 : 0.45, 'F'))
+        const ini = puntos[0]
+        const fin = puntos[puntos.length - 1]
+        texto(`${mesCorto(ini.mes)} ${dec(ini.v)}`, gx, sy + sh + 3, { tam: 5, color: [160, 160, 160] })
+        texto(`${mesCorto(fin.mes)} ${dec(fin.v)}`, gx + gw, sy + sh + 3, { tam: 5, color: [160, 160, 160], alinear: 'right' })
+      }
+
+      // Muestreo y lectura
+      let pie: string
+      if (tiene) {
+        pie = `${s.resumen.diasConCarga} de ${s.resumen.diasConVenta} servicios con consumo`
+        const ini = puntos[0]
+        if (ini && ini.mes !== data.mes && Math.abs(valor - ini.v) >= 1) {
+          pie += ` · ${valor > ini.v ? 'subió' : 'bajó'} ${dec(Math.abs(valor - ini.v))} puntos desde ${nombreMes(ini.mes).split(' ')[0].toLowerCase()}`
+        }
+      } else if (s.resumen.diasConVenta > 0) {
+        pie = `0 de ${s.resumen.diasConVenta} con consumo. Sin cargar lo que se usó no hay forma de saber si deja margen.`
+      } else {
+        pie = 'Sin ventas en el mes.'
+      }
+      texto(pie, x + 3.5, y + altoT - 6, { tam: 5.6, color: [100, 100, 100], ancho: tercio - 7 })
     })
-    y = (doc as any).lastAutoTable.finalY + 3
-    nota('Costo de lo que salió de cocina sobre la venta de ese servicio. Sólo cuenta los servicios con consumo cargado; el muestreo va al lado.')
-    y += 1.5
+    y += altoT + 7
   }
 
   // =====================================================
@@ -389,38 +584,95 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
     const acCanasta = acumular(c.meses.map((m) => m.canasta))
     const acTicket = acumular(c.meses.map((m) => m.ticket))
     const acIpc = hayIpc ? acumular(c.meses.map((m) => m.ipc)) : null
+    const desde = nombreMes(c.desde).split(' ')[0].toLowerCase()
+    const hasta = nombreMes(data.mes).split(' ')[0].toLowerCase()
+    const altoGrafico = 62
 
-    titulo(`TU INFLACIÓN  ·  ${nombreMes(c.desde).toUpperCase()} A ${nombreMes(data.mes).toUpperCase()}`, 55)
-    const anchoIzq = contentWidth * 0.52
-    const yInicio = y
-    autoTable(doc, {
-      ...estiloTabla,
-      margin: { ...margenTablas, right: pageWidth - margin - anchoIzq },
-      tableWidth: anchoIzq,
-      startY: yInicio,
-      head: [['Mes', 'Tu canasta', 'Ticket restaurante', ...(hayIpc ? ['IPC INDEC'] : [])]],
-      body: c.meses.map((m) => [
-        nombreMes(m.mes),
-        fmtVar(m.canasta),
-        fmtVar(m.ticket),
-        ...(hayIpc ? [m.ipc === null ? 'sin publicar' : fmtVar(m.ipc)] : []),
-      ]),
-      foot: [['ACUMULADO', fmtVar(acCanasta), fmtVar(acTicket), ...(hayIpc ? [fmtVar(acIpc)] : [])]],
-      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+    titulo(`TU INFLACIÓN  ·  ${nombreMes(c.desde).toUpperCase()} A ${nombreMes(data.mes).toUpperCase()}`, 19 + GAP + altoGrafico + 6)
+    y += 1
+    tarjetaCifra(margin, tercio, 19, `Tu canasta, ${desde} a ${hasta}`, fmtVar(acCanasta), `Ponderada por gasto, ${c.insumos} insumos`, colorDeVariacion(acCanasta, true))
+    tarjetaCifra(margin + tercio + GAP, tercio, 19, `Ticket restaurante, ${desde} a ${hasta}`, fmtVar(acTicket), 'Mediodía y noche, sin eventos', colorDeVariacion(acTicket))
+    const x3 = margin + (tercio + GAP) * 2
+    if (hayIpc) {
+      tarjetaCifra(x3, tercio, 19, `IPC INDEC, ${desde} a ${hasta}`, fmtVar(acIpc), 'Inflación general', colorDeVariacion(acIpc, true))
+    } else {
+      tarjeta(x3, y, tercio, 19)
+      etiqueta('Lectura', x3 + 3.5, y + 5)
+      const lectura =
+        acCanasta === null || acTicket === null
+          ? 'Faltan meses con datos para comparar.'
+          : acTicket >= acCanasta
+            ? `Tu ticket subió ${dec(acTicket - acCanasta)} puntos más que lo que comprás: el margen se sostiene.`
+            : `Lo que comprás subió ${dec(acCanasta - acTicket)} puntos más que tu ticket: el margen se achica.`
+      texto(lectura, x3 + 3.5, y + 9.5, { tam: 6.4, color: [50, 50, 50], ancho: tercio - 7 })
+    }
+    y += 19 + GAP
+
+    // Gráfico mes a mes, dibujado a mano
+    const yG = y
+    tarjeta(margin, yG, mitad, altoGrafico)
+    etiqueta('Mes a mes', margin + 3.5, yG + 5)
+    const series: { clave: 'canasta' | 'ticket' | 'ipc'; color: [number, number, number]; nombre: string }[] = [
+      { clave: 'canasta', color: TERRACOTA, nombre: 'Tu canasta' },
+      { clave: 'ticket', color: FOREST, nombre: 'Ticket restaurante' },
+      ...(hayIpc ? [{ clave: 'ipc' as const, color: GRIS_IPC, nombre: 'IPC' }] : []),
+    ]
+    const valores = c.meses.flatMap((m) => series.map((s) => m[s.clave])).filter((v): v is number => v !== null)
+    const vMax = Math.max(1, ...valores)
+    const vMin = Math.min(0, ...valores)
+    const paso = vMax - vMin > 10 ? 5 : 2
+    const techo = Math.ceil(vMax / paso) * paso
+    const piso = Math.floor(vMin / paso) * paso
+    const ax = margin + 13
+    const aw = mitad - 17
+    const ay = yG + 9
+    const ah = altoGrafico - 22
+    const gy = (v: number) => ay + ah - ((v - piso) / (techo - piso)) * ah
+    for (let v = piso; v <= techo + 0.001; v += paso) {
+      doc.setDrawColor(v === 0 ? 155 : 236, v === 0 ? 148 : 233, v === 0 ? 140 : 228)
+      doc.setLineWidth(v === 0 ? 0.3 : 0.15)
+      doc.line(ax, gy(v), ax + aw, gy(v))
+      texto(`${v}%`, ax - 1.5, gy(v) + 1, { tam: 5, color: [150, 150, 150], alinear: 'right' })
+    }
+    const grupo = aw / c.meses.length
+    const barra = Math.min(6, (grupo * 0.7) / series.length)
+    c.meses.forEach((m, i) => {
+      const inicio = ax + grupo * i + (grupo - barra * series.length) / 2
+      series.forEach((s, k) => {
+        const v = m[s.clave]
+        if (v === null) return
+        doc.setFillColor(...s.color)
+        const y0 = gy(0)
+        const y1 = gy(v)
+        doc.rect(inicio + barra * k, Math.min(y0, y1), barra - 0.4, Math.max(0.3, Math.abs(y1 - y0)), 'F')
+      })
+      texto(mesCorto(m.mes), ax + grupo * i + grupo / 2, ay + ah + 4, { tam: 5.6, color: [120, 120, 120], alinear: 'center' })
     })
-    const finIzq = (doc as any).lastAutoTable.finalY
+    let xLey = margin + 3.5
+    series.forEach((s) => {
+      doc.setFillColor(...s.color)
+      doc.rect(xLey, yG + altoGrafico - 6.3, 2, 2, 'F')
+      texto(s.nombre, xLey + 3, yG + altoGrafico - 4.6, { tam: 5.6, color: [120, 120, 120] })
+      doc.setFontSize(5.6)
+      xLey += doc.getTextWidth(s.nombre) + 8
+    })
+    if (data.hastaDia) {
+      texto(`${nombreMes(data.mes).split(' ')[0]}, al día ${data.hastaDia}.`, margin + mitad - 3.5, yG + altoGrafico - 4.6, { tam: 5.2, color: [160, 160, 160], alinear: 'right' })
+    }
 
+    // Por rubro, al lado
     const gastoTotal = c.rubros.reduce((t, r) => t + r.gasto, 0)
     autoTable(doc, {
       ...estiloTabla,
-      margin: { ...margenTablas, left: margin + anchoIzq + 4 },
-      startY: yInicio,
-      head: [['Rubro', 'Gasto', 'Variación']],
+      margin: { ...margenTablas, left: margin + mitad + GAP },
+      tableWidth: mitad,
+      startY: yG,
+      head: [[`Rubro, ${desde} a ${hasta}`, 'Gasto', 'Variación']],
       body: [...c.rubros]
         .sort((a, b) => (b.variacion ?? -Infinity) - (a.variacion ?? -Infinity))
         .map((r) => [CATEGORIAS_LABEL[r.rubro] || r.rubro, fmt(r.gasto), fmtVar(r.variacion)]),
       foot: [['TOTAL', fmt(gastoTotal), fmtVar(acCanasta)]],
-      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+      columnStyles: { 1: { halign: 'right', textColor: [120, 120, 120] }, 2: { halign: 'right' } },
       didParseCell: (cell) => {
         if (cell.section === 'body' && cell.column.index === 2) {
           const col = colorVar(String(cell.cell.raw))
@@ -428,27 +680,9 @@ export async function generarPDFCierreMes(data: CierreMes): Promise<void> {
         }
       },
     })
-    y = Math.max(finIzq, (doc as any).lastAutoTable.finalY) + 3
-
-    const lectura: string[] = []
-    if (acCanasta !== null && acTicket !== null) {
-      lectura.push(
-        acTicket >= acCanasta
-          ? `Tu ticket subió ${dec((acTicket - acCanasta))} puntos más que lo que comprás: el margen se sostiene.`
-          : `Lo que comprás subió ${dec((acCanasta - acTicket))} puntos más que tu ticket: el margen se achica.`
-      )
-    }
-    if (acCanasta !== null && acIpc !== null) {
-      lectura.push(
-        acCanasta <= acIpc
-          ? `Tus compras subieron ${dec((acIpc - acCanasta))} puntos menos que la inflación.`
-          : `Tus compras subieron ${dec((acCanasta - acIpc))} puntos más que la inflación.`
-      )
-    }
-    nota(
-      `${lectura.join(' ')} Canasta: precio por kilo o litro de ${c.insumos} insumos, mediana del mes, ponderado por lo que se gastó en cada uno. Una variación de más de 80% en un mes se deja afuera como sospechosa. Ticket del restaurante: mediodía y noche, sin eventos.`
-    )
-    y += 1.5
+    y = Math.max(yG + altoGrafico, (doc as any).lastAutoTable.finalY) + 3
+    nota('Canasta: precio por kilo o litro de cada insumo, mediana del mes, ponderado por lo que se gastó en él. Una variación de más de 80% en un mes se deja afuera como sospechosa. Ticket del restaurante: mediodía y noche, sin eventos.')
+    y += 2
   }
 
   // =====================================================

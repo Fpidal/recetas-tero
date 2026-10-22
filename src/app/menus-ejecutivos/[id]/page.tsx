@@ -191,7 +191,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
 
     if (error || !menu) {
       alert('Menú no encontrado')
-      router.push('/menus-ejecutivos')
+      router.push('/carta?tab=ejecutivos')
       return
     }
 
@@ -486,7 +486,7 @@ export default function EditarMenuEjecutivoPage({ params }: { params: { id: stri
       return
     }
 
-    router.push('/menus-ejecutivos')
+    router.push('/carta?tab=ejecutivos')
   }
 
   const getTipoIcon = (tipo: string) => {

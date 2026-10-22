@@ -379,7 +379,7 @@ export default function NuevoMenuEspecialPage() {
       return
     }
 
-    router.push('/menus-especiales')
+    router.push('/carta?tab=especiales')
   }
 
   return (

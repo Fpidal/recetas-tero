@@ -454,6 +454,14 @@ Registradas para no volver a discutirlas.
   resultado en barras, leyendas y montos. El ranking de "lo que más se cobró de más" suma por
   producto y proveedor, así una suba y una baja del mismo producto se compensan.
 
+- **Instalar en el celular sin tiendas ni service worker** (22/10/26, V.72). Es la app web con
+  `manifest.json`: no pasa por App Store ni Play Store. En iPhone no existe instalar con un
+  botón —Safari no lo permite a ninguna página—, así que el botón muestra los pasos. Desde
+  iOS 26 Compartir está dentro de "⋯" y el primer cartel, que decía sólo "tocá Compartir",
+  dejaba al usuario sin saber qué hacer. No se agrega service worker: no hace falta para
+  instalar, y el que hubo (`public/sw.js`, con caché) se desregistra en `layout.tsx` desde
+  el commit 2db27cb; volver a activarlo es otra decisión.
+
 - **Las compras de eventos no se separan de las del restaurante** (22/10/26). Se había
   propuesto un tilde "Evento" en la factura, pero la mercadería se compra junta y se usa
   para los dos: una factura no es de uno o del otro. El ratio compras/venta del cierre se

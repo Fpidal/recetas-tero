@@ -30,6 +30,7 @@ import { supabase } from '@/lib/supabase'
 import { APP_VERSION, APP_FECHA, CHANGELOG } from '@/lib/version'
 import { useNombreEmpresa } from '@/lib/empresa'
 import Modal from './ui/Modal'
+import InstalarApp from './InstalarApp'
 
 /**
  * Navegación agrupada por lo que estás haciendo, no por tipo de dato.
@@ -289,6 +290,7 @@ export default function Sidebar() {
           <Menu className="h-6 w-6" />
         </button>
         <h1 className="ml-3 font-serif text-lg text-white tracking-tight">{nombreEmpresa}</h1>
+        <InstalarApp />
       </div>
 
       {/* Overlay para mobile */}

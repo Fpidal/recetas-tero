@@ -399,7 +399,12 @@ El schema de la base de datos está en los archivos `supabase-*.sql`. Para confi
   - Input decimal con coma (0,5 en lugar de 0.5)
   - Separador de miles con punto (1.000)
   - Fechas DD/MM/YYYY
-- PWA instalable
+- Se instala en el celular como app (V.72): botón **Instalar** en el encabezado mobile
+  (`src/components/InstalarApp.tsx`). En Android dispara el cartel del sistema; en iPhone
+  muestra los pasos de Safari, porque iOS no deja instalar desde la página. El ícono sale de
+  `icono_principal.png` de Tero Branding, rearmado cuadrado y con fondo lleno; los tamaños
+  están en `public/icons/` y la pestaña usa `src/app/icon.png`. No hay service worker: Chrome
+  ya no lo exige para instalar, y el que hubo se desregistra en `layout.tsx` a propósito
 - Diseño responsive (mobile-first)
 
 ## Convenciones

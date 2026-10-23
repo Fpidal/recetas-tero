@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.72',
+    fecha: '22/10/26',
+    cambios: [
+      'Instalar en el celular: botón "Instalar" arriba a la derecha. En Android instala de un toque; en iPhone muestra los pasos de Safari (⋯ → Compartir → Agregar a inicio). Queda un ícono en la pantalla que abre a pantalla completa',
+      'Ícono nuevo de Tero en el celular y en la pestaña del navegador; al abrir la app instalada, la barra y la pantalla de arranque salen en los colores de la app',
+    ],
+  },
+  {
     version: 'V.71',
     fecha: '22/10/26',
     cambios: [

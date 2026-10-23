@@ -454,6 +454,13 @@ Registradas para no volver a discutirlas.
   resultado en barras, leyendas y montos. El ranking de "lo que más se cobró de más" suma por
   producto y proveedor, así una suba y una baja del mismo producto se compensan.
 
+- **Gajo es la marca del sistema; el restaurante va al lado** (22/10/26, V.73). En la barra
+  lateral, "[ícono] Gajo | Tero" en una sola línea: el usuario eligió la línea compartida
+  sobre las variantes con Gajo de sobretítulo, en ficha o firmando abajo. El nombre del
+  restaurante sale de `restaurantes`. Configuración pasó a un engranaje junto a cerrar
+  sesión para que la lista entre sin scroll en una notebook (antes 641 px en 619). El nombre
+  bajo el ícono del celular sigue siendo el del restaurante hasta el multiusuario.
+
 - **Instalar en el celular sin tiendas ni service worker** (22/10/26, V.72). Es la app web con
   `manifest.json`: no pasa por App Store ni Play Store. En iPhone no existe instalar con un
   botón —Safari no lo permite a ninguna página—, así que el botón muestra los pasos. Desde

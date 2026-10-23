@@ -10,6 +10,14 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.73',
+    fecha: '22/10/26',
+    cambios: [
+      'Barra lateral: arriba dice "Gajo | Tero" —Gajo es el sistema, al lado el restaurante— con el ícono nuevo',
+      'Barra lateral sin scroll en notebooks: Configuración pasó a un engranaje al lado de cerrar sesión, y la versión (que abre Novedades) quedó al lado del rol',
+    ],
+  },
+  {
     version: 'V.72',
     fecha: '22/10/26',
     cambios: [

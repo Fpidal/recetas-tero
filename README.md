@@ -102,7 +102,7 @@ src/
 │   │   └── HojasControl.tsx
 │   ├── insumos/
 │   │   └── ComparadorPrecios.tsx
-│   └── Sidebar.tsx               # Navegación lateral
+│   └── Sidebar.tsx               # Navegación lateral; arriba "Gajo | restaurante" (V.73)
 │
 ├── lib/
 │   ├── supabase.ts               # Cliente Supabase
@@ -243,6 +243,8 @@ Desde el **Resumen** se baja el consumo de la semana en PDF, agrupado por rubro 
 Recuperación de items eliminados (soft delete).
 
 ### Configuración (`/configuracion`)
+Se entra por el **engranaje** del bloque del usuario, abajo en la barra lateral (desde V.73;
+antes era un renglón del menú).
 Los datos del restaurante (V.63): nombre de fantasía, razón social, CUIT, condición de IVA,
 domicilio, teléfono y mail de compras, horario de entrega y condiciones de la OC, y el logo
 con dos tildes —en la orden de compra, en los informes—. Se guardan en la tabla

@@ -38,7 +38,9 @@ import InstalarApp from './InstalarApp'
  * Son los MISMOS catorce destinos de antes: no se agregó ni se quitó ninguno,
  * solo se ordenaron y se les puso un título arriba. Catorce ítems seguidos no
  * dicen qué hace el sistema; agrupados se pueden escanear. En V.63 se sumó el
- * decimoquinto, Configuración, abajo con Papelera.
+ * decimoquinto, Configuración, abajo con Papelera; en V.73 pasó a un engranaje
+ * al lado de cerrar sesión, porque se toca una vez y su renglón era justo lo
+ * que hacía que la lista no entrara en una notebook (641 px de lista en 619).
  *
  * POR QUÉ NO ES UN ACORDEÓN: las pantallas tienen 26 solapas entre todas
  * (Estadísticas 6, Análisis 5, Carta 4…). Desplegarlas acá llevaría el Sidebar
@@ -109,8 +111,6 @@ const navigation: GrupoNav[] = [
     titulo: null,
     items: [
       { name: 'Papelera', href: '/papelera', icon: Trash2 },
-      // V.63: los datos de la empresa. Va abajo de todo porque se toca una vez
-      { name: 'Configuración', href: '/configuracion', icon: Settings },
     ],
   },
 ]
@@ -181,17 +181,7 @@ export default function Sidebar() {
     <>
       {/* Logo */}
       <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/10 px-4">
-        <div>
-          <h1 className="font-serif text-[20px] text-white tracking-tight leading-none">{nombreEmpresa}</h1>
-          <button
-            onClick={() => setChangelogOpen(true)}
-            className="text-[10px] text-white/35 hover:text-white/70 font-mono tracking-wide mt-1 transition-colors cursor-pointer text-left inline-flex items-center gap-1"
-            title="Ver novedades"
-          >
-            {APP_VERSION.toLowerCase()} · {APP_FECHA}
-            <History className="w-2.5 h-2.5" />
-          </button>
-        </div>
+        <Marca nombreEmpresa={nombreEmpresa} />
         {/* Botón cerrar en mobile */}
         <button
           className="lg:hidden text-white/60 hover:text-white p-2 transition-colors"
@@ -207,7 +197,7 @@ export default function Sidebar() {
           el nav crece con la lista y empuja el bloque del usuario fuera de pantalla. */}
       <nav className="flex-1 min-h-0 px-3 py-1.5 overflow-y-auto">
         {navigation.map((grupo, i) => (
-          <div key={grupo.titulo ?? `sin-titulo-${i}`} className={i > 0 ? 'mt-2' : ''}>
+          <div key={grupo.titulo ?? `sin-titulo-${i}`} className={i > 0 ? 'mt-1.5' : ''}>
             {grupo.titulo && (
               <div className="px-3 pb-0.5 text-[9.5px] font-bold uppercase tracking-[0.11em] text-white/30">
                 {grupo.titulo}
@@ -258,8 +248,29 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{userName}</p>
-              <p className="text-xs text-white/50 capitalize">{userRole}</p>
+              <p className="text-xs text-white/50">
+                <span className="capitalize">{userRole}</span>
+                {' · '}
+                <button
+                  onClick={() => setChangelogOpen(true)}
+                  className="font-mono text-[10.5px] text-white/40 hover:text-white/80 transition-colors inline-flex items-center gap-1"
+                  title={`Novedades · ${APP_FECHA}`}
+                >
+                  {APP_VERSION.toLowerCase()}
+                  <History className="w-2.5 h-2.5" />
+                </button>
+              </p>
             </div>
+            <Link
+              href="/configuracion"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`p-1.5 rounded-md transition-colors ${
+                pathname.startsWith('/configuracion') ? 'text-white bg-white/10' : 'text-white/50 hover:text-white hover:bg-white/5'
+              }`}
+              title="Configuración"
+            >
+              <Settings className="w-4 h-4" />
+            </Link>
             <button
               onClick={handleLogout}
               className="text-white/50 hover:text-terracotta p-1.5 rounded-md hover:bg-white/5 transition-colors"
@@ -289,7 +300,7 @@ export default function Sidebar() {
         >
           <Menu className="h-6 w-6" />
         </button>
-        <h1 className="ml-3 font-serif text-lg text-white tracking-tight">{nombreEmpresa}</h1>
+        <div className="ml-2 min-w-0"><Marca nombreEmpresa={nombreEmpresa} /></div>
         <InstalarApp />
       </div>
 
@@ -346,5 +357,22 @@ export default function Sidebar() {
         </div>
       </Modal>
     </>
+  )
+}
+
+/**
+ * Gajo | restaurante, en una línea (V.73). Gajo es el sistema y el nombre que
+ * sigue es el del cliente, que sale de `restaurantes` —nunca escrito en el
+ * código—. Un nombre largo se corta con "…" antes que empujar el ícono.
+ */
+function Marca({ nombreEmpresa }: { nombreEmpresa: string }) {
+  return (
+    <div className="flex items-center gap-2.5 min-w-0">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icons/icon-96x96.png" alt="" className="h-[26px] w-[26px] rounded-md flex-shrink-0" />
+      <span className="text-[17px] font-bold tracking-tight text-white leading-none">Gajo</span>
+      <span className="h-[18px] w-px bg-white/25 flex-shrink-0" />
+      <h1 className="font-serif text-[20px] text-white tracking-tight leading-none truncate">{nombreEmpresa}</h1>
+    </div>
   )
 }

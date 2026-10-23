@@ -10,10 +10,13 @@ import { formatearMoneda, formatearCantidad, parsearNumero, formatearInputNumero
 import { TIPOS_PERCEPCION, calcularPercepcion, tipoPorNombre } from '@/lib/percepciones'
 import { hoyISO } from '@/lib/fechas'
 import { precioPorUnidadBase } from '@/lib/costos'
+import LeerFacturaFoto, { type LineaAplicada } from '../components/LeerFacturaFoto'
+import type { LecturaFactura } from '@/lib/leer-factura'
 
 interface Proveedor {
   id: string
   nombre: string
+  cuit?: string | null
 }
 
 interface Insumo {
@@ -122,7 +125,7 @@ export default function NuevaFacturaPage() {
     setIsLoading(true)
 
     const [proveedoresRes, insumosRes, ordenesRes] = await Promise.all([
-      supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre'),
+      supabase.from('proveedores').select('id, nombre, cuit').eq('activo', true).order('nombre'),
       supabase.from('v_insumos_con_precio').select('id, nombre, unidad_medida, categoria, precio_actual, cantidad_por_paquete, iva_porcentaje').eq('activo', true).order('nombre'),
       supabase.from('ordenes_compra')
         .select(`
@@ -203,6 +206,82 @@ export default function NuevaFacturaPage() {
 
     setItems(itemsFactura)
     setIsModalOrdenOpen(false)
+  }
+
+  /**
+   * Pasa lo leído de la foto al formulario (V.74). Con OC parte de la orden,
+   * igual que "Importar desde Orden", y le pone la cantidad y el precio del
+   * papel; lo que no figura en la factura queda afuera, que es lo mismo que
+   * borrar el ítem a mano y hace que el guardado arme la OC de faltantes.
+   */
+  function aplicarLectura(lectura: LecturaFactura, lineas: LineaAplicada[]) {
+    setTipoComprobante(lectura.tipo)
+    if (lectura.numero) setNumeroFactura(lectura.numero)
+    if (lectura.fecha) setFecha(lectura.fecha)
+    if (!selectedOrden && lectura.proveedorId) setSelectedProveedor(lectura.proveedorId)
+
+    const nuevos: ItemFactura[] = []
+    for (const { linea, insumoId, ocIndice } of lineas) {
+      const itemOC = ocIndice != null ? selectedOrden?.items[ocIndice] : undefined
+      const esVino = !!itemOC?.vino_id
+      const insumo = !esVino ? insumos.find(i => i.id === (itemOC?.insumo_id ?? insumoId)) : undefined
+      if (!esVino && !insumo) continue
+      const cantidadNum = linea.cantidad ?? 0
+      const precioNum = linea.precioUnitario ?? 0
+      const descuentoNum = linea.descuento || 0
+      const ivaPorcentaje = linea.iva ?? (esVino ? itemOC!.iva_porcentaje : insumo!.iva_porcentaje ?? 21)
+      // Contenido (trampa 13): si el papel factura en la unidad base del insumo
+      // —kg contra kg, lt contra lt— cada unidad trae 1. Si factura bultos, cajas
+      // o unidades, vale el paquete del insumo, como al importar la OC. La
+      // columna queda editable para corregirlo.
+      const unidadLeida = (linea.unidad || '').toLowerCase().replace(/[^a-z]/g, '')
+      const unidadBase = (insumo?.unidad_medida || '').toLowerCase()
+      const mismaUnidad = !!unidadBase && unidadBase !== 'unidad' &&
+        (unidadLeida === unidadBase || (unidadBase === 'lt' && /^(l|lts?|litros?)$/.test(unidadLeida)) || (unidadBase === 'kg' && /^(kgs?|kilos?)$/.test(unidadLeida)))
+      const contenido = esVino || mismaUnidad ? 1 : (insumo?.cantidad_por_paquete ? Number(insumo.cantidad_por_paquete) : 1)
+      const subtotal = cantidadNum * precioNum * (1 - descuentoNum / 100)
+
+      let diferencia: ItemFactura['diferencia'] = null
+      if (selectedOrden) {
+        if (!itemOC) diferencia = 'nuevo'
+        else if (cantidadNum !== itemOC.cantidad) diferencia = 'cantidad'
+        else if (precioNum !== itemOC.precio_unitario) diferencia = 'precio'
+      }
+
+      nuevos.push({
+        id: crypto.randomUUID(),
+        insumo_id: esVino ? null : insumo!.id,
+        vino_id: esVino ? itemOC!.vino_id : null,
+        insumo_nombre: esVino ? itemOC!.insumo_nombre : insumo!.nombre,
+        unidad_medida: esVino ? itemOC!.unidad_medida : insumo!.unidad_medida,
+        contenido,
+        cantidad: cantidadNum,
+        precio_unitario: precioNum,
+        descuento: descuentoNum,
+        subtotal,
+        iva_porcentaje: ivaPorcentaje,
+        iva_monto: subtotal * (ivaPorcentaje / 100),
+        diferencia,
+      })
+    }
+    setItems(nuevos)
+
+    // Percepciones: manda el papel, así que van como editadas a mano
+    if (lectura.percepciones.length) {
+      setPercepciones((prev) => prev.map((p, i) => {
+        const leida = lectura.percepciones[i]
+        if (!leida) return { nombre: '', porcentaje: '', valor: '', calculado: false }
+        const tipo = tipoPorNombre(leida.nombre)
+        return {
+          nombre: tipo?.nombre ?? leida.nombre,
+          porcentaje: String(leida.porcentaje ?? tipo?.porcentaje ?? ''),
+          valor: formatearInputNumero(leida.monto.toFixed(2).replace('.', ',')),
+          calculado: false,
+        }
+      }))
+    }
+
+    if (!notas.trim()) setNotas('Cargada desde foto')
   }
 
   function handleSelectInsumo(insumoId: string) {
@@ -799,6 +878,16 @@ export default function NuevaFacturaPage() {
           </div>
         </div>
       )}
+
+      <LeerFacturaFoto
+        proveedores={proveedores}
+        insumos={insumos}
+        orden={selectedOrden}
+        ordenesPendientes={ordenesPendientes}
+        proveedorId={selectedProveedor}
+        onAsociarOrden={(o) => handleImportarOrden(o as OrdenCompra)}
+        onAplicar={aplicarLectura}
+      />
 
       {/* Aviso de actualización */}
       {tipoComprobante === 'factura' ? (

@@ -454,6 +454,21 @@ Registradas para no volver a discutirlas.
   resultado en barras, leyendas y montos. El ranking de "lo que más se cobró de más" suma por
   producto y proveedor, así una suba y una baja del mismo producto se compensan.
 
+- **Facturas desde foto: la foto se lee y no se guarda** (23/10/26, V.74). Guardarla haría pesado el
+  sistema con los años; el papel queda archivado y, si hace falta, se le pide copia al proveedor. Lo
+  que queda son los datos. La lectura usa la API de Anthropic con los créditos del plan Max (100 US$
+  por mes, vencen cada mes) y un límite de gasto de 25 US$ en platform.claude.com. **La clave vence
+  el 23/10/2027**: ese día el botón avisa "la clave no es válida" y hay que crear otra y reemplazarla
+  en `.env.local` y en Vercel. Con OC no se manda el catálogo de insumos —la orden ya dice qué son—:
+  bajó la entrada de 10.287 a 5.869 tokens. Las primeras pruebas costaron 0,09 US$ en total.
+
+- **El costo sigue a la última compra, de cualquier proveedor** (22/10/26). Se evaluó un
+  "proveedor de referencia" por insumo y un promedio ponderado de compras, porque un mismo
+  insumo se compra a varios proveedores: el bife de chorizo costeó a $21.719 entre el 09/09 y
+  el 21/10 por una sola compra de 6,3 kg a Marucha, y volvió a $24.450 con la siguiente de
+  Morres. Se decidió dejarlo así: lo lógico es que el costo cambie según el proveedor de la
+  última compra, y no hay que mantener una referencia por insumo.
+
 - **Gajo es la marca del sistema; el restaurante va al lado** (22/10/26, V.73). En la barra
   lateral, "[ícono] Gajo | Tero" en una sola línea: el usuario eligió la línea compartida
   sobre las variantes con Gajo de sobretítulo, en ficha o firmando abajo. El nombre del

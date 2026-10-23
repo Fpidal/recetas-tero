@@ -184,6 +184,14 @@ Creación de OC con numeración automática, estados (borrador, enviada, recibid
 Dos solapas:
 
 - **Facturas** — registro de facturas de proveedores, con actualización automática de precios de insumos y soporte para Notas de Crédito. Cada línea se carga como la compra —*2 paq. × 5 kg*— y muestra antes de guardar el precio por kilo que va a quedar en el insumo. El contenido es de la línea y no del insumo: el mismo producto puede venir en bolsa de un proveedor y suelto por kilo de otro. El semáforo compara cada factura contra su orden de compra: faltantes, cantidad menor, precio distinto y agregados sin pedir. En el detalle se puede comentar cada ítem (*"sin stock, viene el jueves"*): ese comentario se lee después en el resumen semanal.
+- **Cargar desde foto** (V.74) — en Nueva factura, una foto o PDF de la factura se lee con Claude
+  (API de Anthropic, desde el servidor: `src/app/facturas/nueva/leer-factura-action.ts`) y completa
+  proveedor, número, fecha, líneas y percepciones. Con OC importada, cada línea se busca en la orden
+  y se ve contra lo pedido; sin OC, Claude sugiere el insumo y se confirma. Controla que la suma dé el
+  total impreso. Nada se graba hasta guardar, y **la foto no se guarda**. El proveedor se reconoce
+  primero por CUIT: conviene tenerlo cargado, porque la factura trae la razón social y no el nombre de
+  fantasía. Costo medido el 23/10/26: unos 6.000 tokens de entrada y 1.200 de salida por factura con OC,
+  centavos de dólar (el gasto se ve en platform.claude.com → Gasto)
 - **Resumen semanal** — el pantallazo de la semana cerrada, pensado para la reunión con el encargado de compras. Cinco bloques ordenados por plata: lo que no llegó completo, los cambios de precio (avisando si además cambió el proveedor), lo facturado a distinto precio del pedido, lo que llegó sin pedirse, y las órdenes que siguen sin factura. Cada línea acepta una nota, y todo se baja en PDF.
 
 ### Inventario (`/inventario`)
@@ -321,7 +329,14 @@ Crear un archivo `.env.local` en la raíz del proyecto:
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key_aqui
+
+# Lectura de facturas desde foto (V.74). Sólo servidor: nunca con NEXT_PUBLIC_
+ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+La clave de Anthropic se crea en platform.claude.com → Claves y acceso, y va también en Vercel
+(Settings → Environment Variables). Sin ella el sistema funciona igual; sólo el botón de la foto
+avisa que falta.
 
 ### Obtener las credenciales de Supabase
 

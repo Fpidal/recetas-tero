@@ -10,6 +10,15 @@ export interface VersionEntry {
 
 export const CHANGELOG: VersionEntry[] = [
   {
+    version: 'V.74',
+    fecha: '23/10/26',
+    cambios: [
+      'Nueva factura → Cargar desde foto: sacale una foto a la factura (o subí la imagen o el PDF) y se completan proveedor, número, fecha, líneas y percepciones. Nada se guarda hasta que revisás y guardás',
+      'Con orden de compra, cada línea de la foto se compara con lo pedido: diferencia de precio, cantidad distinta, lo que no estaba pedido y lo que no vino (va a la OC de faltantes como siempre)',
+      'Control del total: si la suma de las líneas no da el total impreso, se avisa antes de pasar al formulario. La foto no se guarda',
+    ],
+  },
+  {
     version: 'V.73',
     fecha: '22/10/26',
     cambios: [
